@@ -1,0 +1,12 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+toml = { workspace = true }
+serde = { workspace = true }
+ansi_rgb = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+byte-unit = "5.1.4"

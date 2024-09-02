@@ -1,0 +1,12 @@
+[package]
+name = "sparreal-rt"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+log = { workspace = true }
+sparreal-std = { workspace = true }
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+aarch64-cpu = "9.4.0"
+tock-registers = { workspace = true }

@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = ["app/helloworld", "crates/*", "xtask"]
+
+[workspace.dependencies]
+embedded-hal = "1.0"
+nb = "1.1"
+embedded-hal-nb = "1.0"
+embedded-hal-async = "1.0"
+embedded-io = "0.6.1"
+log = { version = "0.4", features = ["release_max_level_info"] }
+colored = "2.1"
+clap = { version = "4.5" }
+ansi_rgb = { version = "0.2" }
+rgb = "0.8.47"
+memory_addr = "0.3"
+toml = "0.8"
+serde = { default-features = false, version = "1", features = [
+    "alloc",
+    "derive",
+] }
+arm-pl011-rs = { version = "0.1" }
+tock-registers = "0.8"
+flat_device_tree = "3.1"
+goblin = "0.8"
+lock_api = "0.4"
+
+sparreal-std = { path = "crates/sparreal-std" }
+sparreal-rt = { path = "crates/sparreal-rt" }
+sparreal-macros = { path = "crates/sparreal-macros" }
+
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"

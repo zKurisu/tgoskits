@@ -1,0 +1,9 @@
+[package]
+name = "sparreal-std"
+version = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+log = { workspace = true }
+buddy_system_allocator = "0.10"
+sparreal-macros = { workspace = true }
