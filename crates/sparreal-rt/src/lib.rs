@@ -2,5 +2,8 @@
 
 #[cfg_attr(target_arch = "aarch64", path = "arch/aarch64/mod.rs")]
 pub mod arch;
+mod consts;
+mod kernel;
+mod lang_items;
 
-pub use sparreal_std::*;
+pub use sparreal_kernel::*;

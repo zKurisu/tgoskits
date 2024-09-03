@@ -4,7 +4,7 @@ use std::{
     process::Command,
 };
 
-use crate::{config::Config, project::Project, shell::Shell as _};
+use crate::{project::Project, shell::Shell as _};
 
 pub struct Qemu<'a> {
     command: Command,

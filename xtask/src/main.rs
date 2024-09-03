@@ -1,7 +1,6 @@
 #![feature(path_file_prefix)]
 
 mod compile;
-mod config;
 mod project;
 mod qemu;
 mod shell;

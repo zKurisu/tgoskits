@@ -2,7 +2,7 @@ use std::{path::PathBuf, process::Command};
 
 use byte_unit::Byte;
 
-use crate::{config::Config, project::Project, shell::Shell as _};
+use crate::{project::Project, shell::Shell as _};
 
 pub struct Compile {
     pub kernel_bin_path: PathBuf,

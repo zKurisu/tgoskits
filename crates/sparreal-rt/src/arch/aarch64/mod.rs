@@ -1,6 +1,10 @@
-use sparreal_std::Platform;
+mod boot;
+mod mmu;
+mod trap;
 
-struct PlatformImpl;
+use sparreal_kernel::Platform;
+
+pub struct PlatformImpl;
 
 impl Platform for PlatformImpl {
     fn wait_for_interrupt() {
@@ -8,4 +12,4 @@ impl Platform for PlatformImpl {
     }
 }
 
-sparreal_std::set_impl!(PlatformImpl);
+

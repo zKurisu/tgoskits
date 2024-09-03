@@ -25,10 +25,11 @@ flat_device_tree = "3.1"
 goblin = "0.8"
 lock_api = "0.4"
 
-sparreal-std = { path = "crates/sparreal-std" }
+sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
-
+sparreal-build = { path = "crates/sparreal-build" }
+page_table = { path = "crates/page_table" }
 
 [workspace.package]
 version = "0.1.0"

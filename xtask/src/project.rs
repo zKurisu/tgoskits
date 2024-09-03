@@ -7,8 +7,9 @@ use std::{
 
 use anyhow::Result;
 use byte_unit::Byte;
+use sparreal_build::ProjectConfig;
 
-use crate::{compile::Compile, config::Config, qemu::Qemu, shell::*};
+use crate::{compile::Compile, qemu::Qemu, shell::*};
 
 pub enum Arch {
     Aarch64,
@@ -51,7 +52,7 @@ pub struct Project {
     pub arch: Arch,
     pub config_toml: toml::Value,
     pub debug: bool,
-    pub config: Config,
+    pub config: ProjectConfig,
     pub compile: Option<Compile>,
 }
 
@@ -60,7 +61,7 @@ impl Project {
         let config = config.unwrap_or(".project.toml");
         if !fs::exists(config).unwrap() {
             let mut file = fs::File::create(config).unwrap();
-            let config_str = Config::default().to_string();
+            let config_str = ProjectConfig::default().to_string();
             file.write_all(config_str.as_bytes()).unwrap();
         }
 

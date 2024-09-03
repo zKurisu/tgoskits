@@ -1,0 +1,15 @@
+[package]
+name = "page_table"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitflags = "2.6"
+log = "0.4"
+memory_addr = "0.2"
+
+[target.'cfg(any(target_arch = "aarch64", doc))'.dependencies]
+aarch64-cpu = "9.4"
+
+[target.'cfg(any(target_arch = "x86_64", doc))'.dependencies]
+x86_64 = "0.15"
