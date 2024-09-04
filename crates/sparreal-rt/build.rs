@@ -54,8 +54,8 @@ impl Config {
         let arch = Arch::default();
 
         let va_offset = match arch {
-            // Arch::Aarch64 => 0xffff_0000_0000_0000,
-            Arch::Aarch64 => 0,
+            Arch::Aarch64 => 0xffff_0000_0000_0000,
+            // Arch::Aarch64 => 0,
             Arch::Riscv64 => 0xffff_ffff_0000_0000,
             Arch::X86_64 => 0,
         };

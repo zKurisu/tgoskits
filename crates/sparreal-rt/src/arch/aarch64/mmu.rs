@@ -44,33 +44,22 @@ extern "C" {
 #[link_section = ".text.boot"]
 #[no_mangle]
 pub unsafe extern "C" fn enable_mmu() {
-    let kernel_start_va = _skernel as usize;
-    let heap_start_va = _stack_top as usize;
+    // SPSel.write(SPSel::SP::ELx);
+    // let el = CurrentEL.read(CurrentEL::EL);
 
-    // let  table = &mut *slice_from_raw_parts_mut(heap_start_va as *mut PTE, 512);
+    let kernel_start_pa = _skernel as usize;
+    let heap_start_pa = _stack_top as usize;
 
-    // let idx = VirtAddr::from(kernel_start_va).index_of_table(4);
+    new_access(heap_start_pa, 1024 * 4096);
 
-    // let mut pte = PTE::new(
-    //     (kernel_start_va - VADDR_OFFSET).into(),
-    //     DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
-    // );
-
-    // pte.set_valid();
-    // pte.set_is_block(true);
-
-    // table[idx] = pte;
-
-    // let root_paddr = table.as_ptr() as usize as _;
-
-    let mut access = BeforeMMUPageAllocator::new(heap_start_va - VADDR_OFFSET, 1024 * 4096);
+    let mut access = BeforeMMUPageAllocator::new(heap_start_pa, 1024 * 4096);
 
     let mut table = PageTableRef::try_new(&mut access).unwrap();
 
     table
         .map_region(
-            kernel_start_va.into(),
-            (kernel_start_va - VADDR_OFFSET).into(),
+            kernel_start_pa.into(),
+            kernel_start_pa.into(),
             1024 * 1024 * 1024,
             DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
             true,
@@ -109,6 +98,13 @@ pub unsafe extern "C" fn enable_mmu() {
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
+
+    asm!("ADD  sp, sp, {}", in(reg) VADDR_OFFSET);
+}
+
+#[inline(never)]
+fn new_access(addr: usize, size: usize){
+
 }
 
 struct BeforeMMUPageAllocator {

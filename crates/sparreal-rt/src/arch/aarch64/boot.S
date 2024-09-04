@@ -21,7 +21,6 @@ _start_boot:
   LDR      x1, =_stack_top
   SUB      x1, x1, x10 // X1 == STACK_TOP
 
-//   ADD      x1, x1, #4
   MRS      x2, MPIDR_EL1
   AND      x2, x2, #0xFF // X2 == CPU number.
   LDR      x3, =_cpu_stack_size
@@ -35,8 +34,8 @@ _start_boot:
   LDR      x0, =vector_table_el1
   MSR      VBAR_EL1, x0
 
-  MOV X1, #(0x3 << 20) // FPEN disables trapping to EL1.
-  MSR CPACR_EL1, X1
+  MOV      X1, #(0x3 << 20) // FPEN disables trapping to EL1.
+  MSR      CPACR_EL1, X1
   ISB
 
   MOV      x0, x10
@@ -52,8 +51,10 @@ _start_boot:
   // Branch to scatter loading and C library init code
   // -------------------------------------------------
   MOV      x0, x9
-  .global  __rust_main
-  B        __rust_main
+  LDR     x8, =__rust_main
+  BLR      x8
+  B       .
+       
 
 // ------------------------------------------------------------
 // End of file
