@@ -3,6 +3,7 @@
 mod kernel;
 pub mod mem;
 pub mod platform;
+pub mod driver;
 
 pub use kernel::*;
 pub use platform::Platform;

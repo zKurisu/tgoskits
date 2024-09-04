@@ -28,6 +28,9 @@ _start_boot:
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
 
+  SUB      sp, sp, #16
+  STR      x9, [sp]
+
   // Install vector table
   // --------------------- 
   .global  vector_table_el1
@@ -41,17 +44,14 @@ _start_boot:
   MOV      x0, x10
   BL       enable_mmu
 
-  ADD      sp, sp, x10
-
-
-
   // Ensure changes to system register are visible
   ISB
 
   // Branch to scatter loading and C library init code
   // -------------------------------------------------
-  MOV      x0, x9
-  LDR     x8, =__rust_main
+  LDR      x0, [sp]
+  ADD      sp, sp, #16
+  LDR      x8, =__rust_main
   BLR      x8
   B       .
        

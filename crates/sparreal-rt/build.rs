@@ -35,7 +35,6 @@ fn main() {
 
 struct Config {
     smp: usize,
-    va_offset: u64,
     kernel_load_addr: u64,
     hart_stack_size: usize,
     out_dir: PathBuf,
@@ -45,6 +44,8 @@ struct Config {
 // 8MiB stack size per hart
 const DEFAULT_HART_STACK_SIZE: usize = 2 * 1024 * 1024;
 
+const KERNEL_VADDR: u64 = 0xffff_0000_4008_0000;
+
 impl Config {
     fn new(config_path: String) -> Self {
         let s = fs::read_to_string(&config_path)
@@ -53,16 +54,14 @@ impl Config {
         let cfg = ProjectConfig::from_str(&s).unwrap();
         let arch = Arch::default();
 
-        let va_offset = match arch {
-            Arch::Aarch64 => 0xffff_0000_0000_0000,
-            // Arch::Aarch64 => 0,
-            Arch::Riscv64 => 0xffff_ffff_0000_0000,
-            Arch::X86_64 => 0,
-        };
+        // let va_offset = match arch {
+        //     Arch::Aarch64 => 0xffff_0000_0000_0000,
+        //     Arch::Riscv64 => 0xffff_ffff_0000_0000,
+        //     Arch::X86_64 => 0,
+        // };
 
         Self {
             smp: cfg.build.smp,
-            va_offset,
             hart_stack_size: cfg.build.hart_stack_size.unwrap_or(DEFAULT_HART_STACK_SIZE),
             out_dir: PathBuf::from(std::env::var("OUT_DIR").unwrap()),
             arch,
@@ -84,7 +83,8 @@ impl Config {
         let ld_content = ld_content.replace("%ARCH%", &output_arch);
         let ld_content = ld_content.replace(
             "%KERNEL_VADDR%",
-            &format!("{:#x}", self.va_offset + self.kernel_load_addr),
+            &format!("{:#x}", KERNEL_VADDR),
+            // &format!("{:#x}", self.va_offset + self.kernel_load_addr),
         );
         let ld_content = ld_content.replace(
             "%STACK_SIZE%",
@@ -99,11 +99,10 @@ impl Config {
         let mut const_content = format!(
             r#"
 
-            pub const VADDR_OFFSET: usize = {:#x};
             pub const SMP: usize = {:#x};
             pub const HART_STACK_SIZE: usize = {:#x};
             "#,
-            self.va_offset, self.smp, self.hart_stack_size
+            self.smp, self.hart_stack_size
         );
 
         std::fs::write(self.out_dir.join("constant.rs"), const_content)

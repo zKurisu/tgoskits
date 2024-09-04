@@ -13,7 +13,7 @@ use page_table::{
 };
 use tock_registers::interfaces::ReadWriteable;
 
-use crate::consts::{STACK_SIZE, VADDR_OFFSET};
+const BYTES_1G: usize = 1024 * 1024 * 1024;
 
 const MAIR_VALUE: u64 = {
     // Device-nGnRE memory
@@ -43,14 +43,10 @@ extern "C" {
 
 #[link_section = ".text.boot"]
 #[no_mangle]
-pub unsafe extern "C" fn enable_mmu() {
-    // SPSel.write(SPSel::SP::ELx);
-    // let el = CurrentEL.read(CurrentEL::EL);
-
+pub unsafe extern "C" fn enable_mmu(va_offset: usize) {
     let kernel_start_pa = _skernel as usize;
     let heap_start_pa = _stack_top as usize;
-
-    new_access(heap_start_pa, 1024 * 4096);
+    let kernel_start_va = kernel_start_pa + va_offset;
 
     let mut access = BeforeMMUPageAllocator::new(heap_start_pa, 1024 * 4096);
 
@@ -60,13 +56,22 @@ pub unsafe extern "C" fn enable_mmu() {
         .map_region(
             kernel_start_pa.into(),
             kernel_start_pa.into(),
-            1024 * 1024 * 1024,
+            BYTES_1G,
             DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
             true,
             &mut access,
         )
         .unwrap();
-
+    // table
+    //     .map_region(
+    //         kernel_start_va.into(),
+    //         kernel_start_pa.into(),
+    //         BYTES_1G,
+    //         DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
+    //         true,
+    //         &mut access,
+    //     )
+    //     .unwrap();
     let root_paddr = table.paddr().as_usize() as _;
 
     MAIR_EL1.set(MAIR_VALUE);
@@ -88,23 +93,19 @@ pub unsafe extern "C" fn enable_mmu() {
     barrier::isb(barrier::SY);
 
     // Set both TTBR0 and TTBR1
-    // let root_paddr = BOOT_PT.get() as *mut _ as usize as u64;
-    TTBR1_EL1.set(root_paddr);
-    TTBR0_EL1.set(root_paddr);
-
-    // Flush the entire TLB
-    flush_tlb(None);
+    TTBR1_EL1.set_baddr(root_paddr);
+    TTBR0_EL1.set_baddr(root_paddr);
 
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    asm!("
+    ADD  sp, sp, {0}
+    ADD  x30, x30, {0}
+    ", in(reg) va_offset);
+
+
+    flush_tlb(None);
     barrier::isb(barrier::SY);
-
-    asm!("ADD  sp, sp, {}", in(reg) VADDR_OFFSET);
-}
-
-#[inline(never)]
-fn new_access(addr: usize, size: usize){
-
 }
 
 struct BeforeMMUPageAllocator {

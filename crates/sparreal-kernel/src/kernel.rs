@@ -8,6 +8,7 @@ pub struct Kernel<P>
 where
     P: Platform,
 {
+
     _mark: PhantomData<P>,
 }
 
