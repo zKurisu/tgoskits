@@ -1,5 +1,4 @@
 mod boot;
-mod mmu;
 mod trap;
 
 use sparreal_kernel::Platform;

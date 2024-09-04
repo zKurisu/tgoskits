@@ -7,3 +7,5 @@ mod kernel;
 mod lang_items;
 
 pub use sparreal_kernel::*;
+
+pub use kernel::kernel;

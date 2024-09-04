@@ -21,6 +21,6 @@ pub fn kernel() -> &'static Kernel {
     unsafe { KERNEL.0.get().as_mut().unwrap() }
 }
 
-pub fn kernel_run() -> ! {
-    unsafe { KERNEL.0.get().as_mut().unwrap().run() }
-}
+// pub fn kernel_run() -> ! {
+//     unsafe { KERNEL.0.get().as_mut().unwrap().run() }
+// }

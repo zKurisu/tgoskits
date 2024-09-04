@@ -41,19 +41,26 @@ _start_boot:
   MSR      CPACR_EL1, X1
   ISB
 
-  MOV      x0, x10
-  BL       enable_mmu
+  # MOV      x0, x10
+  # BL       enable_mmu
 
-  // Ensure changes to system register are visible
-  ISB
+  LDR      x0, [sp]
+  ADD      sp, sp, #16
+  MOV      x1, x10
+  BL       __rust_main
+  B       .
+
+
+  # ISB
 
   // Branch to scatter loading and C library init code
   // -------------------------------------------------
-  LDR      x0, [sp]
-  ADD      sp, sp, #16
-  LDR      x8, =__rust_main
-  BLR      x8
-  B       .
+  # LDR      x0, [sp]
+  # ADD      sp, sp, #16
+  # LDR      x1, x10
+  # LDR      x8, =__rust_main
+  # BLR      x8
+  # B       .
        
 
 // ------------------------------------------------------------
