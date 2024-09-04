@@ -16,7 +16,7 @@ _start_boot:
   LDR      x10, =_skernel
   SUB      x10, x10, x11 // x10 = va_offset
 
-  MOV      x9, x0 
+  MOV      x19, x0        // x9 = dtb_addr
 
   LDR      x1, =_stack_top
   SUB      x1, x1, x10 // X1 == STACK_TOP
@@ -28,9 +28,6 @@ _start_boot:
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
 
-  SUB      sp, sp, #16
-  STR      x9, [sp]
-
   // Install vector table
   // --------------------- 
   .global  vector_table_el1
@@ -41,28 +38,7 @@ _start_boot:
   MSR      CPACR_EL1, X1
   ISB
 
-  # MOV      x0, x10
-  # BL       enable_mmu
-
-  LDR      x0, [sp]
-  ADD      sp, sp, #16
+  MOV      x0, x19
   MOV      x1, x10
   BL       __rust_main
-  B       .
-
-
-  # ISB
-
-  // Branch to scatter loading and C library init code
-  // -------------------------------------------------
-  # LDR      x0, [sp]
-  # ADD      sp, sp, #16
-  # LDR      x1, x10
-  # LDR      x8, =__rust_main
-  # BLR      x8
-  # B       .
-       
-
-// ------------------------------------------------------------
-// End of file
-// ------------------------------------------------------------
+  B        .

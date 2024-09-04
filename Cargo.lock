@@ -673,12 +673,9 @@ dependencies = [
 name = "sparreal-kernel"
 version = "0.1.0"
 dependencies = [
- "aarch64-cpu",
  "buddy_system_allocator",
  "log",
- "page_table",
  "sparreal-macros",
- "tock-registers",
 ]
 
 [[package]]

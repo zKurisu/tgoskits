@@ -1,13 +1,16 @@
 use core::{
-    arch::global_asm,
+    arch::{asm, global_asm},
     ptr::{slice_from_raw_parts_mut, NonNull},
 };
 
-use aarch64_cpu::registers::TTBR0_EL1;
+use aarch64_cpu::{asm::barrier, registers::*};
 use page_table::aarch64::flush_tlb;
 use sparreal_kernel::KernelConfig;
+use tock_registers::interfaces::ReadWriteable;
 
-use crate::kernel::kernel;
+use crate::{kernel::kernel, mem::set_va_offset};
+
+use super::mmu;
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -21,12 +24,52 @@ extern "C" {
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
 
-    let cfg = KernelConfig {
-        dtb_addr,
-        heap_lma: NonNull::new_unchecked(_stack_top as *mut u8),
-        kernel_lma: NonNull::new_unchecked(_skernel as *mut u8),
-        va_offset,
-    };
+    let table = mmu::init_boot_table(va_offset);
+
+    // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
+    let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
+        + TCR_EL1::TG0::KiB_4
+        + TCR_EL1::SH0::Inner
+        + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        + TCR_EL1::T0SZ.val(16);
+    let tcr_flags1 = TCR_EL1::EPD1::EnableTTBR1Walks
+        + TCR_EL1::TG1::KiB_4
+        + TCR_EL1::SH1::Inner
+        + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+        + TCR_EL1::T1SZ.val(16);
+    TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
+    barrier::isb(barrier::SY);
+
+    // Set both TTBR0 and TTBR1
+    TTBR1_EL1.set_baddr(table);
+    TTBR0_EL1.set_baddr(table);
+
+    // Enable the MMU and turn on I-cache and D-cache
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    barrier::isb(barrier::SY);
+
+    asm!("
+    ADD  sp, sp, {offset}
+    ADD  x30, x30, {offset}
+    MOV      x0,  {offset}
+    MOV      x1, x19
+    LDR      x8, =__rust_main_after_mmu
+    BLR      x8
+    B       .
+    ", 
+    offset = in(reg) va_offset,
+    );
+    unreachable!()
+}
+
+#[no_mangle]
+unsafe extern "C" fn __rust_main_after_mmu(va_offset: usize, dtb_addr: usize) -> ! {
+    set_va_offset(va_offset);
+    let dtb_addr = NonNull::new_unchecked((dtb_addr + va_offset) as *mut u8);
+
+    let cfg = KernelConfig { dtb_addr };
 
     kernel().run(cfg);
 }
