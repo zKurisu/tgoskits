@@ -172,7 +172,6 @@ impl<PTE: GenericPTE, const LEVELS: usize> PageTableRef<PTE, LEVELS> {
             return Err(PagingError::AlreadyMapped);
         }
         *entry = GenericPTE::new_page(paddr.align_down(page_size), attrs, page_size.is_block());
-        flush_tlb(Some(vaddr.as_mut_ptr()));
         Ok(())
     }
 

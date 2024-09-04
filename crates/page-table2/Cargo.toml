@@ -1,0 +1,9 @@
+[package]
+name = "page-table2"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bitflags = "2.6"
+log = "0.4"
+memory_addr = "0.3"

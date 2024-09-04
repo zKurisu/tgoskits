@@ -1,7 +1,7 @@
 use core::{
     alloc::Layout,
     arch::asm,
-    ptr::{slice_from_raw_parts_mut, NonNull},
+    ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
     sync::atomic::Ordering,
 };
 
@@ -9,7 +9,7 @@ use aarch64_cpu::{asm::barrier, registers::*};
 use buddy_system_allocator::Heap;
 use page_table::{
     aarch64::{flush_tlb, DescriptorAttr, PTE},
-    Access, VaddrAtTableIndex, VirtAddr,
+    Access, PhysAddr, VaddrAtTableIndex, VirtAddr,
 };
 use tock_registers::interfaces::ReadWriteable;
 
@@ -48,30 +48,30 @@ pub unsafe extern "C" fn enable_mmu(va_offset: usize) {
     let heap_start_pa = _stack_top as usize;
     let kernel_start_va = kernel_start_pa + va_offset;
 
-    let mut access = BeforeMMUPageAllocator::new(heap_start_pa, 1024 * 4096);
+    let mut access = BeforeMMUPageAllocator::new(heap_start_pa, 1024 * 4096, 0);
 
     let mut table = PageTableRef::try_new(&mut access).unwrap();
 
-    table
-        .map_region(
-            kernel_start_pa.into(),
-            kernel_start_pa.into(),
-            BYTES_1G,
-            DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
-            true,
-            &mut access,
-        )
-        .unwrap();
-    // table
-    //     .map_region(
-    //         kernel_start_va.into(),
-    //         kernel_start_pa.into(),
-    //         BYTES_1G,
-    //         DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
-    //         true,
-    //         &mut access,
-    //     )
-    //     .unwrap();
+    let virt_p = VirtAddr::from(kernel_start_pa).align_down(BYTES_1G);
+    let phys = PhysAddr::from(virt_p.as_usize());
+    let virt = virt_p + va_offset;
+
+    let _ = table.map_region(
+        virt_p,
+        phys,
+        BYTES_1G,
+        DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
+        true,
+        &mut access,
+    );
+    let _ = table.map_region(
+        virt,
+        phys,
+        BYTES_1G,
+        DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
+        true,
+        &mut access,
+    );
     let root_paddr = table.paddr().as_usize() as _;
 
     MAIR_EL1.set(MAIR_VALUE);
@@ -103,7 +103,6 @@ pub unsafe extern "C" fn enable_mmu(va_offset: usize) {
     ADD  x30, x30, {0}
     ", in(reg) va_offset);
 
-
     flush_tlb(None);
     barrier::isb(barrier::SY);
 }
@@ -111,13 +110,15 @@ pub unsafe extern "C" fn enable_mmu(va_offset: usize) {
 struct BeforeMMUPageAllocator {
     end: usize,
     iter: usize,
+    offset: usize,
 }
 
 impl BeforeMMUPageAllocator {
-    unsafe fn new(start: usize, size: usize) -> Self {
+    unsafe fn new(start: usize, size: usize, offset: usize) -> Self {
         Self {
             iter: start,
             end: start + size,
+            offset,
         }
     }
 }
@@ -136,10 +137,14 @@ impl Access for BeforeMMUPageAllocator {
     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {}
 
     fn virt_to_phys<T>(&self, addr: NonNull<T>) -> usize {
-        addr.as_ptr() as usize
+        addr.as_ptr() as usize - self.offset
     }
 
     fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
-        unsafe { NonNull::new_unchecked(phys as *mut T) }
+        unsafe { NonNull::new_unchecked((phys + self.offset) as *mut T) }
     }
+}
+
+pub unsafe fn test() {
+
 }

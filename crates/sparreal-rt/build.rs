@@ -44,7 +44,7 @@ struct Config {
 // 8MiB stack size per hart
 const DEFAULT_HART_STACK_SIZE: usize = 2 * 1024 * 1024;
 
-const KERNEL_VADDR: u64 = 0xffff_0000_4008_0000;
+const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
 
 impl Config {
     fn new(config_path: String) -> Self {
@@ -53,12 +53,6 @@ impl Config {
 
         let cfg = ProjectConfig::from_str(&s).unwrap();
         let arch = Arch::default();
-
-        // let va_offset = match arch {
-        //     Arch::Aarch64 => 0xffff_0000_0000_0000,
-        //     Arch::Riscv64 => 0xffff_ffff_0000_0000,
-        //     Arch::X86_64 => 0,
-        // };
 
         Self {
             smp: cfg.build.smp,
