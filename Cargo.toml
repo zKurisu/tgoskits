@@ -21,7 +21,6 @@ serde = { default-features = false, version = "1", features = [
 ] }
 arm-pl011-rs = { version = "0.1" }
 tock-registers = "0.8"
-flat_device_tree = "3.1"
 goblin = "0.8"
 lock_api = "0.4"
 
@@ -31,6 +30,8 @@ sparreal-macros = { path = "crates/sparreal-macros" }
 sparreal-build = { path = "crates/sparreal-build" }
 page_table = { path = "crates/page_table" }
 page-table2 = { path = "crates/page-table2" }
+page-table-interface = { path = "crates/page-table-interface" }
+flat_device_tree = { path = "crates/flat_device_tree" }
 
 [workspace.package]
 version = "0.1.0"

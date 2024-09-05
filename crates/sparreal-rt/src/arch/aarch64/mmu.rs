@@ -3,6 +3,7 @@ use core::{alloc::Layout, arch::asm, cell::UnsafeCell, ptr::NonNull, sync::atomi
 use aarch64::{DescriptorAttr, PTE};
 use aarch64_cpu::{asm::barrier, registers::*};
 use page_table::*;
+use sparreal_kernel::mem::mmu;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::KernelConfig;
@@ -34,9 +35,31 @@ extern "C" {
     fn _stack_top();
 }
 
-pub unsafe fn init_boot_table(va_offset: usize) -> u64 {
+struct BootTable {
+    table: PageTableRef,
+}
+impl mmu::PageTable for BootTable {
+    unsafe fn new(access: &mut impl mmu::Access) -> Self {
+        todo!()
+    }
+
+    unsafe fn map(
+        &mut self,
+        vaddr: VirtAddr,
+        paddr: PhysAddr,
+        page_size: usize,
+        attrs: impl Iterator<Item = mmu::PageAttribute>,
+        access: &mut impl mmu::Access,
+    ) -> mmu::PagingResult {
+        todo!()
+    }
+}
+
+pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
     let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
     let kernel_lma = NonNull::new_unchecked(_skernel as *mut u8);
+
+    mmu::boot_init::<BootTable>(va_offset, dtb_addr);
 
     let mut access =
         BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);

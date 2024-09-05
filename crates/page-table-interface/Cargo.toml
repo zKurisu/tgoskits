@@ -1,0 +1,7 @@
+[package]
+name = "page-table-interface"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+memory_addr = { workspace = true }

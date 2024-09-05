@@ -22,9 +22,8 @@ extern "C" {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
-
     clear_bss();
-    let table = mmu::init_boot_table(va_offset);
+    let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
 
     // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
     let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
