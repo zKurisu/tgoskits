@@ -7,3 +7,4 @@ edition = { workspace = true }
 log = { workspace = true }
 buddy_system_allocator = "0.10"
 sparreal-macros = { workspace = true }
+memory_addr = { workspace = true }

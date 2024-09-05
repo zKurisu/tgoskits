@@ -6,6 +6,7 @@ pub mod aarch64;
 mod table;
 
 pub use table::*;
+pub use memory_addr::*;
 
 
 /// The error type for page table operation failures.

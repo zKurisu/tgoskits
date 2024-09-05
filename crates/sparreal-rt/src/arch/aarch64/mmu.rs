@@ -1,10 +1,8 @@
 use core::{alloc::Layout, arch::asm, cell::UnsafeCell, ptr::NonNull, sync::atomic::AtomicU64};
 
+use aarch64::{DescriptorAttr, PTE};
 use aarch64_cpu::{asm::barrier, registers::*};
-use page_table::{
-    aarch64::{flush_tlb, DescriptorAttr, PTE},
-    Access, PhysAddr, VirtAddr,
-};
+use page_table::*;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::KernelConfig;
@@ -40,7 +38,8 @@ pub unsafe fn init_boot_table(va_offset: usize) -> u64 {
     let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
     let kernel_lma = NonNull::new_unchecked(_skernel as *mut u8);
 
-    let mut access = BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);
+    let mut access =
+        BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);
 
     let mut table = PageTableRef::try_new(&mut access).unwrap();
 

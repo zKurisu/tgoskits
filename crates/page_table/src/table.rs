@@ -1,7 +1,7 @@
 use core::{alloc::Layout, fmt::Debug, marker::PhantomData, ptr::NonNull, usize};
 
 use log::{error, trace};
-use memory_addr::is_aligned;
+use memory_addr::{is_aligned, MemoryAddr};
 pub use memory_addr::{pa, va, PhysAddr, VirtAddr};
 
 use crate::{PagingError, PagingResult};

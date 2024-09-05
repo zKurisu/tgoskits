@@ -1,5 +1,28 @@
+use memory_addr::{PhysAddr, VirtAddr};
+
 pub trait Platform: Sync + Send {
     fn wait_for_interrupt();
+}
+
+pub trait Memory {
+    fn map_region(
+        virt: VirtAddr,
+        phys: PhysAddr,
+        attributes: &[PageAttribute],
+    ) -> Result<(), PageError>;
+}
+
+pub enum PageAttribute {
+    Read,
+    Write,
+    Device,
+    Execute,
+    NonCache,
+}
+
+pub enum PageError {
+    NoMemory,
+    Other,
 }
 
 // #[macro_export]

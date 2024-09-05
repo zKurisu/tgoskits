@@ -22,8 +22,8 @@ extern "C" {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
-    clear_bss();
 
+    clear_bss();
     let table = mmu::init_boot_table(va_offset);
 
     // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
@@ -50,18 +50,19 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
+    asm!("MOV x20, {}", in(reg) dtb_addr);
     asm!("
     ADD  sp, sp, {offset}
-    ADD  x30, x30, {offset}
+    // ADD  x30, x30, {offset}
     MOV      x0,  {offset}
-    MOV      x1, x19
+    MOV      x1,  x20
     LDR      x8, =__rust_main_after_mmu
     BLR      x8
     B       .
     ", 
     offset = in(reg) va_offset,
-    );
-    unreachable!()
+    options(noreturn)
+    )
 }
 
 #[no_mangle]
@@ -71,7 +72,7 @@ unsafe extern "C" fn __rust_main_after_mmu(va_offset: usize, dtb_addr: usize) ->
 
     let cfg = KernelConfig { dtb_addr };
 
-    kernel().run(cfg);
+    kernel().run(cfg)
 }
 
 unsafe fn clear_bss() {

@@ -27,15 +27,8 @@ where
     /// # Safety
     ///
     /// 1. BSS section should be zeroed.
+    /// 2. If has MMU, it should be enabled.
     pub unsafe fn run(&self, cfg: KernelConfig) -> ! {
-    //     self.mmu.enable(&cfg);
-    //     asm!(
-    //         "
-    // LDR      x8, =__sparreal_rt_main
-    // BLR      x8
-    // B       .
-    //     "
-    //     );
         app_main();
         loop {
             P::wait_for_interrupt();
