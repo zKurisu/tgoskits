@@ -14,7 +14,7 @@ pub fn va_offset() -> usize {
     unsafe { VA_OFFSET }
 }
 
-pub unsafe fn boot_init<T: PageTable>(
+pub unsafe fn boot_init<T: PageTableRefFn>(
     va_offset: usize,
     dtb_addr: NonNull<u8>,
     mut heap_begin_lma: NonNull<u8>,

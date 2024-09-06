@@ -1,15 +1,7 @@
 #![no_std]
 
-use core::{
-    alloc::Layout,
-    cell::{RefMut, UnsafeCell},
-    fmt::Debug,
-    marker::PhantomData,
-    ptr::{slice_from_raw_parts, NonNull},
-    slice::from_raw_parts_mut,
-};
+use core::{alloc::Layout, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
-use log::trace;
 pub use memory_addr::*;
 
 /// The error type for page table operation failures.
@@ -33,7 +25,17 @@ pub type PagingResult<T = ()> = Result<T, PagingError>;
 
 pub trait Access: 'static {
     const VA_OFFSET: usize;
+    /// Alloc memory for a page table entry.
+    ///
+    /// # Safety
+    ///
+    /// should be deallocated by [`dealloc`].
     unsafe fn alloc(&mut self, layout: Layout) -> Option<PhysAddr>;
+    /// dealloc memory for a page table entry.
+    ///
+    /// # Safety
+    ///
+    /// ptr must be allocated by [`alloc`].
     unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: Layout);
     fn phys_to_virt<T>(&self, phys: PhysAddr) -> NonNull<T> {
         unsafe { NonNull::new_unchecked((phys.as_usize() + Self::VA_OFFSET) as *mut u8) }.cast()
@@ -137,6 +139,22 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
     const IDX_POW: usize = log2(LEN);
     const TABLE_SIZE: usize = LEN * size_of::<P>();
     const PTE_PADDR_OFFSET: usize = log2(P::PAGE_SIZE);
+
+    /// New page table and returns a reference to it.
+    ///
+    /// `level` is level of this page, should from 1 to up.
+    ///
+    /// # Panics
+    ///
+    /// Panics if level is not supported.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if allocating memory fails.
+    ///
+    /// # Safety
+    ///
+    /// table should be deallocated manually.
     pub unsafe fn new(
         level: usize,
         access: &'a mut A,
@@ -146,7 +164,7 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
         Ok(PageTableRef::from_addr(addr, level, access))
     }
 
-    unsafe fn from_ref(value: &'a [P; LEN], level: usize, access: &mut A) -> Self {
+    pub fn from_ref(value: &'a [P; LEN], level: usize, access: &mut A) -> Self {
         Self::from_addr(
             (value.as_ptr() as usize - A::VA_OFFSET).into(),
             level,
@@ -155,14 +173,6 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
     }
 
     fn index_of_table(&self, vaddr: VirtAddr) -> usize {
-        let sf = self.entry_size_shift();
-        let v = vaddr.as_usize() >> sf;
-        trace!(
-            "index_of_table: vaddr={:x}, sf={} -> {}",
-            vaddr.as_usize(),
-            sf,
-            v
-        );
         (vaddr.as_usize() >> self.entry_size_shift()) & (LEN - 1)
     }
     fn level_entry_size_shift(level: usize) -> usize {
@@ -199,19 +209,10 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
         }
     }
 
-    unsafe fn pte(&self, vaddr: VirtAddr) -> NonNull<P> {
-        let idx = self.index_of_table(vaddr);
-        trace!("pte idx: {}", idx);
-        NonNull::new_unchecked((self.addr.as_usize() + A::VA_OFFSET) as *mut P).add(idx)
-    }
-
-    unsafe fn next_table_or_create(&mut self, vaddr: VirtAddr) -> PagingResult<Self> {
-        let idx = self.index_of_table(vaddr);
+    unsafe fn next_table_or_create(&mut self, idx: usize) -> PagingResult<Self> {
         let pte = &mut self.as_slice_mut()[idx];
 
         if pte.valid() {
-            trace!("return pte index: {}", idx);
-
             return Ok(Self::from_addr(pte.paddr(), self.level - 1, unsafe {
                 &mut *self.access.get()
             }));
@@ -223,13 +224,7 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
                 p.is_block = false;
                 p.attributes = PageAttribute::Read;
             });
-            trace!(
-                "L({})  new L({}) modify: idx: {} {:?}",
-                self.level,
-                table.level,
-                idx,
-                pte
-            );
+
             Ok(table)
         }
     }
@@ -241,11 +236,12 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
     ) -> PagingResult<(&mut P, usize)> {
         let mut table = self.clone();
         while table.level > 0 {
-            let pte = table.pte(vaddr).as_mut();
+            let idx = table.index_of_table(vaddr);
+            let pte = &mut table.as_slice_mut()[idx];
             if table.level == level {
                 return Ok((pte, table.level));
             }
-            table = table.next_table_or_create(vaddr)?;
+            table = table.next_table_or_create(idx)?;
         }
         Err(PagingError::NotAligned)
     }
@@ -271,7 +267,6 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
             idx = table.index_of_table(vaddr);
             this_vaddr += table.entry_size() * idx;
             let pte = &mut table.as_slice_mut()[idx];
-            trace!("vaddr: {:#X}", this_vaddr);
 
             let cfg = pte.read();
             if cfg.is_block {
@@ -287,7 +282,7 @@ impl<'a, P: GenericPTE, const LEN: usize, A: Access> PageTableRef<'a, P, LEN, A>
     }
 
     pub fn walk<F: Fn(&WalkInfo)>(&self, f: F) {
-        self.walk_recursive(0.into(), 10000, Some(&f), None);
+        self.walk_recursive(0.into(), usize::MAX, Some(&f), None);
     }
 
     fn walk_recursive<F>(
@@ -343,10 +338,13 @@ pub struct WalkInfo {
 }
 
 impl<P: GenericPTE, const LEN: usize, A: Access> PageTableMap for PageTableRef<'_, P, LEN, A> {
-    unsafe fn map<'b>(&mut self, cfg: &MapConfig) -> PagingResult {
+    unsafe fn map(&mut self, cfg: &MapConfig) -> PagingResult {
         let align = 1 << Self::level_entry_size_shift(cfg.page_level);
-        assert!(cfg.vaddr.is_aligned(align as usize));
-        assert!(cfg.paddr.is_aligned_4k());
+        assert!(
+            cfg.vaddr.is_aligned(align as usize),
+            "vaddr must be aligned to {align:#X}"
+        );
+        assert!(cfg.paddr.is_aligned_4k(), "paddr must be aligned to 4K");
 
         let (entry, level) = self.get_entry_mut_or_create(cfg.vaddr, cfg.page_level)?;
         if entry.valid() {
@@ -363,7 +361,12 @@ impl<P: GenericPTE, const LEN: usize, A: Access> PageTableMap for PageTableRef<'
 }
 
 pub trait PageTableMap {
-    unsafe fn map<'a>(&mut self, cfg: &MapConfig) -> PagingResult;
+    /// Map a page or block of memory.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the memory is valid and that the page table is valid.
+    unsafe fn map(&mut self, cfg: &MapConfig) -> PagingResult;
 
     /// Map a contiguous virtual memory region to a contiguous physical memory
     /// region with the given mapping `flags`.
@@ -376,19 +379,24 @@ pub trait PageTableMap {
     /// if possible. Otherwise, it will map the region with 4K pages.
     ///
     /// [`Err(PagingError::NotAligned)`]: PagingError::NotAligned
-    unsafe fn map_region<'a>(&mut self, cfg: MapConfig) -> PagingResult {
+    fn map_region<'a>(&mut self, cfg: MapConfig) -> PagingResult {
         Ok(())
     }
 }
 
-pub trait PageTable: Sized + PageTableMap {
+pub trait PageTableRefFn: Sized + PageTableMap {
     type PTE: GenericPTE;
 
+    /// Create a new page table.
+    ///
+    /// # Safety
+    ///
+    /// Should be deallocated manually.
     unsafe fn new(access: &mut impl Access) -> Self;
 }
 
 const fn log2(value: usize) -> usize {
-    debug_assert!(value > 0, "Value must be positive and non-zero");
+    assert!(value > 0, "Value must be positive and non-zero");
 
     let mut v = value;
     let mut result = 0;

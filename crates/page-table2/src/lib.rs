@@ -129,12 +129,14 @@ mod test {
             let virt = 0xffff_ffff_0000_0000 + 1024 * 1024 * 1024;
             let phys = 0x1000;
 
-            table.map(&MapConfig {
-                vaddr: virt.into(),
-                paddr: phys.into(),
-                page_level: 2,
-                attrs: PageAttribute::Read | PageAttribute::Write,
-            });
+            table
+                .map(&MapConfig {
+                    vaddr: virt.into(),
+                    paddr: phys.into(),
+                    page_level: 2,
+                    attrs: PageAttribute::Read | PageAttribute::Write,
+                })
+                .unwrap();
 
             info!("created table");
 
