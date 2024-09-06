@@ -35,31 +35,33 @@ extern "C" {
     fn _stack_top();
 }
 
-struct BootTable {
-    table: PageTableRef,
-}
-impl mmu::PageTable for BootTable {
-    unsafe fn new(access: &mut impl mmu::Access) -> Self {
-        todo!()
-    }
+// struct BootTable {
+//     table: PageTableRef,
+// }
+// impl mmu::PageTable for BootTable {
+//     unsafe fn new(access: &mut impl mmu::Access) -> Self {
+//         todo!()
+//     }
 
-    unsafe fn map(
-        &mut self,
-        vaddr: VirtAddr,
-        paddr: PhysAddr,
-        page_size: usize,
-        attrs: impl Iterator<Item = mmu::PageAttribute>,
-        access: &mut impl mmu::Access,
-    ) -> mmu::PagingResult {
-        todo!()
-    }
-}
+//     unsafe fn map(
+//         &mut self,
+//         vaddr: VirtAddr,
+//         paddr: PhysAddr,
+//         page_size: usize,
+//         attrs: impl Iterator<Item = mmu::PageAttribute>,
+//         access: &mut impl mmu::Access,
+//     ) -> mmu::PagingResult {
+//         todo!()
+//     }
+    
+//     type PTE = PTE;
+// }
 
 pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
     let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
     let kernel_lma = NonNull::new_unchecked(_skernel as *mut u8);
 
-    mmu::boot_init::<BootTable>(va_offset, dtb_addr, heap_lma, kernel_lma);
+    // mmu::boot_init::<BootTable>(va_offset, dtb_addr, heap_lma, kernel_lma);
 
     let mut access =
         BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);

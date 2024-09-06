@@ -6,4 +6,15 @@ edition.workspace = true
 [dependencies]
 bitflags = "2.6"
 log = "0.4"
-memory_addr = "0.3"
+memory_addr = { workspace = true }
+page-table-interface = { workspace = true }
+
+[target.'cfg(any(target_arch = "aarch64", doc))'.dependencies]
+aarch64-cpu = "9.4"
+
+[target.'cfg(any(target_arch = "x86_64", doc))'.dependencies]
+x86_64 = "0.15"
+
+
+[dev-dependencies]
+env_logger = "0.11.5"

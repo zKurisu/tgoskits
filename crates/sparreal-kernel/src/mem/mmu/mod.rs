@@ -31,9 +31,6 @@ pub unsafe fn boot_init<T: PageTable>(
 
     let mut access =
         BeforeMMUPageAllocator::new(memory_begin as usize + memory_size / 2, memory_size / 2);
-
-
-
 }
 
 fn device_tree() -> Option<Fdt<'static>> {
@@ -68,24 +65,24 @@ impl BeforeMMUPageAllocator {
     }
 }
 
-impl Access for BeforeMMUPageAllocator {
-    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
-        let size = layout.size();
-        if self.iter + size > self.end {
-            return None;
-        }
-        let ptr = self.iter;
-        self.iter += size;
-        NonNull::new(ptr as *mut u8)
-    }
+// impl Access for BeforeMMUPageAllocator {
+//     unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
+//         let size = layout.size();
+//         if self.iter + size > self.end {
+//             return None;
+//         }
+//         let ptr = self.iter;
+//         self.iter += size;
+//         NonNull::new(ptr as *mut u8)
+//     }
 
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {}
+//     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {}
 
-    fn virt_to_phys<T>(&self, addr: NonNull<T>) -> usize {
-        addr.as_ptr() as usize
-    }
+//     fn virt_to_phys<T>(&self, addr: NonNull<T>) -> usize {
+//         addr.as_ptr() as usize
+//     }
 
-    fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
-        unsafe { NonNull::new_unchecked(phys as *mut T) }
-    }
-}
+//     fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
+//         unsafe { NonNull::new_unchecked(phys as *mut T) }
+//     }
+// }
