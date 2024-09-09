@@ -56,9 +56,9 @@ mod test {
                     &MapConfig {
                         vaddr,
                         paddr,
-                        page_level: 1,
                         attrs: PageAttribute::Read | PageAttribute::Write,
                     },
+                    1,
                     &mut access,
                 )
                 .unwrap();
@@ -83,9 +83,9 @@ mod test {
                     &MapConfig {
                         vaddr,
                         paddr,
-                        page_level: 2,
                         attrs: PageAttribute::Read | PageAttribute::Write,
                     },
+                    2,
                     &mut access,
                 )
                 .unwrap();
@@ -111,9 +111,9 @@ mod test {
                     &MapConfig {
                         vaddr,
                         paddr,
-                        page_level: 3,
                         attrs: PageAttribute::Read | PageAttribute::Write,
                     },
+                    3,
                     &mut access,
                 )
                 .unwrap();
@@ -145,9 +145,9 @@ mod test {
                     &MapConfig {
                         vaddr: virt.into(),
                         paddr: phys.into(),
-                        page_level: 2,
                         attrs: PageAttribute::Read | PageAttribute::Write,
                     },
+                    2,
                     &mut access,
                 )
                 .unwrap();
@@ -170,6 +170,61 @@ mod test {
             assert!(pte.is_some());
 
             assert!(pte.unwrap().paddr() == phys.into())
+        }
+    }
+
+    const BYTES_1G: usize = 1024 * 1024 * 1024;
+
+    #[test]
+    fn test_table_map_region() {
+        init();
+        unsafe {
+            let mut access = AcImpl;
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let va_offset = 0xffff_ff00_0000_0000;
+            let kernel = 0x4008_0000;
+
+            let kernel_p = VirtAddr::from(kernel);
+            let vphys_down = kernel_p.align_down(BYTES_1G);
+            let phys_down = PhysAddr::from(vphys_down.as_usize());
+            let virt_down = vphys_down + va_offset;
+
+            table
+                .map_region(
+                    MapConfig {
+                        vaddr: vphys_down,
+                        paddr: phys_down,
+                        attrs: PageAttribute::Read | PageAttribute::Write,
+                    },
+                    BYTES_1G,
+                    true,
+                    &mut access,
+                )
+                .unwrap();
+
+            table
+                .map_region(
+                    MapConfig {
+                        vaddr: virt_down,
+                        paddr: phys_down,
+                        attrs: PageAttribute::Read | PageAttribute::Write,
+                    },
+                    BYTES_1G,
+                    true,
+                    &mut access,
+                )
+                .unwrap();
+
+            info!("created table");
+
+            table.walk(
+                |info| {
+                    info!("L{} {:#X} {:?}", info.level, info.vaddr, info.pte);
+                },
+                &access,
+            );
+
+            info!("walk finish");
         }
     }
 }

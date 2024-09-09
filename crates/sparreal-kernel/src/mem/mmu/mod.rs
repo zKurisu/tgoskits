@@ -6,6 +6,8 @@ use core::{
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
+use super::BYTES_1G;
+
 static mut VA_OFFSET: usize = 0;
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
 static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
@@ -34,19 +36,34 @@ pub unsafe fn boot_init<T: PageTableMap>(
 
     let mut table = T::new(&mut access)?;
 
-    // table.map_region(
-    //     MapConfig {
-    //         vaddr: kernel_lma.as_ptr() as usize,
-    //         paddr: kernel_lma.as_ptr() as usize,
-    //         page_level: 1,
-    //         attrs: PageAttribute::Read | PageAttribute::Write,
-    //     },
-    //     &mut access,
-    // )?;
+    let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
+    let vphys_down = kernel_p.align_down(BYTES_1G);
+    let phys_down = PhysAddr::from(vphys_down.as_usize());
+    let virt_down = vphys_down + va_offset;
+
+    table.map_region(
+        MapConfig {
+            vaddr: virt_down,
+            paddr: phys_down,
+            attrs: PageAttribute::Read | PageAttribute::Write,
+        },
+        BYTES_1G,
+        true,
+        &mut access,
+    )?;
+
+    table.map_region(
+        MapConfig {
+            vaddr: vphys_down,
+            paddr: phys_down,
+            attrs: PageAttribute::Read | PageAttribute::Write,
+        },
+        BYTES_1G,
+        true,
+        &mut access,
+    )?;
 
     Ok(table)
-
-    // Err(PagingError::NoMemory)
 }
 
 fn device_tree() -> Option<Fdt<'static>> {

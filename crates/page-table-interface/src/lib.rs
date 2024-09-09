@@ -2,6 +2,7 @@
 
 use core::{alloc::Layout, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
+use log::{error, trace};
 pub use memory_addr::*;
 
 /// The error type for page table operation failures.
@@ -100,11 +101,7 @@ bitflags::bitflags! {
 pub struct MapConfig {
     pub vaddr: VirtAddr,
     pub paddr: PhysAddr,
-    /// range: `[1, MAX_LEVEL]`</br>
-    /// 1 => 4K</br>
-    /// 2 => 2M</br>
-    /// 3 => 1G
-    pub page_level: usize,
+
     pub attrs: PageAttribute,
 }
 /// A reference to a page table.
@@ -133,6 +130,10 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     const IDX_POW: usize = log2(LEN);
     const TABLE_SIZE: usize = LEN * size_of::<P>();
     const PTE_PADDR_OFFSET: usize = log2(P::PAGE_SIZE);
+
+    pub fn paddr(&self) -> PhysAddr {
+        self.addr
+    }
 
     /// New page table and returns a reference to it.
     ///
@@ -332,15 +333,20 @@ pub struct WalkInfo {
 impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
     for PageTableRef<'_, P, LEN, LEVEL>
 {
-    unsafe fn map(&mut self, cfg: &MapConfig, access: &mut impl Access) -> PagingResult {
-        let align = 1 << Self::level_entry_size_shift(cfg.page_level);
+    unsafe fn map(
+        &mut self,
+        cfg: &MapConfig,
+        page_level: usize,
+        access: &mut impl Access,
+    ) -> PagingResult {
+        let align = 1 << Self::level_entry_size_shift(page_level);
         assert!(
             cfg.vaddr.is_aligned(align as usize),
             "vaddr must be aligned to {align:#X}"
         );
         assert!(cfg.paddr.is_aligned_4k(), "paddr must be aligned to 4K");
 
-        let (entry, level) = self.get_entry_mut_or_create(cfg.vaddr, cfg.page_level, access)?;
+        let (entry, level) = self.get_entry_mut_or_create(cfg.vaddr, page_level, access)?;
         if entry.valid() {
             return Err(PagingError::AlreadyMapped);
         }
@@ -357,6 +363,10 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
         let table = Self::alloc_table(access)?;
         Ok(Self::from_addr(table, LEVEL))
     }
+
+    fn level_entry_size(&self, level: usize) -> usize {
+        1 << Self::level_entry_size_shift(level)
+    }
 }
 
 pub trait PageTableMap {
@@ -365,7 +375,31 @@ pub trait PageTableMap {
     /// # Safety
     ///
     /// The caller must ensure that the memory is valid and that the page table is valid.
-    unsafe fn map(&mut self, cfg: &MapConfig, access: &mut impl Access) -> PagingResult;
+    ///
+    /// `page_level` range: `[1, MAX_LEVEL]`</br>
+    /// 1 => 4K</br>
+    /// 2 => 2M</br>
+    /// 3 => 1G
+    unsafe fn map(
+        &mut self,
+        cfg: &MapConfig,
+        page_level: usize,
+        access: &mut impl Access,
+    ) -> PagingResult;
+
+    fn level_entry_size(&self, level: usize) -> usize;
+
+    fn detect_page_level(&self, vaddr: VirtAddr, size: usize) -> usize {
+        let max_level = 4;
+        for level in (0..max_level).rev() {
+            let page_size = self.level_entry_size(level);
+
+            if vaddr.is_aligned(page_size) && size >= page_size {
+                return level;
+            }
+        }
+        1
+    }
 
     /// Map a contiguous virtual memory region to a contiguous physical memory
     /// region with the given mapping `flags`.
@@ -378,7 +412,51 @@ pub trait PageTableMap {
     /// if possible. Otherwise, it will map the region with 4K pages.
     ///
     /// [`Err(PagingError::NotAligned)`]: PagingError::NotAligned
-    fn map_region(&mut self, cfg: MapConfig, access: &mut impl Access) -> PagingResult {
+    unsafe fn map_region(
+        &mut self,
+        cfg: MapConfig,
+        size: usize,
+        allow_block: bool,
+        access: &mut impl Access,
+    ) -> PagingResult {
+        let mut vaddr = cfg.vaddr;
+        let mut paddr = cfg.paddr;
+        let mut size = size;
+        trace!(
+            "map_region: [{:#x}, {:#x}) -> [{:#x}, {:#x}) {:?}",
+            vaddr,
+            vaddr + size,
+            paddr,
+            paddr + size,
+            cfg.attrs,
+        );
+        while size > 0 {
+            let page_level = if allow_block {
+                self.detect_page_level(vaddr, size)
+            } else {
+                1
+            };
+            let page_size = self.level_entry_size(page_level);
+            trace!("page_size: {page_size:#X}");
+            self.map(
+                &MapConfig {
+                    vaddr,
+                    paddr,
+                    attrs: cfg.attrs,
+                },
+                page_level,
+                access,
+            )
+            .inspect_err(|e| {
+                error!(
+                    "failed to map page: {:#x?}({:?}) -> {:#x?}, {:?}",
+                    vaddr, page_size, paddr, e
+                )
+            })?;
+            vaddr += page_size as usize;
+            paddr += page_size as usize;
+            size -= page_size as usize;
+        }
         Ok(())
     }
 

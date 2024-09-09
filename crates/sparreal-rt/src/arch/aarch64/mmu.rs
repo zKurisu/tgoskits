@@ -63,33 +63,34 @@ pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
     let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
     let kernel_lma = NonNull::new_unchecked(_skernel as *mut u8);
 
-    let paddr = mmu::boot_init::<BootTable>(va_offset, dtb_addr, heap_lma, kernel_lma);
+    let table = mmu::boot_init::<BootTable>(va_offset, dtb_addr, heap_lma, kernel_lma).unwrap();
+    
 
-    let mut access =
-        BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);
+    // let mut access =
+    //     BeforeMMUPageAllocator::new(heap_lma.as_ptr() as usize + 4096 * 32, 1024 * 4096);
 
-    let mut table = PageTableRef::try_new(&mut access).unwrap();
+    // let mut table = PageTableRef::try_new(&mut access).unwrap();
 
-    let virt_p = VirtAddr::from(kernel_lma.as_ptr() as usize).align_down(BYTES_1G);
-    let phys = PhysAddr::from(virt_p.as_usize());
-    let virt = virt_p + va_offset;
+    // let virt_p = VirtAddr::from(kernel_lma.as_ptr() as usize).align_down(BYTES_1G);
+    // let phys = PhysAddr::from(virt_p.as_usize());
+    // let virt = virt_p + va_offset;
 
-    let _ = table.map_region(
-        virt_p,
-        phys,
-        BYTES_1G,
-        DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
-        true,
-        &mut access,
-    );
-    let _ = table.map_region(
-        virt,
-        phys,
-        BYTES_1G,
-        DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
-        true,
-        &mut access,
-    );
+    // let _ = table.map_region(
+    //     virt_p,
+    //     phys,
+    //     BYTES_1G,
+    //     DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
+    //     true,
+    //     &mut access,
+    // );
+    // let _ = table.map_region(
+    //     virt,
+    //     phys,
+    //     BYTES_1G,
+    //     DescriptorAttr::new(AttrIndex::Normal as u64) | DescriptorAttr::UXN,
+    //     true,
+    //     &mut access,
+    // );
 
     MAIR_EL1.set(MAIR_VALUE);
 
