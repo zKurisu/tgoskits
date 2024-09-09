@@ -756,7 +756,6 @@ dependencies = [
  "log",
  "memory_addr",
  "page-table-interface",
- "page_table",
  "sparreal-macros",
 ]
 
@@ -776,6 +775,8 @@ dependencies = [
  "aarch64-cpu",
  "buddy_system_allocator",
  "log",
+ "page-table-interface",
+ "page-table2",
  "page_table",
  "sparreal-build",
  "sparreal-kernel",

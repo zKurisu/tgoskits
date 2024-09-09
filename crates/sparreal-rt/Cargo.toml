@@ -8,6 +8,9 @@ log = { workspace = true }
 sparreal-kernel = { workspace = true }
 page_table = { workspace = true }
 buddy_system_allocator = "0.10"
+page-table2 = { workspace = true }
+page-table-interface = { workspace = true }
+
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "9.4.0"

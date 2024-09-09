@@ -14,12 +14,12 @@ pub fn va_offset() -> usize {
     unsafe { VA_OFFSET }
 }
 
-pub unsafe fn boot_init<T: PageTableRefFn>(
+pub unsafe fn boot_init<T: PageTableMap>(
     va_offset: usize,
     dtb_addr: NonNull<u8>,
     mut heap_begin_lma: NonNull<u8>,
     kernel_lma: NonNull<u8>,
-) {
+) -> PagingResult<T> {
     VA_OFFSET = va_offset;
     DTB_ADDR = protect_dtb(dtb_addr, heap_begin_lma);
 
@@ -31,6 +31,22 @@ pub unsafe fn boot_init<T: PageTableRefFn>(
 
     let mut access =
         BeforeMMUPageAllocator::new(memory_begin as usize + memory_size / 2, memory_size / 2);
+
+    let mut table = T::new(&mut access)?;
+
+    // table.map_region(
+    //     MapConfig {
+    //         vaddr: kernel_lma.as_ptr() as usize,
+    //         paddr: kernel_lma.as_ptr() as usize,
+    //         page_level: 1,
+    //         attrs: PageAttribute::Read | PageAttribute::Write,
+    //     },
+    //     &mut access,
+    // )?;
+
+    Ok(table)
+
+    // Err(PagingError::NoMemory)
 }
 
 fn device_tree() -> Option<Fdt<'static>> {
@@ -65,24 +81,20 @@ impl BeforeMMUPageAllocator {
     }
 }
 
-// impl Access for BeforeMMUPageAllocator {
-//     unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
-//         let size = layout.size();
-//         if self.iter + size > self.end {
-//             return None;
-//         }
-//         let ptr = self.iter;
-//         self.iter += size;
-//         NonNull::new(ptr as *mut u8)
-//     }
+impl Access for BeforeMMUPageAllocator {
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<PhysAddr> {
+        let size = layout.size();
+        if self.iter + size > self.end {
+            return None;
+        }
+        let ptr = self.iter;
+        self.iter += size;
+        Some(ptr.into())
+    }
 
-//     unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {}
+    unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: Layout) {}
 
-//     fn virt_to_phys<T>(&self, addr: NonNull<T>) -> usize {
-//         addr.as_ptr() as usize
-//     }
-
-//     fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
-//         unsafe { NonNull::new_unchecked(phys as *mut T) }
-//     }
-// }
+    fn va_offset(&self) -> usize {
+        0
+    }
+}
