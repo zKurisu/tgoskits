@@ -1,6 +1,6 @@
 #![no_std]
 
-use core::{alloc::Layout, cell::UnsafeCell, fmt::Debug, marker::PhantomData, ptr::NonNull};
+use core::{alloc::Layout, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
 use log::{error, trace};
 pub use memory_addr::*;
@@ -101,7 +101,6 @@ bitflags::bitflags! {
 pub struct MapConfig {
     pub vaddr: VirtAddr,
     pub paddr: PhysAddr,
-
     pub attrs: PageAttribute,
 }
 /// A reference to a page table.
@@ -201,6 +200,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     unsafe fn next_table_or_create(
         &mut self,
         idx: usize,
+        cfg: &MapConfig,
         access: &mut impl Access,
     ) -> PagingResult<Self> {
         let pte = &mut self.as_slice_mut(access)[idx];
@@ -213,7 +213,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
             pte.modify(|p| {
                 p.paddr = ptr;
                 p.is_block = false;
-                p.attributes = PageAttribute::Read;
+                p.attributes = cfg.attrs;
             });
 
             Ok(table)
@@ -222,18 +222,18 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
 
     unsafe fn get_entry_mut_or_create(
         &mut self,
-        vaddr: VirtAddr,
+        cfg: &MapConfig,
         level: usize,
         access: &mut impl Access,
     ) -> PagingResult<(&mut P, usize)> {
         let mut table = self.clone();
         while table.level > 0 {
-            let idx = table.index_of_table(vaddr);
+            let idx = table.index_of_table(cfg.vaddr);
             let pte = &mut table.as_slice_mut(access)[idx];
             if table.level == level {
                 return Ok((pte, table.level));
             }
-            table = table.next_table_or_create(idx, access)?;
+            table = table.next_table_or_create(idx, cfg, access)?;
         }
         Err(PagingError::NotAligned)
     }
@@ -273,7 +273,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         None
     }
 
-    pub fn walk<F: Fn(&WalkInfo)>(&self, f: F, access: &impl Access) {
+    pub fn walk<F: Fn(&WalkInfo<P>)>(&self, f: F, access: &impl Access) {
         self.walk_recursive(0.into(), usize::MAX, Some(&f), None, access);
     }
 
@@ -286,7 +286,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         access: &impl Access,
     ) -> Option<()>
     where
-        F: Fn(&WalkInfo),
+        F: Fn(&WalkInfo<P>),
     {
         let start_vaddr_usize: usize = start_vaddr.into();
         let mut n = 0;
@@ -302,6 +302,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
                     vaddr,
                     level: self.level,
                     pte,
+                    entry: entry.clone(),
                 };
 
                 if let Some(func) = pre_func {
@@ -323,11 +324,11 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         Some(())
     }
 }
-
-pub struct WalkInfo {
+pub struct WalkInfo<P: GenericPTE> {
     pub level: usize,
     pub vaddr: VirtAddr,
     pub pte: PTEConfig,
+    pub entry: P,
 }
 
 impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
@@ -346,7 +347,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
         );
         assert!(cfg.paddr.is_aligned_4k(), "paddr must be aligned to 4K");
 
-        let (entry, level) = self.get_entry_mut_or_create(cfg.vaddr, page_level, access)?;
+        let (entry, level) = self.get_entry_mut_or_create(cfg, page_level, access)?;
         if entry.valid() {
             return Err(PagingError::AlreadyMapped);
         }

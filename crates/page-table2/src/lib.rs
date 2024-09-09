@@ -194,7 +194,7 @@ mod test {
                     MapConfig {
                         vaddr: vphys_down,
                         paddr: phys_down,
-                        attrs: PageAttribute::Read | PageAttribute::Write,
+                        attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
                     },
                     BYTES_1G,
                     true,
@@ -207,7 +207,7 @@ mod test {
                     MapConfig {
                         vaddr: virt_down,
                         paddr: phys_down,
-                        attrs: PageAttribute::Read | PageAttribute::Write,
+                        attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
                     },
                     BYTES_1G,
                     true,
@@ -219,7 +219,7 @@ mod test {
 
             table.walk(
                 |info| {
-                    info!("L{} {:#X} {:?}", info.level, info.vaddr, info.pte);
+                    info!("L{} {:#X} {:?}", info.level, info.vaddr, info.entry);
                 },
                 &access,
             );

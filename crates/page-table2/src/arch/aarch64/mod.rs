@@ -239,6 +239,7 @@ impl GenericPTE for PTE {
 impl Debug for PTE {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let pte = self.read();
-        write!(f, "PTE @{:#x}, attrs: {:?}", pte.paddr, pte.attributes)
+        let attr = DescriptorAttr::from_bits_retain(self.0);
+        write!(f, "PTE @{:#x}, attrs: {:?}", pte.paddr, attr)
     }
 }
