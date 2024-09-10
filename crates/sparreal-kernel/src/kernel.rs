@@ -2,13 +2,13 @@ use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull};
 
 use log::error;
 
-use crate::{ platform::app_main, Platform};
+use crate::{mem::MemoryManager, platform::app_main, Platform};
 
 pub struct Kernel<P>
 where
     P: Platform,
 {
-
+    mem: MemoryManager,
     _mark: PhantomData<P>,
 }
 
@@ -18,6 +18,7 @@ where
 {
     pub const fn new() -> Self {
         Self {
+            mem: MemoryManager::new(),
             _mark: PhantomData,
         }
     }
@@ -29,6 +30,7 @@ where
     /// 1. BSS section should be zeroed.
     /// 2. If has MMU, it should be enabled.
     pub unsafe fn run(&self, cfg: KernelConfig) -> ! {
+        self.mem.init(&cfg);
         app_main();
         loop {
             P::wait_for_interrupt();
@@ -46,5 +48,5 @@ where
 pub unsafe fn enable_mmu_then() {}
 
 pub struct KernelConfig {
-    pub dtb_addr: NonNull<u8>,
+    pub heap_start: NonNull<u8>,
 }

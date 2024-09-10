@@ -7,7 +7,7 @@ use aarch64_cpu::{asm::barrier, registers::*};
 use sparreal_kernel::KernelConfig;
 use tock_registers::interfaces::ReadWriteable;
 
-use crate::{kernel::kernel, mem::set_va_offset};
+use crate::kernel::kernel;
 
 use super::mmu;
 
@@ -64,11 +64,12 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 }
 
 #[no_mangle]
-unsafe extern "C" fn __rust_main_after_mmu(va_offset: usize, dtb_addr: usize) -> ! {
-    set_va_offset(va_offset);
-    let dtb_addr = NonNull::new_unchecked((dtb_addr + va_offset) as *mut u8);
+unsafe extern "C" fn __rust_main_after_mmu() -> ! {
+    let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
 
-    let cfg = KernelConfig { dtb_addr };
+    let cfg = KernelConfig {
+        heap_start: heap_lma,
+    };
 
     kernel().run(cfg)
 }

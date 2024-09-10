@@ -6,10 +6,11 @@ use core::{
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
+use crate::driver::device_tree::{get_device_tree, set_dtb_addr};
+
 use super::{BYTES_1G, BYTES_1M};
 
 static mut VA_OFFSET: usize = 0;
-static mut DTB_ADDR: Option<NonNull<u8>> = None;
 static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
 
 pub fn va_offset() -> usize {
@@ -23,7 +24,7 @@ pub unsafe fn boot_init<T: PageTableMap>(
     kernel_lma: NonNull<u8>,
 ) -> PagingResult<T> {
     VA_OFFSET = va_offset;
-    DTB_ADDR = protect_dtb(dtb_addr, heap_begin_lma);
+    set_dtb_addr(protect_dtb(dtb_addr, heap_begin_lma));
 
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
     let mut virt_equal = kernel_p.align_down(BYTES_1G);
@@ -75,7 +76,7 @@ pub unsafe fn boot_init<T: PageTableMap>(
 }
 
 unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
-    let fdt = device_tree()?;
+    let fdt = get_device_tree()?;
 
     let memory = fdt.memory().ok()?;
     let primory = memory.regions().next()?;
@@ -103,13 +104,6 @@ struct BootMapInfo {
     virt_equal: VirtAddr,
     phys: PhysAddr,
     size: usize,
-}
-
-fn device_tree() -> Option<Fdt<'static>> {
-    unsafe {
-        let dtb_addr = DTB_ADDR?;
-        Fdt::from_ptr(dtb_addr.as_ptr()).ok()
-    }
 }
 
 unsafe fn protect_dtb(dtb_addr: NonNull<u8>, mut heap_lma: NonNull<u8>) -> Option<NonNull<u8>> {
