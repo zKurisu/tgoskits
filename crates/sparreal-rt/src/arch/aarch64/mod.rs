@@ -6,6 +6,7 @@ mod trap;
 use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
+use page_table_interface::PhysAddr;
 use sparreal_kernel::Platform;
 
 pub struct PlatformImpl;
@@ -39,5 +40,10 @@ impl Platform for PlatformImpl {
                 asm!("tlbi vmalle1; dsb sy; isb")
             };
         }
+    }
+
+    fn get_kernel_page_table() -> Self::Page {
+        let paddr = TTBR1_EL1.get_baddr();
+        unsafe { mmu::PageTable::from_addr(PhysAddr::from(paddr as usize), 4) }
     }
 }

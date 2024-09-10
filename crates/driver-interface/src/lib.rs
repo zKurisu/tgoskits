@@ -6,6 +6,7 @@ extern crate alloc;
 
 pub use futures::future::BoxFuture;
 
+pub mod io;
 pub mod uart;
 
 pub type DriverResult<T = ()> = Result<T, DriverError>;

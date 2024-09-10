@@ -11,7 +11,7 @@ use crate::{
     Platform,
 };
 
-use super::{BYTES_1G, BYTES_1M};
+use super::{AllocatorRef, PhysToVirt, BYTES_1G, BYTES_1M, HEAP_ALLOCATOR};
 
 static mut VA_OFFSET: usize = 0;
 static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
@@ -70,6 +70,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
         boot_map_info.size,
         true,
         &mut access,
+        &|_| {},
     )?;
 
     // 恒等映射，用于mmu启动过程
@@ -82,6 +83,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
         boot_map_info.size,
         true,
         &mut access,
+        &|_| {},
     )?;
 
     Ok(table)
@@ -178,10 +180,34 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
         size,
         true,
         access,
+        &|_| {},
     )?;
 
     P::set_kernel_page_table(table);
     P::set_user_page_table(None);
 
     Ok(())
+}
+
+pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull<u8> {
+    let mut table = P::get_kernel_page_table();
+    let vaddr = paddr.to_virt();
+    let mut heap = HEAP_ALLOCATOR.lock();
+    let mut heap_mut = AllocatorRef::new(&mut heap);
+    let vptr = NonNull::new_unchecked(vaddr.as_mut_ptr());
+
+    let _ = table.map_region(
+        MapConfig {
+            vaddr,
+            paddr,
+            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
+        },
+        size,
+        true,
+        &mut heap_mut,
+        &|addr| {
+            P::flush_tlb(Some(vptr));
+        },
+    );
+    vptr
 }

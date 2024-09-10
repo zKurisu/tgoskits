@@ -7,13 +7,14 @@ use crate::{
     Platform,
 };
 
+type Module<T> = RwLock<Option<T>>;
+
 pub struct Kernel<P>
 where
     P: Platform,
 {
-    mem: MemoryManager<P>,
-    driver: RwLock<Option<DriverManager>>,
-    _mark: PhantomData<P>,
+    mem: Module<MemoryManager<P>>,
+    driver: Module<DriverManager<P>>,
 }
 
 impl<P> Kernel<P>
@@ -22,9 +23,8 @@ where
 {
     pub const fn new() -> Self {
         Self {
-            mem: MemoryManager::new(),
+            mem: RwLock::new(None),
             driver: RwLock::new(None),
-            _mark: PhantomData,
         }
     }
     /// Kernel entry point.
@@ -34,7 +34,7 @@ where
     /// 1. BSS section should be zeroed.
     /// 2. If has MMU, it should be enabled.
     pub unsafe fn preper(&self, cfg: &KernelConfig) {
-        self.mem.init(cfg);
+        self.new_memory_manager(cfg);
         self.new_driver_manager();
     }
     /// Kernel entry point.
@@ -54,19 +54,37 @@ where
             P::wait_for_interrupt();
         }
     }
-
+    fn new_memory_manager(&self, cfg: &KernelConfig) {
+        let mut m = self.mem.write();
+        if m.is_none() {
+            let mut manager = MemoryManager::new();
+            unsafe {
+                manager.init(cfg);
+            }
+            m.replace(manager);
+        }
+    }
     fn new_driver_manager(&self) {
+        let m = self.memory_manager();
         let mut driver = self.driver.write();
         if driver.is_none() {
-            driver.replace(DriverManager::new());
+            driver.replace(DriverManager::new(m));
         }
     }
 
-    pub fn driver_manager(&self) -> DriverManager {
+    pub fn driver_manager(&self) -> DriverManager<P> {
         self.driver
             .read()
             .as_ref()
             .expect("driver is not initialized")
+            .clone()
+    }
+
+    pub fn memory_manager(&self) -> MemoryManager<P> {
+        self.mem
+            .read()
+            .as_ref()
+            .expect("memory is not initialized")
             .clone()
     }
 

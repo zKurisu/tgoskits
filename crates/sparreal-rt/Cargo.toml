@@ -10,10 +10,12 @@ page-table = { workspace = true }
 page-table-interface = { workspace = true }
 driver-interface = { workspace = true }
 futures = { workspace = true, default-features = false, features = ["alloc"] }
+embedded-io = { workspace = true }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "9.4.0"
 tock-registers = { workspace = true }
+arm-pl011-rs = { workspace = true }
 
 
 [build-dependencies]

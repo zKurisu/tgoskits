@@ -1,20 +1,30 @@
+use core::ptr::NonNull;
+
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use driver_interface::*;
 use flat_device_tree::standard_nodes::Chosen;
+use uart::Driver;
 
-use crate::{executor, sync::RwLock};
+use crate::{executor, mem::MemoryManager, stdout, sync::RwLock, Platform};
 
 use super::device_tree::get_device_tree;
 
-#[derive(Clone)]
-pub struct DriverManager {
-    inner: Arc<RwLock<Manager>>,
+pub struct DriverManager<P: Platform> {
+    inner: Arc<RwLock<Manager<P>>>,
 }
 
-impl DriverManager {
-    pub fn new() -> Self {
+impl<P: Platform> Clone for DriverManager<P> {
+    fn clone(&self) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(Manager::new())),
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<P: Platform> DriverManager<P> {
+    pub fn new(mem: MemoryManager<P>) -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(Manager::new(mem))),
         }
     }
 
@@ -27,14 +37,16 @@ impl DriverManager {
     }
 }
 
-struct Manager {
+struct Manager<P: Platform> {
+    mem: MemoryManager<P>,
     register_uart: Vec<Box<dyn uart::Register>>,
     uart: BTreeMap<String, Box<dyn uart::Driver>>,
 }
 
-impl Manager {
-    const fn new() -> Self {
+impl<P: Platform> Manager<P> {
+    fn new(mem: MemoryManager<P>) -> Self {
         Self {
+            mem,
             register_uart: Vec::new(),
             uart: BTreeMap::new(),
         }
@@ -42,7 +54,7 @@ impl Manager {
 
     async fn init(&mut self) {
         if let Some(stdout) = self.probe_stdout().await {
-            self.uart.insert(stdout.name(), stdout);
+            stdout::set_stdout(stdout);
         }
     }
 
@@ -52,12 +64,23 @@ impl Manager {
         let stdout = chosen.stdout()?;
         let node = stdout.node();
         let caps = node.compatible()?;
-        let regs = node.reg();
 
         for one in caps.all() {
             for register in &self.register_uart {
                 if register.compatible_matched(one) {
-                    let config = uart::Config {};
+                    let reg = node.reg().next()?;
+                    let start = (reg.starting_address as usize).into();
+                    let size = reg.size?;
+                    let reg_base = self.mem.iomap(start, size);
+
+                    let config = uart::Config {
+                        reg: reg_base,
+                        baud_rate: 115200,
+                        clock_freq: 1,
+                        data_bits: uart::DataBits::Bits8,
+                        stop_bits: uart::StopBits::STOP1,
+                        parity: uart::Parity::None,
+                    };
                     let uart = register.probe(config).await.ok()?;
                     return Some(uart);
                 }

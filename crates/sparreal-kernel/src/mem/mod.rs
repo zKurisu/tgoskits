@@ -9,7 +9,7 @@ use core::{
 
 use buddy_system_allocator::{Heap, LockedHeap};
 use lock_api::MutexGuard;
-use memory_addr::PhysAddr;
+use memory_addr::{PhysAddr, VirtAddr};
 use mmu::va_offset;
 
 use crate::{
@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
+pub(crate) static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
 
 pub const BYTES_1K: usize = 1024;
 pub const BYTES_1M: usize = 1024 * BYTES_1K;
@@ -35,8 +35,26 @@ impl<T> VirtToPhys for NonNull<T> {
     }
 }
 
+pub(crate) trait PhysToVirt {
+    fn to_virt(&self) -> VirtAddr;
+}
+
+impl PhysToVirt for PhysAddr {
+    fn to_virt(&self) -> VirtAddr {
+        (self.as_usize() + va_offset()).into()
+    }
+}
+
 pub struct MemoryManager<P: Platform> {
     _marker: PhantomData<P>,
+}
+
+impl<P: Platform> Clone for MemoryManager<P> {
+    fn clone(&self) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl<P: Platform> MemoryManager<P> {
@@ -71,6 +89,14 @@ impl<P: Platform> MemoryManager<P> {
             let mut heap_mut = AllocatorRef::new(&mut heap);
             mmu::init_page_table::<P>(&mut heap_mut);
         }
+    }
+
+    pub fn iomap(&self, addr: PhysAddr, size: usize) -> NonNull<u8> {
+        #[cfg(feature = "mmu")]
+        let ptr = unsafe { mmu::iomap::<P>(addr, size) };
+        #[cfg(not(feature = "mmu"))]
+        let ptr = NonNull::new(addr.as_usize() as *mut u8).unwrap();
+        ptr
     }
 }
 

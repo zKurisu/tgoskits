@@ -418,6 +418,7 @@ pub trait PageTableFn {
         size: usize,
         allow_block: bool,
         access: &mut impl Access,
+        on_page_mapped: &impl Fn(VirtAddr),
     ) -> PagingResult {
         let mut vaddr = cfg.vaddr;
         let mut paddr = cfg.paddr;
@@ -453,6 +454,8 @@ pub trait PageTableFn {
                     vaddr, page_size, paddr, e
                 )
             })?;
+            on_page_mapped(vaddr);
+            
             vaddr += page_size as usize;
             paddr += page_size as usize;
             size -= page_size as usize;

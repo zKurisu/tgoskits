@@ -1,12 +1,50 @@
+use core::ptr::NonNull;
+
 use alloc::boxed::Box;
-use futures::future::BoxFuture;
+use futures::future::{BoxFuture, LocalBoxFuture};
 
-use crate::DriverResult;
+use crate::{io, DriverResult};
 
-pub trait Driver: super::DriverGeneric {}
+pub trait Driver: super::DriverGeneric + io::Write {}
 
 pub trait Register: super::RegisterGeneric {
-    fn probe(&self, config: Config) -> BoxFuture<DriverResult<Box<dyn Driver>>>;
+    fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<Box<dyn Driver>>>;
 }
 
-pub struct Config {}
+/// Word length.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum DataBits {
+    Bits5,
+    Bits6,
+    Bits7,
+    Bits8,
+}
+
+/// Parity bit.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Parity {
+    None,
+    Even,
+    Odd,
+}
+
+/// Stop bits.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StopBits {
+    #[doc = "1 stop bit"]
+    STOP1,
+    #[doc = "2 stop bits"]
+    STOP2,
+}
+
+pub struct Config {
+    pub reg: NonNull<u8>,
+    pub baud_rate: u32,
+    pub clock_freq: u32,
+    pub data_bits: DataBits,
+    pub stop_bits: StopBits,
+    pub parity: Parity,
+}
+
+unsafe impl Send for Config {}
+unsafe impl Sync for Config {}

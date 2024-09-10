@@ -7,6 +7,7 @@ pub trait Platform: Sync + Send {
     fn wait_for_interrupt();
     fn set_kernel_page_table(table: Self::Page);
     fn set_user_page_table(table: Option<Self::Page>);
+    fn get_kernel_page_table() -> Self::Page;
     fn flush_tlb(addr: Option<NonNull<u8>>);
 
     #[cfg(feature = "mmu")]
