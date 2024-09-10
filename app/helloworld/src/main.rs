@@ -13,10 +13,10 @@ extern crate sparreal_rt;
 fn main() {
     unsafe {
         let s = "hello world".to_string();
-
+        let st = s.as_str();
         // let a = *(dtb_addr as *const u8);
         // let b = a + 1;
 
-        assert_eq!(&s, "hello world");
+        assert_eq!(st, "hello world");
     }
 }

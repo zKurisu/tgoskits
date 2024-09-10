@@ -3,9 +3,9 @@ mod driver;
 mod mmu;
 mod trap;
 
-use core::arch::asm;
+use core::{arch::asm, ptr::NonNull};
 
-use aarch64_cpu::{asm::barrier, registers::*};
+use aarch64_cpu::registers::*;
 use sparreal_kernel::Platform;
 
 pub struct PlatformImpl;
@@ -19,8 +19,25 @@ impl Platform for PlatformImpl {
 
     fn set_kernel_page_table(table: Self::Page) {
         TTBR1_EL1.set_baddr(table.paddr().as_usize() as _);
+        Self::flush_tlb(None);
+    }
+
+    fn set_user_page_table(table: Option<Self::Page>) {
+        match table {
+            Some(tb) => TTBR0_EL1.set_baddr(tb.paddr().as_usize() as _),
+            None => TTBR0_EL1.set_baddr(0),
+        }
+        Self::flush_tlb(None);
+    }
+
+    fn flush_tlb(addr: Option<NonNull<u8>>) {
         unsafe {
-            asm!("tlbi vmalle1; dsb sy; isb");
+            if let Some(vaddr) = addr {
+                asm!("tlbi vaae1is, {}; dsb sy; isb", in(reg) vaddr.as_ptr() as usize)
+            } else {
+                // flush the entire TLB
+                asm!("tlbi vmalle1; dsb sy; isb")
+            };
         }
     }
 }

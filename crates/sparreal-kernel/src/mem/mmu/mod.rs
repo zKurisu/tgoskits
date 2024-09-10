@@ -165,19 +165,23 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     let mut table = P::Page::new(access)?;
+    let vaddr = (MEMORY_START + va_offset()).into();
+    let paddr = MEMORY_START.into();
+    let size = MEMORY_SIZE;
 
     table.map_region(
         MapConfig {
-            vaddr: (MEMORY_START + va_offset()).into(),
-            paddr: MEMORY_START.into(),
+            vaddr,
+            paddr,
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        MEMORY_SIZE,
+        size,
         true,
         access,
     )?;
 
     P::set_kernel_page_table(table);
+    P::set_user_page_table(None);
 
     Ok(())
 }
