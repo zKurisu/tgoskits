@@ -37,33 +37,38 @@ impl Manager {
     }
 
     fn init(&mut self) {
+        self.probe_stdout();
+    }
+
+    fn probe_stdout(&mut self) -> Option<()> {
         let fdt = get_device_tree().expect("no device tree found!");
-        let chosen = fdt.chosen().unwrap();
-        let stdout = chosen.stdout().unwrap();
-        let params = stdout.params();
+        let chosen = fdt.chosen().ok()?;
+        let stdout = chosen.stdout()?;
         let node = stdout.node();
-        let name = node.name;
-        let caps = node.compatible().unwrap();
+        let caps = node.compatible()?;
+        let regs = node.reg();         
+
         for one in caps.all() {
             for register in &self.register_uart {
-                if register.compatible_matched(one){
-                    let a = 0;
+                if register.compatible_matched(one) {
+                    let uart = register.probe();
                 }
             }
         }
 
-        let regs = node.reg();
-
-        for reg in regs {
-            let base = reg.starting_address;
-            let size = reg.size;
-        }
+        Some(())
     }
 }
 
-pub trait DriverRegisterUart: Driver {}
+pub trait Driver {}
 
-pub trait Driver {
+pub trait DriverUart: Driver {}
+
+pub trait DriverRegisterUart: DriverRegister {
+    fn probe(&self) -> Box<dyn DriverUart>;
+}
+
+pub trait DriverRegister {
     fn compatible(&self) -> Vec<String>;
 
     fn compatible_matched(&self, compatible: &str) -> bool {

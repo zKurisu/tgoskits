@@ -8,7 +8,7 @@ pub struct Kernel<P>
 where
     P: Platform,
 {
-    mem: MemoryManager,
+    mem: MemoryManager<P>,
     pub driver: DriverManager,
     _mark: PhantomData<P>,
 }

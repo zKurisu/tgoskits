@@ -6,18 +6,23 @@ use core::{
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
-use crate::driver::device_tree::{get_device_tree, set_dtb_addr};
+use crate::{
+    driver::device_tree::{get_device_tree, set_dtb_addr},
+    Platform,
+};
 
 use super::{BYTES_1G, BYTES_1M};
 
 static mut VA_OFFSET: usize = 0;
 static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
+static mut MEMORY_START: usize = 0;
+static mut MEMORY_SIZE: usize = 0;
 
 pub fn va_offset() -> usize {
     unsafe { VA_OFFSET }
 }
 
-pub unsafe fn boot_init<T: PageTableMap>(
+pub unsafe fn boot_init<T: PageTableFn>(
     va_offset: usize,
     dtb_addr: NonNull<u8>,
     mut heap_begin_lma: NonNull<u8>,
@@ -50,6 +55,9 @@ pub unsafe fn boot_init<T: PageTableMap>(
         boot_map_info.heap_start.as_ptr() as usize,
         boot_map_info.heap_size,
     );
+
+    MEMORY_START = boot_map_info.phys.into();
+    MEMORY_SIZE = boot_map_info.size;
 
     let mut table = T::new(&mut access)?;
 
@@ -151,4 +159,25 @@ impl Access for BeforeMMUPageAllocator {
     fn va_offset(&self) -> usize {
         0
     }
+}
+
+pub(crate) unsafe fn init_page_table<P: Platform>(
+    access: &mut impl Access,
+) -> Result<(), PagingError> {
+    let mut table = P::Page::new(access)?;
+
+    table.map_region(
+        MapConfig {
+            vaddr: (MEMORY_START + va_offset()).into(),
+            paddr: MEMORY_START.into(),
+            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+        },
+        MEMORY_SIZE,
+        true,
+        access,
+    )?;
+
+    P::set_kernel_page_table(table);
+
+    Ok(())
 }

@@ -1,14 +1,21 @@
 pub mod mmu;
 
-use core::ptr::NonNull;
+use core::{
+    alloc::GlobalAlloc,
+    marker::PhantomData,
+    ops::DerefMut,
+    ptr::{null_mut, NonNull},
+};
 
-use buddy_system_allocator::LockedHeap;
+use buddy_system_allocator::{Heap, LockedHeap};
+use lock_api::MutexGuard;
 use memory_addr::PhysAddr;
 use mmu::va_offset;
 
 use crate::{
     driver::device_tree::{self, get_device_tree},
-    KernelConfig,
+    sync::RwLock,
+    KernelConfig, Platform,
 };
 
 #[global_allocator]
@@ -28,11 +35,15 @@ impl<T> VirtToPhys for NonNull<T> {
     }
 }
 
-pub struct MemoryManager {}
+pub struct MemoryManager<P: Platform> {
+    _marker: PhantomData<P>,
+}
 
-impl MemoryManager {
+impl<P: Platform> MemoryManager<P> {
     pub const fn new() -> Self {
-        Self {}
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     pub unsafe fn init(&self, cfg: &KernelConfig) {
@@ -52,7 +63,53 @@ impl MemoryManager {
                 }
             }
         }
+        let mut heap = HEAP_ALLOCATOR.lock();
+        heap.init(start.as_ptr() as usize, size);
 
-        HEAP_ALLOCATOR.lock().init(start.as_ptr() as usize, size)
+        #[cfg(feature = "mmu")]
+        {
+            let mut heap_mut = AllocatorRef::new(&mut heap);
+            mmu::init_page_table::<P>(&mut heap_mut);
+        }
+    }
+}
+
+pub struct AllocatorRef<'a, G>
+where
+    G: DerefMut<Target = Heap<32>>,
+{
+    inner: &'a mut G,
+}
+
+impl<'a, G> AllocatorRef<'a, G>
+where
+    G: DerefMut<Target = Heap<32>>,
+{
+    fn new(inner: &'a mut G) -> Self {
+        Self { inner }
+    }
+}
+
+#[cfg(feature = "mmu")]
+impl<'a, G> page_table_interface::Access for AllocatorRef<'a, G>
+where
+    G: DerefMut<Target = Heap<32>>,
+{
+    fn va_offset(&self) -> usize {
+        va_offset()
+    }
+
+    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<PhysAddr> {
+        match self.inner.alloc(layout) {
+            Ok(addr) => Some((addr.as_ptr() as usize - va_offset()).into()),
+            Err(_) => None,
+        }
+    }
+
+    unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: core::alloc::Layout) {
+        self.inner.dealloc(
+            NonNull::new_unchecked((ptr.as_usize() + va_offset()) as *mut u8),
+            layout,
+        );
     }
 }

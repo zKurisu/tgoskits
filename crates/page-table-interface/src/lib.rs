@@ -24,7 +24,7 @@ pub enum PagingError {
 /// The specialized `Result` type for page table operations.
 pub type PagingResult<T = ()> = Result<T, PagingError>;
 
-pub trait Access: 'static {
+pub trait Access {
     fn va_offset(&self) -> usize;
     /// Alloc memory for a page table entry.
     ///
@@ -331,7 +331,7 @@ pub struct WalkInfo<P: GenericPTE> {
     pub entry: P,
 }
 
-impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
+impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableFn
     for PageTableRef<'_, P, LEN, LEVEL>
 {
     unsafe fn map(
@@ -369,7 +369,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
     }
 }
 
-pub trait PageTableMap {
+pub trait PageTableFn {
     /// Map a page or block of memory.
     ///
     /// # Safety

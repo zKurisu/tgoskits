@@ -3,6 +3,10 @@ name = "sparreal-kernel"
 version = { workspace = true }
 edition = { workspace = true }
 
+[features]
+mmu = []
+
+
 [dependencies]
 log = { workspace = true }
 buddy_system_allocator = "0.10"

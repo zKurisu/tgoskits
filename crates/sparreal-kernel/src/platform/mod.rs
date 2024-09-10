@@ -1,15 +1,12 @@
 use memory_addr::{PhysAddr, VirtAddr};
+pub use page_table_interface::PageTableFn;
 
 pub trait Platform: Sync + Send {
     fn wait_for_interrupt();
-}
+    fn set_kernel_page_table(table: Self::Page);
 
-pub trait Memory {
-    fn map_region(
-        virt: VirtAddr,
-        phys: PhysAddr,
-        attributes: &[PageAttribute],
-    ) -> Result<(), PageError>;
+    #[cfg(feature = "mmu")]
+    type Page: PageTableFn;
 }
 
 pub enum PageAttribute {
