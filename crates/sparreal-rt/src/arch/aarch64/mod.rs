@@ -1,6 +1,7 @@
 mod boot;
-mod trap;
+mod driver;
 mod mmu;
+mod trap;
 
 use sparreal_kernel::Platform;
 
@@ -11,5 +12,3 @@ impl Platform for PlatformImpl {
         aarch64_cpu::asm::wfi();
     }
 }
-
-

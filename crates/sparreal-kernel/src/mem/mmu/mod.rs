@@ -24,7 +24,9 @@ pub unsafe fn boot_init<T: PageTableMap>(
     kernel_lma: NonNull<u8>,
 ) -> PagingResult<T> {
     VA_OFFSET = va_offset;
-    set_dtb_addr(protect_dtb(dtb_addr, heap_begin_lma));
+    let phys_dtb_addr = protect_dtb(dtb_addr, heap_begin_lma);
+
+    set_dtb_addr(phys_dtb_addr);
 
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
     let mut virt_equal = kernel_p.align_down(BYTES_1G);
@@ -41,6 +43,8 @@ pub unsafe fn boot_init<T: PageTableMap>(
     if let Some(info) = read_dev_tree_boot_map_info(va_offset) {
         boot_map_info = info;
     }
+
+    set_dtb_addr(phys_dtb_addr.map(|p| p.add(va_offset)));
 
     let mut access = BeforeMMUPageAllocator::new(
         boot_map_info.heap_start.as_ptr() as usize,

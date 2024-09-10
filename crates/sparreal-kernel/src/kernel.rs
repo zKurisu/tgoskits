@@ -2,13 +2,14 @@ use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull};
 
 use log::error;
 
-use crate::{mem::MemoryManager, platform::app_main, Platform};
+use crate::{driver::manager::DriverManager, mem::MemoryManager, platform::app_main, Platform};
 
 pub struct Kernel<P>
 where
     P: Platform,
 {
     mem: MemoryManager,
+    pub driver: DriverManager,
     _mark: PhantomData<P>,
 }
 
@@ -19,18 +20,26 @@ where
     pub const fn new() -> Self {
         Self {
             mem: MemoryManager::new(),
+            driver: DriverManager::new(),
             _mark: PhantomData,
         }
     }
-
     /// Kernel entry point.
     ///
     /// # Safety
     ///
     /// 1. BSS section should be zeroed.
     /// 2. If has MMU, it should be enabled.
+    pub unsafe fn preper_memory(&self, cfg: &KernelConfig) {
+        self.mem.init(cfg);
+    }
+    /// Kernel entry point.
+    ///
+    /// # Safety
+    ///
+    /// run after [`preper_memory`]
     pub unsafe fn run(&self, cfg: KernelConfig) -> ! {
-        self.mem.init(&cfg);
+        self.driver.init();
         app_main();
         loop {
             P::wait_for_interrupt();

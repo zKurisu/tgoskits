@@ -9,7 +9,7 @@ use tock_registers::interfaces::ReadWriteable;
 
 use crate::kernel::kernel;
 
-use super::mmu;
+use super::{driver::register_drivers, mmu};
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -48,12 +48,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
-    asm!("MOV x20, {}", in(reg) dtb_addr);
     asm!("
     ADD  sp, sp, {offset}
-    // ADD  x30, x30, {offset}
-    MOV      x0,  {offset}
-    MOV      x1,  x20
+    ADD  x30, x30, {offset}
     LDR      x8, =__rust_main_after_mmu
     BLR      x8
     B       .
@@ -70,7 +67,8 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     let cfg = KernelConfig {
         heap_start: heap_lma,
     };
-
+    kernel().preper_memory(&cfg);
+    register_drivers();
     kernel().run(cfg)
 }
 

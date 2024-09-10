@@ -1,5 +1,7 @@
 #![no_std]
 
+extern crate alloc;
+
 #[cfg_attr(target_arch = "aarch64", path = "arch/aarch64/mod.rs")]
 pub mod arch;
 mod consts;

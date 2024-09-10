@@ -742,6 +742,7 @@ version = "0.1.0"
 dependencies = [
  "buddy_system_allocator",
  "flat_device_tree",
+ "lock_api",
  "log",
  "memory_addr",
  "page-table-interface",
@@ -762,7 +763,6 @@ name = "sparreal-rt"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
- "buddy_system_allocator",
  "log",
  "page-table",
  "page-table-interface",

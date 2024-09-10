@@ -1,12 +1,15 @@
 #![no_std]
 
+extern crate alloc;
+
 mod kernel;
+
+pub mod driver;
 pub mod mem;
 pub mod platform;
-pub mod driver;
+pub mod sync;
 
 pub use kernel::*;
-pub use platform::Platform;
 use platform::app_main;
+pub use platform::Platform;
 pub use sparreal_macros::entry;
-
