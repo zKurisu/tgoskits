@@ -23,6 +23,8 @@ arm-pl011-rs = { version = "0.1" }
 tock-registers = "0.8"
 goblin = "0.8"
 lock_api = "0.4"
+futures = { version = "0.3", default-features = false }
+
 
 sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }

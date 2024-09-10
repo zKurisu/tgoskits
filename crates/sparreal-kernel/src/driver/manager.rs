@@ -1,24 +1,25 @@
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
 use driver_interface::*;
 use flat_device_tree::standard_nodes::Chosen;
 
-use crate::sync::RwLock;
+use crate::{executor, sync::RwLock};
 
 use super::device_tree::get_device_tree;
 
+#[derive(Clone)]
 pub struct DriverManager {
-    inner: RwLock<Manager>,
+    inner: Arc<RwLock<Manager>>,
 }
 
 impl DriverManager {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            inner: RwLock::new(Manager::new()),
+            inner: Arc::new(RwLock::new(Manager::new())),
         }
     }
 
-    pub fn init(&self) {
-        self.inner.write().init();
+    pub async fn init(&self) {
+        self.inner.write().init().await;
     }
 
     pub fn register_uart(&self, register: impl uart::Register + 'static) {
@@ -39,13 +40,13 @@ impl Manager {
         }
     }
 
-    fn init(&mut self) {
-        if let Some(stdout) = self.probe_stdout() {
+    async fn init(&mut self) {
+        if let Some(stdout) = self.probe_stdout().await {
             self.uart.insert(stdout.name(), stdout);
         }
     }
 
-    fn probe_stdout(&mut self) -> Option<Box<dyn uart::Driver>> {
+    async fn probe_stdout(&mut self) -> Option<Box<dyn uart::Driver>> {
         let fdt = get_device_tree().expect("no device tree found!");
         let chosen = fdt.chosen().ok()?;
         let stdout = chosen.stdout()?;
@@ -57,7 +58,7 @@ impl Manager {
             for register in &self.register_uart {
                 if register.compatible_matched(one) {
                     let config = uart::Config {};
-                    let uart = register.probe(config).ok()?;
+                    let uart = register.probe(config).await.ok()?;
                     return Some(uart);
                 }
             }

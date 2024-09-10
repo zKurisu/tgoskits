@@ -67,7 +67,7 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     let cfg = KernelConfig {
         heap_start: heap_lma,
     };
-    kernel().preper_memory(&cfg);
+    kernel().preper(&cfg);
     register_drivers();
     kernel().run(cfg)
 }

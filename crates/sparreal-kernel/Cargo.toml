@@ -16,3 +16,4 @@ page-table-interface = { workspace = true }
 flat_device_tree = { workspace = true }
 lock_api = { workspace = true }
 driver-interface = { workspace = true }
+pasts = { version = "0.14", default-features = false }

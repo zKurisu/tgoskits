@@ -72,7 +72,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
         &mut access,
     )?;
 
-    /// 恒等映射，用于mmu启动过程
+    // 恒等映射，用于mmu启动过程
     table.map_region(
         MapConfig {
             vaddr: boot_map_info.virt_equal,

@@ -6,6 +6,7 @@ use alloc::{
 };
 
 use driver_interface::*;
+use futures::prelude::*;
 use sparreal_kernel::driver::{self};
 
 use crate::kernel;
@@ -23,8 +24,12 @@ impl DriverGeneric for DriverPl011 {
 }
 
 impl uart::Register for RegisterPl011 {
-    fn probe(&self, config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
-        Ok(Box::new(DriverPl011 {}))
+    fn probe(&self, config: uart::Config) -> BoxFuture<DriverResult<Box<dyn uart::Driver>>> {
+        async {
+            let b: Box<dyn uart::Driver> = Box::new(DriverPl011 {});
+            Ok(b)
+        }
+        .boxed()
     }
 }
 
@@ -35,5 +40,5 @@ impl RegisterGeneric for RegisterPl011 {
 }
 
 pub unsafe fn register_drivers() {
-    kernel().driver.register_uart(RegisterPl011 {});
+    kernel().driver_manager().register_uart(RegisterPl011 {});
 }

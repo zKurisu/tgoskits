@@ -4,6 +4,8 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 extern crate alloc;
 
+pub use futures::future::BoxFuture;
+
 pub mod uart;
 
 pub type DriverResult<T = ()> = Result<T, DriverError>;
