@@ -15,3 +15,4 @@ memory_addr = { workspace = true }
 page-table-interface = { workspace = true }
 flat_device_tree = { workspace = true }
 lock_api = { workspace = true }
+driver-interface = { workspace = true }

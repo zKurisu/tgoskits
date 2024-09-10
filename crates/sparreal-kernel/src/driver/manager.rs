@@ -1,4 +1,5 @@
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, vec::Vec};
+use driver_interface::*;
 use flat_device_tree::standard_nodes::Chosen;
 
 use crate::sync::RwLock;
@@ -20,63 +21,48 @@ impl DriverManager {
         self.inner.write().init();
     }
 
-    pub fn register_uart(&self, register: impl DriverRegisterUart + 'static) {
+    pub fn register_uart(&self, register: impl uart::Register + 'static) {
         self.inner.write().register_uart.push(Box::new(register));
     }
 }
 
 struct Manager {
-    register_uart: Vec<Box<dyn DriverRegisterUart>>,
+    register_uart: Vec<Box<dyn uart::Register>>,
+    uart: BTreeMap<String, Box<dyn uart::Driver>>,
 }
 
 impl Manager {
     const fn new() -> Self {
         Self {
             register_uart: Vec::new(),
+            uart: BTreeMap::new(),
         }
     }
 
     fn init(&mut self) {
-        self.probe_stdout();
+        if let Some(stdout) = self.probe_stdout() {
+            self.uart.insert(stdout.name(), stdout);
+        }
     }
 
-    fn probe_stdout(&mut self) -> Option<()> {
+    fn probe_stdout(&mut self) -> Option<Box<dyn uart::Driver>> {
         let fdt = get_device_tree().expect("no device tree found!");
         let chosen = fdt.chosen().ok()?;
         let stdout = chosen.stdout()?;
         let node = stdout.node();
         let caps = node.compatible()?;
-        let regs = node.reg();         
+        let regs = node.reg();
 
         for one in caps.all() {
             for register in &self.register_uart {
                 if register.compatible_matched(one) {
-                    let uart = register.probe();
+                    let config = uart::Config {};
+                    let uart = register.probe(config).ok()?;
+                    return Some(uart);
                 }
             }
         }
 
-        Some(())
-    }
-}
-
-pub trait Driver {}
-
-pub trait DriverUart: Driver {}
-
-pub trait DriverRegisterUart: DriverRegister {
-    fn probe(&self) -> Box<dyn DriverUart>;
-}
-
-pub trait DriverRegister {
-    fn compatible(&self) -> Vec<String>;
-
-    fn compatible_matched(&self, compatible: &str) -> bool {
-        for one in self.compatible() {
-            if one.as_str().eq(compatible) {
-                return true;
-            }
-        }
-        false
+        None
     }
 }

@@ -274,6 +274,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fd119d74b830634cea2a0f58bbd0d54540518a14397557951e79340abc28c0"
 
 [[package]]
+name = "driver-interface"
+version = "0.1.0"
+
+[[package]]
 name = "env_filter"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -741,6 +745,7 @@ name = "sparreal-kernel"
 version = "0.1.0"
 dependencies = [
  "buddy_system_allocator",
+ "driver-interface",
  "flat_device_tree",
  "lock_api",
  "log",
@@ -763,6 +768,7 @@ name = "sparreal-rt"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
+ "driver-interface",
  "log",
  "page-table",
  "page-table-interface",

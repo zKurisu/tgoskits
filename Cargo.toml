@@ -31,6 +31,7 @@ sparreal-build = { path = "crates/sparreal-build" }
 page-table = { path = "crates/page-table" }
 page-table-interface = { path = "crates/page-table-interface" }
 flat_device_tree = { path = "crates/flat_device_tree" }
+driver-interface = { path = "crates/driver-interface" }
 
 [workspace.package]
 version = "0.1.0"

@@ -5,8 +5,6 @@ use page_table_interface::{MapConfig, PageAttribute, PageTableFn};
 use sparreal_kernel::mem::mmu;
 use tock_registers::interfaces::ReadWriteable;
 
-use crate::KernelConfig;
-
 extern "C" {
     fn _skernel();
     fn _stack_top();
