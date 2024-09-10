@@ -4,7 +4,6 @@ use core::{
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
-use page_table::aarch64::flush_tlb;
 use sparreal_kernel::KernelConfig;
 use tock_registers::interfaces::ReadWriteable;
 

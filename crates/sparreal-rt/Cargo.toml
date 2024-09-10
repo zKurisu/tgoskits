@@ -6,7 +6,6 @@ edition = { workspace = true }
 [dependencies]
 log = { workspace = true }
 sparreal-kernel = { workspace = true }
-page_table = { workspace = true }
 buddy_system_allocator = "0.10"
 page-table2 = { workspace = true }
 page-table-interface = { workspace = true }

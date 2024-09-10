@@ -1,18 +1,11 @@
 use core::{alloc::Layout, arch::asm, cell::UnsafeCell, ptr::NonNull, sync::atomic::AtomicU64};
 
-use aarch64::{DescriptorAttr, PTE};
 use aarch64_cpu::{asm::barrier, registers::*};
-use page_table::*;
 use page_table_interface::{MapConfig, PageAttribute, PageTableMap};
 use sparreal_kernel::mem::mmu;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::KernelConfig;
-
-const BYTES_1G: usize = 1024 * 1024 * 1024;
-
-
-pub type PageTableRef = page_table::PageTableRef<PTE, 4>;
 
 extern "C" {
     fn _skernel();

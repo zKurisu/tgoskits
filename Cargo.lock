@@ -777,7 +777,6 @@ dependencies = [
  "log",
  "page-table-interface",
  "page-table2",
- "page_table",
  "sparreal-build",
  "sparreal-kernel",
  "tock-registers",
