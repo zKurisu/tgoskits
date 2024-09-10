@@ -25,58 +25,84 @@ pub unsafe fn boot_init<T: PageTableMap>(
     VA_OFFSET = va_offset;
     DTB_ADDR = protect_dtb(dtb_addr, heap_begin_lma);
 
-    let mut heap_start = heap_begin_lma.add(BYTES_1M);
-    let mut heap_size = BYTES_1M * 2;
-    let mut map_size = BYTES_1G;
-
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
-    let mut vphys_down = kernel_p.align_down(BYTES_1G);
-    let mut phys_down = PhysAddr::from(vphys_down.as_usize());
-    let mut virt_down = vphys_down + va_offset;
+    let mut virt_equal = kernel_p.align_down(BYTES_1G);
 
-    if let Some(fdt) = device_tree() {
-        let fdt = device_tree().unwrap();
-        let memory = fdt.memory().unwrap();
-        let primory = memory.regions().next().unwrap();
-        let memory_begin = NonNull::new_unchecked(primory.starting_address as *mut u8);
-        let memory_size = primory.size.unwrap();
-        heap_size = memory_size / 2;
-        heap_start = memory_begin.add(heap_size);
+    let mut boot_map_info = BootMapInfo {
+        virt: virt_equal + va_offset,
+        virt_equal,
+        phys: PhysAddr::from(virt_equal.as_usize()),
+        size: BYTES_1G,
+        heap_start: heap_begin_lma.add(BYTES_1M),
+        heap_size: BYTES_1M * 2,
+    };
 
-        // map primory memory.
-        vphys_down = (memory_begin.as_ptr() as usize).into();
-        phys_down = vphys_down.as_usize().into();
-        virt_down = vphys_down + va_offset;
-        map_size = memory_size;
+    if let Some(info) = read_dev_tree_boot_map_info(va_offset) {
+        boot_map_info = info;
     }
 
-    let mut access = BeforeMMUPageAllocator::new(heap_start.as_ptr() as usize, heap_size);
+    let mut access = BeforeMMUPageAllocator::new(
+        boot_map_info.heap_start.as_ptr() as usize,
+        boot_map_info.heap_size,
+    );
 
     let mut table = T::new(&mut access)?;
 
     table.map_region(
         MapConfig {
-            vaddr: virt_down,
-            paddr: phys_down,
+            vaddr: boot_map_info.virt,
+            paddr: boot_map_info.phys,
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        map_size,
+        boot_map_info.size,
         true,
         &mut access,
     )?;
 
+    /// 恒等映射，用于mmu启动过程
     table.map_region(
         MapConfig {
-            vaddr: vphys_down,
-            paddr: phys_down,
+            vaddr: boot_map_info.virt_equal,
+            paddr: boot_map_info.phys,
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        map_size,
+        boot_map_info.size,
         true,
         &mut access,
     )?;
 
     Ok(table)
+}
+
+unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
+    let fdt = device_tree()?;
+
+    let memory = fdt.memory().ok()?;
+    let primory = memory.regions().next()?;
+    let memory_begin = NonNull::new_unchecked(primory.starting_address as *mut u8);
+    let memory_size = primory.size?;
+    let heap_size = memory_size / 2;
+    let heap_start = memory_begin.add(heap_size);
+
+    let virt_equal = (memory_begin.as_ptr() as usize).into();
+
+    Some(BootMapInfo {
+        virt: virt_equal + va_offset,
+        virt_equal,
+        phys: virt_equal.as_usize().into(),
+        size: memory_size,
+        heap_start,
+        heap_size,
+    })
+}
+
+struct BootMapInfo {
+    heap_start: NonNull<u8>,
+    heap_size: usize,
+    virt: VirtAddr,
+    virt_equal: VirtAddr,
+    phys: PhysAddr,
+    size: usize,
 }
 
 fn device_tree() -> Option<Fdt<'static>> {
