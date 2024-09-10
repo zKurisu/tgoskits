@@ -361,8 +361,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableMap
     }
 
     unsafe fn new(access: &mut impl Access) -> PagingResult<Self> {
-        let table = Self::alloc_table(access)?;
-        Ok(Self::from_addr(table, LEVEL))
+        PageTableRef::new(LEVEL, access)
     }
 
     fn level_entry_size(&self, level: usize) -> usize {

@@ -6,7 +6,7 @@ use core::{
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
-use super::BYTES_1G;
+use super::{BYTES_1G, BYTES_1M};
 
 static mut VA_OFFSET: usize = 0;
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
@@ -25,29 +25,42 @@ pub unsafe fn boot_init<T: PageTableMap>(
     VA_OFFSET = va_offset;
     DTB_ADDR = protect_dtb(dtb_addr, heap_begin_lma);
 
-    let fdt = device_tree().unwrap();
-    let memory = fdt.memory().unwrap();
-    let primory = memory.regions().next().unwrap();
-    let memory_begin = primory.starting_address;
-    let memory_size = primory.size.unwrap();
-
-    let mut access =
-        BeforeMMUPageAllocator::new(memory_begin as usize + memory_size / 2, memory_size / 2);
-
-    let mut table = T::new(&mut access)?;
+    let mut heap_start = heap_begin_lma.add(BYTES_1M);
+    let mut heap_size = BYTES_1M * 2;
+    let mut map_size = BYTES_1G;
 
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
-    let vphys_down = kernel_p.align_down(BYTES_1G);
-    let phys_down = PhysAddr::from(vphys_down.as_usize());
-    let virt_down = vphys_down + va_offset;
+    let mut vphys_down = kernel_p.align_down(BYTES_1G);
+    let mut phys_down = PhysAddr::from(vphys_down.as_usize());
+    let mut virt_down = vphys_down + va_offset;
+
+    if let Some(fdt) = device_tree() {
+        let fdt = device_tree().unwrap();
+        let memory = fdt.memory().unwrap();
+        let primory = memory.regions().next().unwrap();
+        let memory_begin = NonNull::new_unchecked(primory.starting_address as *mut u8);
+        let memory_size = primory.size.unwrap();
+        heap_size = memory_size / 2;
+        heap_start = memory_begin.add(heap_size);
+
+        // map primory memory.
+        vphys_down = (memory_begin.as_ptr() as usize).into();
+        phys_down = vphys_down.as_usize().into();
+        virt_down = vphys_down + va_offset;
+        map_size = memory_size;
+    }
+
+    let mut access = BeforeMMUPageAllocator::new(heap_start.as_ptr() as usize, heap_size);
+
+    let mut table = T::new(&mut access)?;
 
     table.map_region(
         MapConfig {
             vaddr: virt_down,
             paddr: phys_down,
-            attrs: PageAttribute::Read | PageAttribute::Write,
+            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        BYTES_1G,
+        map_size,
         true,
         &mut access,
     )?;
@@ -56,9 +69,9 @@ pub unsafe fn boot_init<T: PageTableMap>(
         MapConfig {
             vaddr: vphys_down,
             paddr: phys_down,
-            attrs: PageAttribute::Read | PageAttribute::Write,
+            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        BYTES_1G,
+        map_size,
         true,
         &mut access,
     )?;
