@@ -12,8 +12,7 @@ extern "C" {
     fn _stack_top();
 }
 
-
-type BootTable = page_table_interface::PageTableRef<'static, page_table2::PTE, 512, 4>;
+type BootTable = page_table_interface::PageTableRef<'static, page_table::PTE, 512, 4>;
 
 pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
     let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
@@ -21,7 +20,7 @@ pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
 
     let table = mmu::boot_init::<BootTable>(va_offset, dtb_addr, heap_lma, kernel_lma).unwrap();
 
-    MAIR_EL1.set(page_table2::AttrIndex::mair_value());
+    MAIR_EL1.set(page_table::AttrIndex::mair_value());
 
     table.paddr().as_usize() as _
 }
