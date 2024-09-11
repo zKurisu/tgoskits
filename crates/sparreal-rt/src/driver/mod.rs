@@ -1,11 +1,10 @@
-use alloc::vec;
+use alloc::{vec, vec::Vec};
+use driver_interface::Register;
 
 use crate::kernel;
 
 mod uart;
 
-pub fn register_all() {
-    let registers = vec![uart::pl011::register()];
-
-    kernel::get().module_driver().register_all(registers);
+pub fn registers() -> Vec<Register> {
+    vec![uart::pl011::register()]
 }

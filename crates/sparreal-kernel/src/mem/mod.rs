@@ -1,7 +1,6 @@
 pub mod mmu;
 
 use core::{
-    alloc::GlobalAlloc,
     marker::PhantomData,
     ops::DerefMut,
     ptr::{null_mut, NonNull},

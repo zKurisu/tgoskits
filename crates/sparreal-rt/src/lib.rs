@@ -12,4 +12,4 @@ pub mod mem;
 
 pub use sparreal_kernel::*;
 
-pub use kernel::get as kernel;
+pub use kernel::kernel;

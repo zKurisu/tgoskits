@@ -1,21 +1,23 @@
-use crate::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::{
+    mem::MemoryManager,
+    stdout::Stdout,
+    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
+    time::Time,
+    Platform,
+};
 
-pub struct Module<T> {
-    inner: RwLock<Option<T>>,
+pub struct ModuleBase<P: Platform> {
+    pub memory: MemoryManager<P>,
+    pub time: Time<P>,
+    pub stdout: Stdout,
 }
 
-impl<T> Module<T> {
-    pub const fn uninit() -> Self {
+impl<P: Platform> Clone for ModuleBase<P> {
+    fn clone(&self) -> Self {
         Self {
-            inner: RwLock::new(None),
+            memory: self.memory.clone(),
+            time: self.time.clone(),
+            stdout: self.stdout.clone(),
         }
-    }
-
-    pub fn write(&self) -> RwLockWriteGuard<'_, Option<T>> {
-        self.inner.write()
-    }
-
-    pub fn read(&self) -> RwLockReadGuard<'_, Option<T>> {
-        self.inner.read()
     }
 }

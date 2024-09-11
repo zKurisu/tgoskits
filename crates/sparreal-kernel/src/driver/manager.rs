@@ -14,7 +14,7 @@ use flat_device_tree::{
 };
 use uart::Driver;
 
-use crate::{executor, mem::MemoryManager, stdout, sync::RwLock, Platform};
+use crate::{executor, mem::MemoryManager, module::ModuleBase, stdout, sync::RwLock, Platform};
 
 use super::device_tree::get_device_tree;
 
@@ -31,9 +31,9 @@ impl<P: Platform> Clone for DriverManager<P> {
 }
 
 impl<P: Platform> DriverManager<P> {
-    pub fn new(mem: MemoryManager<P>) -> Self {
+    pub fn new(module: ModuleBase<P>) -> Self {
         Self {
-            inner: Arc::new(RwLock::new(Manager::new(mem))),
+            inner: Arc::new(RwLock::new(Manager::new(module))),
         }
     }
 
@@ -57,16 +57,16 @@ impl<P: Platform> DriverManager<P> {
 }
 
 struct Manager<P: Platform> {
-    mem: MemoryManager<P>,
+    module: ModuleBase<P>,
     registers: BTreeMap<String, Register>,
     registed: BTreeSet<String>,
     uart: BTreeMap<String, Box<dyn uart::Driver>>,
 }
 
 impl<P: Platform> Manager<P> {
-    fn new(mem: MemoryManager<P>) -> Self {
+    fn new(module: ModuleBase<P>) -> Self {
         Self {
-            mem,
+            module,
             uart: BTreeMap::new(),
             registed: BTreeSet::new(),
             registers: BTreeMap::new(),
@@ -75,7 +75,7 @@ impl<P: Platform> Manager<P> {
 
     async fn init(&mut self) {
         if let Some(stdout) = self.probe_stdout().await {
-            stdout::set_stdout(stdout);
+            self.module.stdout.set(stdout);
         }
     }
 
@@ -104,7 +104,7 @@ impl<P: Platform> Manager<P> {
                         let reg = node.reg().next()?;
                         let start = (reg.starting_address as usize).into();
                         let size = reg.size?;
-                        let reg_base = self.mem.iomap(start, size);
+                        let reg_base = self.module.memory.iomap(start, size);
 
                         let clock_freq = if let Some(clk) = get_uart_clk(&node) {
                             clk

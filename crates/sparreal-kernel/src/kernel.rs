@@ -1,90 +1,73 @@
-use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull, time::Duration};
+use core::{arch::asm, fmt, marker::PhantomData, panic::PanicInfo, ptr::NonNull, time::Duration};
 
+use alloc::vec::Vec;
+use driver_interface::Register;
 use log::{error, info};
 
 use crate::{
-    driver::manager::DriverManager, executor, logger::init_boot_log, mem::MemoryManager,
-    module::Module, platform::app_main, sync::RwLock, time::Time, Platform,
+    driver::manager::DriverManager, executor,  mem::MemoryManager, module::ModuleBase, platform::app_main, stdout::Stdout, sync::RwLock, time::Time, Platform
 };
 
 pub struct Kernel<P>
 where
     P: Platform,
 {
-    mem: Module<MemoryManager<P>>,
-    driver: Module<DriverManager<P>>,
+    module_base: ModuleBase<P>,
+    driver: DriverManager<P>,
 }
 
 impl<P> Kernel<P>
 where
     P: Platform,
 {
-    pub const fn new() -> Self {
-        Self {
-            mem: Module::uninit(),
-            driver: Module::uninit(),
-        }
-    }
-    /// Kernel entry point.
+    /// New kernel and initialize memory.
     ///
     /// # Safety
     ///
     /// 1. BSS section should be zeroed.
     /// 2. If has MMU, it should be enabled.
-    pub unsafe fn preper(&self, cfg: &KernelConfig) {
-        self.new_memory_manager(cfg);
-        self.new_driver_manager();
+    /// 3. alloc can be used after this function.
+    pub unsafe fn new(cfg: KernelConfig) -> Self {
+        let mut memory = MemoryManager::new();
+        memory.init(&cfg);
+
+        let module_base = ModuleBase {
+            memory,
+            time: Time::new(),
+            stdout: Stdout::new(),
+        };
+
+        let driver = DriverManager::new(module_base.clone());
+        Self {
+            module_base,
+            driver,
+        }
     }
+
     /// Kernel entry point.
     ///
     /// # Safety
     ///
     /// run after [`preper`]
-    pub unsafe fn run(&self, cfg: KernelConfig) -> ! {
+    pub unsafe fn run(&self) -> ! {
         let driver_manager = self.module_driver();
 
         executor::block_on(async move {
             driver_manager.init().await;
         });
-        init_boot_log();
         info!("Welcome to sparreal!");
         app_main();
         loop {
             P::wait_for_interrupt();
         }
     }
-    fn new_memory_manager(&self, cfg: &KernelConfig) {
-        let mut m = self.mem.write();
-        if m.is_none() {
-            let mut manager = MemoryManager::new();
-            unsafe {
-                manager.init(cfg);
-            }
-            m.replace(manager);
-        }
-    }
-    fn new_driver_manager(&self) {
-        let m = self.module_memory();
-        let mut driver = self.driver.write();
-        if driver.is_none() {
-            driver.replace(DriverManager::new(m));
-        }
-    }
 
     pub fn module_driver(&self) -> DriverManager<P> {
-        self.driver
-            .read()
-            .as_ref()
-            .expect("driver is not initialized")
-            .clone()
+        self.driver.clone()
     }
 
     pub fn module_memory(&self) -> MemoryManager<P> {
-        self.mem
-            .read()
-            .as_ref()
-            .expect("memory is not initialized")
-            .clone()
+        self.module_base.memory.clone()
     }
 
     /// Global panic handler.
@@ -95,7 +78,11 @@ where
     }
 
     pub fn module_time(&self) -> Time<P> {
-        Time::new()
+        self.module_base.time.clone()
+    }
+
+    pub fn print(&self, args: fmt::Arguments){
+        self.module_base.stdout.print(args);
     }
 }
 

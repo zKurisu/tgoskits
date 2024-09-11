@@ -5,10 +5,7 @@ use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, LevelFilter, Log};
 use rgb::{Rgb, RGB8};
 
-use crate::{stdout::print, time::TimeSource};
-
-pub struct BootLogger {}
-unsafe impl Sync for BootLogger {}
+use crate::{time::TimeSource, Kernel, Platform};
 
 fn level_to_rgb(level: Level) -> RGB8 {
     match level {
@@ -48,22 +45,16 @@ macro_rules! format_record {
     }};
 }
 
-impl Log for BootLogger {
+impl<P: Platform> Log for Kernel<P> {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let _ = print(format_record!(record, Duration::from_secs(1)));
+            let duration = self.module_time().since_boot();
+            let _ = self.print(format_record!(record, duration));
         }
     }
-
     fn flush(&self) {}
-}
-
-static LOGGER_BOOT: BootLogger = BootLogger {};
-
-pub fn init_boot_log() {
-    let _ = log::set_logger(&LOGGER_BOOT).map(|()| log::set_max_level(LevelFilter::Trace));
 }
