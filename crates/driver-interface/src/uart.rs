@@ -8,8 +8,9 @@ use crate::{io, DriverResult};
 pub trait Driver: super::DriverGeneric + io::Write {}
 
 pub type BoxDriver = Box<dyn Driver>;
+pub type BoxRegister = Box<dyn Register>;
 
-pub trait Register: super::RegisterGeneric {
+pub trait Register {
     fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<BoxDriver>>;
 }
 

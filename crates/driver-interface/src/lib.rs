@@ -13,11 +13,19 @@ pub type DriverResult<T = ()> = Result<T, DriverError>;
 
 pub trait DriverGeneric {}
 
-pub trait RegisterGeneric {
-    fn name(&self) -> String;
-    fn compatible(&self) -> Vec<String>;
-    fn compatible_matched(&self, compatible: &str) -> bool {
-        for one in self.compatible() {
+pub struct Register {
+    pub name: String,
+    pub compatible: Vec<String>,
+    pub kind: RegisterKind,
+}
+
+pub enum RegisterKind {
+    Uart(uart::BoxRegister),
+}
+
+impl Register {
+    pub fn compatible_matched(&self, compatible: &str) -> bool {
+        for one in &self.compatible {
             if one.as_str().eq(compatible) {
                 return true;
             }

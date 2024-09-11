@@ -19,3 +19,4 @@ pub use kernel::*;
 use platform::app_main;
 pub use platform::Platform;
 pub use sparreal_macros::entry;
+

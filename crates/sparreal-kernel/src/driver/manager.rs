@@ -41,25 +41,35 @@ impl<P: Platform> DriverManager<P> {
         self.inner.write().init().await;
     }
 
-    pub fn register_uart(&self, register: impl uart::Register + 'static) {
-        self.inner.write().register_uart.push(Box::new(register));
+    pub fn register(&self, register: Register) {
+        self.inner
+            .write()
+            .registers
+            .insert(register.name.clone(), register);
+    }
+
+    pub fn register_all(&self, list: impl IntoIterator<Item = Register>) {
+        let mut g = self.inner.write();
+        for reg in list {
+            g.registers.insert(reg.name.clone(), reg);
+        }
     }
 }
 
 struct Manager<P: Platform> {
     mem: MemoryManager<P>,
-    register_uart: Vec<Box<dyn uart::Register>>,
-    uart: BTreeMap<String, Box<dyn uart::Driver>>,
+    registers: BTreeMap<String, Register>,
     registed: BTreeSet<String>,
+    uart: BTreeMap<String, Box<dyn uart::Driver>>,
 }
 
 impl<P: Platform> Manager<P> {
     fn new(mem: MemoryManager<P>) -> Self {
         Self {
             mem,
-            register_uart: Vec::new(),
             uart: BTreeMap::new(),
             registed: BTreeSet::new(),
+            registers: BTreeMap::new(),
         }
     }
 
@@ -83,36 +93,37 @@ impl<P: Platform> Manager<P> {
     async fn node_probe_uart(&mut self, node: FdtNode<'_, '_>) -> Option<uart::BoxDriver> {
         let caps = node.compatible()?;
         for one in caps.all() {
-            for register in &self.register_uart {
-                let name = register.name();
-
-                if self.registed.contains(&name) {
+            for register in self.registers.values() {
+                let name = &register.name;
+                if self.registed.contains(name) {
                     continue;
                 }
 
                 if register.compatible_matched(one) {
-                    let reg = node.reg().next()?;
-                    let start = (reg.starting_address as usize).into();
-                    let size = reg.size?;
-                    let reg_base = self.mem.iomap(start, size);
+                    if let RegisterKind::Uart(ref register) = register.kind {
+                        let reg = node.reg().next()?;
+                        let start = (reg.starting_address as usize).into();
+                        let size = reg.size?;
+                        let reg_base = self.mem.iomap(start, size);
 
-                    let clock_freq = if let Some(clk) = get_uart_clk(&node) {
-                        clk
-                    } else {
-                        continue;
-                    };
+                        let clock_freq = if let Some(clk) = get_uart_clk(&node) {
+                            clk
+                        } else {
+                            continue;
+                        };
 
-                    let config = uart::Config {
-                        reg: reg_base,
-                        baud_rate: 115200,
-                        clock_freq: clock_freq as _,
-                        data_bits: uart::DataBits::Bits8,
-                        stop_bits: uart::StopBits::STOP1,
-                        parity: uart::Parity::None,
-                    };
-                    let uart = register.probe(config).await.ok()?;
-                    self.registed.insert(name);
-                    return Some(uart);
+                        let config = uart::Config {
+                            reg: reg_base,
+                            baud_rate: 115200,
+                            clock_freq: clock_freq as _,
+                            data_bits: uart::DataBits::Bits8,
+                            stop_bits: uart::StopBits::STOP1,
+                            parity: uart::Parity::None,
+                        };
+                        let uart = register.probe(config).await.ok()?;
+                        self.registed.insert(name.clone());
+                        return Some(uart);
+                    }
                 }
             }
         }

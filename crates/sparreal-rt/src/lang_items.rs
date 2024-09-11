@@ -1,8 +1,8 @@
 use core::panic::PanicInfo;
 
-use crate::kernel::kernel;
+use crate::kernel::get;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    kernel().panic_handler(info)
+    get().panic_handler(info)
 }

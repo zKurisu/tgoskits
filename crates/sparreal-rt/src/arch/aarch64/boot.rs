@@ -7,9 +7,9 @@ use aarch64_cpu::{asm::barrier, registers::*};
 use sparreal_kernel::KernelConfig;
 use tock_registers::interfaces::ReadWriteable;
 
-use crate::kernel::kernel;
+use crate::kernel;
 
-use super::{driver::register_drivers, mmu};
+use super::mmu;
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -62,14 +62,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
-    let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
-
-    let cfg = KernelConfig {
-        heap_start: heap_lma,
-    };
-    kernel().preper(&cfg);
-    register_drivers();
-    kernel().run(cfg)
+    kernel::boot()
 }
 
 unsafe fn clear_bss() {

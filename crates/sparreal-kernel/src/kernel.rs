@@ -1,10 +1,10 @@
 use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull, time::Duration};
 
-use log::error;
+use log::{error, info};
 
 use crate::{
     driver::manager::DriverManager, executor, logger::init_boot_log, mem::MemoryManager,
-    module::Module, platform::app_main, sync::RwLock, time::Delay, Platform,
+    module::Module, platform::app_main, sync::RwLock, time::Time, Platform,
 };
 
 pub struct Kernel<P>
@@ -47,6 +47,7 @@ where
             driver_manager.init().await;
         });
         init_boot_log();
+        info!("Welcome to sparreal!");
         app_main();
         loop {
             P::wait_for_interrupt();
@@ -93,8 +94,8 @@ where
         unreachable!()
     }
 
-    pub fn module_delay(&self) -> Delay<P> {
-        Delay::new()
+    pub fn module_time(&self) -> Time<P> {
+        Time::new()
     }
 }
 

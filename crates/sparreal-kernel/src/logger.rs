@@ -1,10 +1,13 @@
+use core::time::Duration;
+
+use alloc::boxed::Box;
 use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, LevelFilter, Log};
 use rgb::{Rgb, RGB8};
 
-use crate::stdout::print;
+use crate::{stdout::print, time::TimeSource};
 
-pub struct BootLogger;
+pub struct BootLogger {}
 unsafe impl Sync for BootLogger {}
 
 fn level_to_rgb(level: Level) -> RGB8 {
@@ -28,14 +31,14 @@ fn level_icon(level: Level) -> &'static str {
 }
 
 macro_rules! format_record {
-    ($record:expr) => {{
+    ($record:expr, $d: expr) => {{
         format_args!(
             "{}",
             format_args!(
-                // "{} {:.3?} [{path}:{line}] {args}\n",
-                "{} [{path}:{line}] {args}\n",
+                "{} {:.3?} [{path}:{line}] {args}\n",
+                // "{} [{path}:{line}] {args}\n",
                 level_icon($record.level()),
-                // since_boot(),
+                $d,
                 path = $record.target(),
                 line = $record.line().unwrap_or(0),
                 args = $record.args()
@@ -52,7 +55,7 @@ impl Log for BootLogger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let _ = print(format_record!(record));
+            let _ = print(format_record!(record, Duration::from_secs(1)));
         }
     }
 
