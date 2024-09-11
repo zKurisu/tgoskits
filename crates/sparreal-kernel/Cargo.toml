@@ -19,3 +19,4 @@ driver-interface = { workspace = true }
 pasts = { version = "0.14", default-features = false }
 rgb = { workspace = true }
 ansi_rgb = { workspace = true }
+embedded-hal-async = { workspace = true }

@@ -1,19 +1,16 @@
-use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull};
+use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull, time::Duration};
 
 use log::error;
 
 use crate::{
     driver::manager::DriverManager, executor, logger::init_boot_log, mem::MemoryManager,
-    platform::app_main, sync::RwLock, time::Time, Platform,
+    module::Module, platform::app_main, sync::RwLock, time::Delay, Platform,
 };
-
-type Module<T> = RwLock<Option<T>>;
 
 pub struct Kernel<P>
 where
     P: Platform,
 {
-    time: Time<P>,
     mem: Module<MemoryManager<P>>,
     driver: Module<DriverManager<P>>,
 }
@@ -24,9 +21,8 @@ where
 {
     pub const fn new() -> Self {
         Self {
-            time: Time::new(),
-            mem: RwLock::new(None),
-            driver: RwLock::new(None),
+            mem: Module::uninit(),
+            driver: Module::uninit(),
         }
     }
     /// Kernel entry point.
@@ -45,7 +41,7 @@ where
     ///
     /// run after [`preper`]
     pub unsafe fn run(&self, cfg: KernelConfig) -> ! {
-        let driver_manager = self.driver_manager();
+        let driver_manager = self.module_driver();
 
         executor::block_on(async move {
             driver_manager.init().await;
@@ -67,14 +63,14 @@ where
         }
     }
     fn new_driver_manager(&self) {
-        let m = self.memory_manager();
+        let m = self.module_memory();
         let mut driver = self.driver.write();
         if driver.is_none() {
             driver.replace(DriverManager::new(m));
         }
     }
 
-    pub fn driver_manager(&self) -> DriverManager<P> {
+    pub fn module_driver(&self) -> DriverManager<P> {
         self.driver
             .read()
             .as_ref()
@@ -82,7 +78,7 @@ where
             .clone()
     }
 
-    pub fn memory_manager(&self) -> MemoryManager<P> {
+    pub fn module_memory(&self) -> MemoryManager<P> {
         self.mem
             .read()
             .as_ref()
@@ -96,9 +92,11 @@ where
         P::wait_for_interrupt();
         unreachable!()
     }
-}
 
-pub unsafe fn enable_mmu_then() {}
+    pub fn module_delay(&self) -> Delay<P> {
+        Delay::new()
+    }
+}
 
 pub struct KernelConfig {
     pub heap_start: NonNull<u8>,

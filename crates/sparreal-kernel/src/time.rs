@@ -1,18 +1,28 @@
+use embedded_hal_async::delay::DelayNs;
+
 use crate::Platform;
 use core::{future::Future, marker::PhantomData, time::Duration};
 
-pub struct Time<P: Platform> {
+pub struct Delay<P: Platform> {
     _marker: PhantomData<P>,
 }
 
-impl<P: Platform> Time<P> {
+impl<P: Platform> Clone for Delay<P> {
+    fn clone(&self) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<P: Platform> Delay<P> {
     pub const fn new() -> Self {
         Self {
             _marker: PhantomData,
         }
     }
 
-    pub fn delay(duration: Duration) -> impl Future<Output = ()> {
+    pub fn delay(&self, duration: Duration) -> impl Future<Output = ()> {
         let current_tick = P::current_ticks();
         let freq = P::tick_hz();
         let ticks = duration.as_nanos() * freq as u128 / 1_000_000_000;
@@ -23,10 +33,16 @@ impl<P: Platform> Time<P> {
         }
     }
 
-    pub fn since_boot() -> Duration {
+    pub fn since_boot(&self) -> Duration {
         let current_tick = P::current_ticks();
         let freq = P::tick_hz();
         Duration::from_nanos(current_tick * 1_000_000_000 / freq)
+    }
+}
+
+impl<P: Platform> DelayNs for Delay<P> {
+    async fn delay_ns(&mut self, ns: u32) {
+        Delay::delay(self, Duration::from_nanos(ns as _)).await
     }
 }
 

@@ -66,5 +66,5 @@ impl RegisterGeneric for RegisterPl011 {
 }
 
 pub unsafe fn register_drivers() {
-    kernel().driver_manager().register_uart(RegisterPl011 {});
+    kernel().module_driver().register_uart(RegisterPl011 {});
 }

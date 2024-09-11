@@ -166,7 +166,7 @@ impl Access for BeforeMMUPageAllocator {
 pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
-    let mut table = P::Page::new(access)?;
+    let mut table = P::Table::new(access)?;
     let vaddr = (MEMORY_START + va_offset()).into();
     let paddr = MEMORY_START.into();
     let size = MEMORY_SIZE;

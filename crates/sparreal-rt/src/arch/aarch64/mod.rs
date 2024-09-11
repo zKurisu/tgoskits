@@ -7,7 +7,7 @@ use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
 use page_table_interface::PhysAddr;
-use sparreal_kernel::Platform;
+use sparreal_kernel::{platform::Mmu, Platform};
 
 pub struct PlatformImpl;
 
@@ -16,14 +16,22 @@ impl Platform for PlatformImpl {
         aarch64_cpu::asm::wfi();
     }
 
-    type Page = mmu::PageTable;
+    fn current_ticks() -> u64 {
+        CNTPCT_EL0.get()
+    }
 
-    fn set_kernel_page_table(table: Self::Page) {
+    fn tick_hz() -> u64 {
+        CNTFRQ_EL0.get()
+    }
+}
+
+impl Mmu for PlatformImpl {
+    fn set_kernel_page_table(table: Self::Table) {
         TTBR1_EL1.set_baddr(table.paddr().as_usize() as _);
         Self::flush_tlb(None);
     }
 
-    fn set_user_page_table(table: Option<Self::Page>) {
+    fn set_user_page_table(table: Option<Self::Table>) {
         match table {
             Some(tb) => TTBR0_EL1.set_baddr(tb.paddr().as_usize() as _),
             None => TTBR0_EL1.set_baddr(0),
@@ -42,16 +50,10 @@ impl Platform for PlatformImpl {
         }
     }
 
-    fn get_kernel_page_table() -> Self::Page {
+    fn get_kernel_page_table() -> Self::Table {
         let paddr = TTBR1_EL1.get_baddr();
         unsafe { mmu::PageTable::from_addr(PhysAddr::from(paddr as usize), 4) }
     }
 
-    fn current_ticks() -> u64 {
-        CNTPCT_EL0.get()
-    }
-
-    fn tick_hz() -> u64 {
-        CNTFRQ_EL0.get()
-    }
+    type Table = mmu::PageTable;
 }
