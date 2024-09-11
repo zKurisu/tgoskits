@@ -1,8 +1,17 @@
 use core::ptr::NonNull;
 
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::String, sync::Arc, vec::Vec};
+use alloc::{
+    boxed::Box,
+    collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+    string::String,
+    sync::Arc,
+    vec::Vec,
+};
 use driver_interface::*;
-use flat_device_tree::standard_nodes::Chosen;
+use flat_device_tree::{
+    node::{CellSize, FdtNode},
+    standard_nodes::Chosen,
+};
 use uart::Driver;
 
 use crate::{executor, mem::MemoryManager, stdout, sync::RwLock, Platform};
@@ -41,6 +50,7 @@ struct Manager<P: Platform> {
     mem: MemoryManager<P>,
     register_uart: Vec<Box<dyn uart::Register>>,
     uart: BTreeMap<String, Box<dyn uart::Driver>>,
+    registed: BTreeSet<String>,
 }
 
 impl<P: Platform> Manager<P> {
@@ -49,6 +59,7 @@ impl<P: Platform> Manager<P> {
             mem,
             register_uart: Vec::new(),
             uart: BTreeMap::new(),
+            registed: BTreeSet::new(),
         }
     }
 
@@ -58,35 +69,64 @@ impl<P: Platform> Manager<P> {
         }
     }
 
-    async fn probe_stdout(&mut self) -> Option<Box<dyn uart::Driver>> {
+    async fn probe_stdout(&mut self) -> Option<io::BoxWrite> {
         let fdt = get_device_tree().expect("no device tree found!");
         let chosen = fdt.chosen().ok()?;
         let stdout = chosen.stdout()?;
         let node = stdout.node();
-        let caps = node.compatible()?;
+        if let Some(d) = self.node_probe_uart(node).await {
+            return Some(d);
+        }
+        None
+    }
 
+    async fn node_probe_uart(&mut self, node: FdtNode<'_, '_>) -> Option<uart::BoxDriver> {
+        let caps = node.compatible()?;
         for one in caps.all() {
             for register in &self.register_uart {
+                let name = register.name();
+
+                if self.registed.contains(&name) {
+                    continue;
+                }
+
                 if register.compatible_matched(one) {
                     let reg = node.reg().next()?;
                     let start = (reg.starting_address as usize).into();
                     let size = reg.size?;
                     let reg_base = self.mem.iomap(start, size);
 
+                    let clock_freq = if let Some(clk) = get_uart_clk(&node) {
+                        clk
+                    } else {
+                        continue;
+                    };
+
                     let config = uart::Config {
                         reg: reg_base,
                         baud_rate: 115200,
-                        clock_freq: 1,
+                        clock_freq: clock_freq as _,
                         data_bits: uart::DataBits::Bits8,
                         stop_bits: uart::StopBits::STOP1,
                         parity: uart::Parity::None,
                     };
                     let uart = register.probe(config).await.ok()?;
+                    self.registed.insert(name);
                     return Some(uart);
                 }
             }
         }
-
         None
     }
+}
+
+fn get_uart_clk(uart_node: &FdtNode<'_, '_>) -> Option<u64> {
+    let fdt = get_device_tree()?;
+    let clk = uart_node.property("clocks")?;
+    for phandle in clk.iter_cell_size(CellSize::One) {
+        if let Some(node) = fdt.find_phandle(phandle as _) {
+            return node.property("clock-frequency")?.as_usize().map(|c| c as _);
+        }
+    }
+    None
 }

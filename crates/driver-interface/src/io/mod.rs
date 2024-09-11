@@ -1,7 +1,11 @@
 use core::fmt;
 
+use alloc::boxed::Box;
+
 pub type IOError = embedded_io::ErrorKind;
 pub type IOResult<T = ()> = Result<T, IOError>;
+
+pub type BoxWrite = Box<dyn Write>;
 
 pub trait Write: Send + Sync {
     // Required methods

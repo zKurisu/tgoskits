@@ -199,6 +199,7 @@ mod test {
                     BYTES_1G,
                     true,
                     &mut access,
+                    &|_| {},
                 )
                 .unwrap();
 
@@ -212,6 +213,7 @@ mod test {
                     BYTES_1G,
                     true,
                     &mut access,
+                    &|_| {},
                 )
                 .unwrap();
 

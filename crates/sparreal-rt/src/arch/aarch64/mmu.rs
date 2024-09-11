@@ -1,9 +1,7 @@
-use core::{alloc::Layout, arch::asm, cell::UnsafeCell, ptr::NonNull, sync::atomic::AtomicU64};
+use core::ptr::NonNull;
 
-use aarch64_cpu::{asm::barrier, registers::*};
-use page_table_interface::{MapConfig, PageAttribute, PageTableFn};
+use aarch64_cpu::registers::*;
 use sparreal_kernel::mem::mmu;
-use tock_registers::interfaces::ReadWriteable;
 
 extern "C" {
     fn _skernel();

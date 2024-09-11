@@ -7,7 +7,7 @@ pub mod arch;
 mod consts;
 mod kernel;
 mod lang_items;
-pub(crate) mod mem;
+pub mod mem;
 
 pub use sparreal_kernel::*;
 

@@ -7,8 +7,10 @@ use crate::{io, DriverResult};
 
 pub trait Driver: super::DriverGeneric + io::Write {}
 
+pub type BoxDriver = Box<dyn Driver>;
+
 pub trait Register: super::RegisterGeneric {
-    fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<Box<dyn Driver>>>;
+    fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<BoxDriver>>;
 }
 
 /// Word length.

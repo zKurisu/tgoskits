@@ -1,5 +1,5 @@
 use aarch64_cpu::registers::*;
-use log::{debug, warn};
+use log::warn;
 use page_table_interface::VirtAddr;
 
 #[no_mangle]

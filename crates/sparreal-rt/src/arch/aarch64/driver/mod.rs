@@ -1,5 +1,3 @@
-use core::ptr::NonNull;
-
 use alloc::{
     boxed::Box,
     string::{String, ToString},
@@ -12,7 +10,6 @@ use driver_interface::*;
 use embedded_io::*;
 use future::LocalBoxFuture;
 use futures::prelude::*;
-use sparreal_kernel::driver::{self};
 
 use crate::kernel;
 
@@ -37,16 +34,34 @@ impl io::Write for DriverPl011 {
     }
 }
 
-impl DriverGeneric for DriverPl011 {
-    fn name(&self) -> String {
-        "PL011".to_string()
-    }
-}
+impl DriverGeneric for DriverPl011 {}
 
 impl RegisterPl011 {
     async fn new_pl011(config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
-        let uart = Pl011::new(config.reg, None).await;
+        let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
         Ok(Box::new(DriverPl011(uart)))
+    }
+
+    fn conv_config(config: uart::Config) -> arm_pl011_rs::Config {
+        arm_pl011_rs::Config {
+            baud_rate: config.baud_rate,
+            clock_freq: config.clock_freq,
+            data_bits: match config.data_bits {
+                uart::DataBits::Bits5 => arm_pl011_rs::DataBits::Bits5,
+                uart::DataBits::Bits6 => arm_pl011_rs::DataBits::Bits6,
+                uart::DataBits::Bits7 => arm_pl011_rs::DataBits::Bits7,
+                uart::DataBits::Bits8 => arm_pl011_rs::DataBits::Bits8,
+            },
+            stop_bits: match config.stop_bits {
+                uart::StopBits::STOP1 => arm_pl011_rs::StopBits::STOP1,
+                uart::StopBits::STOP2 => arm_pl011_rs::StopBits::STOP2,
+            },
+            parity: match config.parity {
+                uart::Parity::None => arm_pl011_rs::Parity::None,
+                uart::Parity::Even => arm_pl011_rs::Parity::Even,
+                uart::Parity::Odd => arm_pl011_rs::Parity::Odd,
+            },
+        }
     }
 }
 
@@ -60,6 +75,9 @@ impl uart::Register for RegisterPl011 {
 }
 
 impl RegisterGeneric for RegisterPl011 {
+    fn name(&self) -> String {
+        "PL011".to_string()
+    }
     fn compatible(&self) -> Vec<String> {
         vec!["arm,pl011".to_string()]
     }

@@ -52,7 +52,7 @@ impl Mmu for PlatformImpl {
 
     fn get_kernel_page_table() -> Self::Table {
         let paddr = TTBR1_EL1.get_baddr();
-        unsafe { mmu::PageTable::from_addr(PhysAddr::from(paddr as usize), 4) }
+        mmu::PageTable::from_addr(PhysAddr::from(paddr as usize), 4)
     }
 
     type Table = mmu::PageTable;

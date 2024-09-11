@@ -87,7 +87,7 @@ impl<P: Platform> MemoryManager<P> {
         #[cfg(feature = "mmu")]
         {
             let mut heap_mut = AllocatorRef::new(&mut heap);
-            mmu::init_page_table::<P>(&mut heap_mut);
+            mmu::init_page_table::<P>(&mut heap_mut).unwrap();
         }
     }
 

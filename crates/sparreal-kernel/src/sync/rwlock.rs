@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use core::{
     hint::spin_loop,
     sync::atomic::{AtomicUsize, Ordering},
