@@ -6,11 +6,14 @@ extern crate alloc;
 mod kernel;
 
 pub mod driver;
-pub mod mem;
-pub mod platform;
-pub mod sync;
 pub mod executor;
+mod logger;
+pub mod mem;
+pub mod module;
+pub mod platform;
 pub mod stdout;
+pub mod sync;
+pub mod time;
 
 pub use kernel::*;
 use platform::app_main;

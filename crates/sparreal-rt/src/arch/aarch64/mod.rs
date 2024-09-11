@@ -46,4 +46,12 @@ impl Platform for PlatformImpl {
         let paddr = TTBR1_EL1.get_baddr();
         unsafe { mmu::PageTable::from_addr(PhysAddr::from(paddr as usize), 4) }
     }
+
+    fn current_ticks() -> u64 {
+        CNTPCT_EL0.get()
+    }
+
+    fn tick_hz() -> u64 {
+        CNTFRQ_EL0.get()
+    }
 }

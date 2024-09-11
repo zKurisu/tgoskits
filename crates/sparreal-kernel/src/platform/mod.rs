@@ -1,7 +1,8 @@
-use core::ptr::NonNull;
+use core::{marker::PhantomData, ptr::NonNull};
 
 use memory_addr::{PhysAddr, VirtAddr};
 pub use page_table_interface::PageTableFn;
+
 
 pub trait Platform: Sync + Send {
     fn wait_for_interrupt();
@@ -12,6 +13,10 @@ pub trait Platform: Sync + Send {
 
     #[cfg(feature = "mmu")]
     type Page: PageTableFn;
+
+    fn current_ticks() -> u64;
+
+    fn tick_hz() -> u64;
 }
 
 pub enum PageAttribute {

@@ -1,7 +1,9 @@
+use core::fmt;
+
 pub type IOError = embedded_io::ErrorKind;
 pub type IOResult<T = ()> = Result<T, IOError>;
 
-pub trait Write: Send + Sync{
+pub trait Write: Send + Sync {
     // Required methods
     fn write(&mut self, buf: &[u8]) -> IOResult<usize>;
     fn flush(&mut self) -> IOResult;
@@ -25,5 +27,11 @@ pub trait Write: Send + Sync{
             }
         }
         Ok(())
+    }
+}
+
+impl fmt::Write for dyn Write {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.write_all(s.as_bytes()).map_err(|_| fmt::Error)
     }
 }

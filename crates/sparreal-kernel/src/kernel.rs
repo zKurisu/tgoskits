@@ -3,8 +3,8 @@ use core::{arch::asm, marker::PhantomData, panic::PanicInfo, ptr::NonNull};
 use log::error;
 
 use crate::{
-    driver::manager::DriverManager, executor, mem::MemoryManager, platform::app_main, sync::RwLock,
-    Platform,
+    driver::manager::DriverManager, executor, logger::init_boot_log, mem::MemoryManager,
+    platform::app_main, sync::RwLock, time::Time, Platform,
 };
 
 type Module<T> = RwLock<Option<T>>;
@@ -13,6 +13,7 @@ pub struct Kernel<P>
 where
     P: Platform,
 {
+    time: Time<P>,
     mem: Module<MemoryManager<P>>,
     driver: Module<DriverManager<P>>,
 }
@@ -23,6 +24,7 @@ where
 {
     pub const fn new() -> Self {
         Self {
+            time: Time::new(),
             mem: RwLock::new(None),
             driver: RwLock::new(None),
         }
@@ -48,7 +50,7 @@ where
         executor::block_on(async move {
             driver_manager.init().await;
         });
-
+        init_boot_log();
         app_main();
         loop {
             P::wait_for_interrupt();
