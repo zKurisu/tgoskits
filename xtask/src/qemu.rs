@@ -45,12 +45,12 @@ impl<'a> Qemu<'a> {
             &machine,
             "-kernel",
             &bin,
-            "-global",
-            "virtio-mmio.force-legacy=false",
-            "-drive",
-            &drive,
-            "-device",
-            "virtio-blk-device,drive=x0",
+            // "-global",
+            // "virtio-mmio.force-legacy=false",
+            // "-drive",
+            // &drive,
+            // "-device",
+            // "virtio-blk-device,drive=x0",
         ];
 
         if let Some(cpu) = &project.config.build.cpu {

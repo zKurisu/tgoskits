@@ -1,12 +1,6 @@
-use std::{
-    fs,
-    io::Write,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{fs, io::Write, path::PathBuf};
 
 use anyhow::Result;
-use byte_unit::Byte;
 use sparreal_build::ProjectConfig;
 
 use crate::{compile::Compile, qemu::Qemu, shell::*};

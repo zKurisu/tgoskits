@@ -1,5 +1,4 @@
 mod boot;
-mod driver;
 mod mmu;
 mod trap;
 
@@ -26,12 +25,12 @@ impl Platform for PlatformImpl {
 }
 
 impl Mmu for PlatformImpl {
-    fn set_kernel_page_table(table: Self::Table) {
+    fn set_kernel_page_table(table: &Self::Table) {
         TTBR1_EL1.set_baddr(table.paddr().as_usize() as _);
         Self::flush_tlb(None);
     }
 
-    fn set_user_page_table(table: Option<Self::Table>) {
+    fn set_user_page_table(table: Option<&Self::Table>) {
         match table {
             Some(tb) => TTBR0_EL1.set_baddr(tb.paddr().as_usize() as _),
             None => TTBR0_EL1.set_baddr(0),

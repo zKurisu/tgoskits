@@ -61,7 +61,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
 
     let mut table = T::new(&mut access)?;
 
-    table.map_region(
+    let _ = table.map_region(
         MapConfig {
             vaddr: boot_map_info.virt,
             paddr: boot_map_info.phys,
@@ -70,11 +70,10 @@ pub unsafe fn boot_init<T: PageTableFn>(
         boot_map_info.size,
         true,
         &mut access,
-        &|_| {},
-    )?;
+    );
 
     // 恒等映射，用于mmu启动过程
-    table.map_region(
+    let _ = table.map_region(
         MapConfig {
             vaddr: boot_map_info.virt_equal,
             paddr: boot_map_info.phys,
@@ -83,8 +82,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
         boot_map_info.size,
         true,
         &mut access,
-        &|_| {},
-    )?;
+    );
 
     Ok(table)
 }
@@ -180,10 +178,10 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
         size,
         true,
         access,
-        &|_| {},
     )?;
 
-    P::set_kernel_page_table(table);
+    P::set_kernel_page_table(&table);
+    // P::set_user_page_table(Some(&table));
     P::set_user_page_table(None);
 
     Ok(())
@@ -196,7 +194,7 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
     let mut heap_mut = AllocatorRef::new(&mut heap);
     let vptr = NonNull::new_unchecked(vaddr.as_mut_ptr());
 
-    let _ = table.map_region(
+    let _ = table.map_region_with_handle(
         MapConfig {
             vaddr,
             paddr,
@@ -205,9 +203,9 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
         size,
         true,
         &mut heap_mut,
-        &|addr| {
+        Some(&|addr| {
             P::flush_tlb(Some(addr));
-        },
+        }),
     );
     vptr
 }

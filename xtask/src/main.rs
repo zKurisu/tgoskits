@@ -10,7 +10,6 @@ use byte_unit::Byte;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use project::Project;
 use qemu::Qemu;
-use shell::exec;
 use std::{fs::File, io::Read};
 
 /// Simple program to greet a person

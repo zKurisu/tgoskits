@@ -401,6 +401,22 @@ pub trait PageTableFn {
         1
     }
 
+    unsafe fn map_region(
+        &mut self,
+        config: MapConfig,
+        size: usize,
+        allow_block: bool,
+        access: &mut impl Access,
+    ) -> PagingResult<()> {
+        self.map_region_with_handle(
+            config,
+            size,
+            allow_block,
+            access,
+            None::<fn(NonNull<u8>)>.as_ref(),
+        )
+    }
+
     /// Map a contiguous virtual memory region to a contiguous physical memory
     /// region with the given mapping `flags`.
     ///
@@ -412,13 +428,13 @@ pub trait PageTableFn {
     /// if possible. Otherwise, it will map the region with 4K pages.
     ///
     /// [`Err(PagingError::NotAligned)`]: PagingError::NotAligned
-    unsafe fn map_region(
+    unsafe fn map_region_with_handle(
         &mut self,
         cfg: MapConfig,
         size: usize,
         allow_block: bool,
         access: &mut impl Access,
-        on_page_mapped: &impl Fn(NonNull<u8>),
+        on_page_mapped: Option<&impl Fn(NonNull<u8>)>,
     ) -> PagingResult {
         let mut vaddr = cfg.vaddr;
         let mut paddr = cfg.paddr;
@@ -454,8 +470,9 @@ pub trait PageTableFn {
                     vaddr, page_size, paddr, e
                 )
             })?;
-            on_page_mapped(NonNull::new_unchecked(vaddr.as_mut_ptr()));
-
+            if let Some(f) = on_page_mapped {
+                f(NonNull::new_unchecked(vaddr.as_mut_ptr()));
+            }
             vaddr += page_size as usize;
             paddr += page_size as usize;
             size -= page_size as usize;

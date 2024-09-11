@@ -30,8 +30,8 @@ pub trait Mmu {}
 pub trait Mmu {
     type Table: PageTableFn;
 
-    fn set_kernel_page_table(table: Self::Table);
-    fn set_user_page_table(table: Option<Self::Table>);
+    fn set_kernel_page_table(table: &Self::Table);
+    fn set_user_page_table(table: Option<&Self::Table>);
     fn get_kernel_page_table() -> Self::Table;
     fn flush_tlb(addr: Option<NonNull<u8>>);
 }
