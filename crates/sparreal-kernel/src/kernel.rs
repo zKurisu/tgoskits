@@ -1,11 +1,10 @@
-use core::{arch::asm, fmt, marker::PhantomData, panic::PanicInfo, ptr::NonNull, time::Duration};
+use core::{fmt, panic::PanicInfo, ptr::NonNull};
 
-use alloc::vec::Vec;
-use driver_interface::Register;
-use log::{error, info};
+use log::*;
 
 use crate::{
-    driver::manager::DriverManager, executor,  mem::MemoryManager, module::ModuleBase, platform::app_main, stdout::Stdout, sync::RwLock, time::Time, Platform
+    driver::manager::DriverManager, executor, mem::MemoryManager, module::ModuleBase,
+    platform::app_main, stdout::Stdout, time::Time, Platform,
 };
 
 pub struct Kernel<P>
@@ -28,7 +27,7 @@ where
     /// 2. If has MMU, it should be enabled.
     /// 3. alloc can be used after this function.
     pub unsafe fn new(cfg: KernelConfig) -> Self {
-        let mut memory = MemoryManager::new();
+        let memory = MemoryManager::new();
         memory.init(&cfg);
 
         let module_base = ModuleBase {
@@ -53,9 +52,10 @@ where
         let driver_manager = self.module_driver();
 
         executor::block_on(async move {
+            driver_manager.init_stdout().await;
+            self.print_welcome();
             driver_manager.init().await;
         });
-        info!("Welcome to sparreal!");
         app_main();
         loop {
             P::wait_for_interrupt();
@@ -81,8 +81,15 @@ where
         self.module_base.time.clone()
     }
 
-    pub fn print(&self, args: fmt::Arguments){
+    pub fn print(&self, args: fmt::Arguments) {
         self.module_base.stdout.print(args);
+    }
+
+    fn print_welcome(&self) {
+        let version = env!("CARGO_PKG_VERSION");
+
+        let _ = self.print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
+        let _ = self.print(format_args!("{}\n", self.module_base.memory));
     }
 }
 

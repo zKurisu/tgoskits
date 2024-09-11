@@ -1,9 +1,4 @@
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    vec,
-    vec::Vec,
-};
+use alloc::{boxed::Box, string::ToString};
 
 use arm_pl011_rs::Pl011;
 use driver_interface::*;
@@ -11,12 +6,10 @@ use embedded_io::*;
 use future::LocalBoxFuture;
 use futures::prelude::*;
 
-use crate::kernel;
-
 pub fn register() -> Register {
     Register {
         name: "PL011".to_string(),
-        compatible: ["arm,pl011".to_string()].to_vec(),
+        compatible: ["arm,pl011"].to_vec(),
         kind: RegisterKind::Uart(Box::new(RegisterPl011 {})),
     }
 }

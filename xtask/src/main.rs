@@ -51,7 +51,7 @@ fn main() -> Result<()> {
         }
         Commands::Qemu(a) => {
             let mut project = Project::new(a.config.as_deref(), a.debug)?;
-            let mut qemu = project.qemu(a.dtb);
+            let qemu = project.qemu(a.dtb);
         }
     }
 

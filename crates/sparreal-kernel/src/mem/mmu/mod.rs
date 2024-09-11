@@ -25,7 +25,7 @@ pub fn va_offset() -> usize {
 pub unsafe fn boot_init<T: PageTableFn>(
     va_offset: usize,
     dtb_addr: NonNull<u8>,
-    mut heap_begin_lma: NonNull<u8>,
+    heap_begin_lma: NonNull<u8>,
     kernel_lma: NonNull<u8>,
 ) -> PagingResult<T> {
     VA_OFFSET = va_offset;
@@ -34,7 +34,7 @@ pub unsafe fn boot_init<T: PageTableFn>(
     set_dtb_addr(phys_dtb_addr);
 
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
-    let mut virt_equal = kernel_p.align_down(BYTES_1G);
+    let virt_equal = kernel_p.align_down(BYTES_1G);
 
     let mut boot_map_info = BootMapInfo {
         virt: virt_equal + va_offset,
@@ -156,7 +156,7 @@ impl Access for BeforeMMUPageAllocator {
         Some(ptr.into())
     }
 
-    unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: Layout) {}
+    unsafe fn dealloc(&mut self, _ptr: PhysAddr, _layout: Layout) {}
 
     fn va_offset(&self) -> usize {
         0
@@ -206,7 +206,7 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
         true,
         &mut heap_mut,
         &|addr| {
-            P::flush_tlb(Some(vptr));
+            P::flush_tlb(Some(addr));
         },
     );
     vptr

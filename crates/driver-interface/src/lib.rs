@@ -1,6 +1,6 @@
 #![no_std]
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 extern crate alloc;
 
@@ -15,22 +15,18 @@ pub trait DriverGeneric {}
 
 pub struct Register {
     pub name: String,
-    pub compatible: Vec<String>,
+    pub compatible: Vec<&'static str>,
     pub kind: RegisterKind,
 }
 
 pub enum RegisterKind {
     Uart(uart::BoxRegister),
+    Spi,
 }
 
 impl Register {
     pub fn compatible_matched(&self, compatible: &str) -> bool {
-        for one in &self.compatible {
-            if one.as_str().eq(compatible) {
-                return true;
-            }
-        }
-        false
+        self.compatible.contains(&compatible)
     }
 }
 

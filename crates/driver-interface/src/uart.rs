@@ -1,7 +1,7 @@
 use core::ptr::NonNull;
 
 use alloc::boxed::Box;
-use futures::future::{BoxFuture, LocalBoxFuture};
+use futures::future::LocalBoxFuture;
 
 use crate::{io, DriverResult};
 

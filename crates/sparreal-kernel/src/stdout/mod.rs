@@ -1,6 +1,6 @@
 use core::fmt::{self, Write};
 
-use alloc::{boxed::Box, sync::Arc};
+use alloc::sync::Arc;
 use driver_interface::io;
 
 use crate::sync::RwLock;

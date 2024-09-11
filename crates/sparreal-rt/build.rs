@@ -1,4 +1,4 @@
-use std::{fs, ops::Range, path::PathBuf, str::FromStr};
+use std::{fs, path::PathBuf, str::FromStr};
 
 use sparreal_build::{Arch, ProjectConfig};
 
@@ -35,7 +35,6 @@ fn main() {
 
 struct Config {
     smp: usize,
-    kernel_load_addr: u64,
     hart_stack_size: usize,
     out_dir: PathBuf,
     arch: Arch,
@@ -59,8 +58,6 @@ impl Config {
             hart_stack_size: cfg.build.hart_stack_size.unwrap_or(DEFAULT_HART_STACK_SIZE),
             out_dir: PathBuf::from(std::env::var("OUT_DIR").unwrap()),
             arch,
-            kernel_load_addr: parse_int(&cfg.build.kernel_load_addr)
-                .expect("Invalid kernel load address"),
         }
     }
 
@@ -90,7 +87,7 @@ impl Config {
     }
 
     fn gen_const(&self) {
-        let mut const_content = format!(
+        let const_content = format!(
             r#"
 
             pub const SMP: usize = {:#x};
@@ -103,6 +100,8 @@ impl Config {
             .expect("const write failed");
     }
 }
+
+#[allow(unused)]
 fn parse_int(s: &str) -> std::result::Result<u64, std::num::ParseIntError> {
     let s = s.trim().replace('_', "");
     if let Some(s) = s.strip_prefix("0x") {

@@ -1,5 +1,3 @@
-use core::ptr::NonNull;
-
 use alloc::{
     boxed::Box,
     collections::{btree_map::BTreeMap, btree_set::BTreeSet},
@@ -8,13 +6,9 @@ use alloc::{
     vec::Vec,
 };
 use driver_interface::*;
-use flat_device_tree::{
-    node::{CellSize, FdtNode},
-    standard_nodes::Chosen,
-};
-use uart::Driver;
+use flat_device_tree::node::{CellSize, FdtNode};
 
-use crate::{executor, mem::MemoryManager, module::ModuleBase, stdout, sync::RwLock, Platform};
+use crate::{module::ModuleBase, sync::RwLock, Platform};
 
 use super::device_tree::get_device_tree;
 
@@ -40,7 +34,9 @@ impl<P: Platform> DriverManager<P> {
     pub async fn init(&self) {
         self.inner.write().init().await;
     }
-
+    pub async fn init_stdout(&self) {
+        self.inner.write().init_stdout().await;
+    }
     pub fn register(&self, register: Register) {
         self.inner
             .write()
@@ -60,23 +56,27 @@ struct Manager<P: Platform> {
     module: ModuleBase<P>,
     registers: BTreeMap<String, Register>,
     registed: BTreeSet<String>,
-    uart: BTreeMap<String, Box<dyn uart::Driver>>,
+    uart: Vec<Box<dyn uart::Driver>>,
 }
 
 impl<P: Platform> Manager<P> {
     fn new(module: ModuleBase<P>) -> Self {
         Self {
             module,
-            uart: BTreeMap::new(),
-            registed: BTreeSet::new(),
-            registers: BTreeMap::new(),
+            uart: Default::default(),
+            registed: Default::default(),
+            registers: Default::default(),
+        }
+    }
+
+    pub async fn init_stdout(&mut self) {
+        if let Some(stdout) = self.probe_stdout().await {
+            self.module.stdout.set(stdout);
         }
     }
 
     async fn init(&mut self) {
-        if let Some(stdout) = self.probe_stdout().await {
-            self.module.stdout.set(stdout);
-        }
+        self.probe_uart().await;
     }
 
     async fn probe_stdout(&mut self) -> Option<io::BoxWrite> {
@@ -86,6 +86,17 @@ impl<P: Platform> Manager<P> {
         let node = stdout.node();
         if let Some(d) = self.node_probe_uart(node).await {
             return Some(d);
+        }
+
+        None
+    }
+
+    async fn probe_uart(&mut self) -> Option<io::BoxWrite> {
+        let fdt = get_device_tree()?;
+        for node in fdt.all_nodes() {
+            if let Some(d) = self.node_probe_uart(node).await {
+                self.uart.push(d);
+            }
         }
         None
     }

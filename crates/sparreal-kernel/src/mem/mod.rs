@@ -1,21 +1,12 @@
 pub mod mmu;
 
-use core::{
-    marker::PhantomData,
-    ops::DerefMut,
-    ptr::{null_mut, NonNull},
-};
+use core::{fmt::Display, marker::PhantomData, ops::DerefMut, ptr::NonNull};
 
 use buddy_system_allocator::{Heap, LockedHeap};
-use lock_api::MutexGuard;
 use memory_addr::{PhysAddr, VirtAddr};
 use mmu::va_offset;
 
-use crate::{
-    driver::device_tree::{self, get_device_tree},
-    sync::RwLock,
-    KernelConfig, Platform,
-};
+use crate::{driver::device_tree::get_device_tree, KernelConfig, Platform};
 
 #[global_allocator]
 pub(crate) static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
@@ -23,6 +14,9 @@ pub(crate) static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
 pub const BYTES_1K: usize = 1024;
 pub const BYTES_1M: usize = 1024 * BYTES_1K;
 pub const BYTES_1G: usize = 1024 * BYTES_1M;
+
+static mut MEMORY_START: usize = 0;
+static mut MEMORY_SIZE: usize = 0;
 
 pub(crate) trait VirtToPhys {
     fn to_phys(&self) -> PhysAddr;
@@ -72,10 +66,12 @@ impl<P: Platform> MemoryManager<P> {
 
             if let Some(memory) = fdt.memory().ok() {
                 for region in memory.regions() {
-                    let used = start.to_phys().as_usize() - region.starting_address as usize;
+                    MEMORY_START = region.starting_address as usize;
+                    let used = start.to_phys().as_usize() - MEMORY_START;
 
                     if let Some(mem_size) = region.size {
                         size = mem_size - used;
+                        MEMORY_SIZE = mem_size;
                     }
                 }
             }
@@ -96,6 +92,18 @@ impl<P: Platform> MemoryManager<P> {
         #[cfg(not(feature = "mmu"))]
         let ptr = NonNull::new(addr.as_usize() as *mut u8).unwrap();
         ptr
+    }
+}
+
+impl<P: Platform> Display for MemoryManager<P> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        unsafe {
+            write!(
+                f,
+                "Primary Memory: @{:#X} ({:#X} bytes)",
+                MEMORY_START, MEMORY_SIZE
+            )
+        }
     }
 }
 

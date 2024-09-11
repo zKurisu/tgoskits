@@ -36,7 +36,7 @@ impl<'a> Qemu<'a> {
             println!("img: {}", img.display());
             let _ = remove_file(&img);
             let file = File::create(&img).unwrap();
-            file.set_len(16384);
+            file.set_len(16384).unwrap();
         }
 
         let mut args = vec![

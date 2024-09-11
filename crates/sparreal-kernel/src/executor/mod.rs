@@ -3,9 +3,7 @@ use core::ptr;
 use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
 use pasts::prelude::*;
-use pasts::Executor;
 
-static mut EXECUTOR: Option<Executor> = None;
 
 // pub fn init_exeutor() {
 //     unsafe {
@@ -24,7 +22,6 @@ static mut EXECUTOR: Option<Executor> = None;
 // pub fn spawn_boxed(f: impl Future<Output = ()> + 'static) {
 //     executor().spawn_boxed(f)
 // }
-
 
 
 static VTABLE: RawWakerVTable = RawWakerVTable::new(

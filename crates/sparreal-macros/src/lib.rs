@@ -8,7 +8,7 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use syn::{parse, spanned::Spanned, FnArg, ItemFn, PathArguments, ReturnType, Type, Visibility};
+use syn::{parse, spanned::Spanned, FnArg, ItemFn, PathArguments, Type, Visibility};
 
 /// Attribute to declare the entry point of the program
 ///

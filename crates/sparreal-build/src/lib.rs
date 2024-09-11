@@ -16,7 +16,6 @@ pub struct Build {
     pub hart_stack_size: Option<usize>,
     pub package: String,
     pub smp: usize,
-    pub kernel_load_addr: String,
 }
 
 impl Default for Build {
@@ -28,7 +27,6 @@ impl Default for Build {
             package: "helloworld".into(),
             smp: 1,
             hart_stack_size: None,
-            kernel_load_addr: "0x4008_0000".into(),
         }
     }
 }

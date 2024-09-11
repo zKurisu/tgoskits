@@ -1,7 +1,6 @@
 use alloc::{vec, vec::Vec};
 use driver_interface::Register;
 
-use crate::kernel;
 
 mod uart;
 

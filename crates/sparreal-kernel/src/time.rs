@@ -1,5 +1,3 @@
-use embedded_hal_async::delay::DelayNs;
-
 use crate::Platform;
 use core::{future::Future, marker::PhantomData, time::Duration};
 

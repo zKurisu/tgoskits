@@ -1,8 +1,5 @@
-use core::time::Duration;
-
-use alloc::boxed::Box;
 use ansi_rgb::{red, yellow, Foreground};
-use log::{Level, LevelFilter, Log};
+use log::{Level, Log};
 use rgb::{Rgb, RGB8};
 
 use crate::{time::TimeSource, Kernel, Platform};

@@ -4,7 +4,7 @@ use core::{
     hint::spin_loop,
     sync::atomic::{AtomicBool, Ordering},
 };
-use lock_api::{GuardSend, Mutex, RawMutex};
+use lock_api::{GuardSend, RawMutex};
 
 // 1. Define our raw lock type
 pub struct RawSpinlock(AtomicBool);

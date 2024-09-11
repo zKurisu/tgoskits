@@ -1,10 +1,4 @@
-use crate::{
-    mem::MemoryManager,
-    stdout::Stdout,
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
-    time::Time,
-    Platform,
-};
+use crate::{mem::MemoryManager, stdout::Stdout, time::Time, Platform};
 
 pub struct ModuleBase<P: Platform> {
     pub memory: MemoryManager<P>,

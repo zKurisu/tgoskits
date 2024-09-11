@@ -1,6 +1,5 @@
-use core::{marker::PhantomData, ptr::NonNull};
+use core::ptr::NonNull;
 
-use memory_addr::{PhysAddr, VirtAddr};
 pub use page_table_interface::PageTableFn;
 
 pub trait Platform: Mmu + Sync + Send {
