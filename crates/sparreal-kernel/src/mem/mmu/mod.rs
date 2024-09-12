@@ -3,7 +3,7 @@ use core::{
     ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
 
-use super::{addr::*, AllocatorRef, PhysToVirt, BYTES_1G, BYTES_1M, HEAP_ALLOCATOR};
+use super::*;
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
@@ -164,14 +164,14 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     let mut table = P::Table::new(access)?;
-    let vaddr = (MEMORY_START + va_offset()) as *const u8;
-    let paddr = MEMORY_START.into();
+    let vaddr = VirtAddr::from(MEMORY_START + va_offset());
+    let paddr = Phys::<u8>::from(MEMORY_START);
     let size = MEMORY_SIZE;
 
     table.map_region(
         MapConfig {
-            vaddr,
-            paddr,
+            vaddr: vaddr.as_mut_ptr(),
+            paddr: paddr.as_usize(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
         size,

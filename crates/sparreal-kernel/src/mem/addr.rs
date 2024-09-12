@@ -38,7 +38,7 @@ impl<T> Virt<T> {
 
 impl<T> From<usize> for Virt<T> {
     fn from(value: usize) -> Self {
-        unsafe { Self(value as *const T) }
+        Self(value as *const T)
     }
 }
 impl<T> From<Virt<T>> for usize {

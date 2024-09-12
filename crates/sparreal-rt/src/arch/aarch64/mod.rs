@@ -5,7 +5,6 @@ mod trap;
 use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
-use memory_addr::*;
 use sparreal_kernel::{platform::Mmu, Platform};
 pub struct PlatformImpl;
 

@@ -3,7 +3,7 @@ pub mod mmu;
 
 use core::{fmt::Display, marker::PhantomData, ops::DerefMut, ptr::NonNull};
 
-use addr::*;
+pub use addr::*;
 use buddy_system_allocator::{Heap, LockedHeap};
 use mmu::va_offset;
 
