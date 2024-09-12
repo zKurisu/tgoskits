@@ -28,6 +28,7 @@ _start_boot:
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
 
+  BL       __switch_to_el1
 
   // Install vector table
   // --------------------- 
@@ -39,7 +40,6 @@ _start_boot:
   MSR      CPACR_EL1, X1
   ISB
 
-  BL       __switch_to_el1
 
   MOV      x0, x19
   MOV      x1, x10
