@@ -44,8 +44,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
     TTBR0_EL1.set_baddr(table);
-    TTBR0_EL2.set_baddr(table);
-    
 
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
@@ -96,7 +94,12 @@ unsafe extern "C" fn __switch_to_el1() {
                     + SPSR_EL3::I::Masked
                     + SPSR_EL3::F::Masked,
             );
-            ELR_EL3.set(LR.get());
+            asm!(
+                "
+            adr      x2, _start_boot
+            msr elr_el3, x2
+            "
+            );
         }
         // Disable EL1 timer traps and the timer offset.
         CNTHCTL_EL2.modify(CNTHCTL_EL2::EL1PCEN::SET + CNTHCTL_EL2::EL1PCTEN::SET);
@@ -111,12 +114,16 @@ unsafe extern "C" fn __switch_to_el1() {
                 + SPSR_EL2::I::Masked
                 + SPSR_EL2::F::Masked,
         );
+
         asm!(
             "
             mov     x8, sp
-            msr     sp_el1, x8"
+            msr     sp_el1, x8
+            MOV      x0, x19
+            adr      x2, _start_boot
+            msr elr_el2, x2
+            eret
+            "
         );
-        ELR_EL2.set(LR.get());
-        aarch64_cpu::asm::eret();
     }
 }

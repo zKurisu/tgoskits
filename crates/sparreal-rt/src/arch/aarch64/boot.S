@@ -28,17 +28,18 @@ _start_boot:
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
 
-  # BL       __switch_to_el1
 
   // Install vector table
   // --------------------- 
   .global  vector_table_el1
   LDR      x0, =vector_table_el1
   MSR      VBAR_EL1, x0
-
+  
   MOV      X1, #(0x3 << 20) // FPEN disables trapping to EL1.
   MSR      CPACR_EL1, X1
   ISB
+
+  BL       __switch_to_el1
 
   MOV      x0, x19
   MOV      x1, x10

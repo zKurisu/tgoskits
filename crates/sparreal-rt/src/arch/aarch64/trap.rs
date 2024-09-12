@@ -20,13 +20,13 @@ unsafe extern "C" fn handle_sync(tf: &TrapFrame) {
                 // tf.elr += 4;
             }
             _ => {
-                panic!(
-                    "Unhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
-                    elr,
-                    esr.get(),
-                    esr.read(ESR_EL1::EC),
-                    esr.read(ESR_EL1::ISS),
-                );
+                // panic!(
+                //     "Unhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+                //     elr,
+                //     esr.get(),
+                //     esr.read(ESR_EL1::EC),
+                //     esr.read(ESR_EL1::ISS),
+                // );
             }
         }
     }
