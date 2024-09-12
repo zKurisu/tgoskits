@@ -41,10 +41,10 @@ struct Config {
 }
 
 // 8MiB stack size per hart
-const DEFAULT_HART_STACK_SIZE: usize = 2 * 1024 * 1024;
+const DEFAULT_HART_STACK_SIZE: usize = 8 * 1024 * 1024;
 
-const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
-// const KERNEL_VADDR: u64 = 0x0000_0000_0008_0000;
+// const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
+const KERNEL_VADDR: u64 = 0x0000_0000_0008_0000;
 
 impl Config {
     fn new(config_path: String) -> Self {

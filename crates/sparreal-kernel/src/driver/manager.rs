@@ -73,6 +73,12 @@ impl<P: Platform> Manager<P> {
         if let Some(stdout) = self.probe_stdout().await {
             self.module.stdout.set(stdout);
         }
+
+        self.probe_uart().await;
+
+        if let Some(uart) = self.uart.pop() {
+            self.module.stdout.set(uart);
+        }
     }
 
     async fn init(&mut self) {
@@ -112,7 +118,7 @@ impl<P: Platform> Manager<P> {
 
                 if register.compatible_matched(one) {
                     if let RegisterKind::Uart(ref register) = register.kind {
-                        let reg = node.reg().next()?;
+                        let reg = node.reg_fix().next()?;
                         let start = (reg.starting_address as usize).into();
                         let size = reg.size?;
                         let reg_base = self.module.memory.iomap(start, size);
@@ -120,13 +126,13 @@ impl<P: Platform> Manager<P> {
                         let clock_freq = if let Some(clk) = get_uart_clk(&node) {
                             clk
                         } else {
-                            continue;
+                            0
                         };
 
                         let config = uart::Config {
                             reg: reg_base,
                             baud_rate: 115200,
-                            clock_freq: clock_freq as _,
+                            clock_freq,
                             data_bits: uart::DataBits::Bits8,
                             stop_bits: uart::StopBits::STOP1,
                             parity: uart::Parity::None,

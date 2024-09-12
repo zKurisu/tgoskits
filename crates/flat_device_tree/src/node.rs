@@ -180,7 +180,43 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
             None => None,
         })
     }
+    /// `reg` property
+    ///
+    /// Important: this method assumes that the value(s) inside the `reg`
+    /// property represent CPU-addressable addresses that are able to fit within
+    /// the platform's pointer size (e.g. `#address-cells` and `#size-cells` are
+    /// less than or equal to 2 for a 64-bit platform). If this is not the case
+    /// or you're unsure of whether this applies to the node, it is recommended
+    /// to use the [`FdtNode::property`] method to extract the raw value slice
+    /// or use the provided [`FdtNode::raw_reg`] helper method to give you an
+    /// iterator over the address and size slices. One example of where this
+    /// would return `None` for a node is a `pci` child node which contains the
+    /// PCI address information in the `reg` property, of which the address has
+    /// an `#address-cells` value of 3.
+    pub fn reg_fix(self) -> impl Iterator<Item = MemoryRegion> + 'b {
+        let mut regs = self.reg();
 
+        core::iter::from_fn(move || {
+            let one = regs.next()?;
+            let reg_start = one.starting_address as usize;
+            for range in self.parent_ranges() {
+                if range.child_bus_address < reg_start
+                    && reg_start < range.child_bus_address + range.size
+                {
+                    return Some(MemoryRegion {
+                        starting_address: unsafe {
+                            one.starting_address
+                                .sub(range.child_bus_address)
+                                .add(range.parent_bus_address)
+                        },
+                        size: one.size,
+                    });
+                }
+            }
+
+            Some(one)
+        })
+    }
     /// Parses the `ranges` property as an iterator over [MemoryRange].
     pub fn ranges(self) -> impl Iterator<Item = MemoryRange> + 'a {
         let sizes = self.cell_sizes();
@@ -304,6 +340,23 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
         })
     }
 
+    pub fn parent_ranges(self) -> impl Iterator<Item = MemoryRange> + 'b {
+        let mut ranges = if let Some(parent) = self.parent_props {
+            let parent =
+                FdtNode { name: "", props: parent, header: self.header, parent_props: None };
+            Some(parent.ranges())
+        } else {
+            None
+        };
+
+        core::iter::from_fn(move || {
+            if let Some(ranges) = &mut ranges {
+                return ranges.next();
+            }
+            None
+        })
+    }
+
     pub(crate) fn parent_cell_sizes(self) -> CellSizes {
         let mut cell_sizes = CellSizes::default();
 
@@ -393,7 +446,7 @@ pub(crate) fn find_node<'b, 'a: 'b>(
     skip_4_aligned(stream, full_name_len);
 
     let looking_contains_addr = looking_for.contains('@');
-    let addr_name_same = unit_name .eq( looking_for);
+    let addr_name_same = unit_name.eq(looking_for);
     let base_name_same = unit_name.split('@').next()?.eq(looking_for);
 
     if (looking_contains_addr && !addr_name_same) || (!looking_contains_addr && !base_name_same) {

@@ -18,6 +18,18 @@ pub const BYTES_1G: usize = 1024 * BYTES_1M;
 static mut MEMORY_START: usize = 0;
 static mut MEMORY_SIZE: usize = 0;
 
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub struct CpuAddr(*const u8);
+unsafe impl Send for CpuAddr {}
+unsafe impl Sync for CpuAddr {}
+
+impl<T> From<*const T> for CpuAddr {
+    fn from(value: *const T) -> Self {
+        Self(value as *const u8)
+    }
+}
+
 pub(crate) trait VirtToPhys {
     fn to_phys(&self) -> PhysAddr;
 }

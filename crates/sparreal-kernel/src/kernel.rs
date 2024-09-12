@@ -47,7 +47,6 @@ where
     ///
     /// # Safety
     ///
-    /// run after [`preper`]
     pub unsafe fn run(&self) -> ! {
         let driver_manager = self.module_driver();
 

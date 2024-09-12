@@ -92,12 +92,12 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
 
     let memory = fdt.memory().ok()?;
     let primory = memory.regions().next()?;
-    let memory_begin = NonNull::new_unchecked(primory.starting_address as *mut u8);
+    let memory_begin = primory.starting_address;
     let memory_size = primory.size?;
     let heap_size = memory_size / 2;
-    let heap_start = memory_begin.add(heap_size);
+    let heap_start = NonNull::new_unchecked(memory_begin.add(heap_size) as *mut u8);
 
-    let virt_equal = (memory_begin.as_ptr() as usize).into();
+    let virt_equal = (memory_begin as usize).into();
 
     Some(BootMapInfo {
         virt: virt_equal + va_offset,
@@ -189,10 +189,12 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
 
 pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     let mut table = P::get_kernel_page_table();
+    let paddr = paddr.align_down_4k();
     let vaddr = paddr.to_virt();
+    let size = size.max(0x1000);
+
     let mut heap = HEAP_ALLOCATOR.lock();
     let mut heap_mut = AllocatorRef::new(&mut heap);
-    let vptr = NonNull::new_unchecked(vaddr.as_mut_ptr());
 
     let _ = table.map_region_with_handle(
         MapConfig {
@@ -207,5 +209,6 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
             P::flush_tlb(Some(addr));
         }),
     );
-    vptr
+
+    NonNull::new_unchecked(vaddr.as_mut_ptr())
 }

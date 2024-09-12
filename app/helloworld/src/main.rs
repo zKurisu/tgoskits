@@ -17,4 +17,7 @@ fn main() {
     // let b = a + 1;
 
     assert_eq!(st, "hello world");
+
+
+    panic!("panic!");
 }

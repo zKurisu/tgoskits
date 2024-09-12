@@ -1,3 +1,5 @@
+use core::ptr::NonNull;
+
 use alloc::{boxed::Box, string::ToString};
 
 use arm_pl011_rs::Pl011;
@@ -39,14 +41,16 @@ impl DriverGeneric for DriverPl011 {}
 
 impl RegisterPl011 {
     async fn new_pl011(config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
-        let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
+        // let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
+        // let uart = Pl011::new(unsafe{NonNull::new_unchecked(0xfe201000 as *mut u8)}, None).await;
+        let uart = Pl011::new(config.reg, None).await;
         Ok(Box::new(DriverPl011(uart)))
     }
 
     fn conv_config(config: uart::Config) -> arm_pl011_rs::Config {
         arm_pl011_rs::Config {
             baud_rate: config.baud_rate,
-            clock_freq: config.clock_freq,
+            clock_freq: config.clock_freq as _,
             data_bits: match config.data_bits {
                 uart::DataBits::Bits5 => arm_pl011_rs::DataBits::Bits5,
                 uart::DataBits::Bits6 => arm_pl011_rs::DataBits::Bits6,

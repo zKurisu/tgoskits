@@ -488,6 +488,10 @@ pub trait PageTableFn {
     unsafe fn new(access: &mut impl Access) -> PagingResult<Self>
     where
         Self: Sized;
+
+    unsafe fn test_fn(&self, ptr: *const u8) {
+        ptr.add(1);
+    }
 }
 
 const fn log2(value: usize) -> usize {

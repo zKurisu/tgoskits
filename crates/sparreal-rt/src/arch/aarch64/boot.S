@@ -28,6 +28,8 @@ _start_boot:
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
 
+  # BL       __switch_to_el1
+
   // Install vector table
   // --------------------- 
   .global  vector_table_el1

@@ -43,7 +43,7 @@ pub enum StopBits {
 pub struct Config {
     pub reg: NonNull<u8>,
     pub baud_rate: u32,
-    pub clock_freq: u32,
+    pub clock_freq: u64,
     pub data_bits: DataBits,
     pub stop_bits: StopBits,
     pub parity: Parity,
