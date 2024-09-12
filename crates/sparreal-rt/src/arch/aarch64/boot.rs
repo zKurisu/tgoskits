@@ -4,9 +4,7 @@ use core::{
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
-use sparreal_kernel::executor;
 use tock_registers::interfaces::ReadWriteable;
-use TCR_EL1::A1::TTBR1;
 
 use crate::kernel;
 

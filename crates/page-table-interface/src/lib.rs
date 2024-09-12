@@ -99,7 +99,7 @@ bitflags::bitflags! {
 
 #[derive(Debug, Clone, Copy)]
 pub struct MapConfig {
-    pub vaddr: VirtAddr,
+    pub vaddr: *const u8,
     pub paddr: PhysAddr,
     pub attrs: PageAttribute,
 }
@@ -162,8 +162,8 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         Self::from_addr((value.as_ptr() as usize - access.va_offset()).into(), level)
     }
 
-    fn index_of_table(&self, vaddr: VirtAddr) -> usize {
-        (vaddr.as_usize() >> self.entry_size_shift()) & (LEN - 1)
+    fn index_of_table(&self, vaddr: *const u8) -> usize {
+        (vaddr as usize >> self.entry_size_shift()) & (LEN - 1)
     }
     fn level_entry_size_shift(level: usize) -> usize {
         Self::PTE_PADDR_OFFSET + (level - 1) * Self::IDX_POW
@@ -250,14 +250,12 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         }
     }
 
-    pub fn get_pte_mut(&mut self, vaddr: VirtAddr, access: &mut impl Access) -> Option<&mut P> {
+    pub fn get_pte_mut(&mut self, vaddr: *const u8, access: &mut impl Access) -> Option<&mut P> {
         let mut table = self.clone();
         let mut idx;
-        let mut this_vaddr = VirtAddr::from(0);
 
         while table.level > 0 {
             idx = table.index_of_table(vaddr);
-            this_vaddr += table.entry_size() * idx;
             let pte = &mut table.as_slice_mut(access)[idx];
 
             let cfg = pte.read();
@@ -342,7 +340,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableFn
     ) -> PagingResult {
         let align = 1 << Self::level_entry_size_shift(page_level);
         assert!(
-            cfg.vaddr.is_aligned(align as usize),
+            cfg.vaddr as usize % align == 0,
             "vaddr must be aligned to {align:#X}"
         );
         assert!(cfg.paddr.is_aligned_4k(), "paddr must be aligned to 4K");
@@ -389,12 +387,12 @@ pub trait PageTableFn {
 
     fn level_entry_size(&self, level: usize) -> usize;
 
-    fn detect_page_level(&self, vaddr: VirtAddr, size: usize) -> usize {
+    fn detect_page_level(&self, vaddr: *const u8, size: usize) -> usize {
         let max_level = 4;
         for level in (0..max_level).rev() {
             let page_size = self.level_entry_size(level);
 
-            if vaddr.is_aligned(page_size) && size >= page_size {
+            if vaddr as usize % page_size == 0 && size >= page_size {
                 return level;
             }
         }
@@ -441,8 +439,8 @@ pub trait PageTableFn {
         let mut size = size;
         trace!(
             "map_region: [{:#x}, {:#x}) -> [{:#x}, {:#x}) {:?}",
-            vaddr,
-            vaddr + size,
+            vaddr as usize,
+            vaddr as usize + size,
             paddr,
             paddr + size,
             cfg.attrs,
@@ -467,13 +465,13 @@ pub trait PageTableFn {
             .inspect_err(|e| {
                 error!(
                     "failed to map page: {:#x?}({:?}) -> {:#x?}, {:?}",
-                    vaddr, page_size, paddr, e
+                    vaddr as usize, page_size, paddr, e
                 )
             })?;
             if let Some(f) = on_page_mapped {
-                f(NonNull::new_unchecked(vaddr.as_mut_ptr()));
+                f(NonNull::new_unchecked(vaddr as *mut u8));
             }
-            vaddr += page_size as usize;
+            vaddr = vaddr.add(page_size);
             paddr += page_size as usize;
             size -= page_size as usize;
         }
@@ -488,10 +486,6 @@ pub trait PageTableFn {
     unsafe fn new(access: &mut impl Access) -> PagingResult<Self>
     where
         Self: Sized;
-
-    unsafe fn test_fn(&self, ptr: *const u8) {
-        ptr.add(1);
-    }
 }
 
 const fn log2(value: usize) -> usize {

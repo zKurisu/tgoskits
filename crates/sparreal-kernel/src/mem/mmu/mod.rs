@@ -34,12 +34,12 @@ pub unsafe fn boot_init<T: PageTableFn>(
     set_dtb_addr(phys_dtb_addr);
 
     let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
-    let virt_equal = kernel_p.align_down(BYTES_1G);
+    let virt_equal = kernel_p.align_down(BYTES_1G).as_mut_ptr();
 
     let mut boot_map_info = BootMapInfo {
-        virt: virt_equal + va_offset,
+        virt: virt_equal.add(va_offset),
         virt_equal,
-        phys: PhysAddr::from(virt_equal.as_usize()),
+        phys: PhysAddr::from(virt_equal as usize),
         size: BYTES_1G,
         heap_start: heap_begin_lma.add(BYTES_1M),
         heap_size: BYTES_1M * 2,
@@ -97,12 +97,12 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
     let heap_size = memory_size / 2;
     let heap_start = NonNull::new_unchecked(memory_begin.add(heap_size) as *mut u8);
 
-    let virt_equal = (memory_begin as usize).into();
+    let virt_equal = memory_begin as *mut u8;
 
     Some(BootMapInfo {
-        virt: virt_equal + va_offset,
+        virt: virt_equal.add(va_offset),
         virt_equal,
-        phys: virt_equal.as_usize().into(),
+        phys: (virt_equal as usize).into(),
         size: memory_size,
         heap_start,
         heap_size,
@@ -112,8 +112,8 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
 struct BootMapInfo {
     heap_start: NonNull<u8>,
     heap_size: usize,
-    virt: VirtAddr,
-    virt_equal: VirtAddr,
+    virt: *mut u8,
+    virt_equal: *mut u8,
     phys: PhysAddr,
     size: usize,
 }
@@ -165,7 +165,7 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     let mut table = P::Table::new(access)?;
-    let vaddr = (MEMORY_START + va_offset()).into();
+    let vaddr = (MEMORY_START + va_offset()) as *const u8;
     let paddr = MEMORY_START.into();
     let size = MEMORY_SIZE;
 
@@ -181,7 +181,6 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     )?;
 
     P::set_kernel_page_table(&table);
-    // P::set_user_page_table(Some(&table));
     P::set_user_page_table(None);
 
     Ok(())
@@ -190,7 +189,7 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
 pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     let mut table = P::get_kernel_page_table();
     let paddr = paddr.align_down_4k();
-    let vaddr = paddr.to_virt();
+    let vaddr = paddr.to_virt().as_mut_ptr();
     let size = size.max(0x1000);
 
     let mut heap = HEAP_ALLOCATOR.lock();
@@ -210,5 +209,5 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
         }),
     );
 
-    NonNull::new_unchecked(vaddr.as_mut_ptr())
+    NonNull::new_unchecked(vaddr)
 }
