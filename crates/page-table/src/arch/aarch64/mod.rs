@@ -1,6 +1,4 @@
 use core::{fmt::Debug, mem::transmute};
-
-use memory_addr::PhysAddr;
 use page_table_interface::{GenericPTE, PTEConfig, PageAttribute};
 
 #[allow(unused)]
@@ -58,8 +56,8 @@ impl PTE {
         self.0 & DescriptorAttr::NON_BLOCK.bits() == 0
     }
 
-    fn paddr(&self) -> PhysAddr {
-        ((self.0 & DescriptorAttr::PHYS_ADDR_MASK) as usize).into()
+    fn paddr(&self) -> usize {
+        (self.0 & DescriptorAttr::PHYS_ADDR_MASK) as usize
     }
 }
 
@@ -206,7 +204,7 @@ impl From<PTEConfig> for DescriptorAttr {
             des |= DescriptorAttr::NON_BLOCK;
         }
         des |=
-            DescriptorAttr::from_bits_retain(value.paddr.as_usize() as u64 & Self::PHYS_ADDR_MASK);
+            DescriptorAttr::from_bits_retain(value.paddr as u64 & Self::PHYS_ADDR_MASK);
 
         des
     }
@@ -231,7 +229,7 @@ impl GenericPTE for PTE {
         Self(des.bits())
     }
 
-    fn paddr(&self) -> PhysAddr {
+    fn paddr(&self) -> usize {
         PTE::paddr(self)
     }
 }

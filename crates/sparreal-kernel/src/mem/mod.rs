@@ -1,9 +1,10 @@
+mod addr;
 pub mod mmu;
 
 use core::{fmt::Display, marker::PhantomData, ops::DerefMut, ptr::NonNull};
 
+use addr::*;
 use buddy_system_allocator::{Heap, LockedHeap};
-use memory_addr::{PhysAddr, VirtAddr};
 use mmu::va_offset;
 
 use crate::{driver::device_tree::get_device_tree, KernelConfig, Platform};
@@ -18,18 +19,6 @@ pub const BYTES_1G: usize = 1024 * BYTES_1M;
 static mut MEMORY_START: usize = 0;
 static mut MEMORY_SIZE: usize = 0;
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct CpuAddr(*const u8);
-unsafe impl Send for CpuAddr {}
-unsafe impl Sync for CpuAddr {}
-
-impl<T> From<*const T> for CpuAddr {
-    fn from(value: *const T) -> Self {
-        Self(value as *const u8)
-    }
-}
-
 pub(crate) trait VirtToPhys {
     fn to_phys(&self) -> PhysAddr;
 }
@@ -40,13 +29,14 @@ impl<T> VirtToPhys for NonNull<T> {
     }
 }
 
-pub(crate) trait PhysToVirt {
-    fn to_virt(&self) -> VirtAddr;
+pub(crate) trait PhysToVirt<T> {
+    fn to_virt(self) -> Virt<T>;
 }
 
-impl PhysToVirt for PhysAddr {
-    fn to_virt(&self) -> VirtAddr {
-        (self.as_usize() + va_offset()).into()
+impl<T> PhysToVirt<T> for Phys<T> {
+    fn to_virt(self) -> Virt<T> {
+        let a: usize = self.into();
+        (a + va_offset()).into()
     }
 }
 
@@ -144,16 +134,16 @@ where
         va_offset()
     }
 
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<PhysAddr> {
+    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<usize> {
         match self.inner.alloc(layout) {
-            Ok(addr) => Some((addr.as_ptr() as usize - va_offset()).into()),
+            Ok(addr) => Some(addr.as_ptr() as usize - va_offset()),
             Err(_) => None,
         }
     }
 
-    unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
         self.inner.dealloc(
-            NonNull::new_unchecked((ptr.as_usize() + va_offset()) as *mut u8),
+            NonNull::new_unchecked((ptr + va_offset()) as *mut u8),
             layout,
         );
     }

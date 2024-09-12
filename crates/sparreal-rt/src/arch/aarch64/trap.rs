@@ -1,6 +1,6 @@
 use aarch64_cpu::registers::*;
 use log::warn;
-use page_table_interface::VirtAddr;
+use memory_addr::VirtAddr;
 
 #[no_mangle]
 unsafe extern "C" fn handle_sync(tf: &TrapFrame) {

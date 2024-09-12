@@ -3,7 +3,6 @@
 use core::{alloc::Layout, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
 use log::{error, trace};
-pub use memory_addr::*;
 
 /// The error type for page table operation failures.
 #[derive(Debug, PartialEq)]
@@ -31,21 +30,21 @@ pub trait Access {
     /// # Safety
     ///
     /// should be deallocated by [`dealloc`].
-    unsafe fn alloc(&mut self, layout: Layout) -> Option<PhysAddr>;
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<usize>;
     /// dealloc memory for a page table entry.
     ///
     /// # Safety
     ///
     /// ptr must be allocated by [`alloc`].
-    unsafe fn dealloc(&mut self, ptr: PhysAddr, layout: Layout);
-    fn phys_to_virt<T>(&self, phys: PhysAddr) -> NonNull<T> {
-        unsafe { NonNull::new_unchecked((phys.as_usize() + self.va_offset()) as *mut u8) }.cast()
+    unsafe fn dealloc(&mut self, ptr: usize, layout: Layout);
+    fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
+        unsafe { NonNull::new_unchecked((phys + self.va_offset()) as *mut u8) }.cast()
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct PTEConfig {
-    pub paddr: PhysAddr,
+    pub paddr: usize,
     pub is_block: bool,
     pub attributes: PageAttribute,
 }
@@ -56,7 +55,7 @@ pub trait GenericPTE: Debug + Clone + Copy + Sync + Send + Sized + 'static {
     /// Creates a page table entry point to a terminate page or block.
     fn new_page(pte: PTEConfig) -> Self;
 
-    fn new_table(paddr: PhysAddr) -> Self {
+    fn new_table(paddr: usize) -> Self {
         Self::new_page(PTEConfig {
             paddr,
             is_block: false,
@@ -78,7 +77,7 @@ pub trait GenericPTE: Debug + Clone + Copy + Sync + Send + Sized + 'static {
         self.read().attributes.contains(PageAttribute::Read)
     }
 
-    fn paddr(&self) -> PhysAddr {
+    fn paddr(&self) -> usize {
         self.read().paddr
     }
 }
@@ -100,7 +99,7 @@ bitflags::bitflags! {
 #[derive(Debug, Clone, Copy)]
 pub struct MapConfig {
     pub vaddr: *const u8,
-    pub paddr: PhysAddr,
+    pub paddr: usize,
     pub attrs: PageAttribute,
 }
 /// A reference to a page table.
@@ -109,14 +108,14 @@ pub struct MapConfig {
 /// `LEVEL` is the max level of the page table.
 #[derive(Clone, Copy)]
 pub struct PageTableRef<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> {
-    addr: PhysAddr,
+    addr: usize,
     // 当前的页表等级
     pub level: usize,
     _marker: PhantomData<&'a P>,
 }
 
 impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'_, P, LEN, LEVEL> {
-    pub fn from_addr(addr: PhysAddr, level: usize) -> Self {
+    pub fn from_addr(addr: usize, level: usize) -> Self {
         PageTableRef {
             addr,
             level,
@@ -130,7 +129,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     const TABLE_SIZE: usize = LEN * size_of::<P>();
     const PTE_PADDR_OFFSET: usize = log2(P::PAGE_SIZE);
 
-    pub fn paddr(&self) -> PhysAddr {
+    pub fn paddr(&self) -> usize {
         self.addr
     }
 
@@ -179,10 +178,10 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     }
 
     fn as_slice<'b: 'a>(&self, access: &impl Access) -> &'b [P; LEN] {
-        unsafe { &*((self.addr.as_usize() + access.va_offset()) as *const [P; LEN]) }
+        unsafe { &*((self.addr + access.va_offset()) as *const [P; LEN]) }
     }
     fn as_slice_mut<'b: 'a>(&self, access: &mut impl Access) -> &'b mut [P; LEN] {
-        unsafe { &mut *((self.addr.as_usize() + access.va_offset()) as *mut [P; LEN]) }
+        unsafe { &mut *((self.addr + access.va_offset()) as *mut [P; LEN]) }
     }
     fn next_table(&self, index: usize, access: &impl Access) -> Option<Self> {
         let pte = &self.as_slice(access)[index];
@@ -238,7 +237,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         Err(PagingError::NotAligned)
     }
 
-    unsafe fn alloc_table(access: &mut impl Access) -> PagingResult<PhysAddr> {
+    unsafe fn alloc_table(access: &mut impl Access) -> PagingResult<usize> {
         let layout = Layout::from_size_align_unchecked(Self::TABLE_SIZE, Self::TABLE_SIZE);
         if let Some(addr) = access.alloc(layout) {
             access
@@ -272,12 +271,12 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     }
 
     pub fn walk<F: Fn(&WalkInfo<P>)>(&self, f: F, access: &impl Access) {
-        self.walk_recursive(0.into(), usize::MAX, Some(&f), None, access);
+        self.walk_recursive(0 as _, usize::MAX, Some(&f), None, access);
     }
 
     fn walk_recursive<F>(
         &self,
-        start_vaddr: VirtAddr,
+        start_vaddr: *const u8,
         limit: usize,
         pre_func: Option<&F>,
         post_func: Option<&F>,
@@ -286,12 +285,12 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     where
         F: Fn(&WalkInfo<P>),
     {
-        let start_vaddr_usize: usize = start_vaddr.into();
+        let start_vaddr_usize: usize = start_vaddr as _;
         let mut n = 0;
         let entries = self.as_slice(access);
         for (i, entry) in entries.iter().enumerate() {
             let vaddr_usize = start_vaddr_usize + i * self.entry_size();
-            let vaddr = vaddr_usize.into();
+            let vaddr = vaddr_usize as _;
 
             if entry.valid() {
                 let pte = entry.read();
@@ -324,7 +323,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
 }
 pub struct WalkInfo<P: GenericPTE> {
     pub level: usize,
-    pub vaddr: VirtAddr,
+    pub vaddr: *const u8,
     pub pte: PTEConfig,
     pub entry: P,
 }
@@ -343,7 +342,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableFn
             cfg.vaddr as usize % align == 0,
             "vaddr must be aligned to {align:#X}"
         );
-        assert!(cfg.paddr.is_aligned_4k(), "paddr must be aligned to 4K");
+        assert!(cfg.paddr % 0x1000 == 0, "paddr must be aligned to 4K");
 
         let (entry, level) = self.get_entry_mut_or_create(cfg, page_level, access)?;
         if entry.valid() {

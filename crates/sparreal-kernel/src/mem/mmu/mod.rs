@@ -3,6 +3,7 @@ use core::{
     ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
 };
 
+use super::{addr::*, AllocatorRef, PhysToVirt, BYTES_1G, BYTES_1M, HEAP_ALLOCATOR};
 use flat_device_tree::Fdt;
 pub use page_table_interface::*;
 
@@ -10,8 +11,6 @@ use crate::{
     driver::device_tree::{get_device_tree, set_dtb_addr},
     Platform,
 };
-
-use super::{AllocatorRef, PhysToVirt, BYTES_1G, BYTES_1M, HEAP_ALLOCATOR};
 
 static mut VA_OFFSET: usize = 0;
 static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
@@ -33,13 +32,13 @@ pub unsafe fn boot_init<T: PageTableFn>(
 
     set_dtb_addr(phys_dtb_addr);
 
-    let kernel_p = VirtAddr::from(kernel_lma.as_ptr() as usize);
-    let virt_equal = kernel_p.align_down(BYTES_1G).as_mut_ptr();
+    let kernel_p = Virt::from(kernel_lma.as_ptr());
+    let virt_equal = kernel_p.align_down(BYTES_1G);
 
     let mut boot_map_info = BootMapInfo {
-        virt: virt_equal.add(va_offset),
+        virt: virt_equal + va_offset,
         virt_equal,
-        phys: PhysAddr::from(virt_equal as usize),
+        phys: virt_equal.convert_to_phys(0),
         size: BYTES_1G,
         heap_start: heap_begin_lma.add(BYTES_1M),
         heap_size: BYTES_1M * 2,
@@ -63,8 +62,8 @@ pub unsafe fn boot_init<T: PageTableFn>(
 
     let _ = table.map_region(
         MapConfig {
-            vaddr: boot_map_info.virt,
-            paddr: boot_map_info.phys,
+            vaddr: boot_map_info.virt.into(),
+            paddr: boot_map_info.phys.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
         boot_map_info.size,
@@ -75,8 +74,8 @@ pub unsafe fn boot_init<T: PageTableFn>(
     // 恒等映射，用于mmu启动过程
     let _ = table.map_region(
         MapConfig {
-            vaddr: boot_map_info.virt_equal,
-            paddr: boot_map_info.phys,
+            vaddr: boot_map_info.virt_equal.into(),
+            paddr: boot_map_info.phys.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
         boot_map_info.size,
@@ -97,12 +96,12 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
     let heap_size = memory_size / 2;
     let heap_start = NonNull::new_unchecked(memory_begin.add(heap_size) as *mut u8);
 
-    let virt_equal = memory_begin as *mut u8;
+    let virt_equal = memory_begin.into();
 
     Some(BootMapInfo {
-        virt: virt_equal.add(va_offset),
+        virt: virt_equal + va_offset,
         virt_equal,
-        phys: (virt_equal as usize).into(),
+        phys: virt_equal.convert_to_phys(0),
         size: memory_size,
         heap_start,
         heap_size,
@@ -112,8 +111,8 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
 struct BootMapInfo {
     heap_start: NonNull<u8>,
     heap_size: usize,
-    virt: *mut u8,
-    virt_equal: *mut u8,
+    virt: VirtAddr,
+    virt_equal: VirtAddr,
     phys: PhysAddr,
     size: usize,
 }
@@ -144,17 +143,17 @@ impl BeforeMMUPageAllocator {
 }
 
 impl Access for BeforeMMUPageAllocator {
-    unsafe fn alloc(&mut self, layout: Layout) -> Option<PhysAddr> {
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<usize> {
         let size = layout.size();
         if self.iter + size > self.end {
             return None;
         }
         let ptr = self.iter;
         self.iter += size;
-        Some(ptr.into())
+        Some(ptr)
     }
 
-    unsafe fn dealloc(&mut self, _ptr: PhysAddr, _layout: Layout) {}
+    unsafe fn dealloc(&mut self, _ptr: usize, _layout: Layout) {}
 
     fn va_offset(&self) -> usize {
         0
@@ -188,7 +187,7 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
 
 pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     let mut table = P::get_kernel_page_table();
-    let paddr = paddr.align_down_4k();
+    let paddr = paddr.align_down(0x1000);
     let vaddr = paddr.to_virt().as_mut_ptr();
     let size = size.max(0x1000);
 
@@ -198,7 +197,7 @@ pub(crate) unsafe fn iomap<P: Platform>(paddr: PhysAddr, size: usize) -> NonNull
     let _ = table.map_region_with_handle(
         MapConfig {
             vaddr,
-            paddr,
+            paddr: paddr.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
         },
         size,

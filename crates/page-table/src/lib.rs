@@ -30,12 +30,12 @@ mod test {
     struct AcImpl;
 
     impl Access for AcImpl {
-        unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<memory_addr::PhysAddr> {
+        unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<usize> {
             Some((std::alloc::alloc(layout) as usize).into())
         }
 
-        unsafe fn dealloc(&mut self, ptr: memory_addr::PhysAddr, layout: core::alloc::Layout) {
-            std::alloc::dealloc(ptr.as_usize() as _, layout)
+        unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
+            std::alloc::dealloc(ptr as _, layout)
         }
 
         fn va_offset(&self) -> usize {
@@ -48,8 +48,8 @@ mod test {
         unsafe {
             let mut access = AcImpl;
             let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
-            let vaddr = (0xffff_ffff_0000_0000 + 50 * 0x1000).into();
-            let paddr = 0x1000.into();
+            let vaddr = (0xffff_ffff_0000_0000usize + 50 * 0x1000) as _;
+            let paddr = 0x1000;
 
             table
                 .map(
@@ -75,8 +75,8 @@ mod test {
         unsafe {
             let mut access = AcImpl;
             let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
-            let vaddr = (0xffff_ffff_0000_0000 + 50 * 2 * 1024 * 1024).into();
-            let paddr = 0x1000.into();
+            let vaddr = (0xffff_ffff_0000_0000usize + 50 * 2 * 1024 * 1024) as _;
+            let paddr = 0x1000;
 
             table
                 .map(
@@ -103,8 +103,8 @@ mod test {
         unsafe {
             let mut access = AcImpl;
             let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
-            let vaddr = (0xffff_ff00_0000_0000 + 50 * 1024 * 1024 * 1024).into();
-            let paddr = 0x1000.into();
+            let vaddr = (0xffff_ff00_0000_0000usize + 50 * 1024 * 1024 * 1024) as _;
+            let paddr = 0x1000;
 
             table
                 .map(
@@ -137,14 +137,14 @@ mod test {
 
             let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
 
-            let virt = 0xffff_ffff_0000_0000 + 1024 * 1024 * 1024;
+            let virt = (0xffff_ffff_0000_0000usize + 1024 * 1024 * 1024) as _;
             let phys = 0x1000;
 
             table
                 .map(
                     &MapConfig {
-                        vaddr: virt.into(),
-                        paddr: phys.into(),
+                        vaddr: virt,
+                        paddr: phys,
                         attrs: PageAttribute::Read | PageAttribute::Write,
                     },
                     2,
@@ -163,7 +163,7 @@ mod test {
 
             info!("walk finish");
 
-            let pte = table.get_pte_mut(virt.into(), &mut access);
+            let pte = table.get_pte_mut(virt, &mut access);
 
             info!("pte: {:?}", pte);
 
@@ -182,12 +182,10 @@ mod test {
             let mut access = AcImpl;
             let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
             let va_offset = 0xffff_ff00_0000_0000;
-            let kernel = 0x4008_0000;
 
-            let kernel_p = VirtAddr::from(kernel);
-            let vphys_down = kernel_p.align_down(BYTES_1G);
-            let phys_down = PhysAddr::from(vphys_down.as_usize());
-            let virt_down = vphys_down + va_offset;
+            let phys_down = 0x4000_0000;
+            let vphys_down = phys_down as *mut u8;
+            let virt_down = vphys_down.add(va_offset);
 
             table
                 .map_region(

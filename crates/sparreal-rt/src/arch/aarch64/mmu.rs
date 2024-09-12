@@ -18,5 +18,5 @@ pub unsafe fn init_boot_table(va_offset: usize, dtb_addr: NonNull<u8>) -> u64 {
 
     MAIR_EL1.set(page_table::AttrIndex::mair_value());
 
-    table.paddr().as_usize() as _
+    table.paddr() as _
 }

@@ -548,7 +548,6 @@ dependencies = [
  "bitflags",
  "env_logger",
  "log",
- "memory_addr",
  "page-table-interface",
  "x86_64",
 ]
@@ -559,7 +558,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags",
  "log",
- "memory_addr",
 ]
 
 [[package]]
@@ -903,6 +901,7 @@ dependencies = [
  "embedded-io",
  "futures",
  "log",
+ "memory_addr",
  "page-table",
  "page-table-interface",
  "sparreal-build",
