@@ -42,6 +42,7 @@ pub struct Project {
     pub target: String,
     pub kernel_bin: String,
     pub config_path: PathBuf,
+    pub kernel_linux_image: PathBuf,
     pub output_dir: PathBuf,
     pub arch: Arch,
     pub config_toml: toml::Value,
@@ -96,6 +97,7 @@ impl Project {
             debug,
             config,
             compile: None,
+            kernel_linux_image: Default::default(),
         })
     }
 

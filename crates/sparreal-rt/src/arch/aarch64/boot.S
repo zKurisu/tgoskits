@@ -1,12 +1,16 @@
-  .section .text.boot.start,"ax"
-  .align 3
+.section .text.boot.start,"ax"
+.align 3
 
 // ------------------------------------------------------------
 
-  .global _start_boot
-  .type _start_boot, @function
+.global _start_boot
+.type _start_boot, @function
 _start_boot:
+  // code0/code1
+  nop
+  bl entry
 
+entry:
   // Clear registers
   // ---------------
   // This is primarily for RTL simulators, to avoid
@@ -30,6 +34,9 @@ _start_boot:
 
   BL       __switch_to_el1
 
+.global _el1_entry
+.type _el1_entry, @function
+_el1_entry:
   // Install vector table
   // --------------------- 
   .global  vector_table_el1
@@ -45,3 +52,4 @@ _start_boot:
   MOV      x1, x10
   BL       __rust_main
   B        .
+

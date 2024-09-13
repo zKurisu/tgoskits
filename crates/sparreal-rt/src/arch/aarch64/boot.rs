@@ -61,7 +61,18 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
-    kernel::boot()
+    if MPIDR_EL1.matches_all(
+        MPIDR_EL1::Aff0.val(0)
+            + MPIDR_EL1::Aff1.val(0)
+            + MPIDR_EL1::Aff2.val(0)
+            + MPIDR_EL1::Aff3.val(0),
+    ) {
+        kernel::boot()
+    } else {
+        loop {
+            aarch64_cpu::asm::wfe();
+        }
+    }
 }
 
 unsafe fn clear_bss() {
@@ -118,10 +129,12 @@ unsafe extern "C" fn __switch_to_el1() {
             mov     x8, sp
             msr     sp_el1, x8
             MOV      x0, x19
-            adr      x2, _start_boot
-            msr elr_el2, x2
+            adr      x2, _el1_entry
+            msr      elr_el2, x2
             eret
             "
         );
+    } else {
+        asm!("bl _el1_entry")
     }
 }

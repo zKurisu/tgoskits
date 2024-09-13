@@ -45,8 +45,8 @@ impl<'a> Qemu<'a> {
             &machine,
             "-kernel",
             &bin,
-            "-dtb",
-            "target/bcm2711-rpi-4-b.dtb"
+            // "-dtb",
+            // "target/bcm2711-rpi-4-b.dtb"
             // "-global",
             // "virtio-mmio.force-legacy=false",
             // "-drive",
