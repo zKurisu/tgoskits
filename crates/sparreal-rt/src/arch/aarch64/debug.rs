@@ -1,0 +1,56 @@
+use core::fmt::{self, Arguments, Write};
+
+use log::*;
+
+unsafe fn put_debug(char: u8) {
+    const BASE: usize = 0;
+    // const BASE: usize = 0x2800D000;
+    if BASE == 0 {
+        return;
+    }
+
+    let state = (BASE + 0x18) as *mut u8;
+    let put = (BASE) as *mut u8;
+    while (state.read_volatile() & (0x20 as u8)) != 0 {}
+    put.write_volatile(char);
+}
+
+struct DebugLogger;
+
+struct DebugWriter;
+
+impl fmt::Write for DebugWriter {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.bytes() {
+            unsafe { put_debug(c) }
+        }
+        Ok(())
+    }
+}
+
+impl Log for DebugLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        DebugWriter {}.write_fmt(format_args!("{} {}", record.level(), record.args(),));
+    }
+
+    fn flush(&self) {}
+}
+
+static LOGGER: DebugLogger = DebugLogger;
+
+pub fn init_debug() {
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+}
+
+pub fn debug_print(d: &str) {
+    DebugWriter {}.write_str(d);
+    DebugWriter {}.write_str("\r\n");
+}
+
+pub fn debug_fmt(args: Arguments<'_>) {
+    DebugWriter {}.write_fmt(args);
+}

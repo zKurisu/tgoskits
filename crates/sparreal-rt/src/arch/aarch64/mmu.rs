@@ -1,6 +1,7 @@
 use core::ptr::NonNull;
 
 use aarch64_cpu::registers::*;
+use log::debug;
 use sparreal_kernel::mem::mmu;
 
 extern "C" {

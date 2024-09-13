@@ -1,6 +1,7 @@
 mod boot;
 mod mmu;
 mod trap;
+mod debug;
 
 use core::{arch::asm, ptr::NonNull};
 

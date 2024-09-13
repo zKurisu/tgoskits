@@ -1,12 +1,13 @@
 use core::{
     arch::{asm, global_asm},
-    ptr::{slice_from_raw_parts_mut, NonNull},
+    ptr::{self, slice_from_raw_parts_mut, NonNull},
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
+use log::debug;
 use tock_registers::interfaces::ReadWriteable;
 
-use crate::kernel;
+use crate::{arch::debug::{debug_fmt, debug_print, init_debug}, kernel};
 
 use super::mmu;
 
@@ -21,7 +22,11 @@ extern "C" {
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
+    debug_print("bss cleared");
+
     let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
+
+    debug_print("table initialized");
 
     // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
     let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
@@ -42,6 +47,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
     TTBR0_EL1.set_baddr(table);
+    debug_print("table set");
 
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
@@ -86,6 +92,7 @@ unsafe fn clear_bss() {
 
 #[no_mangle]
 unsafe extern "C" fn __switch_to_el1() {
+    debug_print("switch to EL1");
     SPSel.write(SPSel::SP::ELx);
     SP_EL0.set(0);
     let current_el = CurrentEL.read(CurrentEL::EL);
