@@ -1,6 +1,6 @@
 OUTPUT_ARCH(%ARCH%)
 
-ENTRY(_start_boot)
+ENTRY(_start)
 
 /* Define the program headers we want so the bootloader gives us the right */
 /* MMU permissions; this also allows us to exert more control over the linking */
@@ -17,13 +17,13 @@ SECTIONS
     . = %KERNEL_VADDR%;
     _skernel = .;
 
-    .text :   
-        ALIGN(4K) {
+    .text : ALIGN(4K) {
         _stext = .;
+        KEEP(*(.head.text))
         KEEP(*(.text.boot.start))
-        KEEP(*(.text.boot .text.boot.*));
+        KEEP(*(.text.boot .text.boot.*))
         . = ALIGN(4);
-        *(.text .text.*)
+        *(.text .text.*);
         . = ALIGN(4K);
         _etext = .;
     } :text
@@ -77,6 +77,7 @@ SECTIONS
     . = ALIGN(4K);
     _stack_top = . + %STACK_SIZE%;
     _cpu_stack_size = %CPU_STACK_SIZE%;
+    _kernel_size = _stack_top - _skernel;
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)
     }

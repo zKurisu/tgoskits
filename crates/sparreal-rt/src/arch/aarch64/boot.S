@@ -1,3 +1,38 @@
+.section ".head.text","ax"
+.global _start
+
+_start:
+    // code0/code1
+    nop
+    b entry
+
+    // text_offset
+    .quad 0x80000
+
+    // image_size
+    .quad _kernel_size
+
+    // flags
+    .quad 0
+
+    // Reserved fields
+    .quad 0
+    .quad 0
+    .quad 0
+
+    // magic - yes 0x644d5241 is the same as ASCII string "ARM\x64"
+    .ascii "ARM\x64"
+
+    // Another reserved field at the end of the header
+    .byte 0, 0, 0, 0
+
+entry:
+    bl _start_boot 
+
+loop:
+    b loop
+
+
 .section .text.boot.start,"ax"
 .align 3
 
@@ -6,18 +41,13 @@
 .global _start_boot
 .type _start_boot, @function
 _start_boot:
-  // code0/code1
-  nop
-  bl entry
-
-entry:
   // Clear registers
   // ---------------
   // This is primarily for RTL simulators, to avoid
   // possibility of X propagation
   
   ADR      x11, .
-  LDR      x10, =_skernel
+  LDR      x10, =_start_boot
   SUB      x10, x10, x11 // x10 = va_offset
 
   MOV      x19, x0        // x9 = dtb_addr
