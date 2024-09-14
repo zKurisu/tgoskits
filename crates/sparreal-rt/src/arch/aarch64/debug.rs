@@ -1,10 +1,11 @@
 use core::fmt::{self, Arguments, Write};
 
 use log::*;
+use sparreal_kernel::util;
 
 unsafe fn put_debug(char: u8) {
-    const BASE: usize = 0;
-    // const BASE: usize = 0x2800D000;
+    // const BASE: usize = 0;
+    const BASE: usize = 0x2800D000;
     if BASE == 0 {
         return;
     }
@@ -46,11 +47,17 @@ pub fn init_debug() {
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 
-pub fn debug_print(d: &str) {
+pub fn debug_println(d: &str) {
     DebugWriter {}.write_str(d);
     DebugWriter {}.write_str("\r\n");
 }
-
+pub fn debug_print(d: &str) {
+    DebugWriter {}.write_str(d);
+}
 pub fn debug_fmt(args: Arguments<'_>) {
     DebugWriter {}.write_fmt(args);
+}
+
+pub fn debug_hex(v: u64) {
+    util::boot::boot_debug_hex(DebugWriter {}, v);
 }

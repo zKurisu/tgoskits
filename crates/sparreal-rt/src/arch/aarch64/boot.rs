@@ -9,7 +9,7 @@ use tock_registers::interfaces::ReadWriteable;
 
 use crate::{arch::debug::{debug_fmt, debug_print, init_debug}, kernel};
 
-use super::mmu;
+use super::{debug::{debug_hex, debug_println}, mmu};
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -23,6 +23,7 @@ extern "C" {
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
     debug_print("bss cleared");
+    print_info(dtb_addr, va_offset);
 
     let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
 
@@ -89,6 +90,17 @@ unsafe fn clear_bss() {
     let bss = &mut *slice_from_raw_parts_mut(_sbss as *mut u8, _ebss as usize - _sbss as usize);
     bss.fill(0);
 }
+
+
+
+fn print_info(dtb_addr: usize, va_offset: usize){
+    debug_print("dtb @");
+    debug_hex(dtb_addr as _);
+    debug_print(" va_offset: ");
+    debug_hex(va_offset as _);
+    debug_print("\r\n");
+}
+
 
 #[no_mangle]
 unsafe extern "C" fn __switch_to_el1() {

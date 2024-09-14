@@ -14,6 +14,7 @@ pub mod platform;
 pub mod stdout;
 pub mod sync;
 pub mod time;
+pub mod util;
 
 pub use kernel::*;
 pub use platform::Platform;

@@ -1,4 +1,4 @@
-use core::ptr::NonNull;
+use core::{fmt, ptr::NonNull};
 
 pub use page_table_interface::PageTableFn;
 
@@ -34,6 +34,16 @@ pub trait Mmu {
     fn set_user_page_table(table: Option<&Self::Table>);
     fn get_kernel_page_table() -> Self::Table;
     fn flush_tlb(addr: Option<NonNull<u8>>);
+    fn boot_debug_writer() -> Option<impl fmt::Write> {
+        None::<NopWrite>
+    }
+}
+
+struct NopWrite;
+impl fmt::Write for NopWrite {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        todo!()
+    }
 }
 
 pub fn app_main() {

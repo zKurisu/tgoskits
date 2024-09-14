@@ -18,3 +18,6 @@ fn print_node(node: FdtNode<'_, '_>, n_spaces: usize) {
         print_node(child, n_spaces + 4);
     }
 }
+
+
+
