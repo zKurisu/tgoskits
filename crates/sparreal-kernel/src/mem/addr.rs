@@ -34,6 +34,10 @@ impl<T> Virt<T> {
     pub fn as_mut_ptr(self) -> *mut T {
         self.0 as *mut T
     }
+
+    pub fn as_usize(self) -> usize {
+        self.0 as usize
+    }
 }
 
 impl<T> From<usize> for Virt<T> {
@@ -100,4 +104,12 @@ pub const fn align_offset(addr: usize, align: usize) -> usize {
 
 pub const fn align_down(addr: usize, align: usize) -> usize {
     addr & !(align - 1)
+}
+
+impl<T> Add<usize> for Phys<T> {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        (self.as_usize() + rhs).into()
+    }
 }

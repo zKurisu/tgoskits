@@ -2,6 +2,7 @@ use core::ptr::NonNull;
 
 use flat_device_tree::Fdt;
 
+#[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
 
 pub(crate) unsafe fn set_dtb_addr(addr: Option<NonNull<u8>>) {
@@ -14,3 +15,6 @@ pub fn get_device_tree() -> Option<Fdt<'static>> {
         Fdt::from_ptr(dtb_addr.as_ptr()).ok()
     }
 }
+
+
+

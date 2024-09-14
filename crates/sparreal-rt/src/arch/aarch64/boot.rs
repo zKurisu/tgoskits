@@ -5,11 +5,19 @@ use core::{
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use log::debug;
+use sparreal_kernel::util;
 use tock_registers::interfaces::ReadWriteable;
+use DAIF::A;
 
-use crate::{arch::debug::{debug_fmt, debug_print, init_debug}, kernel};
+use crate::{
+    arch::debug::{debug_fmt, debug_print, init_debug, mmu_add_offset},
+    kernel,
+};
 
-use super::{debug::{debug_hex, debug_println}, mmu};
+use super::{
+    debug::{debug_hex, debug_println, init_log},
+    mmu,
+};
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -22,12 +30,11 @@ extern "C" {
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
-    debug_print("bss cleared");
     print_info(dtb_addr, va_offset);
 
     let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
 
-    debug_print("table initialized");
+    debug_println("table initialized");
 
     // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
     let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
@@ -48,8 +55,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
     TTBR0_EL1.set_baddr(table);
-    debug_print("table set");
-
+    debug_println("table set");
+    mmu_add_offset(va_offset);
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
@@ -68,6 +75,14 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
+    debug_println("mmu ok");
+    debug_fmt(format_args!("{}\r\n", "debug log ok"));
+
+    loop {
+        debug_print(".");
+        asm!("wfe");
+    }
+
     if MPIDR_EL1.matches_all(
         MPIDR_EL1::Aff0.val(0)
             + MPIDR_EL1::Aff1.val(0)
@@ -91,9 +106,13 @@ unsafe fn clear_bss() {
     bss.fill(0);
 }
 
+unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
+    if let Some(dtb) = NonNull::new(dtb_addr as *mut u8) {
+        if let Some(reg) = util::boot::stdout_reg(dtb) {
+            init_debug(reg);
+        }
+    }
 
-
-fn print_info(dtb_addr: usize, va_offset: usize){
     debug_print("dtb @");
     debug_hex(dtb_addr as _);
     debug_print(" va_offset: ");
@@ -101,10 +120,8 @@ fn print_info(dtb_addr: usize, va_offset: usize){
     debug_print("\r\n");
 }
 
-
 #[no_mangle]
 unsafe extern "C" fn __switch_to_el1() {
-    debug_print("switch to EL1");
     SPSel.write(SPSel::SP::ELx);
     SP_EL0.set(0);
     let current_el = CurrentEL.read(CurrentEL::EL);

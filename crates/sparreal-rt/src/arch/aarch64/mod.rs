@@ -1,11 +1,12 @@
 mod boot;
+mod debug;
 mod mmu;
 mod trap;
-mod debug;
 
 use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
+use debug::DebugWriter;
 use sparreal_kernel::{platform::Mmu, Platform};
 pub struct PlatformImpl;
 
@@ -54,4 +55,8 @@ impl Mmu for PlatformImpl {
     }
 
     type Table = mmu::PageTable;
+
+    fn boot_debug_writer() -> Option<impl core::fmt::Write> {
+        Some(DebugWriter {})
+    }
 }

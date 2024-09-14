@@ -5,83 +5,133 @@ use core::{
 
 use super::*;
 use flat_device_tree::Fdt;
+use memory_addr::MemoryAddr;
 pub use page_table_interface::*;
 
 use crate::{
     driver::device_tree::{get_device_tree, set_dtb_addr},
+    kernel,
+    util::{
+        self,
+        boot::{k_boot_debug, k_boot_debug_hex},
+    },
     Platform,
 };
 
-static mut VA_OFFSET: usize = 0;
-static mut HEAP_BEGIN_LMA: NonNull<u8> = NonNull::dangling();
-static mut MEMORY_START: usize = 0;
-static mut MEMORY_SIZE: usize = 0;
-
-pub fn va_offset() -> usize {
-    unsafe { VA_OFFSET }
+struct BootInfo {
+    va_offset: usize,
+    reserved_start: usize,
+    reserved_end: usize,
 }
 
-pub unsafe fn boot_init<T: PageTableFn>(
+#[link_section = ".data.boot"]
+static mut BOOT_INFO: BootInfo = BootInfo {
+    va_offset: 0,
+    reserved_start: 0,
+    reserved_end: 0,
+};
+
+fn reserved_start() -> Phys<u8> {
+    unsafe { BOOT_INFO.reserved_start.into() }
+}
+fn reserved_end() -> Phys<u8> {
+    unsafe { BOOT_INFO.reserved_end.into() }
+}
+
+pub fn va_offset() -> usize {
+    unsafe { BOOT_INFO.va_offset }
+}
+
+pub unsafe fn boot_init<P: Platform>(
     va_offset: usize,
     dtb_addr: NonNull<u8>,
-    heap_begin_lma: NonNull<u8>,
     kernel_lma: NonNull<u8>,
-) -> PagingResult<T> {
-    VA_OFFSET = va_offset;
-    let phys_dtb_addr = protect_dtb(dtb_addr, heap_begin_lma);
+    kernel_size: usize,
+) -> PagingResult<P::Table> {
+    BOOT_INFO.va_offset = va_offset;
+    BOOT_INFO.reserved_start = kernel_lma.as_ptr() as usize;
+    BOOT_INFO.reserved_end = kernel_lma.as_ptr() as usize + kernel_size;
 
-    set_dtb_addr(phys_dtb_addr);
+    k_boot_debug::<P>("boot table init\r\n");
 
-    let kernel_p = Virt::from(kernel_lma.as_ptr());
-    let virt_equal = kernel_p.align_down(BYTES_1G);
-
-    let mut boot_map_info = BootMapInfo {
-        virt: virt_equal + va_offset,
-        virt_equal,
-        phys: virt_equal.convert_to_phys(0),
-        size: BYTES_1G,
-        heap_start: heap_begin_lma.add(BYTES_1M),
-        heap_size: BYTES_1M * 2,
-    };
-
-    if let Some(info) = read_dev_tree_boot_map_info(va_offset) {
-        boot_map_info = info;
-    }
-
-    set_dtb_addr(phys_dtb_addr.map(|p| p.add(va_offset)));
-
-    let mut access = BeforeMMUPageAllocator::new(
-        boot_map_info.heap_start.as_ptr() as usize,
-        boot_map_info.heap_size,
+    let phys_dtb_addr = protect_dtb(
+        dtb_addr,
+        NonNull::new_unchecked(BOOT_INFO.reserved_end as _),
     );
 
-    MEMORY_START = boot_map_info.phys.into();
-    MEMORY_SIZE = boot_map_info.size;
+    if let Some(addr) = phys_dtb_addr {
+        k_boot_debug::<P>("dtb moved to ");
+        k_boot_debug_hex::<P>(addr.as_ptr() as usize as _);
+        k_boot_debug::<P>("\r\n");
+    }
 
-    let mut table = T::new(&mut access)?;
+    let stdout = phys_dtb_addr.and_then(|addr| util::boot::stdout_reg(addr));
+
+    set_dtb_addr(phys_dtb_addr);
+    DtbPrint::<P>::print();
+
+    let primory_phys_start = reserved_start().align_down(BYTES_1M * 2);
+    let primory_virt_start = primory_phys_start.to_virt();
+    let primory_virt_start_eq = Virt::<u8>::from(primory_phys_start.as_usize());
+    let size = BYTES_1G;
+
+    let heap_start = reserved_end() + BYTES_1M * 2;
+    let heep_size = BYTES_1M * 2;
+    let mut access = BeforeMMUPageAllocator::new(heap_start.into(), heep_size);
+
+    let mut table = P::Table::new(&mut access)?;
 
     let _ = table.map_region(
         MapConfig {
-            vaddr: boot_map_info.virt.into(),
-            paddr: boot_map_info.phys.into(),
+            vaddr: primory_virt_start.into(),
+            paddr: primory_phys_start.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        boot_map_info.size,
+        size,
         true,
         &mut access,
     );
+    k_boot_debug::<P>("map @");
+    k_boot_debug_hex::<P>(primory_virt_start.as_usize() as _);
+    k_boot_debug::<P>("-> @");
+    k_boot_debug_hex::<P>(primory_phys_start.as_usize() as _);
 
+    k_boot_debug::<P>(" size ");
+    k_boot_debug_hex::<P>(size as _);
+    k_boot_debug::<P>("\r\n");
     // 恒等映射，用于mmu启动过程
     let _ = table.map_region(
         MapConfig {
-            vaddr: boot_map_info.virt_equal.into(),
-            paddr: boot_map_info.phys.into(),
+            vaddr: primory_virt_start_eq.into(),
+            paddr: primory_phys_start.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        boot_map_info.size,
+        size,
         true,
         &mut access,
     );
+
+    if let Some(stdout) = stdout {
+        let mut reg_virt_eq = Virt::from(stdout.reg);
+        let reg_virt = reg_virt_eq + va_offset;
+        let reg_phys = reg_virt_eq.convert_to_phys(0);
+        k_boot_debug::<P>("map stdout @");
+        k_boot_debug_hex::<P>(reg_virt.as_usize() as _);
+        k_boot_debug::<P>(" -> ");
+        k_boot_debug_hex::<P>(reg_phys.as_usize() as _);
+        k_boot_debug::<P>("\r\n");
+
+        table.map_region(
+            MapConfig {
+                vaddr: reg_virt.into(),
+                paddr: reg_phys.into(),
+                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
+            },
+            stdout.size.max(0x1000),
+            true,
+            &mut access,
+        );
+    };
 
     Ok(table)
 }
@@ -92,6 +142,7 @@ unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {
     let memory = fdt.memory().ok()?;
     let primory = memory.regions().next()?;
     let memory_begin = primory.starting_address;
+
     let memory_size = primory.size?;
     let heap_size = memory_size / 2;
     let heap_start = NonNull::new_unchecked(memory_begin.add(heap_size) as *mut u8);
@@ -117,15 +168,52 @@ struct BootMapInfo {
     size: usize,
 }
 
-unsafe fn protect_dtb(dtb_addr: NonNull<u8>, mut heap_lma: NonNull<u8>) -> Option<NonNull<u8>> {
-    HEAP_BEGIN_LMA = heap_lma;
+unsafe fn protect_dtb(dtb_addr: NonNull<u8>, mut kernel_end: NonNull<u8>) -> Option<NonNull<u8>> {
     let fdt = Fdt::from_ptr(dtb_addr.as_ptr()).ok()?;
     let size = fdt.total_size();
-    HEAP_BEGIN_LMA = heap_lma.add(size);
-    let dest = &mut *slice_from_raw_parts_mut(heap_lma.as_mut(), size);
+    BOOT_INFO.reserved_end += size;
+    let dest = &mut *slice_from_raw_parts_mut(kernel_end.as_mut(), size);
     let src = &*slice_from_raw_parts(dtb_addr.as_ptr(), size);
     dest.copy_from_slice(src);
     Some(NonNull::new_unchecked(dest.as_mut_ptr()))
+}
+
+struct DtbPrint<P: Platform> {
+    _marker: PhantomData<P>,
+}
+
+impl<P: Platform> DtbPrint<P> {
+    fn print() -> Option<()> {
+        let fdt = get_device_tree()?;
+
+        if let Ok(memory) = fdt.memory() {
+            for region in memory.regions() {
+                k_boot_debug::<P>("memory region: ");
+                k_boot_debug_hex::<P>(region.starting_address as usize as _);
+                k_boot_debug::<P>(" size ");
+                k_boot_debug_hex::<P>(region.size.unwrap_or_default() as _);
+                k_boot_debug::<P>("\r\n");
+            }
+        }
+
+        let chosen = fdt.chosen().ok()?;
+        if let Some(stdout) = chosen.stdout() {
+            k_boot_debug::<P>("stdout: ");
+
+            let node = stdout.node();
+            let reg = node.reg_fix().next()?;
+            let start = reg.starting_address as usize;
+            let size = reg.size?;
+            k_boot_debug::<P>(node.name);
+            k_boot_debug::<P>(" @");
+            k_boot_debug_hex::<P>(start as _);
+            k_boot_debug::<P>(" size ");
+            k_boot_debug_hex::<P>(size as _);
+            k_boot_debug::<P>("\r\n");
+        }
+
+        Some(())
+    }
 }
 
 struct BeforeMMUPageAllocator {
@@ -164,20 +252,60 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     let mut table = P::Table::new(access)?;
-    let vaddr = VirtAddr::from(MEMORY_START + va_offset());
-    let paddr = Phys::<u8>::from(MEMORY_START);
-    let size = MEMORY_SIZE;
 
-    table.map_region(
+    // get_device_tree().take_if(|fdt| {
+    //     for region in fdt.memory_reservations() {
+    //         table.map_region(
+    //             MapConfig {
+    //                 vaddr: region.address().add(va_offset()),
+    //                 paddr: region.address() as usize,
+    //                 attrs: PageAttribute::Read | PageAttribute::Write,
+    //             },
+    //             region.size(),
+    //             true,
+    //             access,
+    //         )
+    //     }
+    // });
+    // table.map_region(
+    //     MapConfig {
+    //         vaddr: MEMORY_START,
+    //         paddr: KERNEL_START,
+    //         attrs: PageAttribute::Read | PageAttribute::Write,
+    //     },
+    //     KERNEL_SIZE,
+    //     true,
+    //     access,
+    // );
+
+    let kernel_phys = Phys::<u8>::from(BOOT_INFO.reserved_start);
+    let kernel_virt = kernel_phys.to_virt();
+    let kernel_size = (BOOT_INFO.reserved_end - BOOT_INFO.reserved_start).align_up_4k();
+    let _ = table.map_region(
         MapConfig {
-            vaddr: vaddr.as_mut_ptr(),
-            paddr: paddr.as_usize(),
+            vaddr: kernel_virt.into(),
+            paddr: kernel_phys.into(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        size,
+        BYTES_1G,
         true,
         access,
-    )?;
+    );
+
+    // let vaddr = VirtAddr::from(MEMORY_START + va_offset());
+    // let paddr = Phys::<u8>::from(MEMORY_START);
+    // let size = MEMORY_SIZE;
+
+    // table.map_region(
+    //     MapConfig {
+    //         vaddr: vaddr.as_mut_ptr(),
+    //         paddr: paddr.as_usize(),
+    //         attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+    //     },
+    //     size,
+    //     true,
+    //     access,
+    // )?;
 
     P::set_kernel_page_table(&table);
     P::set_user_page_table(None);

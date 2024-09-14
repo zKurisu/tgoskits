@@ -1,24 +1,32 @@
 use core::fmt::{self, Arguments, Write};
 
 use log::*;
-use sparreal_kernel::util;
+use sparreal_kernel::util::{self, boot::StdoutReg};
+
+
+static mut OUT_REG: usize = 0;
+
+pub unsafe fn mmu_add_offset(va_offset: usize) {
+    OUT_REG += va_offset;
+}
 
 unsafe fn put_debug(char: u8) {
     // const BASE: usize = 0;
-    const BASE: usize = 0x2800D000;
-    if BASE == 0 {
+    // const BASE: usize = 0x2800D000;
+    // const BASE: usize = 0xFE20_1000;
+    if OUT_REG == 0 {
         return;
     }
 
-    let state = (BASE + 0x18) as *mut u8;
-    let put = (BASE) as *mut u8;
+    let state = (OUT_REG + 0x18) as *mut u8;
+    let put = (OUT_REG) as *mut u8;
     while (state.read_volatile() & (0x20 as u8)) != 0 {}
     put.write_volatile(char);
 }
 
 struct DebugLogger;
 
-struct DebugWriter;
+pub struct DebugWriter;
 
 impl fmt::Write for DebugWriter {
     fn write_str(&mut self, s: &str) -> fmt::Result {
@@ -35,7 +43,7 @@ impl Log for DebugLogger {
     }
 
     fn log(&self, record: &Record) {
-        DebugWriter {}.write_fmt(format_args!("{} {}", record.level(), record.args(),));
+        DebugWriter {}.write_fmt(format_args!("{} {}\r\n", record.level(), record.args(),));
     }
 
     fn flush(&self) {}
@@ -43,7 +51,13 @@ impl Log for DebugLogger {
 
 static LOGGER: DebugLogger = DebugLogger;
 
-pub fn init_debug() {
+pub fn init_debug(stdout: StdoutReg) {
+    unsafe { OUT_REG = stdout.reg as usize };
+}
+
+pub fn init_log() {
+    
+
     log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 

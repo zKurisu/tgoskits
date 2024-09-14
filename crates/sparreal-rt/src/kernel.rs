@@ -37,6 +37,7 @@ pub(crate) unsafe fn boot() -> ! {
     };
 
     let k = Kernel::new(cfg);
+
     KERNEL.0.get().replace(Some(k));
     init_boot_log();
     kernel().module_driver().register_all(driver::registers());

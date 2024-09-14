@@ -3,8 +3,7 @@ use core::{fmt, panic::PanicInfo, ptr::NonNull};
 use log::*;
 
 use crate::{
-    driver::manager::DriverManager, executor, mem::MemoryManager, module::ModuleBase,
-    platform::app_main, stdout::Stdout, time::Time, Platform,
+    driver::manager::DriverManager, executor, mem::MemoryManager, module::ModuleBase, platform::app_main, stdout::Stdout, time::Time, util::boot::k_boot_debug, Platform
 };
 
 pub struct Kernel<P>
@@ -29,7 +28,6 @@ where
     pub unsafe fn new(cfg: KernelConfig) -> Self {
         let memory = MemoryManager::new();
         memory.init(&cfg);
-
         let module_base = ModuleBase {
             memory,
             time: Time::new(),

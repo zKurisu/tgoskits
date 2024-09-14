@@ -1,5 +1,7 @@
+use flat_device_tree::Fdt;
+
 use crate::Platform;
-use core::fmt::Write;
+use core::{fmt::Write, ptr::NonNull};
 
 pub fn boot_debug_hex(mut w: impl Write, v: u64) {
     const HEX_BUF_SIZE: usize = 20; // 最大长度，包括前缀"0x"和数字
@@ -27,6 +29,33 @@ pub fn boot_debug_hex(mut w: impl Write, v: u64) {
     for ch in s.iter().rev() {
         let _ = w.write_char(*ch);
     }
+}
+
+pub fn k_boot_debug<P: Platform>(msg: &str) {
+    P::boot_debug_writer().map(|mut w| w.write_str(msg));
+}
+pub fn k_boot_debug_hex<P: Platform>(v: u64) {
+    P::boot_debug_writer().map(|mut w| {
+        boot_debug_hex(&mut w, v);
+    });
+}
+
+pub struct StdoutReg {
+    pub reg: *const u8,
+    pub size: usize,
+}
+
+pub unsafe fn stdout_reg(dtb: NonNull<u8>) -> Option<StdoutReg> {
+    let fdt = Fdt::from_ptr(dtb.as_ptr()).ok()?;
+    let chosen = fdt.chosen().ok()?;
+    if let Some(stdout) = chosen.stdout() {
+        let r = stdout.node().reg_fix().next()?;
+        return Some(StdoutReg {
+            reg: r.starting_address,
+            size: r.size.unwrap_or_default(),
+        });
+    }
+    None
 }
 
 #[cfg(test)]

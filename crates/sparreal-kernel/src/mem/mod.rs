@@ -7,7 +7,11 @@ pub use addr::*;
 use buddy_system_allocator::{Heap, LockedHeap};
 use mmu::va_offset;
 
-use crate::{driver::device_tree::get_device_tree, KernelConfig, Platform};
+use crate::{
+    driver::device_tree::get_device_tree,
+    util::boot::{k_boot_debug, k_boot_debug_hex},
+    KernelConfig, Platform,
+};
 
 #[global_allocator]
 pub(crate) static HEAP_ALLOCATOR: LockedHeap<32> = LockedHeap::empty();
@@ -63,21 +67,21 @@ impl<P: Platform> MemoryManager<P> {
         let mut start = cfg.heap_start;
         let mut size = 2 * BYTES_1M;
 
-        if let Some(fdt) = get_device_tree() {
-            start = start.add(fdt.total_size());
+        // if let Some(fdt) = get_device_tree() {
+        //     start = start.add(fdt.total_size());
 
-            if let Some(memory) = fdt.memory().ok() {
-                for region in memory.regions() {
-                    MEMORY_START = region.starting_address as usize;
-                    let used = start.to_phys().as_usize() - MEMORY_START;
+        //     if let Some(memory) = fdt.memory().ok() {
+        //         for region in memory.regions() {
+        //             MEMORY_START = region.starting_address as usize;
+        //             let used = start.to_phys().as_usize() - MEMORY_START;
 
-                    if let Some(mem_size) = region.size {
-                        size = mem_size - used;
-                        MEMORY_SIZE = mem_size;
-                    }
-                }
-            }
-        }
+        //             if let Some(mem_size) = region.size {
+        //                 size = mem_size - used;
+        //                 MEMORY_SIZE = mem_size;
+        //             }
+        //         }
+        //     }
+        // }
         let mut heap = HEAP_ALLOCATOR.lock();
         heap.init(start.as_ptr() as usize, size);
 
