@@ -75,11 +75,20 @@ pub unsafe fn boot_init<P: Platform>(
     let primory_virt_start_eq = Virt::<u8>::from(primory_phys_start.as_usize());
     let size = BYTES_1G;
 
-    let heap_start = reserved_end() + BYTES_1M * 2;
+    let heap_start = reserved_end().align_down(0x1000) + BYTES_1M * 2;
     let heep_size = BYTES_1M * 2;
+
+    k_boot_debug::<P>("heap [");
+    k_boot_debug_hex::<P>(heap_start.as_usize() as _);
+    k_boot_debug::<P>(", ");
+    k_boot_debug_hex::<P>((heap_start.as_usize() + heep_size) as _);
+    k_boot_debug::<P>(")\r\n");
+
     let mut access = BeforeMMUPageAllocator::new(heap_start.into(), heep_size);
 
     let mut table = P::Table::new(&mut access)?;
+
+    k_boot_debug::<P>("new table\r\n");
 
     let _ = table.map_region(
         MapConfig {
@@ -185,6 +194,14 @@ struct DtbPrint<P: Platform> {
 impl<P: Platform> DtbPrint<P> {
     fn print() -> Option<()> {
         let fdt = get_device_tree()?;
+
+        for memory in fdt.memory_reservations() {
+            k_boot_debug::<P>("memory reservation: ");
+            k_boot_debug_hex::<P>(memory.address() as usize as _);
+            k_boot_debug::<P>(" size ");
+            k_boot_debug_hex::<P>(memory.size() as _);
+            k_boot_debug::<P>("\r\n");
+        }
 
         if let Ok(memory) = fdt.memory() {
             for region in memory.regions() {
