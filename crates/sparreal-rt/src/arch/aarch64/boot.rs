@@ -7,12 +7,16 @@ use core::{
 use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
 use log::{debug, info};
-use sparreal_kernel::util;
+use sparreal_kernel::{
+    mem::{Addr, Phys},
+    util, KernelConfig,
+};
 use tock_registers::interfaces::ReadWriteable;
 use DAIF::A;
 
 use crate::{
     arch::debug::{debug_fmt, debug_print, init_debug, mmu_add_offset},
+    consts::{BYTES_1G, BYTES_1M},
     kernel,
     mem::{MemoryMap, MemoryRange},
 };
@@ -31,10 +35,65 @@ extern "C" {
     fn _stack_top();
 }
 
+static mut KCONFIG: KernelConfig = KernelConfig::new();
+
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
     print_info(dtb_addr, va_offset);
+
+    let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
+    let kernel_end = Phys::<u8>::from(_ekernel as *const u8 as usize);
+    let mut kernel_size = kernel_end.as_usize() - kernel_start.as_usize();
+
+    unsafe fn no_memory() {
+        let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
+        let kernel_end = Phys::<u8>::from(_ekernel as *const u8 as usize);
+        KCONFIG.memory_start = kernel_start;
+        KCONFIG.memory_used = kernel_end.as_usize() - kernel_start.as_usize();
+        KCONFIG.memory_size = KCONFIG.memory_used + BYTES_1M * 16;
+        debug_println("FDT parse failed!");
+    }
+
+    match Fdt::from_ptr(dtb_addr as _) {
+        Ok(fdt) => {
+            if let Ok(memory) = fdt.memory() {
+                if let Some(region) = memory.regions().next() {
+                    KCONFIG.memory_start = (region.starting_address as usize).into();
+                    KCONFIG.memory_size = region.size.unwrap_or_default();
+                    debug_print("memory region: 0");
+
+                    if KCONFIG.memory_start == kernel_start {
+                        KCONFIG.memory_start = kernel_start;
+                        KCONFIG.memory_used =
+                            kernel_end.as_usize() - kernel_start.as_usize() + fdt.total_size();
+                        debug_print(", Image is this memory, used: ");
+                        debug_hex(KCONFIG.memory_used as _);
+                        debug_println("\r\n");
+                    } else {
+                        debug_println(", Image is not in this memory");
+                    }
+                } else {
+                    no_memory();
+                }
+            } else {
+                no_memory();
+            }
+
+            for resv in fdt.memory_reservations() {
+                let addr = Phys::<u8>::from(resv.address() as usize).align_down(BYTES_1G);
+                if addr == kernel_start {
+                    KCONFIG.reserved_memory_start = Some(addr);
+                    KCONFIG.reserved_memory_size = resv.size().max(kernel_size + fdt.total_size());
+                    debug_print("Reserving memory kernel @");
+                    debug_hex(addr.as_usize() as _);
+                    debug_print("\r\n");
+                    break;
+                }
+            }
+        }
+        Err(_) => no_memory(),
+    }
 
     let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
 
@@ -79,14 +138,11 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
-    debug_println("mmu ok");
-    debug_fmt(format_args!("{}\r\n", "debug log ok"));
+    debug_println("MMU ok");
     init_log();
-
-    debug!("logger ok");
-
+    debug!("Debug logger ok");
     debug!(
-        "cpu: {:?}.{:?}.{:?}.{:?}",
+        "CPU: {:?}.{:?}.{:?}.{:?}",
         MPIDR_EL1.read(MPIDR_EL1::Aff0),
         MPIDR_EL1.read(MPIDR_EL1::Aff1),
         MPIDR_EL1.read(MPIDR_EL1::Aff2),
@@ -94,8 +150,8 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     );
 
     if MPIDR_EL1.matches_all(MPIDR_EL1::Aff0.val(0)) {
-        info!("kernel start");
-        kernel::boot()
+        info!("Kernel start");
+        kernel::boot(KCONFIG.clone())
     } else {
         info!("wait for primary cpu");
         loop {
@@ -179,5 +235,11 @@ unsafe extern "C" fn __switch_to_el1() {
         );
     } else {
         asm!("bl _el1_entry")
+    }
+}
+
+unsafe fn other_cpu() -> ! {
+    loop {
+        asm!("wfe")
     }
 }

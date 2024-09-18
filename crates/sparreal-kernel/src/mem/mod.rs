@@ -5,6 +5,7 @@ use core::{fmt::Display, marker::PhantomData, ops::DerefMut, ptr::NonNull};
 
 pub use addr::*;
 use buddy_system_allocator::{Heap, LockedHeap};
+use log::debug;
 use mmu::va_offset;
 
 use crate::{
@@ -64,11 +65,22 @@ impl<P: Platform> MemoryManager<P> {
     }
 
     pub unsafe fn init(&self, cfg: &KernelConfig) {
-        let mut start = cfg.heap_start;
-        let mut size = 2 * BYTES_1M;
+        let mut start = (cfg.memory_start + cfg.memory_used).to_virt();
+        let mut size = cfg.memory_size - cfg.memory_used - cfg.stack_size;
+
+        debug!(
+            "Heap: [{:#x}, {:#x})",
+            start.as_usize(),
+            start.as_usize() + size
+        );
+        debug!(
+            "Stack: [{:#x}, {:#x})",
+            cfg.stack_bottom.as_usize(),
+            cfg.stack_bottom.as_usize() + cfg.stack_size
+        );
 
         let mut heap = HEAP_ALLOCATOR.lock();
-        heap.init(start.as_ptr() as usize, size);
+        heap.init(start.as_usize(), size);
 
         #[cfg(feature = "mmu")]
         {

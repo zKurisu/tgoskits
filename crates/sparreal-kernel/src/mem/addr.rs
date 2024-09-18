@@ -27,6 +27,10 @@ pub type VirtAddr<T = u8> = Virt<T>;
 impl<T> Addr for Virt<T> {}
 
 impl<T> Virt<T> {
+    pub const fn new() -> Self {
+        Self(0 as *const T)
+    }
+
     pub fn convert_to_phys(self, va_offset: usize) -> Phys<T> {
         Phys::from(self.0 as usize - va_offset)
     }
@@ -58,6 +62,13 @@ impl<T> From<Phys<T>> for usize {
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct Phys<T>(*const T);
+
+impl<T> PartialEq for Phys<T> {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { (self.0 as *const u8 as usize) == (other.0 as *const u8 as usize) }
+    }
+}
+
 unsafe impl<T> Send for Phys<T> {}
 unsafe impl<T> Sync for Phys<T> {}
 
@@ -71,6 +82,10 @@ impl<T> From<usize> for Phys<T> {
     }
 }
 impl<T> Phys<T> {
+    pub const fn new() -> Self {
+        Self(0 as *const T)
+    }
+
     pub fn as_usize(&self) -> usize {
         self.0 as usize
     }

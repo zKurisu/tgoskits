@@ -3,7 +3,15 @@ use core::{fmt, panic::PanicInfo, ptr::NonNull};
 use log::*;
 
 use crate::{
-    driver::manager::DriverManager, executor, mem::MemoryManager, module::ModuleBase, platform::app_main, stdout::Stdout, time::Time, util::boot::k_boot_debug, Platform
+    driver::manager::DriverManager,
+    executor,
+    mem::{MemoryManager, Phys},
+    module::ModuleBase,
+    platform::app_main,
+    stdout::Stdout,
+    time::Time,
+    util::boot::k_boot_debug,
+    Platform,
 };
 
 pub struct Kernel<P>
@@ -91,6 +99,27 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct KernelConfig {
-    pub heap_start: NonNull<u8>,
+    pub reserved_memory_start: Option<Phys<u8>>,
+    pub reserved_memory_size: usize,
+    pub memory_start: Phys<u8>,
+    pub memory_used: usize,
+    pub memory_size: usize,
+    pub stack_bottom: Phys<u8>,
+    pub stack_size: usize,
+}
+
+impl KernelConfig {
+    pub const fn new() -> Self {
+        Self {
+            reserved_memory_start: None,
+            reserved_memory_size: 0,
+            memory_start: Phys::new(),
+            memory_size: 0,
+            stack_bottom: Phys::new(),
+            stack_size: 0,
+            memory_used: 0,
+        }
+    }
 }

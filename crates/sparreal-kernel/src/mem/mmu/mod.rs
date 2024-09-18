@@ -10,7 +10,7 @@ use memory_addr::MemoryAddr;
 pub use page_table_interface::*;
 
 use crate::{
-    driver::device_tree::{get_device_tree, set_dtb_addr},
+    driver::device_tree::{self, get_device_tree, set_dtb_addr},
     kernel,
     platform::Mmu,
     util::{
@@ -305,9 +305,17 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     debug!("Initializing page table...");
-
-
     let mut table = P::Table::new(access)?;
+
+    let fdt = get_device_tree().expect("FDT not found!");
+
+    for region in fdt.memory_reservations() {
+        let phys = Phys::<u8>::from(region.address() as usize);
+        let size = region.size();
+
+
+
+    }
 
     // get_device_tree().take_if(|fdt| {
     //     for region in fdt.memory_reservations() {
@@ -334,19 +342,19 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     //     access,
     // );
 
-    let kernel_phys = Phys::<u8>::from(BOOT_INFO.reserved_start);
-    let kernel_virt = kernel_phys.to_virt();
-    let kernel_size = (BOOT_INFO.reserved_end - BOOT_INFO.reserved_start).align_up_4k();
-    let _ = table.map_region(
-        MapConfig {
-            vaddr: kernel_virt.into(),
-            paddr: kernel_phys.into(),
-            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-        },
-        BYTES_1G,
-        true,
-        access,
-    );
+    // let kernel_phys = Phys::<u8>::from(BOOT_INFO.reserved_start);
+    // let kernel_virt = kernel_phys.to_virt();
+    // let kernel_size = (BOOT_INFO.reserved_end - BOOT_INFO.reserved_start).align_up_4k();
+    // let _ = table.map_region(
+    //     MapConfig {
+    //         vaddr: kernel_virt.into(),
+    //         paddr: kernel_phys.into(),
+    //         attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+    //     },
+    //     BYTES_1G,
+    //     true,
+    //     access,
+    // );
 
     // let vaddr = VirtAddr::from(MEMORY_START + va_offset());
     // let paddr = Phys::<u8>::from(MEMORY_START);

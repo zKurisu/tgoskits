@@ -29,15 +29,8 @@ extern "C" {
 }
 
 /// 通用启动流程
-pub(crate) unsafe fn boot() -> ! {
-    let heap_lma = NonNull::new_unchecked(_stack_top as *mut u8);
-
-    let cfg = KernelConfig {
-        heap_start: heap_lma,
-    };
-    debug!("new kernel");
-    let k = Kernel::new(cfg);
-
+pub(crate) unsafe fn boot(kconfig: KernelConfig) -> ! {
+    let k = Kernel::new(kconfig);
     KERNEL.0.get().replace(Some(k));
     kernel().module_driver().register_all(driver::registers());
     kernel().run()
