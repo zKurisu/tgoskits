@@ -79,7 +79,7 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_fmt(format_args!("{}\r\n", "debug log ok"));
 
     loop {
-        debug_print(".");
+        // debug_print(".");
         asm!("wfe");
     }
 

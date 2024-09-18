@@ -129,7 +129,7 @@ impl From<PageAttribute> for DescriptorAttr {
         } | DescriptorAttr::AF;
 
         if value.contains(PageAttribute::Read) {
-            attr |= DescriptorAttr::VALID;
+            attr |= DescriptorAttr::VALID | DescriptorAttr::SHAREABLE;
         }
         if !value.contains(PageAttribute::Write) {
             attr |= DescriptorAttr::AP_RO;
