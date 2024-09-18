@@ -1,4 +1,4 @@
-use core::{fmt::Write, time::Duration};
+use core::{fmt::Write, marker::PhantomData, time::Duration};
 
 use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, Log};
@@ -60,16 +60,26 @@ impl<P: Platform> Log for Kernel<P> {
     fn flush(&self) {}
 }
 
-pub struct KernelLogger;
+pub struct KernelLogger<P: Platform> {
+    _marker: PhantomData<P>,
+}
 
-impl Log for KernelLogger {
+impl<P: Platform> KernelLogger<P> {
+    pub const fn new() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<P: Platform> Log for KernelLogger<P> {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let duration = Duration::from_millis(0);
+            let duration = P::since_boot();
             OutFmt {}.write_fmt(format_record!(record, duration));
         }
     }

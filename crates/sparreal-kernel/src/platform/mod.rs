@@ -1,4 +1,4 @@
-use core::{fmt, ptr::NonNull};
+use core::{fmt, ptr::NonNull, time::Duration};
 
 pub use page_table_interface::PageTableFn;
 
@@ -8,6 +8,12 @@ pub trait Platform: Mmu + Sync + Send {
     fn current_ticks() -> u64;
 
     fn tick_hz() -> u64;
+
+    fn since_boot() -> Duration {
+        let current_tick = Self::current_ticks();
+        let freq = Self::tick_hz();
+        Duration::from_nanos(current_tick * 1_000_000_000 / freq)
+    }
 }
 
 pub enum PageAttribute {

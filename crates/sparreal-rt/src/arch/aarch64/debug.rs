@@ -6,6 +6,8 @@ use sparreal_kernel::{
     util::{self, boot::StdoutReg},
 };
 
+use super::PlatformImpl;
+
 static mut OUT_REG: usize = 0;
 
 pub unsafe fn mmu_add_offset(va_offset: usize) {
@@ -63,9 +65,11 @@ impl StdoutWrite for DebugWriter {
     }
 }
 
+static KERNEL_LOGGER: KernelLogger<PlatformImpl> = KernelLogger::new();
+
 pub fn init_log() {
     sparreal_kernel::logger::set_stdout(&DebugWriter);
-    log::set_logger(&KernelLogger).map(|()| log::set_max_level(LevelFilter::Trace));
+    log::set_logger(&KERNEL_LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 
 pub fn debug_println(d: &str) {
