@@ -16,7 +16,7 @@ use DAIF::A;
 
 use crate::{
     arch::debug::{debug_fmt, debug_print, init_debug, mmu_add_offset},
-    consts::{BYTES_1G, BYTES_1M},
+    consts::{BYTES_1G, BYTES_1M, HART_STACK_SIZE, STACK_SIZE},
     kernel,
     mem::{MemoryMap, MemoryRange},
 };
@@ -40,6 +40,7 @@ static mut KCONFIG: KernelConfig = KernelConfig::new();
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
+    KCONFIG.hart_stack_size = HART_STACK_SIZE;
     print_info(dtb_addr, va_offset);
 
     let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
@@ -50,8 +51,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
         let kernel_end = Phys::<u8>::from(_ekernel as *const u8 as usize);
         KCONFIG.memory_start = kernel_start;
-        KCONFIG.memory_used = kernel_end.as_usize() - kernel_start.as_usize();
-        KCONFIG.memory_size = KCONFIG.memory_used + BYTES_1M * 16;
+        KCONFIG.memory_heap_start = kernel_end.as_usize() - kernel_start.as_usize();
+        KCONFIG.memory_size = KCONFIG.memory_heap_start + BYTES_1M * 16;
         debug_println("FDT parse failed!");
     }
 
@@ -65,10 +66,10 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
                     if KCONFIG.memory_start == kernel_start {
                         KCONFIG.memory_start = kernel_start;
-                        KCONFIG.memory_used =
+                        KCONFIG.memory_heap_start =
                             kernel_end.as_usize() - kernel_start.as_usize() + fdt.total_size();
                         debug_print(", Image is this memory, used: ");
-                        debug_hex(KCONFIG.memory_used as _);
+                        debug_hex(KCONFIG.memory_heap_start as _);
                         debug_println("\r\n");
                     } else {
                         debug_println(", Image is not in this memory");
@@ -124,16 +125,32 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
+    let stack_top = (KCONFIG.memory_start + KCONFIG.memory_size).as_usize() + va_offset;
+    debug_print("stack top: ");
+    debug_hex(stack_top as _);
+    debug_print("\r\n");
+
     asm!("
-    ADD  sp, sp, {offset}
+    MOV  sp,  {sp_top}
     ADD  x30, x30, {offset}
     LDR      x8, =__rust_main_after_mmu
     BLR      x8
     B       .
     ", 
+    sp_top = in(reg) stack_top,
     offset = in(reg) va_offset,
     options(noreturn)
     )
+    // asm!("
+    // ADD  sp, sp, {offset}
+    // ADD  x30, x30, {offset}
+    // LDR      x8, =__rust_main_after_mmu
+    // BLR      x8
+    // B       .
+    // ",
+    // offset = in(reg) va_offset,
+    // options(noreturn)
+    // )
 }
 
 #[no_mangle]

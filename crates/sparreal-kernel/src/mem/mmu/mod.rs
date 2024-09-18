@@ -302,20 +302,51 @@ impl Access for BeforeMMUPageAllocator {
 }
 
 pub(crate) unsafe fn init_page_table<P: Platform>(
+    kconfig: &KernelConfig,
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
     debug!("Initializing page table...");
     let mut table = P::Table::new(access)?;
 
-    let fdt = get_device_tree().expect("FDT not found!");
-
-    for region in fdt.memory_reservations() {
-        let phys = Phys::<u8>::from(region.address() as usize);
-        let size = region.size();
-
-
-
+    if let Some(memory_start) = kconfig.reserved_memory_start {
+        let virt = memory_start.to_virt();
+        let size = kconfig.reserved_memory_size.align_up(BYTES_1M * 2);
+        debug!(
+            "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
+            virt.as_usize(),
+            memory_start.as_usize(),
+            size,
+        );
+        table.map_region(
+            MapConfig {
+                vaddr: virt.as_mut_ptr(),
+                paddr: memory_start.as_usize(),
+                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+            },
+            size,
+            true,
+            access,
+        );
     }
+
+    let virt = kconfig.memory_start.to_virt();
+    debug!(
+        "Map memory {:#X} -> {:#X} size {:#X}",
+        virt.as_usize(),
+        kconfig.memory_start.as_usize(),
+        kconfig.memory_size
+    );
+
+    table.map_region(
+        MapConfig {
+            vaddr: virt.as_mut_ptr(),
+            paddr: kconfig.memory_start.as_usize(),
+            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+        },
+        kconfig.memory_size,
+        true,
+        access,
+    );
 
     // get_device_tree().take_if(|fdt| {
     //     for region in fdt.memory_reservations() {
@@ -373,6 +404,8 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
 
     P::set_kernel_page_table(&table);
     P::set_user_page_table(None);
+
+    debug!("Page table initialized");
 
     Ok(())
 }

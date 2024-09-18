@@ -5,7 +5,7 @@ use log::*;
 use crate::{
     driver::manager::DriverManager,
     executor,
-    mem::{MemoryManager, Phys},
+    mem::{MemoryManager, Phys, BYTES_1M},
     module::ModuleBase,
     platform::app_main,
     stdout::Stdout,
@@ -104,10 +104,9 @@ pub struct KernelConfig {
     pub reserved_memory_start: Option<Phys<u8>>,
     pub reserved_memory_size: usize,
     pub memory_start: Phys<u8>,
-    pub memory_used: usize,
+    pub memory_heap_start: usize,
     pub memory_size: usize,
-    pub stack_bottom: Phys<u8>,
-    pub stack_size: usize,
+    pub hart_stack_size: usize,
 }
 
 impl KernelConfig {
@@ -117,9 +116,8 @@ impl KernelConfig {
             reserved_memory_size: 0,
             memory_start: Phys::new(),
             memory_size: 0,
-            stack_bottom: Phys::new(),
-            stack_size: 0,
-            memory_used: 0,
+            memory_heap_start: 0,
+            hart_stack_size: BYTES_1M * 2,
         }
     }
 }

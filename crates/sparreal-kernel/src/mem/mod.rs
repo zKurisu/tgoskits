@@ -65,8 +65,9 @@ impl<P: Platform> MemoryManager<P> {
     }
 
     pub unsafe fn init(&self, cfg: &KernelConfig) {
-        let mut start = (cfg.memory_start + cfg.memory_used).to_virt();
-        let mut size = cfg.memory_size - cfg.memory_used - cfg.stack_size;
+        let mut start = (cfg.memory_start + cfg.memory_heap_start).to_virt();
+        let mut size = cfg.memory_size - cfg.memory_heap_start - cfg.hart_stack_size;
+        let memory_end = (cfg.memory_start + cfg.memory_size).to_virt();
 
         debug!(
             "Heap: [{:#x}, {:#x})",
@@ -75,8 +76,8 @@ impl<P: Platform> MemoryManager<P> {
         );
         debug!(
             "Stack: [{:#x}, {:#x})",
-            cfg.stack_bottom.as_usize(),
-            cfg.stack_bottom.as_usize() + cfg.stack_size
+            memory_end.as_usize() - cfg.hart_stack_size,
+            memory_end.as_usize()
         );
 
         let mut heap = HEAP_ALLOCATOR.lock();
@@ -85,7 +86,7 @@ impl<P: Platform> MemoryManager<P> {
         #[cfg(feature = "mmu")]
         {
             let mut heap_mut = AllocatorRef::new(&mut heap);
-            mmu::init_page_table::<P>(&mut heap_mut).unwrap();
+            mmu::init_page_table::<P>(cfg, &mut heap_mut).unwrap();
         }
     }
 
