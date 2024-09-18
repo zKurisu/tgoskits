@@ -1,8 +1,10 @@
 use core::fmt::{self, Arguments, Write};
 
 use log::*;
-use sparreal_kernel::util::{self, boot::StdoutReg};
-
+use sparreal_kernel::{
+    logger::{KernelLogger, StdoutWrite},
+    util::{self, boot::StdoutReg},
+};
 
 static mut OUT_REG: usize = 0;
 
@@ -55,10 +57,15 @@ pub fn init_debug(stdout: StdoutReg) {
     unsafe { OUT_REG = stdout.reg as usize };
 }
 
-pub fn init_log() {
-    
+impl StdoutWrite for DebugWriter {
+    fn write_char(&self, ch: char) {
+        unsafe { put_debug(ch as _) };
+    }
+}
 
-    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+pub fn init_log() {
+    sparreal_kernel::logger::set_stdout(&DebugWriter);
+    log::set_logger(&KernelLogger).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 
 pub fn debug_println(d: &str) {

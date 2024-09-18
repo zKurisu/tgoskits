@@ -899,6 +899,7 @@ dependencies = [
  "arm-pl011-rs",
  "driver-interface",
  "embedded-io",
+ "flat_device_tree",
  "futures",
  "log",
  "memory_addr",

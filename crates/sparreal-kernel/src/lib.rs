@@ -7,7 +7,7 @@ mod kernel;
 
 mod driver;
 pub mod executor;
-mod logger;
+pub mod logger;
 pub mod mem;
 pub mod module;
 pub mod platform;

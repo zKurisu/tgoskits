@@ -11,6 +11,7 @@ pub use page_table_interface::*;
 use crate::{
     driver::device_tree::{get_device_tree, set_dtb_addr},
     kernel,
+    platform::Mmu,
     util::{
         self,
         boot::{k_boot_debug, k_boot_debug_hex},
@@ -70,9 +71,8 @@ pub unsafe fn boot_init<P: Platform>(
     set_dtb_addr(phys_dtb_addr);
     DtbPrint::<P>::print();
 
-    let primory_phys_start = reserved_start().align_down(BYTES_1M * 2);
-    let primory_virt_start = primory_phys_start.to_virt();
-    let primory_virt_start_eq = Virt::<u8>::from(primory_phys_start.as_usize());
+    let primory_phys_start = reserved_start().align_down(BYTES_1G);
+
     let size = BYTES_1G;
 
     let heap_start = reserved_end().align_down(0x1000) + BYTES_1M * 2;
@@ -90,59 +90,94 @@ pub unsafe fn boot_init<P: Platform>(
 
     k_boot_debug::<P>("new table\r\n");
 
-    let _ = table.map_region(
-        MapConfig {
-            vaddr: primory_virt_start.into(),
-            paddr: primory_phys_start.into(),
-            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-        },
-        size,
-        true,
-        &mut access,
-    );
-    k_boot_debug::<P>("map @");
-    k_boot_debug_hex::<P>(primory_virt_start.as_usize() as _);
-    k_boot_debug::<P>("-> @");
-    k_boot_debug_hex::<P>(primory_phys_start.as_usize() as _);
+    let fdt = get_device_tree().unwrap();
 
-    k_boot_debug::<P>(" size ");
-    k_boot_debug_hex::<P>(size as _);
-    k_boot_debug::<P>("\r\n");
-    // 恒等映射，用于mmu启动过程
-    let _ = table.map_region(
-        MapConfig {
-            vaddr: primory_virt_start_eq.into(),
-            paddr: primory_phys_start.into(),
-            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-        },
+    let memory = fdt
+        .memory()
+        .inspect_err(|e| k_boot_debug::<P>("DTB no memory"))
+        .unwrap();
+
+    for region in memory.regions() {
+        let paddr = Phys::<u8>::from(region.starting_address as usize);
+        let size = region.size.unwrap_or(BYTES_1G);
+
+        map_boot_region::<P>(
+            "memory",
+            &mut table,
+            paddr,
+            size,
+            PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
+            &mut access,
+        );
+    }
+
+    map_boot_region::<P>(
+        "primory",
+        &mut table,
+        primory_phys_start,
         size,
-        true,
+        PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         &mut access,
     );
 
     if let Some(stdout) = stdout {
-        let mut reg_virt_eq = Virt::from(stdout.reg);
-        let reg_virt = reg_virt_eq + va_offset;
-        let reg_phys = reg_virt_eq.convert_to_phys(0);
-        k_boot_debug::<P>("map stdout @");
-        k_boot_debug_hex::<P>(reg_virt.as_usize() as _);
-        k_boot_debug::<P>(" -> ");
-        k_boot_debug_hex::<P>(reg_phys.as_usize() as _);
-        k_boot_debug::<P>("\r\n");
+        let paddr = Phys::<u8>::from(stdout.reg as usize);
+        let size = 0x1000;
 
-        table.map_region(
-            MapConfig {
-                vaddr: reg_virt.into(),
-                paddr: reg_phys.into(),
-                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
-            },
-            stdout.size.max(0x1000),
-            true,
+        map_boot_region::<P>(
+            "pl011",
+            &mut table,
+            paddr,
+            size,
+            PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
             &mut access,
         );
     };
 
     Ok(table)
+}
+
+unsafe fn map_boot_region<P: Platform>(
+    name: &str,
+    table: &mut <P as Mmu>::Table,
+    paddr: PhysAddr,
+    size: usize,
+    attrs: PageAttribute,
+    access: &mut impl Access,
+) {
+    let virt = paddr.as_usize() + va_offset();
+
+    k_boot_debug::<P>("map ");
+    k_boot_debug::<P>(name);
+    k_boot_debug::<P>(" @");
+    k_boot_debug_hex::<P>(virt as _);
+    k_boot_debug::<P>(" -> ");
+    k_boot_debug_hex::<P>(paddr.as_usize() as _);
+    k_boot_debug::<P>(" size: ");
+    k_boot_debug_hex::<P>(size as _);
+    k_boot_debug::<P>("\r\n");
+
+    let _ = table.map_region(
+        MapConfig {
+            vaddr: virt as _,
+            paddr: paddr.into(),
+            attrs,
+        },
+        size,
+        true,
+        access,
+    );
+
+    let _ = table.map_region(
+        MapConfig {
+            vaddr: paddr.as_usize() as _,
+            paddr: paddr.into(),
+            attrs,
+        },
+        size,
+        true,
+        access,
+    );
 }
 
 unsafe fn read_dev_tree_boot_map_info(va_offset: usize) -> Option<BootMapInfo> {

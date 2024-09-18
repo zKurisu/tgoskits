@@ -57,6 +57,9 @@ _start_boot:
 
   MRS      x2, MPIDR_EL1
   AND      x2, x2, #0xFF // X2 == CPU number.
+
+  cbnz     x2, _suspend
+
   LDR      x3, =_cpu_stack_size
   MUL      x3, x2, x3 // Create separated stack spaces 
   SUB      x1, x1, x3 // for each processor
@@ -83,3 +86,6 @@ _el1_entry:
   BL       __rust_main
   B        .
 
+
+_suspend:
+  wfi

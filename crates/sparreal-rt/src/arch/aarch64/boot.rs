@@ -1,9 +1,11 @@
 use core::{
     arch::{asm, global_asm},
+    mem,
     ptr::{self, slice_from_raw_parts_mut, NonNull},
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
+use flat_device_tree::Fdt;
 use log::debug;
 use sparreal_kernel::util;
 use tock_registers::interfaces::ReadWriteable;
@@ -12,6 +14,7 @@ use DAIF::A;
 use crate::{
     arch::debug::{debug_fmt, debug_print, init_debug, mmu_add_offset},
     kernel,
+    mem::{MemoryMap, MemoryRange},
 };
 
 use super::{
@@ -24,6 +27,7 @@ global_asm!(include_str!("vectors.S"));
 
 extern "C" {
     fn _skernel();
+    fn _ekernel();
     fn _stack_top();
 }
 
@@ -77,11 +81,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_println("mmu ok");
     debug_fmt(format_args!("{}\r\n", "debug log ok"));
+    init_log();
 
-    loop {
-        // debug_print(".");
-        asm!("wfe");
-    }
+    debug!("logger ok");
 
     if MPIDR_EL1.matches_all(
         MPIDR_EL1::Aff0.val(0)
@@ -174,3 +176,5 @@ unsafe extern "C" fn __switch_to_el1() {
         asm!("bl _el1_entry")
     }
 }
+
+

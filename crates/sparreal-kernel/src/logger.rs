@@ -1,3 +1,5 @@
+use core::{fmt::Write, time::Duration};
+
 use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, Log};
 use rgb::{Rgb, RGB8};
@@ -50,8 +52,55 @@ impl<P: Platform> Log for Kernel<P> {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             let duration = self.module_time().since_boot();
-            let _ = self.print(format_record!(record, duration));
+            // let _ = self.print(format_record!(record, duration));
+
+            OutFmt {}.write_fmt(format_record!(record, duration));
         }
     }
     fn flush(&self) {}
+}
+
+pub struct KernelLogger;
+
+impl Log for KernelLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            let duration = Duration::from_millis(0);
+            OutFmt {}.write_fmt(format_record!(record, duration));
+        }
+    }
+    fn flush(&self) {}
+}
+
+struct OutFmt;
+
+impl Write for OutFmt {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for ch in s.chars() {
+            unsafe {
+                STDOUT.write_char(ch);
+            }
+        }
+        Ok(())
+    }
+}
+
+struct NopWrite;
+
+impl StdoutWrite for NopWrite {
+    fn write_char(&self, ch: char) {}
+}
+
+static mut STDOUT: &dyn StdoutWrite = &NopWrite;
+
+pub trait StdoutWrite: Sync + Send {
+    fn write_char(&self, ch: char);
+}
+
+pub fn set_stdout(stdout: &'static dyn StdoutWrite) {
+    unsafe { STDOUT = stdout }
 }
