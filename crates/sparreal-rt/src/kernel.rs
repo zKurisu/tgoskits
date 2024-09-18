@@ -1,6 +1,6 @@
 use core::{cell::UnsafeCell, ptr::NonNull};
 
-use log::LevelFilter;
+use log::{debug, LevelFilter};
 use sparreal_kernel::KernelConfig;
 
 use crate::{arch::PlatformImpl, driver};
@@ -35,15 +35,10 @@ pub(crate) unsafe fn boot() -> ! {
     let cfg = KernelConfig {
         heap_start: heap_lma,
     };
-
+    debug!("new kernel");
     let k = Kernel::new(cfg);
 
     KERNEL.0.get().replace(Some(k));
-    init_boot_log();
     kernel().module_driver().register_all(driver::registers());
     kernel().run()
-}
-
-pub fn init_boot_log() {
-    let _ = log::set_logger(kernel()).map(|()| log::set_max_level(LevelFilter::Trace));
 }

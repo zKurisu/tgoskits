@@ -6,7 +6,7 @@ use core::{
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
-use log::debug;
+use log::{debug, info};
 use sparreal_kernel::util;
 use tock_registers::interfaces::ReadWriteable;
 use DAIF::A;
@@ -85,14 +85,19 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
 
     debug!("logger ok");
 
-    if MPIDR_EL1.matches_all(
-        MPIDR_EL1::Aff0.val(0)
-            + MPIDR_EL1::Aff1.val(0)
-            + MPIDR_EL1::Aff2.val(0)
-            + MPIDR_EL1::Aff3.val(0),
-    ) {
+    debug!(
+        "cpu: {:?}.{:?}.{:?}.{:?}",
+        MPIDR_EL1.read(MPIDR_EL1::Aff0),
+        MPIDR_EL1.read(MPIDR_EL1::Aff1),
+        MPIDR_EL1.read(MPIDR_EL1::Aff2),
+        MPIDR_EL1.read(MPIDR_EL1::Aff3)
+    );
+
+    if MPIDR_EL1.matches_all(MPIDR_EL1::Aff0.val(0)) {
+        info!("kernel start");
         kernel::boot()
     } else {
+        info!("wait for primary cpu");
         loop {
             aarch64_cpu::asm::wfe();
         }
@@ -176,5 +181,3 @@ unsafe extern "C" fn __switch_to_el1() {
         asm!("bl _el1_entry")
     }
 }
-
-

@@ -26,6 +26,7 @@ where
     /// 2. If has MMU, it should be enabled.
     /// 3. alloc can be used after this function.
     pub unsafe fn new(cfg: KernelConfig) -> Self {
+        debug!("Initializing kernel...");
         let memory = MemoryManager::new();
         memory.init(&cfg);
         let module_base = ModuleBase {

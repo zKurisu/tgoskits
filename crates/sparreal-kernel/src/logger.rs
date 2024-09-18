@@ -17,12 +17,20 @@ fn level_to_rgb(level: Level) -> RGB8 {
 }
 
 fn level_icon(level: Level) -> &'static str {
-    match level {
-        Level::Error => "💥",
-        Level::Warn => "⚠️ ",
-        Level::Info => "💡",
-        Level::Debug => "🐛",
-        Level::Trace => "🔍",
+    // match level {
+    //     Level::Error => "💥",
+    //     Level::Warn => "⚠️ ",
+    //     Level::Info => "💡",
+    //     Level::Debug => "🐛",
+    //     Level::Trace => "🔍",
+    // }
+
+        match level {
+        Level::Error => "Error",
+        Level::Warn => "Warn ",
+        Level::Info => "Info ",
+        Level::Debug => "Debug",
+        Level::Trace => "Trace",
     }
 }
 

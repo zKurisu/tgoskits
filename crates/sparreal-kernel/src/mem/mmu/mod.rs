@@ -5,6 +5,7 @@ use core::{
 
 use super::*;
 use flat_device_tree::Fdt;
+use log::debug;
 use memory_addr::MemoryAddr;
 pub use page_table_interface::*;
 
@@ -303,6 +304,9 @@ impl Access for BeforeMMUPageAllocator {
 pub(crate) unsafe fn init_page_table<P: Platform>(
     access: &mut impl Access,
 ) -> Result<(), PagingError> {
+    debug!("Initializing page table...");
+
+
     let mut table = P::Table::new(access)?;
 
     // get_device_tree().take_if(|fdt| {
