@@ -100,28 +100,39 @@ where
 }
 
 #[derive(Clone)]
+pub struct MemoryRange {
+    pub start: Phys<u8>,
+    pub size: usize,
+}
+
+impl MemoryRange {
+    pub const fn new() -> Self {
+        Self {
+            start: Phys::new(),
+            size: 0,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct KernelConfig {
-    pub reserved_memory_start: Option<Phys<u8>>,
-    pub reserved_memory_size: usize,
-    pub memory_start: Phys<u8>,
-    pub memory_heap_start: usize,
-    pub memory_size: usize,
+    pub va_offset: usize,
+    pub reserved_memory: Option<MemoryRange>,
+    pub main_memory: MemoryRange,
+    pub main_memory_heap_offset: usize,
     pub hart_stack_size: usize,
-    pub debug_reg_start: Option<Phys<u8>>,
-    pub debug_reg_size: usize,
+    pub early_debug_reg: Option<MemoryRange>,
 }
 
 impl KernelConfig {
     pub const fn new() -> Self {
         Self {
-            reserved_memory_start: None,
-            reserved_memory_size: 0,
-            memory_start: Phys::new(),
-            memory_size: 0,
-            memory_heap_start: 0,
+            va_offset: 0,
+            reserved_memory: None,
             hart_stack_size: BYTES_1M * 2,
-            debug_reg_start: None,
-            debug_reg_size: 0,
+            early_debug_reg: None,
+            main_memory: MemoryRange::new(),
+            main_memory_heap_offset: 0,
         }
     }
 }

@@ -1,12 +1,14 @@
 use core::fmt::{self, Arguments, Write};
 
+use aarch64_cpu::registers::*;
 use log::*;
 use sparreal_kernel::{
     logger::{KernelLogger, StdoutWrite},
+    mem::Phys,
     util::{self, boot::StdoutReg},
 };
 
-use super::PlatformImpl;
+use super::{PlatformImpl, VA_OFFSET};
 
 static mut OUT_REG: usize = 0;
 
@@ -14,7 +16,7 @@ pub unsafe fn mmu_add_offset(va_offset: usize) {
     OUT_REG += va_offset;
 }
 
-unsafe fn put_debug(char: u8) {
+pub unsafe fn put_debug(char: u8) {
     // const BASE: usize = 0;
     // const BASE: usize = 0x2800D000;
     // const BASE: usize = 0xFE20_1000;
@@ -22,8 +24,14 @@ unsafe fn put_debug(char: u8) {
         return;
     }
 
-    let state = (OUT_REG + 0x18) as *mut u8;
-    let put = (OUT_REG) as *mut u8;
+    let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
+        OUT_REG + VA_OFFSET
+    } else {
+        OUT_REG
+    };
+
+    let state = (base + 0x18) as *mut u8;
+    let put = (base) as *mut u8;
     while (state.read_volatile() & (0x20 as u8)) != 0 {}
     put.write_volatile(char);
 }

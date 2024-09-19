@@ -51,8 +51,6 @@ pub unsafe fn boot_init<P: Platform>(
     kernel_size: usize,
 ) -> PagingResult<P::Table> {
     BOOT_INFO.va_offset = va_offset;
-    BOOT_INFO.reserved_start = kernel_lma.as_ptr() as usize;
-    BOOT_INFO.reserved_end = kernel_lma.as_ptr() as usize + kernel_size;
 
     k_boot_debug::<P>("boot table init\r\n");
 
@@ -310,19 +308,19 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
     debug!("Initializing page table...");
     let mut table = P::Table::new(access)?;
 
-    if let Some(memory_start) = kconfig.reserved_memory_start {
-        let virt = memory_start.to_virt();
-        let size = kconfig.reserved_memory_size.align_up(BYTES_1M * 2);
+    if let Some(memory) = &kconfig.reserved_memory {
+        let virt = memory.start.to_virt();
+        let size = memory.size.align_up(BYTES_1M * 2);
         debug!(
             "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
             virt.as_usize(),
-            memory_start.as_usize(),
+            memory.start.as_usize(),
             size,
         );
         table.map_region(
             MapConfig {
                 vaddr: virt.as_mut_ptr(),
-                paddr: memory_start.as_usize(),
+                paddr: memory.start.as_usize(),
                 attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
             },
             size,
@@ -331,40 +329,40 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
         );
     }
 
-    let virt = kconfig.memory_start.to_virt();
+    let virt = kconfig.main_memory.start.to_virt();
     debug!(
         "Map memory {:#X} -> {:#X} size {:#X}",
         virt.as_usize(),
-        kconfig.memory_start.as_usize(),
-        kconfig.memory_size
+        kconfig.main_memory.start.as_usize(),
+        kconfig.main_memory.size
     );
 
     table.map_region(
         MapConfig {
             vaddr: virt.as_mut_ptr(),
-            paddr: kconfig.memory_start.as_usize(),
+            paddr: kconfig.main_memory.start.as_usize(),
             attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
         },
-        kconfig.memory_size,
+        kconfig.main_memory.size,
         true,
         access,
     );
 
-    if let Some(debug_reg) = kconfig.debug_reg_start {
-        let virt = debug_reg.to_virt();
+    if let Some(debug_reg) = &kconfig.early_debug_reg {
+        let virt = debug_reg.start.to_virt();
         debug!(
             "Map debug register {:#X} -> {:#X} size {:#X}",
             virt.as_usize(),
-            debug_reg.as_usize(),
-            kconfig.debug_reg_size
+            debug_reg.start.as_usize(),
+            debug_reg.size
         );
         table.map_region(
             MapConfig {
                 vaddr: virt.as_mut_ptr(),
-                paddr: debug_reg.as_usize(),
+                paddr: debug_reg.start.as_usize(),
                 attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
             },
-            kconfig.debug_reg_size,
+            debug_reg.size,
             true,
             access,
         );

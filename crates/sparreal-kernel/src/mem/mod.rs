@@ -65,9 +65,9 @@ impl<P: Platform> MemoryManager<P> {
     }
 
     pub unsafe fn init(&self, cfg: &KernelConfig) {
-        let mut start = (cfg.memory_start + cfg.memory_heap_start).to_virt();
-        let mut size = cfg.memory_size - cfg.memory_heap_start - cfg.hart_stack_size;
-        let memory_end = (cfg.memory_start + cfg.memory_size).to_virt();
+        let mut start = (cfg.main_memory.start + cfg.main_memory_heap_offset).to_virt();
+        let mut size = cfg.main_memory.size - cfg.main_memory_heap_offset - cfg.hart_stack_size;
+        let memory_end = (cfg.main_memory.start + cfg.main_memory.size).to_virt();
 
         debug!(
             "Heap: [{:#x}, {:#x})",
@@ -145,6 +145,29 @@ where
 
     unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
         self.inner.dealloc(
+            NonNull::new_unchecked((ptr + va_offset()) as *mut u8),
+            layout,
+        );
+    }
+}
+
+pub struct PageAllocator(Heap<32>);
+
+#[cfg(feature = "mmu")]
+impl page_table_interface::Access for PageAllocator {
+    fn va_offset(&self) -> usize {
+        va_offset()
+    }
+
+    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<usize> {
+        match self.0.alloc(layout) {
+            Ok(addr) => Some(addr.as_ptr() as usize - va_offset()),
+            Err(_) => None,
+        }
+    }
+
+    unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
+        self.0.dealloc(
             NonNull::new_unchecked((ptr + va_offset()) as *mut u8),
             layout,
         );

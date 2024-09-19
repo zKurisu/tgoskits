@@ -5,7 +5,7 @@ extern crate alloc;
 
 mod kernel;
 
-mod driver;
+pub mod driver;
 pub mod executor;
 pub mod logger;
 pub mod mem;

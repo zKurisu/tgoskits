@@ -7,11 +7,17 @@ use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
 use debug::DebugWriter;
+use mmu::PageTable;
+use page_table_interface::{Access, MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
+    mem::{PageAllocator, Phys, Virt},
     platform::{Mmu, Platform2},
     Platform,
 };
 use sparreal_macros::api_impl;
+
+static mut VA_OFFSET: usize = 0;
+
 pub struct PlatformImpl;
 
 impl Platform for PlatformImpl {
@@ -69,11 +75,57 @@ pub struct Platform2Impl;
 
 #[api_impl]
 impl Platform2 for Platform2Impl {
-    fn current_ticks() -> u64 {
+    unsafe fn current_ticks() -> u64 {
         CNTPCT_EL0.get()
     }
 
-    fn tick_hz() -> u64 {
+    unsafe fn tick_hz() -> u64 {
         CNTFRQ_EL0.get()
+    }
+
+    unsafe fn debug_write_char(ch: char) {
+        unsafe { debug::put_debug(ch as u8) };
+    }
+
+    unsafe fn table_new(access: &mut PageAllocator) -> PagingResult<Phys<u8>> {
+        <PageTable as PageTableFn>::new(access).map(|table| table.paddr().into())
+    }
+
+    unsafe fn table_map(
+        table: Phys<u8>,
+        config: MapConfig,
+        size: usize,
+        allow_block: bool,
+        access: &mut PageAllocator,
+    ) -> PagingResult<()> {
+        let mut table = PageTable::from_addr(table.into(), 4);
+        table.map_region(config, size, allow_block, access)
+    }
+
+    unsafe fn set_kernel_page_table(table: Phys<u8>) {
+        TTBR1_EL1.set_baddr(table.as_usize() as _);
+        Self::flush_tlb(None);
+    }
+
+    unsafe fn set_user_page_table(table: Option<Phys<u8>>) {
+        match table {
+            Some(tb) => TTBR0_EL1.set_baddr(tb.as_usize() as _),
+            None => TTBR0_EL1.set_baddr(0),
+        }
+        Self::flush_tlb(None);
+    }
+
+    unsafe fn get_kernel_page_table() -> Phys<u8> {
+        let paddr = TTBR1_EL1.get_baddr();
+        (paddr as usize).into()
+    }
+
+    unsafe fn flush_tlb(addr: Option<Virt<u8>>) {
+        if let Some(vaddr) = addr {
+            asm!("tlbi vaae1is, {}; dsb sy; isb", in(reg) vaddr.as_usize())
+        } else {
+            // flush the entire TLB
+            asm!("tlbi vmalle1; dsb sy; isb")
+        };
     }
 }

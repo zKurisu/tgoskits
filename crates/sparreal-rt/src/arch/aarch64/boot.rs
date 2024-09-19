@@ -9,21 +9,19 @@ use flat_device_tree::Fdt;
 use log::{debug, info};
 use sparreal_kernel::{
     mem::{Addr, Phys},
-    util, KernelConfig,
+    util, KernelConfig, MemoryRange,
 };
 use tock_registers::interfaces::ReadWriteable;
 use DAIF::A;
 
 use crate::{
-    arch::debug::{debug_fmt, debug_print, init_debug, mmu_add_offset},
-    consts::{BYTES_1G, BYTES_1M, HART_STACK_SIZE, STACK_SIZE},
-    kernel,
-    mem::{MemoryMap, MemoryRange},
+    arch::debug::{debug_print, init_debug, mmu_add_offset},
+    consts::*,
 };
 
 use super::{
     debug::{debug_hex, debug_println, init_log},
-    mmu,
+    mmu, VA_OFFSET,
 };
 
 global_asm!(include_str!("boot.S"));
@@ -36,64 +34,42 @@ extern "C" {
 }
 
 static mut KCONFIG: KernelConfig = KernelConfig::new();
+static mut DTB_ADDR: usize = 0;
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     clear_bss();
     KCONFIG.hart_stack_size = HART_STACK_SIZE;
     print_info(dtb_addr, va_offset);
+    KCONFIG.va_offset = va_offset;
+    VA_OFFSET = va_offset;
 
-    let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
-    let kernel_end = Phys::<u8>::from(_ekernel as *const u8 as usize);
-    let mut kernel_size = kernel_end.as_usize() - kernel_start.as_usize();
+    let kernel_start = Phys::from(_skernel as *const u8).align_down(BYTES_1G);
+    let mut kernel_end = Phys::from(_ekernel as *const u8);
 
-    unsafe fn no_memory() {
-        let kernel_start = Phys::<u8>::from(_skernel as *const u8 as usize).align_down(BYTES_1G);
-        let kernel_end = Phys::<u8>::from(_ekernel as *const u8 as usize);
-        KCONFIG.memory_start = kernel_start;
-        KCONFIG.memory_heap_start = kernel_end.as_usize() - kernel_start.as_usize();
-        KCONFIG.memory_size = KCONFIG.memory_heap_start + BYTES_1M * 16;
-        debug_println("FDT parse failed!");
+    let new_dtb_addr = sparreal_kernel::driver::move_dtb(
+        dtb_addr as _,
+        NonNull::new_unchecked(kernel_end.as_usize() as _),
+    );
+
+    if let Some(addr) = new_dtb_addr {
+        debug_print("DTB moved to ");
+        DTB_ADDR = addr.as_ptr() as usize;
+        debug_hex(DTB_ADDR as _);
+        debug_print(", size: ");
+        debug_hex(addr.len() as _);
+        debug_println("\r\n");
+        kernel_end = kernel_end + addr.len();
     }
 
-    match Fdt::from_ptr(dtb_addr as _) {
-        Ok(fdt) => {
-            if let Ok(memory) = fdt.memory() {
-                if let Some(region) = memory.regions().next() {
-                    KCONFIG.memory_start = (region.starting_address as usize).into();
-                    KCONFIG.memory_size = region.size.unwrap_or_default();
-                    debug_print("memory region: 0");
+    let mut kernel_size = kernel_end - kernel_start;
 
-                    if KCONFIG.memory_start == kernel_start {
-                        KCONFIG.memory_start = kernel_start;
-                        KCONFIG.memory_heap_start =
-                            kernel_end.as_usize() - kernel_start.as_usize() + fdt.total_size();
-                        debug_print(", Image is this memory, used: ");
-                        debug_hex(KCONFIG.memory_heap_start as _);
-                        debug_println("\r\n");
-                    } else {
-                        debug_println(", Image is not in this memory");
-                    }
-                } else {
-                    no_memory();
-                }
-            } else {
-                no_memory();
-            }
+    if let Err(msg) = config_memory_by_fdt(kernel_start, kernel_size) {
+        debug_println(msg);
 
-            for resv in fdt.memory_reservations() {
-                let addr = Phys::<u8>::from(resv.address() as usize).align_down(BYTES_1G);
-                if addr == kernel_start {
-                    KCONFIG.reserved_memory_start = Some(addr);
-                    KCONFIG.reserved_memory_size = resv.size().max(kernel_size + fdt.total_size());
-                    debug_print("Reserving memory kernel @");
-                    debug_hex(addr.as_usize() as _);
-                    debug_print("\r\n");
-                    break;
-                }
-            }
-        }
-        Err(_) => no_memory(),
+        KCONFIG.main_memory.start = kernel_start;
+        KCONFIG.main_memory_heap_offset = kernel_size;
+        KCONFIG.main_memory.size = KCONFIG.main_memory_heap_offset + BYTES_1M * 16;
     }
 
     let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
@@ -125,7 +101,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
-    let stack_top = (KCONFIG.memory_start + KCONFIG.memory_size).as_usize() + va_offset;
+    let stack_top = (KCONFIG.main_memory.start + KCONFIG.main_memory.size).as_usize() + va_offset;
     debug_print("stack top: ");
     debug_hex(stack_top as _);
     debug_print("\r\n");
@@ -141,16 +117,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     offset = in(reg) va_offset,
     options(noreturn)
     )
-    // asm!("
-    // ADD  sp, sp, {offset}
-    // ADD  x30, x30, {offset}
-    // LDR      x8, =__rust_main_after_mmu
-    // BLR      x8
-    // B       .
-    // ",
-    // offset = in(reg) va_offset,
-    // options(noreturn)
-    // )
 }
 
 #[no_mangle]
@@ -168,7 +134,7 @@ unsafe extern "C" fn __rust_main_after_mmu() -> ! {
 
     if MPIDR_EL1.matches_all(MPIDR_EL1::Aff0.val(0)) {
         info!("Kernel start");
-        kernel::boot(KCONFIG.clone())
+        crate::kernel::boot(KCONFIG.clone())
     } else {
         info!("wait for primary cpu");
         loop {
@@ -189,8 +155,10 @@ unsafe fn clear_bss() {
 unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
     if let Some(dtb) = NonNull::new(dtb_addr as *mut u8) {
         if let Some(reg) = util::boot::stdout_reg(dtb) {
-            KCONFIG.debug_reg_start = Some(Phys::from(reg.reg));
-            KCONFIG.debug_reg_size = reg.size;
+            KCONFIG.early_debug_reg = Some(MemoryRange {
+                start: reg.reg.into(),
+                size: reg.size,
+            });
             init_debug(reg);
         }
     }
@@ -200,6 +168,10 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
     debug_print(" va_offset: ");
     debug_hex(va_offset as _);
     debug_print("\r\n");
+}
+
+unsafe fn device_tree() -> Option<Fdt<'static>> {
+    return Fdt::from_ptr(DTB_ADDR as _).ok();
 }
 
 #[no_mangle]
@@ -260,5 +232,51 @@ unsafe extern "C" fn __switch_to_el1() {
 unsafe fn other_cpu() -> ! {
     loop {
         asm!("wfe")
+    }
+}
+
+unsafe fn config_memory_by_fdt(
+    kernel_start: Phys<u8>,
+    kernel_size: usize,
+) -> Result<(), &'static str> {
+    let fdt = device_tree().ok_or("FDT not found")?;
+    for resv in fdt.memory_reservations() {
+        let addr = Phys::from(resv.address()).align_down(BYTES_1G);
+        if addr == kernel_start {
+            KCONFIG.reserved_memory = Some(MemoryRange {
+                start: addr,
+                size: resv.size().max(kernel_size + fdt.total_size()),
+            });
+            debug_print("Reserving memory kernel @");
+            debug_hex(addr.as_usize() as _);
+            debug_print("\r\n");
+            break;
+        }
+    }
+
+    let memory = fdt.memory().map_err(|e| "memory node not found")?;
+
+    for region in memory.regions() {
+        KCONFIG.main_memory.start = (region.starting_address as usize).into();
+        KCONFIG.main_memory.size = region.size.unwrap_or_default();
+        debug_print("memory @");
+        debug_hex(region.starting_address as usize as _);
+        debug_print(", size: ");
+        debug_hex(region.size.unwrap_or_default() as _);
+
+        if KCONFIG.main_memory.start == kernel_start {
+            KCONFIG.main_memory_heap_offset = kernel_size;
+            debug_print(", Kernel is in this memory, used: ");
+            debug_hex(KCONFIG.main_memory_heap_offset as _);
+            debug_println("\r\n");
+            return Ok(());
+        } else {
+            debug_println(", Kernel is not in this memory");
+        }
+    }
+    if KCONFIG.main_memory.size == 0 {
+        Err("No memory region found")
+    } else {
+        Ok(())
     }
 }

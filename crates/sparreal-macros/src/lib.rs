@@ -148,13 +148,14 @@ pub fn api_trait(args: TokenStream, input: TokenStream) -> TokenStream {
             let output = func.sig.output.clone();
 
             let api_name = format_ident!("__sparreal_api_{}", ident);
-            
+
             let mut args = Vec::new();
 
             for arg in &inputs {
                 if let FnArg::Typed(t) = arg {
                     if let Pat::Ident(i) = t.pat.as_ref() {
-                        args.push(i.ident.clone());
+                        let ident = &i.ident;
+                        args.push(quote! { #ident , });
                     }
                 }
             }
@@ -199,7 +200,8 @@ pub fn api_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
             for arg in &inputs {
                 if let FnArg::Typed(t) = arg {
                     if let Pat::Ident(i) = t.pat.as_ref() {
-                        args.push(i.ident.clone());
+                        let ident = &i.ident;
+                        args.push(quote! { #ident , });
                     }
                 }
             }

@@ -1,4 +1,7 @@
-use core::{fmt::Display, ops::Add};
+use core::{
+    fmt::Display,
+    ops::{Add, Sub},
+};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -95,6 +98,15 @@ impl<T> Phys<T> {
         self.0 as usize
     }
 }
+
+impl<T> Sub<Phys<T>> for Phys<T> {
+    type Output = usize;
+
+    fn sub(self, rhs: Phys<T>) -> Self::Output {
+        self.as_usize() - rhs.as_usize()
+    }
+}
+
 pub trait Addr: Into<usize> + From<usize> {
     fn is_aligned_to(self, align: usize) -> bool {
         align_offset(self.into(), align) == 0
