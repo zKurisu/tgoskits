@@ -1,6 +1,7 @@
 use core::{fmt, ptr::NonNull, time::Duration};
 
 pub use page_table_interface::PageTableFn;
+use sparreal_macros::api_trait;
 
 pub trait Platform: Mmu + Sync + Send {
     fn wait_for_interrupt();
@@ -58,4 +59,10 @@ pub fn app_main() {
     }
 
     unsafe { __sparreal_rt_main() }
+}
+
+#[api_trait]
+pub trait Platform2 {
+    fn current_ticks() -> u64;
+    fn tick_hz() -> u64;
 }

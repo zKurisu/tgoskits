@@ -907,6 +907,7 @@ dependencies = [
  "page-table-interface",
  "sparreal-build",
  "sparreal-kernel",
+ "sparreal-macros",
  "tock-registers",
 ]
 

@@ -6,9 +6,14 @@ extern crate proc_macro2;
 #[macro_use]
 extern crate syn;
 
-use proc_macro::TokenStream;
+mod api_trait;
+
+use proc_macro::{Ident, TokenStream};
 use proc_macro2::Span;
-use syn::{parse, spanned::Spanned, FnArg, ItemFn, PathArguments, Type, Visibility};
+use syn::{
+    parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments,
+    TraitItem, Type, Visibility,
+};
 
 /// Attribute to declare the entry point of the program
 ///
@@ -128,4 +133,90 @@ fn is_simple_type(ty: &Type, name: &str) -> bool {
         }
     }
     false
+}
+
+#[proc_macro_attribute]
+pub fn api_trait(args: TokenStream, input: TokenStream) -> TokenStream {
+    let f = parse_macro_input!(input as ItemTrait);
+
+    let mut funcs = Vec::new();
+
+    for item in &f.items {
+        if let TraitItem::Fn(func) = item {
+            let ident = func.sig.ident.clone();
+            let inputs = func.sig.inputs.clone();
+            let output = func.sig.output.clone();
+
+            let api_name = format_ident!("__sparreal_api_{}", ident);
+            
+            let mut args = Vec::new();
+
+            for arg in &inputs {
+                if let FnArg::Typed(t) = arg {
+                    if let Pat::Ident(i) = t.pat.as_ref() {
+                        args.push(i.ident.clone());
+                    }
+                }
+            }
+            funcs.push(quote! {
+
+                pub unsafe fn #ident (#inputs) #output{
+                    extern "Rust" {
+                        fn #api_name ( #inputs ) #output;
+                    }
+
+                    #api_name ( #(#args)* )
+                }
+            });
+        }
+    }
+
+    quote! {
+        #f
+        #(#funcs)*
+
+    }
+    .into()
+}
+
+#[proc_macro_attribute]
+pub fn api_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let f = parse_macro_input!(input as ItemImpl);
+
+    let mut funcs = Vec::new();
+
+    let ty = f.self_ty.clone();
+
+    for item in &f.items {
+        if let ImplItem::Fn(func) = item {
+            let ident = func.sig.ident.clone();
+            let inputs = func.sig.inputs.clone();
+            let output = func.sig.output.clone();
+
+            let api_name = format_ident!("__sparreal_api_{}", ident);
+            let mut args = Vec::new();
+
+            for arg in &inputs {
+                if let FnArg::Typed(t) = arg {
+                    if let Pat::Ident(i) = t.pat.as_ref() {
+                        args.push(i.ident.clone());
+                    }
+                }
+            }
+
+            funcs.push(quote! {
+                #[no_mangle]
+                unsafe fn #api_name (#inputs) #output{
+                    #ty:: #ident ( #(#args)* )
+                }
+            });
+        }
+    }
+
+    quote! {
+        #f
+        #(#funcs)*
+
+    }
+    .into()
 }

@@ -25,7 +25,7 @@ fn level_icon(level: Level) -> &'static str {
     //     Level::Trace => "🔍",
     // }
 
-        match level {
+    match level {
         Level::Error => "Error",
         Level::Warn => "Warn ",
         Level::Info => "Info ",
@@ -59,8 +59,7 @@ impl<P: Platform> Log for Kernel<P> {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let duration = self.module_time().since_boot();
-            // let _ = self.print(format_record!(record, duration));
+            let duration = crate::time::since_boot();
 
             OutFmt {}.write_fmt(format_record!(record, duration));
         }

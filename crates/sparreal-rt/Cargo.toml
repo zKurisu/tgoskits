@@ -12,6 +12,7 @@ driver-interface = { workspace = true }
 futures = { workspace = true, default-features = false, features = ["alloc"] }
 embedded-io = { workspace = true }
 memory_addr = { workspace = true }
+sparreal-macros = { workspace = true }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "9.4.0"

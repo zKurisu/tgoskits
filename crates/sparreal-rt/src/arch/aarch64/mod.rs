@@ -7,7 +7,11 @@ use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
 use debug::DebugWriter;
-use sparreal_kernel::{platform::Mmu, Platform};
+use sparreal_kernel::{
+    platform::{Mmu, Platform2},
+    Platform,
+};
+use sparreal_macros::api_impl;
 pub struct PlatformImpl;
 
 impl Platform for PlatformImpl {
@@ -58,5 +62,18 @@ impl Mmu for PlatformImpl {
 
     fn boot_debug_writer() -> Option<impl core::fmt::Write> {
         Some(DebugWriter {})
+    }
+}
+
+pub struct Platform2Impl;
+
+#[api_impl]
+impl Platform2 for Platform2Impl {
+    fn current_ticks() -> u64 {
+        CNTPCT_EL0.get()
+    }
+
+    fn tick_hz() -> u64 {
+        CNTFRQ_EL0.get()
     }
 }
