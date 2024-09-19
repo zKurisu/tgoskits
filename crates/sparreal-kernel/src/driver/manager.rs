@@ -92,8 +92,6 @@ impl<P: Platform> Manager<P> {
         let node = stdout.node();
         if let Some(d) = self.node_probe_uart(node).await {
             let r: io::BoxWrite = d;
-            logger::set_stdout(r.as_ref());
-
             return Some(r);
         }
 
@@ -182,8 +180,3 @@ fn get_uart_clk(uart_node: &FdtNode<'_, '_>) -> Option<u64> {
 
 
 
-impl StdoutWrite for dyn io::Write {
-    fn write_char(&self, ch: char) {
-        io::Write::write_char(self, ch);
-    }
-}
