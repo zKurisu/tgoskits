@@ -153,6 +153,14 @@ where
 
 pub struct PageAllocator(Heap<32>);
 
+impl PageAllocator {
+    pub unsafe fn new(start: NonNull<u8>, size: usize) -> Self {
+        let mut heap = Heap::new();
+        heap.init(start.as_ptr() as usize, size);
+        Self(heap)
+    }
+}
+
 #[cfg(feature = "mmu")]
 impl page_table_interface::Access for PageAllocator {
     fn va_offset(&self) -> usize {

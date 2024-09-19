@@ -27,8 +27,6 @@ impl<T> From<Virt<T>> for *const T {
 
 pub type VirtAddr<T = u8> = Virt<T>;
 
-impl<T> Addr for Virt<T> {}
-
 impl<T> Virt<T> {
     pub const fn new() -> Self {
         Self(0 as *const T)
@@ -77,8 +75,6 @@ unsafe impl<T> Sync for Phys<T> {}
 
 pub type PhysAddr<T = u8> = Phys<T>;
 
-impl<T> Addr for Phys<T> {}
-
 impl<T> From<usize> for Phys<T> {
     fn from(value: usize) -> Self {
         unsafe { Self(value as _) }
@@ -107,18 +103,38 @@ impl<T> Sub<Phys<T>> for Phys<T> {
     }
 }
 
-pub trait Addr: Into<usize> + From<usize> {
-    fn is_aligned_to(self, align: usize) -> bool {
-        align_offset(self.into(), align) == 0
+pub trait Align: Clone + Copy
+where
+    usize: From<Self>,
+{
+    fn align_down(self, align: usize) -> Self
+    where
+        Self: From<usize>,
+    {
+        align_down(self.into(), align).into()
+    }
+
+    fn align_up(self, align: usize) -> Self
+    where
+        Self: From<usize>,
+    {
+        align_up(self.into(), align).into()
     }
 
     fn is_aligned_4k(self) -> bool {
         self.is_aligned_to(0x1000)
     }
 
-    fn align_down(self, align: usize) -> Self {
-        align_down(self.into(), align).into()
+    fn is_aligned_to(self, align: usize) -> bool {
+        align_offset(self.into(), align) == 0
     }
+}
+
+impl<T> Align for T
+where
+    T: Into<usize> + From<usize> + Copy,
+    usize: From<T>,
+{
 }
 
 impl<T> Add<usize> for Virt<T> {
@@ -136,6 +152,10 @@ pub const fn align_offset(addr: usize, align: usize) -> usize {
 
 pub const fn align_down(addr: usize, align: usize) -> usize {
     addr & !(align - 1)
+}
+
+pub const fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
 }
 
 impl<T> Add<usize> for Phys<T> {

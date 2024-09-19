@@ -1,18 +1,17 @@
 use core::{
     arch::{asm, global_asm},
     mem,
-    ptr::{self, slice_from_raw_parts_mut, NonNull},
+    ptr::{self, addr_of, slice_from_raw_parts_mut, NonNull},
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
 use log::{debug, info};
 use sparreal_kernel::{
-    mem::{Addr, Phys},
+    mem::{Align, Phys},
     util, KernelConfig, MemoryRange,
 };
 use tock_registers::interfaces::ReadWriteable;
-use DAIF::A;
 
 use crate::{
     arch::debug::{debug_print, init_debug, mmu_add_offset},
@@ -72,7 +71,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         KCONFIG.main_memory.size = KCONFIG.main_memory_heap_offset + BYTES_1M * 16;
     }
 
-    let table = mmu::init_boot_table(va_offset, NonNull::new_unchecked(dtb_addr as *mut u8));
+    let table = mmu::init_boot_table(va_offset, &*addr_of!(KCONFIG));
 
     debug_println("table initialized");
 
@@ -95,16 +94,16 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
     TTBR0_EL1.set_baddr(table);
-    debug_println("table set");
-    mmu_add_offset(va_offset);
-    // Enable the MMU and turn on I-cache and D-cache
-    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-    barrier::isb(barrier::SY);
 
     let stack_top = (KCONFIG.main_memory.start + KCONFIG.main_memory.size).as_usize() + va_offset;
     debug_print("stack top: ");
     debug_hex(stack_top as _);
     debug_print("\r\n");
+
+    debug_println("table set");
+    // Enable the MMU and turn on I-cache and D-cache
+    SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    barrier::isb(barrier::SY);
 
     asm!("
     MOV  sp,  {sp_top}

@@ -6,7 +6,6 @@ use core::{
 use super::*;
 use flat_device_tree::Fdt;
 use log::debug;
-use memory_addr::MemoryAddr;
 pub use page_table_interface::*;
 
 use crate::{
