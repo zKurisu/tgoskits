@@ -8,7 +8,7 @@ use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
 use log::{debug, info};
 use sparreal_kernel::{
-    mem::{Align, Phys},
+    mem::{Align, Phys, BYTES_1G, BYTES_1M},
     util, KernelConfig, MemoryRange,
 };
 use tock_registers::interfaces::ReadWriteable;
@@ -19,7 +19,7 @@ use crate::{
 };
 
 use super::{
-    debug::{debug_hex, debug_println, init_log},
+    debug::{debug_hex, debug_println},
     mmu, VA_OFFSET,
 };
 
@@ -61,6 +61,10 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         kernel_end = kernel_end + addr.len();
     }
 
+    debug_print("Kernel @");
+    debug_hex(_skernel as *const u8 as usize as _);
+    debug_print("\r\n");
+
     let mut kernel_size = kernel_end - kernel_start;
 
     if let Err(msg) = config_memory_by_fdt(kernel_start, kernel_size) {
@@ -101,6 +105,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_print("\r\n");
 
     debug_println("table set");
+    mmu_add_offset(va_offset);
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
@@ -121,7 +126,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_println("MMU ok");
-    init_log();
+    debug_println("MMU ok2");
+    crate::boot(KCONFIG.clone());
+
     debug!("Debug logger ok");
     debug!(
         "CPU: {:?}.{:?}.{:?}.{:?}",

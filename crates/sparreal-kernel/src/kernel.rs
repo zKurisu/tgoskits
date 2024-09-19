@@ -5,14 +5,24 @@ use log::*;
 use crate::{
     driver::manager::DriverManager,
     executor,
+    logger::{self, KLogger},
     mem::{MemoryManager, Phys, BYTES_1M},
     module::ModuleBase,
     platform::app_main,
-    stdout::Stdout,
+    stdout::{self, EarlyDebugWrite},
     time::Time,
-    util::boot::k_boot_debug,
     Platform,
 };
+
+pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
+    let _ = log::set_logger(&KLogger);
+    log::set_max_level(LevelFilter::Trace);
+    stdout::set_stdout(EarlyDebugWrite {});
+    info!("Logger initialized.");
+    
+
+    
+}
 
 pub struct Kernel<P>
 where
@@ -40,7 +50,6 @@ where
         let module_base = ModuleBase {
             memory,
             time: Time::new(),
-            stdout: Stdout::new(),
         };
 
         let driver = DriverManager::new(module_base.clone());
@@ -87,15 +96,11 @@ where
         self.module_base.time.clone()
     }
 
-    pub fn print(&self, args: fmt::Arguments) {
-        self.module_base.stdout.print(args);
-    }
-
     fn print_welcome(&self) {
         let version = env!("CARGO_PKG_VERSION");
 
-        let _ = self.print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
-        let _ = self.print(format_args!("{}\n", self.module_base.memory));
+        let _ = stdout::print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
+        let _ = stdout::print(format_args!("{}\n", self.module_base.memory));
     }
 }
 

@@ -13,7 +13,7 @@ use super::device_tree::get_device_tree;
 use super::Driver as KDriver;
 use crate::{
     driver::DriverKind,
-    logger::{self, StdoutWrite},
+    logger,
     module::ModuleBase,
     sync::RwLock,
     Platform,
@@ -77,7 +77,7 @@ impl<P: Platform> Manager<P> {
 
     pub async fn init_stdout(&mut self) {
         if let Some(stdout) = self.probe_stdout().await {
-            self.module.stdout.set(stdout);
+            
         }
 
         let _ = self.probe_uart().await;

@@ -3,7 +3,6 @@ use core::fmt::{self, Arguments, Write};
 use aarch64_cpu::registers::*;
 use log::*;
 use sparreal_kernel::{
-    logger::{KernelLogger, StdoutWrite},
     mem::Phys,
     util::{self, boot::StdoutReg},
 };
@@ -24,11 +23,13 @@ pub unsafe fn put_debug(char: u8) {
         return;
     }
 
-    let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
-        OUT_REG + VA_OFFSET
-    } else {
-        OUT_REG
-    };
+    // let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
+    //     OUT_REG + VA_OFFSET
+    // } else {
+    //     OUT_REG
+    // };
+
+    let base = OUT_REG;
 
     let state = (base + 0x18) as *mut u8;
     let put = (base) as *mut u8;
@@ -49,35 +50,8 @@ impl fmt::Write for DebugWriter {
     }
 }
 
-impl Log for DebugLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        true
-    }
-
-    fn log(&self, record: &Record) {
-        let _ = DebugWriter {}.write_fmt(format_args!("{} {}\r\n", record.level(), record.args(),));
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: DebugLogger = DebugLogger;
-
 pub fn init_debug(stdout: StdoutReg) {
     unsafe { OUT_REG = stdout.reg as usize };
-}
-
-impl StdoutWrite for DebugWriter {
-    fn write_char(&self, ch: char) {
-        unsafe { put_debug(ch as _) };
-    }
-}
-
-static KERNEL_LOGGER: KernelLogger<PlatformImpl> = KernelLogger::new();
-
-pub fn init_log() {
-    sparreal_kernel::logger::set_stdout(&DebugWriter);
-    let _ = log::set_logger(&KERNEL_LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 
 pub fn debug_println(d: &str) {

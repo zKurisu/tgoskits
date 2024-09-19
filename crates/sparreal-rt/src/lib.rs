@@ -11,6 +11,12 @@ mod kernel;
 mod lang_items;
 pub mod mem;
 
+use log::debug;
 pub use sparreal_kernel::*;
 
-pub use kernel::kernel;
+
+unsafe fn boot(kconfig: KernelConfig)->!{
+    init_log_and_memory(&kconfig);       
+    
+    unreachable!()
+}

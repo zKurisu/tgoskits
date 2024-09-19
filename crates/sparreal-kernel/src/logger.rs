@@ -4,7 +4,7 @@ use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, Log};
 use rgb::{Rgb, RGB8};
 
-use crate::{time::TimeSource, Kernel, Platform};
+use crate::{stdout, time::TimeSource, Kernel, Platform};
 
 fn level_to_rgb(level: Level) -> RGB8 {
     match level {
@@ -52,7 +52,9 @@ macro_rules! format_record {
     }};
 }
 
-impl<P: Platform> Log for Kernel<P> {
+pub struct KLogger;
+
+impl Log for KLogger {
     fn enabled(&self, _metadata: &log::Metadata) -> bool {
         true
     }
@@ -61,63 +63,8 @@ impl<P: Platform> Log for Kernel<P> {
         if self.enabled(record.metadata()) {
             let duration = crate::time::since_boot();
 
-            OutFmt {}.write_fmt(format_record!(record, duration));
+            stdout::print(format_record!(record, duration));
         }
     }
     fn flush(&self) {}
-}
-
-pub struct KernelLogger<P: Platform> {
-    _marker: PhantomData<P>,
-}
-
-impl<P: Platform> KernelLogger<P> {
-    pub const fn new() -> Self {
-        Self {
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<P: Platform> Log for KernelLogger<P> {
-    fn enabled(&self, _metadata: &log::Metadata) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record) {
-        if self.enabled(record.metadata()) {
-            let duration = P::since_boot();
-            OutFmt {}.write_fmt(format_record!(record, duration));
-        }
-    }
-    fn flush(&self) {}
-}
-
-struct OutFmt;
-
-impl Write for OutFmt {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        for ch in s.chars() {
-            unsafe {
-                STDOUT.write_char(ch);
-            }
-        }
-        Ok(())
-    }
-}
-
-struct NopWrite;
-
-impl StdoutWrite for NopWrite {
-    fn write_char(&self, ch: char) {}
-}
-
-static mut STDOUT: &dyn StdoutWrite = &NopWrite;
-
-pub trait StdoutWrite: Sync + Send {
-    fn write_char(&self, ch: char);
-}
-
-pub fn set_stdout(stdout: &'static dyn StdoutWrite) {
-    unsafe { STDOUT = stdout }
 }
