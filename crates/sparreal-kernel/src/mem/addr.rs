@@ -1,4 +1,4 @@
-use core::ops::Add;
+use core::{fmt::Display, ops::Add};
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -81,6 +81,11 @@ impl<T> From<usize> for Phys<T> {
         unsafe { Self(value as _) }
     }
 }
+impl<T> From<*const T> for Phys<T> {
+    fn from(value: *const T) -> Self {
+        unsafe { Self(value as _) }
+    }
+}
 impl<T> Phys<T> {
     pub const fn new() -> Self {
         Self(0 as *const T)
@@ -126,5 +131,11 @@ impl<T> Add<usize> for Phys<T> {
 
     fn add(self, rhs: usize) -> Self::Output {
         (self.as_usize() + rhs).into()
+    }
+}
+
+impl<T> Display for Phys<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "PA({:p})", self.0)
     }
 }

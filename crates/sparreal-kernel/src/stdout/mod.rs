@@ -3,7 +3,7 @@ use core::fmt::{self, Write};
 use alloc::sync::Arc;
 use driver_interface::io;
 
-use crate::sync::RwLock;
+use crate::{logger::StdoutWrite, sync::RwLock};
 
 #[derive(Clone)]
 pub struct Stdout {
@@ -29,4 +29,11 @@ impl Stdout {
     }
 }
 
-
+impl StdoutWrite for Stdout {
+    fn write_char(&self, ch: char) {
+        let mut stdout = self.inner.write();
+        if let Some(stdout) = stdout.as_mut() {
+            let _ = stdout.write_char(ch);
+        }
+    }
+}

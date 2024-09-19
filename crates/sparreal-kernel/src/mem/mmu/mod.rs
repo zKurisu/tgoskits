@@ -135,6 +135,8 @@ pub unsafe fn boot_init<P: Platform>(
         );
     };
 
+    set_dtb_addr(phys_dtb_addr.map(|addr| addr.add(va_offset)));
+
     Ok(table)
 }
 
@@ -348,65 +350,28 @@ pub(crate) unsafe fn init_page_table<P: Platform>(
         access,
     );
 
-    // get_device_tree().take_if(|fdt| {
-    //     for region in fdt.memory_reservations() {
-    //         table.map_region(
-    //             MapConfig {
-    //                 vaddr: region.address().add(va_offset()),
-    //                 paddr: region.address() as usize,
-    //                 attrs: PageAttribute::Read | PageAttribute::Write,
-    //             },
-    //             region.size(),
-    //             true,
-    //             access,
-    //         )
-    //     }
-    // });
-    // table.map_region(
-    //     MapConfig {
-    //         vaddr: MEMORY_START,
-    //         paddr: KERNEL_START,
-    //         attrs: PageAttribute::Read | PageAttribute::Write,
-    //     },
-    //     KERNEL_SIZE,
-    //     true,
-    //     access,
-    // );
-
-    // let kernel_phys = Phys::<u8>::from(BOOT_INFO.reserved_start);
-    // let kernel_virt = kernel_phys.to_virt();
-    // let kernel_size = (BOOT_INFO.reserved_end - BOOT_INFO.reserved_start).align_up_4k();
-    // let _ = table.map_region(
-    //     MapConfig {
-    //         vaddr: kernel_virt.into(),
-    //         paddr: kernel_phys.into(),
-    //         attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-    //     },
-    //     BYTES_1G,
-    //     true,
-    //     access,
-    // );
-
-    // let vaddr = VirtAddr::from(MEMORY_START + va_offset());
-    // let paddr = Phys::<u8>::from(MEMORY_START);
-    // let size = MEMORY_SIZE;
-
-    // table.map_region(
-    //     MapConfig {
-    //         vaddr: vaddr.as_mut_ptr(),
-    //         paddr: paddr.as_usize(),
-    //         attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-    //     },
-    //     size,
-    //     true,
-    //     access,
-    // )?;
+    if let Some(debug_reg) = kconfig.debug_reg_start {
+        let virt = debug_reg.to_virt();
+        debug!(
+            "Map debug register {:#X} -> {:#X} size {:#X}",
+            virt.as_usize(),
+            debug_reg.as_usize(),
+            kconfig.debug_reg_size
+        );
+        table.map_region(
+            MapConfig {
+                vaddr: virt.as_mut_ptr(),
+                paddr: debug_reg.as_usize(),
+                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
+            },
+            kconfig.debug_reg_size,
+            true,
+            access,
+        );
+    }
 
     P::set_kernel_page_table(&table);
     P::set_user_page_table(None);
-
-    debug!("Page table initialized");
-
     Ok(())
 }
 

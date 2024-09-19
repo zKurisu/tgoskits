@@ -107,6 +107,8 @@ pub struct KernelConfig {
     pub memory_heap_start: usize,
     pub memory_size: usize,
     pub hart_stack_size: usize,
+    pub debug_reg_start: Option<Phys<u8>>,
+    pub debug_reg_size: usize,
 }
 
 impl KernelConfig {
@@ -118,6 +120,8 @@ impl KernelConfig {
             memory_size: 0,
             memory_heap_start: 0,
             hart_stack_size: BYTES_1M * 2,
+            debug_reg_start: None,
+            debug_reg_size: 0,
         }
     }
 }

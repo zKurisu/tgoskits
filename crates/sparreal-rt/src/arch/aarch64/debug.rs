@@ -47,7 +47,7 @@ impl Log for DebugLogger {
     }
 
     fn log(&self, record: &Record) {
-        DebugWriter {}.write_fmt(format_args!("{} {}\r\n", record.level(), record.args(),));
+        let _ = DebugWriter {}.write_fmt(format_args!("{} {}\r\n", record.level(), record.args(),));
     }
 
     fn flush(&self) {}
@@ -69,18 +69,18 @@ static KERNEL_LOGGER: KernelLogger<PlatformImpl> = KernelLogger::new();
 
 pub fn init_log() {
     sparreal_kernel::logger::set_stdout(&DebugWriter);
-    log::set_logger(&KERNEL_LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+    let _ = log::set_logger(&KERNEL_LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
 }
 
 pub fn debug_println(d: &str) {
-    DebugWriter {}.write_str(d);
-    DebugWriter {}.write_str("\r\n");
+    let _ = DebugWriter {}.write_str(d);
+    let _ = DebugWriter {}.write_str("\r\n");
 }
 pub fn debug_print(d: &str) {
-    DebugWriter {}.write_str(d);
+    let _ = DebugWriter {}.write_str(d);
 }
 pub fn debug_fmt(args: Arguments<'_>) {
-    DebugWriter {}.write_fmt(args);
+    let _ = DebugWriter {}.write_fmt(args);
 }
 
 pub fn debug_hex(v: u64) {

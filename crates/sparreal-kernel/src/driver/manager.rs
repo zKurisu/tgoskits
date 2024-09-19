@@ -1,16 +1,24 @@
 use alloc::{
     boxed::Box,
     collections::{btree_map::BTreeMap, btree_set::BTreeSet},
-    string::String,
+    string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
 use driver_interface::*;
 use flat_device_tree::node::{CellSize, FdtNode};
-
-use crate::{module::ModuleBase, sync::RwLock, Platform};
+use log::info;
 
 use super::device_tree::get_device_tree;
+use super::Driver as KDriver;
+use crate::{
+    driver::DriverKind,
+    logger::{self, StdoutWrite},
+    module::ModuleBase,
+    sync::RwLock,
+    Platform,
+};
+
 
 pub struct DriverManager<P: Platform> {
     inner: Arc<RwLock<Manager<P>>>,
@@ -55,16 +63,14 @@ impl<P: Platform> DriverManager<P> {
 struct Manager<P: Platform> {
     module: ModuleBase<P>,
     registers: BTreeMap<String, Register>,
-    registed: BTreeSet<String>,
-    uart: Vec<Box<dyn uart::Driver>>,
+    drivers: BTreeMap<String, KDriver>,
 }
 
 impl<P: Platform> Manager<P> {
     fn new(module: ModuleBase<P>) -> Self {
         Self {
             module,
-            uart: Default::default(),
-            registed: Default::default(),
+            drivers: Default::default(),
             registers: Default::default(),
         }
     }
@@ -74,16 +80,10 @@ impl<P: Platform> Manager<P> {
             self.module.stdout.set(stdout);
         }
 
-        self.probe_uart().await;
-
-        if let Some(uart) = self.uart.pop() {
-            self.module.stdout.set(uart);
-        }
+        let _ = self.probe_uart().await;
     }
 
-    async fn init(&mut self) {
-        self.probe_uart().await;
-    }
+    async fn init(&mut self) {}
 
     async fn probe_stdout(&mut self) -> Option<io::BoxWrite> {
         let fdt = get_device_tree().expect("no device tree found!");
@@ -91,36 +91,51 @@ impl<P: Platform> Manager<P> {
         let stdout = chosen.stdout()?;
         let node = stdout.node();
         if let Some(d) = self.node_probe_uart(node).await {
-            return Some(d);
+            let r: io::BoxWrite = d;
+            logger::set_stdout(r.as_ref());
+
+            return Some(r);
         }
 
         None
     }
 
-    async fn probe_uart(&mut self) -> Option<io::BoxWrite> {
+    async fn probe_uart(&mut self) -> Option<()> {
         let fdt = get_device_tree()?;
         for node in fdt.all_nodes() {
-            if let Some(d) = self.node_probe_uart(node).await {
-                self.uart.push(d);
-            }
+            self.node_register_uart(node);
         }
-        None
+        Some(())
+    }
+    async fn node_register_uart(&mut self, node: FdtNode<'_, '_>) {
+        if self.drivers.contains_key(node.name) {
+            return;
+        }
+
+        if let Some(d) = self.node_probe_uart(node).await {
+            self.drivers.insert(
+                node.name.to_string(),
+                KDriver {
+                    name: node.name.to_string(),
+                    kind: DriverKind::Uart(d),
+                },
+            );
+        }
     }
 
     async fn node_probe_uart(&mut self, node: FdtNode<'_, '_>) -> Option<uart::BoxDriver> {
         let caps = node.compatible()?;
         for one in caps.all() {
             for register in self.registers.values() {
-                let name = &register.name;
-                if self.registed.contains(name) {
-                    continue;
-                }
-
                 if register.compatible_matched(one) {
                     if let RegisterKind::Uart(ref register) = register.kind {
+                        info!("Probe {} - uart: {}", node.name, one);
                         let reg = node.reg_fix().next()?;
                         let start = (reg.starting_address as usize).into();
                         let size = reg.size?;
+
+                        info!(" @{} size: {:#X}", start, size);
+
                         let reg_base = self.module.memory.iomap(start, size);
 
                         let clock_freq = if let Some(clk) = get_uart_clk(&node) {
@@ -128,6 +143,8 @@ impl<P: Platform> Manager<P> {
                         } else {
                             0
                         };
+
+                        info!(" clk: {}", clock_freq);
 
                         let config = uart::Config {
                             reg: reg_base,
@@ -138,7 +155,9 @@ impl<P: Platform> Manager<P> {
                             parity: uart::Parity::None,
                         };
                         let uart = register.probe(config).await.ok()?;
-                        self.registed.insert(name.clone());
+
+                        info!("Uart probe success!");
+
                         return Some(uart);
                     }
                 }
@@ -157,4 +176,14 @@ fn get_uart_clk(uart_node: &FdtNode<'_, '_>) -> Option<u64> {
         }
     }
     None
+}
+
+
+
+
+
+impl StdoutWrite for dyn io::Write {
+    fn write_char(&self, ch: char) {
+        io::Write::write_char(self, ch);
+    }
 }

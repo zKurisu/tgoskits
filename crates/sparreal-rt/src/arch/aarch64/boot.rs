@@ -189,6 +189,8 @@ unsafe fn clear_bss() {
 unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
     if let Some(dtb) = NonNull::new(dtb_addr as *mut u8) {
         if let Some(reg) = util::boot::stdout_reg(dtb) {
+            KCONFIG.debug_reg_start = Some(Phys::from(reg.reg));
+            KCONFIG.debug_reg_size = reg.size;
             init_debug(reg);
         }
     }
