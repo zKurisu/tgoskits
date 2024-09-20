@@ -21,12 +21,15 @@ extern "C" {
 pub type PageTable = page_table_interface::PageTableRef<'static, page_table::PTE, 512, 4>;
 
 pub unsafe fn init_boot_table(va_offset: usize, kconfig: &KernelConfig) -> u64 {
-    let heap_size = (kconfig.main_memory.size - kconfig.main_memory_heap_offset) / 2;
+    let heap_size =
+        (kconfig.main_memory.size - kconfig.main_memory_heap_offset - kconfig.hart_stack_size) / 2;
     let heap_start = kconfig.main_memory.start + kconfig.main_memory_heap_offset + heap_size;
 
-    debug_print("Page Allocator @");
+    debug_print("Page Allocator [");
     debug_hex(heap_start.as_usize() as _);
-    debug_print("\r\n");
+    debug_print(", ");
+    debug_hex((heap_start.as_usize() + heap_size) as _);
+    debug_print(")\r\n");
 
     let mut access = PageAllocator::new(
         NonNull::new_unchecked(heap_start.as_usize() as _),
@@ -39,10 +42,8 @@ pub unsafe fn init_boot_table(va_offset: usize, kconfig: &KernelConfig) -> u64 {
     debug_hex(table.paddr() as _);
     debug_print("\r\n");
 
-
-
     if let Some(memory) = &kconfig.reserved_memory {
-        let size = memory.size.align_up(BYTES_1M * 2);
+        let size = memory.size.align_up(BYTES_1G);
 
         map_boot_region(
             "Map reserved memory",

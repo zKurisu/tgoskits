@@ -104,7 +104,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct MemoryRange {
     pub start: Phys<u8>,
     pub size: usize,

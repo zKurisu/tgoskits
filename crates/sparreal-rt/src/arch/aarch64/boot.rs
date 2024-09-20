@@ -250,12 +250,15 @@ unsafe fn config_memory_by_fdt(
     for resv in fdt.memory_reservations() {
         let addr = Phys::from(resv.address()).align_down(BYTES_1G);
         if addr == kernel_start {
-            KCONFIG.reserved_memory = Some(MemoryRange {
+            let range = MemoryRange {
                 start: addr,
                 size: resv.size().max(kernel_size + fdt.total_size()),
-            });
+            };
+            KCONFIG.reserved_memory = Some(range);
             debug_print("Reserving memory kernel @");
             debug_hex(addr.as_usize() as _);
+            debug_print(" size: ");
+            debug_hex(range.size as _);
             debug_print("\r\n");
             break;
         }
