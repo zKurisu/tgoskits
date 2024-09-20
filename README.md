@@ -21,6 +21,10 @@ rustup component add rust-src
 
 安装[Qemu](https://www.qemu.org/download/#linux)
 
+### Mac
+
+安装[Qemu](https://www.qemu.org/download/#macos)
+
 ## 构建
 
 ```bash
@@ -52,3 +56,39 @@ cargo xtask uboot
 ## 配置
 
 首次执行 `xtask` 任务后，会在根目录生成默认配置文件 `.project.toml`。
+
+## 平台适配
+
+ 1. 实现平台接口
+ 2. 初始化页表，启动MMU。
+ 3. 启动内核
+
+```rust
+use sparreal_kernel::platform::Platform;
+use sparreal_macros::api_impl;
+
+pub struct PlatformImpl;
+
+// 实现接口
+#[api_impl]
+impl Platform for PlatformImpl {
+    unsafe fn wait_for_interrupt() {
+        aarch64_cpu::asm::wfi();
+    }
+    ... other fn
+}
+```
+
+```rust
+pub use sparreal_kernel::*;
+
+// 启动MMU，并进入函数
+unsafe fn boot(kconfig: kernel::KernelConfig) -> ! {
+    // 初始化日志和内存分配器。
+    kernel::init_log_and_memory(&kconfig);
+    // 注册驱动
+    kernel::driver_manager().register_all(drivers::registers());
+    // 启动内核
+    kernel::run()
+}
+``
