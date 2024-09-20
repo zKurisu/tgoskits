@@ -1,46 +1,6 @@
 use crate::{platform, Platform};
 use core::{future::Future, marker::PhantomData, time::Duration};
 
-pub trait TimeSource {
-    fn since_boot(&self) -> Duration;
-}
-
-impl<P: Platform> TimeSource for Time<P> {
-    fn since_boot(&self) -> Duration {
-        let current_tick = P::current_ticks();
-        let freq = P::tick_hz();
-        Duration::from_nanos(current_tick * 1_000_000_000 / freq)
-    }
-}
-
-pub struct Time<P: Platform> {
-    _marker: PhantomData<P>,
-}
-
-impl<P: Platform> Clone for Time<P> {
-    fn clone(&self) -> Self {
-        Self {
-            _marker: PhantomData,
-        }
-    }
-}
-
-impl<P: Platform> Time<P> {
-    pub const fn new() -> Self {
-        Self {
-            _marker: PhantomData,
-        }
-    }
-
-    pub fn delay(&self, duration: Duration) -> impl Future<Output = ()> {
-        let current_tick = P::current_ticks();
-        let freq = P::tick_hz();
-        let ticks = duration.as_nanos() * freq as u128 / 1_000_000_000;
-        let until = current_tick + ticks as u64;
-        FutureDelay { until }
-    }
-}
-
 pub fn since_boot() -> Duration {
     let current_tick = unsafe { platform::current_ticks() };
     let freq = unsafe { platform::tick_hz() };

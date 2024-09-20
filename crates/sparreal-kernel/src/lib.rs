@@ -7,9 +7,9 @@ mod kernel;
 
 pub mod driver;
 pub mod executor;
+mod lang_items;
 pub mod logger;
 pub mod mem;
-pub mod module;
 pub mod platform;
 pub mod stdout;
 pub mod sync;

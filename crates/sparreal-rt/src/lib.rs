@@ -6,17 +6,13 @@ extern crate alloc;
 pub mod arch;
 mod consts;
 mod device_tree;
-mod driver;
-mod kernel;
-mod lang_items;
+mod drivers;
 pub mod mem;
 
-use log::debug;
 pub use sparreal_kernel::*;
 
-
-unsafe fn boot(kconfig: KernelConfig)->!{
-    init_log_and_memory(&kconfig);       
-    
-    unreachable!()
+unsafe fn boot(kconfig: KernelConfig) -> ! {
+    init_log_and_memory(&kconfig);
+    driver_manager().register_all(drivers::registers());
+    run()
 }

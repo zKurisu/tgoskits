@@ -65,7 +65,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_hex(_skernel as *const u8 as usize as _);
     debug_print("\r\n");
 
-    let mut kernel_size = kernel_end - kernel_start;
+    let kernel_size = kernel_end - kernel_start;
 
     if let Err(msg) = config_memory_by_fdt(kernel_start, kernel_size) {
         debug_println(msg);
@@ -75,7 +75,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         KCONFIG.main_memory.size = KCONFIG.main_memory_heap_offset + BYTES_1M * 16;
     }
 
-    let table = mmu::init_boot_table(va_offset, &*addr_of!(KCONFIG));
+    let table = mmu::init_boot_table(&*addr_of!(KCONFIG));
 
     debug_println("table initialized");
 
@@ -128,24 +128,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_println("MMU enabled");
     crate::boot(KCONFIG.clone());
-    debug!("Debug logger initialized");
-    debug!(
-        "CPU: {:?}.{:?}.{:?}.{:?}",
-        MPIDR_EL1.read(MPIDR_EL1::Aff0),
-        MPIDR_EL1.read(MPIDR_EL1::Aff1),
-        MPIDR_EL1.read(MPIDR_EL1::Aff2),
-        MPIDR_EL1.read(MPIDR_EL1::Aff3)
-    );
-
-    if MPIDR_EL1.matches_all(MPIDR_EL1::Aff0.val(0)) {
-        info!("Kernel start");
-        crate::kernel::boot(KCONFIG.clone())
-    } else {
-        info!("wait for primary cpu");
-        loop {
-            aarch64_cpu::asm::wfe();
-        }
-    }
 }
 
 unsafe fn clear_bss() {
@@ -262,7 +244,7 @@ unsafe fn config_memory_by_fdt(
         }
     }
 
-    let memory = fdt.memory().map_err(|e| "memory node not found")?;
+    let memory = fdt.memory().map_err(|_e| "memory node not found")?;
 
     for region in memory.regions() {
         KCONFIG.main_memory.start = (region.starting_address as usize).into();

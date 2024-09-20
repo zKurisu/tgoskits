@@ -1,47 +1,54 @@
 use alloc::{
-    boxed::Box,
-    collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+    collections::btree_map::BTreeMap,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 use driver_interface::*;
 use flat_device_tree::node::{CellSize, FdtNode};
 use log::info;
 
 use super::device_tree::get_device_tree;
-use super::Driver as KDriver;
 use crate::{
     driver::DriverKind,
-    logger,
-    module::ModuleBase,
-    sync::RwLock,
-    Platform,
+    mem::mmu::iomap,
+    sync::{RwLock, RwLockWriteGuard},
 };
 
+use super::Driver as KDriver;
 
-pub struct DriverManager<P: Platform> {
-    inner: Arc<RwLock<Manager<P>>>,
-}
+static MANAGER: RwLock<Option<DriverManager>> = RwLock::new(None);
 
-impl<P: Platform> Clone for DriverManager<P> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
+pub fn driver_manager() -> DriverManager {
+    let d = MANAGER.read();
+    match d.as_ref() {
+        Some(dm) => dm.clone(),
+        None => {
+            drop(d);
+            let mut g = MANAGER.write();
+            match g.as_mut() {
+                Some(d) => d.clone(),
+                None => {
+                    let d = DriverManager::new();
+                    *g = Some(d.clone());
+                    d
+                }
+            }
         }
     }
 }
 
-impl<P: Platform> DriverManager<P> {
-    pub fn new(module: ModuleBase<P>) -> Self {
+#[derive(Clone)]
+pub struct DriverManager {
+    inner: Arc<RwLock<Manager>>,
+}
+
+impl DriverManager {
+    pub fn new() -> Self {
         Self {
-            inner: Arc::new(RwLock::new(Manager::new(module))),
+            inner: Arc::new(RwLock::new(Manager::new())),
         }
     }
 
-    pub async fn init(&self) {
-        self.inner.write().init().await;
-    }
     pub async fn init_stdout(&self) {
         self.inner.write().init_stdout().await;
     }
@@ -60,25 +67,21 @@ impl<P: Platform> DriverManager<P> {
     }
 }
 
-struct Manager<P: Platform> {
-    module: ModuleBase<P>,
+struct Manager {
     registers: BTreeMap<String, Register>,
     drivers: BTreeMap<String, KDriver>,
 }
 
-impl<P: Platform> Manager<P> {
-    fn new(module: ModuleBase<P>) -> Self {
+impl Manager {
+    fn new() -> Self {
         Self {
-            module,
             drivers: Default::default(),
             registers: Default::default(),
         }
     }
 
     pub async fn init_stdout(&mut self) {
-        if let Some(stdout) = self.probe_stdout().await {
-            
-        }
+        if let Some(stdout) = self.probe_stdout().await {}
 
         let _ = self.probe_uart().await;
     }
@@ -134,7 +137,7 @@ impl<P: Platform> Manager<P> {
 
                         info!(" @{} size: {:#X}", start, size);
 
-                        let reg_base = self.module.memory.iomap(start, size);
+                        let reg_base = iomap(start, size);
 
                         let clock_freq = if let Some(clk) = get_uart_clk(&node) {
                             clk
@@ -175,8 +178,3 @@ fn get_uart_clk(uart_node: &FdtNode<'_, '_>) -> Option<u64> {
     }
     None
 }
-
-
-
-
-

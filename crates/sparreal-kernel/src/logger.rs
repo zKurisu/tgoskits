@@ -4,7 +4,7 @@ use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, Log};
 use rgb::{Rgb, RGB8};
 
-use crate::{stdout, time::TimeSource, Kernel, Platform};
+use crate::{stdout, Platform};
 
 fn level_to_rgb(level: Level) -> RGB8 {
     match level {

@@ -7,6 +7,7 @@ use flat_device_tree::Fdt;
 pub mod device_tree;
 pub mod manager;
 
+
 pub struct Driver {
     pub name: String,
     pub kind: DriverKind,

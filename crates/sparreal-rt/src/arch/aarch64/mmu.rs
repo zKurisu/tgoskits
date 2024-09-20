@@ -20,7 +20,7 @@ extern "C" {
 
 pub type PageTable = page_table_interface::PageTableRef<'static, page_table::PTE, 512, 4>;
 
-pub unsafe fn init_boot_table(va_offset: usize, kconfig: &KernelConfig) -> u64 {
+pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
     let heap_size =
         (kconfig.main_memory.size - kconfig.main_memory_heap_offset - kconfig.hart_stack_size) / 2;
     let heap_start = kconfig.main_memory.start + kconfig.main_memory_heap_offset + heap_size;

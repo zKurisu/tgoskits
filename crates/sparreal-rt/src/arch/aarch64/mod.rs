@@ -11,7 +11,7 @@ use debug::DebugWriter;
 use mmu::PageTable;
 use page_table_interface::{Access, MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
-    mem::{PageAllocator, PageAllocatorRef, Phys, Virt},
+    mem::{PageAllocatorRef, Phys, Virt},
     platform::{Mmu, Platform2},
     Platform,
 };
@@ -76,6 +76,10 @@ pub struct Platform2Impl;
 
 #[api_impl]
 impl Platform2 for Platform2Impl {
+    unsafe fn wait_for_interrupt() {
+        aarch64_cpu::asm::wfi();
+    }
+
     unsafe fn current_ticks() -> u64 {
         CNTPCT_EL0.get()
     }
