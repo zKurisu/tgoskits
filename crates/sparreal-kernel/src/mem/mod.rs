@@ -3,9 +3,6 @@ pub mod mmu;
 
 use core::{
     alloc::GlobalAlloc,
-    fmt::Display,
-    marker::PhantomData,
-    ops::DerefMut,
     ptr::{null_mut, NonNull},
 };
 
@@ -15,27 +12,24 @@ use log::*;
 use mmu::va_offset;
 
 use crate::{
-    driver::device_tree::get_device_tree,
-    sync::{RwLock, RwLockReadGuard, RwLockWriteGuard},
-    util::boot::{k_boot_debug, k_boot_debug_hex},
-    KernelConfig, Platform,
+    sync::{RwLock, RwLockWriteGuard},
+    KernelConfig,
 };
 
 #[global_allocator]
-pub(crate) static HEAP_ALLOCATOR: LockedHeap = LockedHeap::new();
+static HEAP_ALLOCATOR: LockedHeap = LockedHeap::new();
 
 pub const BYTES_1K: usize = 1024;
 pub const BYTES_1M: usize = 1024 * BYTES_1K;
 pub const BYTES_1G: usize = 1024 * BYTES_1M;
-
 
 pub unsafe fn init(kconfig: &KernelConfig) {
     #[cfg(feature = "mmu")]
     mmu::set_va_offset(kconfig.va_offset);
 
     let stack_size = kconfig.hart_stack_size * kconfig.cpu_count;
-    let mut start = (kconfig.main_memory.start + kconfig.main_memory_heap_offset).to_virt();
-    let mut size = kconfig.main_memory.size - kconfig.main_memory_heap_offset - stack_size;
+    let start = (kconfig.main_memory.start + kconfig.main_memory_heap_offset).to_virt();
+    let size = kconfig.main_memory.size - kconfig.main_memory_heap_offset - stack_size;
     let stack_top = kconfig.stack_top.to_virt();
 
     debug!("Heap: [{}, {})", start, start + size);
@@ -65,10 +59,6 @@ impl LockedHeap {
         Self(RwLock::new(Heap::new()))
     }
 
-    fn read(&self) -> RwLockReadGuard<'_, Heap<32>> {
-        self.0.read()
-    }
-
     fn write(&self) -> RwLockWriteGuard<'_, Heap<32>> {
         self.0.write()
     }
@@ -86,16 +76,16 @@ unsafe impl GlobalAlloc for LockedHeap {
         self.write().dealloc(NonNull::new_unchecked(ptr), layout);
     }
 }
+// #[allow(unused)]
+// pub(crate) trait VirtToPhys {
+//     fn to_phys(&self) -> PhysAddr;
+// }
 
-pub(crate) trait VirtToPhys {
-    fn to_phys(&self) -> PhysAddr;
-}
-
-impl<T> VirtToPhys for NonNull<T> {
-    fn to_phys(&self) -> PhysAddr {
-        (self.as_ptr() as usize - va_offset()).into()
-    }
-}
+// impl<T> VirtToPhys for NonNull<T> {
+//     fn to_phys(&self) -> PhysAddr {
+//         (self.as_ptr() as usize - va_offset()).into()
+//     }
+// }
 
 pub(crate) trait PhysToVirt<T> {
     fn to_virt(self) -> Virt<T>;
@@ -107,7 +97,6 @@ impl<T> PhysToVirt<T> for Phys<T> {
         (a + va_offset()).into()
     }
 }
-
 
 pub struct PageAllocatorRef<'a> {
     inner: RwLockWriteGuard<'a, Heap<32>>,

@@ -1,16 +1,11 @@
 use core::{
     arch::{asm, global_asm},
-    mem,
-    ptr::{self, addr_of, slice_from_raw_parts_mut, NonNull},
+    ptr::{addr_of, slice_from_raw_parts_mut, NonNull},
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
-use log::{debug, info};
-use sparreal_kernel::{
-    mem::{Align, Phys, BYTES_1G, BYTES_1M},
-    util, KernelConfig, MemoryRange,
-};
+use sparreal_kernel::{mem::*, util, KernelConfig, MemoryRange};
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::{
@@ -220,11 +215,11 @@ unsafe extern "C" fn __switch_to_el1() {
     }
 }
 
-unsafe fn other_cpu() -> ! {
-    loop {
-        asm!("wfe")
-    }
-}
+// unsafe fn other_cpu() -> ! {
+//     loop {
+//         asm!("wfe")
+//     }
+// }
 
 unsafe fn config_memory_by_fdt(
     kernel_start: Phys<u8>,

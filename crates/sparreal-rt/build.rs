@@ -1,28 +1,9 @@
-use std::{fs, path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
-use sparreal_build::{Arch, ProjectConfig};
+use sparreal_build::Arch;
 
 fn main() {
-    // println!("cargo:rerun-if-env-changed=BSP_FILE");
-
-    // let config_path = std::env::var("BSP_FILE").unwrap_or_else(|_| {
-    //     println!("env BSP_FILE not set, use default config");
-
-    //     let mf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-
-    //     mf.parent()
-    //         .unwrap()
-    //         .parent()
-    //         .unwrap()
-    //         .join(".project.toml")
-    //         .display()
-    //         .to_string()
-    // });
-    let config_path = String::new();
-    let config = Config::new(config_path);
-
-    // config.cfg_arch();
-    // config.cfg_mmu();
+    let config = Config::new();
 
     config.gen_const();
     // // Put the linker script somewhere the linker can find it.
@@ -49,11 +30,7 @@ const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
 // const KERNEL_VADDR: u64 = 0x0000_0000_40080000;
 
 impl Config {
-    fn new(config_path: String) -> Self {
-        // let s = fs::read_to_string(&config_path)
-        //     .unwrap_or_else(|_| panic!("Config file not found in {}", &config_path));
-
-        // let cfg = ProjectConfig::from_str(&s).unwrap();
+    fn new() -> Self {
         let arch = Arch::default();
 
         Self {

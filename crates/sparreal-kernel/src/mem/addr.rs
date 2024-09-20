@@ -66,7 +66,7 @@ pub struct Phys<T>(*const T);
 
 impl<T> PartialEq for Phys<T> {
     fn eq(&self, other: &Self) -> bool {
-        unsafe { (self.0 as *const u8 as usize) == (other.0 as *const u8 as usize) }
+        (self.0 as *const u8 as usize) == (other.0 as *const u8 as usize)
     }
 }
 
@@ -77,12 +77,12 @@ pub type PhysAddr<T = u8> = Phys<T>;
 
 impl<T> From<usize> for Phys<T> {
     fn from(value: usize) -> Self {
-        unsafe { Self(value as _) }
+        Self(value as _)
     }
 }
 impl<T> From<*const T> for Phys<T> {
     fn from(value: *const T) -> Self {
-        unsafe { Self(value as _) }
+        Self(value as _)
     }
 }
 impl<T> Phys<T> {

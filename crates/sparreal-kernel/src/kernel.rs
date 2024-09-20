@@ -1,6 +1,5 @@
-use core::{fmt, panic::PanicInfo, ptr::NonNull};
+use core::ptr::NonNull;
 
-use driver_interface::Register;
 use log::*;
 
 use crate::{

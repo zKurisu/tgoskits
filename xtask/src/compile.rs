@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf, process::Command};
+use std::{path::PathBuf, process::Command};
 
 use anyhow::Result;
 use byte_unit::Byte;

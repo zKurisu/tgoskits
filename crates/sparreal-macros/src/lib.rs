@@ -8,7 +8,7 @@ extern crate syn;
 
 mod api_trait;
 
-use proc_macro::{Ident, TokenStream};
+use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
     parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments,
@@ -136,7 +136,7 @@ fn is_simple_type(ty: &Type, name: &str) -> bool {
 }
 
 #[proc_macro_attribute]
-pub fn api_trait(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn api_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as ItemTrait);
 
     let mut funcs = Vec::new();

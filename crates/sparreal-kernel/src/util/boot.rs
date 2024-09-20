@@ -1,6 +1,5 @@
 use flat_device_tree::Fdt;
 
-use crate::Platform;
 use core::{fmt::Write, ptr::NonNull};
 
 pub fn boot_debug_hex(mut w: impl Write, v: u64) {
@@ -10,7 +9,7 @@ pub fn boot_debug_hex(mut w: impl Write, v: u64) {
     let _ = w.write_str("0x");
 
     if n == 0 {
-        w.write_str("0");
+        let _ = w.write_str("0");
         return;
     }
     let mut i = 0;
@@ -29,15 +28,6 @@ pub fn boot_debug_hex(mut w: impl Write, v: u64) {
     for ch in s.iter().rev() {
         let _ = w.write_char(*ch);
     }
-}
-
-pub fn k_boot_debug<P: Platform>(msg: &str) {
-    P::boot_debug_writer().map(|mut w| w.write_str(msg));
-}
-pub fn k_boot_debug_hex<P: Platform>(v: u64) {
-    P::boot_debug_writer().map(|mut w| {
-        boot_debug_hex(&mut w, v);
-    });
 }
 
 pub struct StdoutReg {

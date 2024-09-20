@@ -12,10 +12,8 @@ use crate::{
     driver::DriverKind,
     mem::mmu::iomap,
     stdout::{set_stdout, DriverWrite},
-    sync::{RwLock, RwLockWriteGuard},
+    sync::RwLock,
 };
-
-use super::Driver as KDriver;
 
 static MANAGER: RwLock<Option<DriverManager>> = RwLock::new(None);
 
@@ -123,7 +121,7 @@ impl Manager {
     async fn probe_uart(&mut self) -> Option<()> {
         let fdt = get_device_tree()?;
         for node in fdt.all_nodes() {
-            self.node_register_uart(node);
+            self.node_register_uart(node).await;
         }
         Some(())
     }

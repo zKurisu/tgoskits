@@ -1,15 +1,12 @@
 use core::ptr::NonNull;
 
 use aarch64_cpu::registers::*;
-use flat_device_tree::Fdt;
-use page_table_interface::{Access, MapConfig, PageAttribute, PageTableFn};
-use sparreal_kernel::{mem::*, util, KernelConfig};
-
-use crate::consts::*;
+use page_table_interface::*;
+use sparreal_kernel::{mem::*, KernelConfig};
 
 use super::{
     debug::{debug_hex, debug_print},
-    PlatformImpl, VA_OFFSET,
+    VA_OFFSET,
 };
 
 extern "C" {

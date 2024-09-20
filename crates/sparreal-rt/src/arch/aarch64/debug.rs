@@ -1,13 +1,6 @@
-use core::fmt::{self, Arguments, Write};
+use core::fmt::{self, Write};
 
-use aarch64_cpu::registers::*;
-use log::*;
-use sparreal_kernel::{
-    mem::Phys,
-    util::{self, boot::StdoutReg},
-};
-
-use super::{PlatformImpl, VA_OFFSET};
+use sparreal_kernel::util::{self, boot::StdoutReg};
 
 static mut OUT_REG: usize = 0;
 
@@ -37,8 +30,6 @@ pub unsafe fn put_debug(char: u8) {
     put.write_volatile(char);
 }
 
-struct DebugLogger;
-
 pub struct DebugWriter;
 
 impl fmt::Write for DebugWriter {
@@ -60,9 +51,6 @@ pub fn debug_println(d: &str) {
 }
 pub fn debug_print(d: &str) {
     let _ = DebugWriter {}.write_str(d);
-}
-pub fn debug_fmt(args: Arguments<'_>) {
-    let _ = DebugWriter {}.write_fmt(args);
 }
 
 pub fn debug_hex(v: u64) {

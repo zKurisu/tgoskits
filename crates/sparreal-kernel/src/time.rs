@@ -1,5 +1,6 @@
-use crate::{platform, Platform};
-use core::{future::Future, marker::PhantomData, time::Duration};
+use core::{future::Future, time::Duration};
+
+use crate::platform;
 
 pub fn since_boot() -> Duration {
     let current_tick = unsafe { platform::current_ticks() };

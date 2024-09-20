@@ -1,23 +1,10 @@
-use core::{
-    alloc::Layout,
-    ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull},
-};
+use core::ptr::NonNull;
 
 use super::*;
-use flat_device_tree::Fdt;
 use log::debug;
 pub use page_table_interface::*;
 
-use crate::{
-    driver::device_tree::{self, get_device_tree, set_dtb_addr},
-    kernel,
-    platform::{self, Mmu},
-    util::{
-        self,
-        boot::{k_boot_debug, k_boot_debug_hex},
-    },
-    Platform,
-};
+use crate::platform;
 
 struct BootInfo {
     va_offset: usize,
@@ -40,7 +27,7 @@ pub(crate) unsafe fn init_table(
 ) -> PagingResult<()> {
     debug!("Initializing page table...");
 
-    let mut table = platform::table_new(access)?;
+    let table = platform::table_new(access)?;
 
     if let Some(memory) = &kconfig.reserved_memory {
         let virt = memory.start.to_virt();
@@ -62,7 +49,7 @@ pub(crate) unsafe fn init_table(
             true,
             false,
             access,
-        );
+        )?;
     }
 
     let virt = kconfig.main_memory.start.to_virt();
@@ -84,7 +71,7 @@ pub(crate) unsafe fn init_table(
         true,
         false,
         access,
-    );
+    )?;
 
     if let Some(debug_reg) = &kconfig.early_debug_reg {
         let virt = debug_reg.start.to_virt();
@@ -105,7 +92,7 @@ pub(crate) unsafe fn init_table(
             true,
             false,
             access,
-        );
+        )?;
     }
 
     platform::set_kernel_page_table(table);
@@ -117,12 +104,12 @@ pub(crate) unsafe fn init_table(
 
 pub(crate) fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     unsafe {
-        let mut table = platform::get_kernel_page_table();
+        let table = platform::get_kernel_page_table();
         let paddr = paddr.align_down(0x1000);
         let vaddr = paddr.to_virt().as_mut_ptr();
         let size = size.max(0x1000);
 
-        let mut heap = HEAP_ALLOCATOR.write();
+        let heap = HEAP_ALLOCATOR.write();
         let mut heap_mut = PageAllocatorRef::new(heap);
 
         let _ = platform::table_map(

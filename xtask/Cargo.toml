@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = { version = "1.0.86", features = ["backtrace"] }
 toml = { workspace = true }
 serde = { workspace = true }
 ansi_rgb = { workspace = true }

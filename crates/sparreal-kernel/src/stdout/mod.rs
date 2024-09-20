@@ -1,7 +1,6 @@
 use core::fmt::{self, Write};
 
-use alloc::{boxed::Box, string::String, sync::Arc};
-use driver_interface::io::*;
+use alloc::{boxed::Box, string::String};
 
 use crate::{driver::DriverKind, driver_manager, platform, sync::RwLock};
 

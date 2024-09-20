@@ -17,5 +17,5 @@ pub mod time;
 pub mod util;
 
 pub use kernel::*;
-pub use platform::Platform;
+pub use platform::Platform2;
 pub use sparreal_macros::entry;

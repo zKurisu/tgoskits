@@ -1,10 +1,8 @@
-use core::{fmt::Write, marker::PhantomData, time::Duration};
-
 use ansi_rgb::{red, yellow, Foreground};
 use log::{Level, Log};
 use rgb::{Rgb, RGB8};
 
-use crate::{stdout, Platform};
+use crate::stdout;
 
 fn level_to_rgb(level: Level) -> RGB8 {
     match level {

@@ -68,16 +68,16 @@ impl UBoot {
                         let mut s = String::from_utf8(history.to_vec())?;
                         if s.contains("Hit any key to stop autoboot") {
                             in_shell = true;
-                            port.write(b"a");
+                            port.write(b"a")?;
                             sleep(Duration::from_secs(1));
-                            port.write_all(b"dhcp 0x90600000 10.3.10.22:phytium.dtb;fdt addr 0x90600000;bootp  10.3.10.22:kernel.bin;booti $loadaddr - 0x90600000\r\n");
+                            port.write_all(b"dhcp 0x90600000 10.3.10.22:phytium.dtb;fdt addr 0x90600000;bootp  10.3.10.22:kernel.bin;booti $loadaddr - 0x90600000\r\n")?;
                         }
                     }
 
                     stdout().write(&buf)?;
                 }
                 Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {
-                    stdout().flush();
+                    stdout().flush()?;
 
                     let mut input = input.lock().unwrap();
                     if input.is_empty() {

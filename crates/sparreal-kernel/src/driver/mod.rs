@@ -33,6 +33,8 @@ pub struct Driver {
 
 pub enum DriverKind {
     Uart(uart::BoxDriver),
+    Spi,
+    I2c,
 }
 
 pub unsafe fn move_dtb(src: *const u8, mut dst: NonNull<u8>) -> Option<&'static [u8]> {
