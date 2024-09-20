@@ -35,6 +35,12 @@ pub unsafe fn init_boot_table(va_offset: usize, kconfig: &KernelConfig) -> u64 {
 
     let mut table = <PageTable as PageTableFn>::new(&mut access).unwrap();
 
+    debug_print("Table @");
+    debug_hex(table.paddr() as _);
+    debug_print("\r\n");
+
+
+
     if let Some(memory) = &kconfig.reserved_memory {
         let size = memory.size.align_up(BYTES_1M * 2);
 

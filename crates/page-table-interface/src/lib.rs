@@ -148,7 +148,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     /// # Safety
     ///
     /// table should be deallocated manually.
-    pub unsafe fn new(
+    pub unsafe fn new_with_level(
         level: usize,
         access: &mut impl Access,
     ) -> PagingResult<PageTableRef<'static, P, LEN, LEVEL>> {
@@ -207,7 +207,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
         if pte.valid() {
             return Ok(Self::from_addr(pte.paddr(), self.level - 1));
         } else {
-            let table = Self::new(self.level - 1, access)?;
+            let table = Self::new_with_level(self.level - 1, access)?;
             let ptr = table.addr;
             pte.modify(|p| {
                 p.paddr = ptr;
@@ -358,7 +358,7 @@ impl<P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableFn
     }
 
     unsafe fn new(access: &mut impl Access) -> PagingResult<Self> {
-        PageTableRef::new(LEVEL, access)
+        PageTableRef::new_with_level(LEVEL, access)
     }
 
     fn level_entry_size(&self, level: usize) -> usize {

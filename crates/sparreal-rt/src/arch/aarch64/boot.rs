@@ -110,6 +110,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
+    debug_println("table set2");
     asm!("
     MOV  sp,  {sp_top}
     ADD  x30, x30, {offset}

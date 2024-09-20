@@ -47,7 +47,7 @@ mod test {
     fn test_l1() {
         unsafe {
             let mut access = AcImpl;
-            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new_with_level(4, &mut access).unwrap();
             let vaddr = (0xffff_ffff_0000_0000usize + 50 * 0x1000) as _;
             let paddr = 0x1000;
 
@@ -74,7 +74,7 @@ mod test {
     fn test_l2() {
         unsafe {
             let mut access = AcImpl;
-            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new_with_level(4, &mut access).unwrap();
             let vaddr = (0xffff_ffff_0000_0000usize + 50 * 2 * 1024 * 1024) as _;
             let paddr = 0x1000;
 
@@ -102,7 +102,7 @@ mod test {
     fn test_l3() {
         unsafe {
             let mut access = AcImpl;
-            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new_with_level(4, &mut access).unwrap();
             let vaddr = (0xffff_ff00_0000_0000usize + 50 * 1024 * 1024 * 1024) as _;
             let paddr = 0x1000;
 
@@ -132,10 +132,10 @@ mod test {
         unsafe {
             let mut access = AcImpl;
 
-            let table_l1 = PageTableRef::<'_, PTE, 512, 4>::new(1, &mut access).unwrap();
+            let table_l1 = PageTableRef::<'_, PTE, 512, 4>::new_with_level(1, &mut access).unwrap();
             info!("L1 entry_size = {:#X}", table_l1.entry_size());
 
-            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new_with_level(4, &mut access).unwrap();
 
             let virt = (0xffff_ffff_0000_0000usize + 1024 * 1024 * 1024) as _;
             let phys = 0x1000;
@@ -180,7 +180,7 @@ mod test {
         init();
         unsafe {
             let mut access = AcImpl;
-            let mut table = PageTableRef::<'_, PTE, 512, 4>::new(4, &mut access).unwrap();
+            let mut table = PageTableRef::<'_, PTE, 512, 4>::new_with_level(4, &mut access).unwrap();
             let va_offset = 0xffff_ff00_0000_0000;
 
             let phys_down = 0x4000_0000;
