@@ -32,6 +32,10 @@ static mut BOOT_INFO: BootInfo = BootInfo {
     reserved_end: 0,
 };
 
+pub(super) unsafe fn set_va_offset(offset: usize) {
+    BOOT_INFO.va_offset = offset;
+}
+
 fn reserved_start() -> Phys<u8> {
     unsafe { BOOT_INFO.reserved_start.into() }
 }
@@ -42,8 +46,6 @@ fn reserved_end() -> Phys<u8> {
 pub fn va_offset() -> usize {
     unsafe { BOOT_INFO.va_offset }
 }
-
-
 
 pub(crate) unsafe fn init_page_table<P: Platform>(
     kconfig: &KernelConfig,

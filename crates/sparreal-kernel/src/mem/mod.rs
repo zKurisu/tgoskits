@@ -24,6 +24,28 @@ pub const BYTES_1G: usize = 1024 * BYTES_1M;
 static mut MEMORY_START: usize = 0;
 static mut MEMORY_SIZE: usize = 0;
 
+pub unsafe fn init(kconfig: &KernelConfig) {
+    #[cfg(feature = "mmu")]
+    mmu::set_va_offset(kconfig.va_offset);
+
+    let stack_size = kconfig.hart_stack_size * kconfig.cpu_count;
+    let mut start = (kconfig.main_memory.start + kconfig.main_memory_heap_offset).to_virt();
+    let mut size = kconfig.main_memory.size - kconfig.main_memory_heap_offset - stack_size;
+    let stack_top = kconfig.stack_top.to_virt();
+
+    debug!(
+        "Heap: [{}, {})",
+        start,
+        start + size
+    );
+    debug!("Stack: [{}, {})", stack_top - stack_size, stack_top);
+
+    let mut heap = HEAP_ALLOCATOR.lock();
+    heap.init(start.as_usize(), size);
+
+    debug!("Heap initialized.");
+}
+
 pub(crate) trait VirtToPhys {
     fn to_phys(&self) -> PhysAddr;
 }

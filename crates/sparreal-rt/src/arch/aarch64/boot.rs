@@ -99,7 +99,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     TTBR1_EL1.set_baddr(table);
     TTBR0_EL1.set_baddr(table);
 
-    let stack_top = (KCONFIG.main_memory.start + KCONFIG.main_memory.size).as_usize() + va_offset;
+    KCONFIG.stack_top = KCONFIG.main_memory.start + KCONFIG.main_memory.size;
+    let stack_top = KCONFIG.stack_top.as_usize() + va_offset;
     debug_print("stack top: ");
     debug_hex(stack_top as _);
     debug_print("\r\n");
@@ -110,7 +111,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
 
-    debug_println("table set2");
     asm!("
     MOV  sp,  {sp_top}
     ADD  x30, x30, {offset}
@@ -126,11 +126,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
-    debug_println("MMU ok");
-    debug_println("MMU ok2");
+    debug_println("MMU enabled");
     crate::boot(KCONFIG.clone());
-
-    debug!("Debug logger ok");
+    debug!("Debug logger initialized");
     debug!(
         "CPU: {:?}.{:?}.{:?}.{:?}",
         MPIDR_EL1.read(MPIDR_EL1::Aff0),

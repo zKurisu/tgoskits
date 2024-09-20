@@ -43,6 +43,7 @@ pub unsafe fn init_boot_table(va_offset: usize, kconfig: &KernelConfig) -> u64 {
     debug_print("\r\n");
 
     if let Some(memory) = &kconfig.reserved_memory {
+        // sp 范围也需要涵盖
         let size = memory.size.align_up(BYTES_1G);
 
         map_boot_region(

@@ -6,7 +6,7 @@ use crate::{
     driver::manager::DriverManager,
     executor,
     logger::{self, KLogger},
-    mem::{MemoryManager, Phys, BYTES_1M},
+    mem::{self, MemoryManager, Phys, BYTES_1M},
     module::ModuleBase,
     platform::app_main,
     stdout::{self, EarlyDebugWrite},
@@ -19,9 +19,13 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     log::set_max_level(LevelFilter::Trace);
     stdout::set_stdout(EarlyDebugWrite {});
     info!("Logger initialized.");
-    
 
-    
+    mem::init(kconfig);
+
+    // let version = env!("CARGO_PKG_VERSION");
+
+    // let _ = stdout::print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
+    // let _ = stdout::print(format_args!("{}\n", self.module_base.memory));
 }
 
 pub struct Kernel<P>
@@ -127,6 +131,8 @@ pub struct KernelConfig {
     pub main_memory_heap_offset: usize,
     pub hart_stack_size: usize,
     pub early_debug_reg: Option<MemoryRange>,
+    pub stack_top: Phys<u8>,
+    pub cpu_count: usize,
 }
 
 impl KernelConfig {
@@ -138,6 +144,8 @@ impl KernelConfig {
             early_debug_reg: None,
             main_memory: MemoryRange::new(),
             main_memory_heap_offset: 0,
+            stack_top: Phys::new(),
+            cpu_count: 1,
         }
     }
 }

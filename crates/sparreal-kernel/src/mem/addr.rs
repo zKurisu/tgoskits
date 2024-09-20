@@ -166,8 +166,21 @@ impl<T> Add<usize> for Phys<T> {
     }
 }
 
+impl<T> Sub<usize> for Virt<T> {
+    type Output = Self;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        (self.as_usize() - rhs).into()
+    }
+}
+
 impl<T> Display for Phys<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "PA({:p})", self.0)
+    }
+}
+impl<T> Display for Virt<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "VA({:p})", self.0)
     }
 }
