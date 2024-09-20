@@ -1,5 +1,5 @@
 use ansi_rgb::{Foreground, magenta_pink};
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use std::{
     ffi::{OsStr, OsString},
     io::{BufRead, BufReader},

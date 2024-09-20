@@ -2,13 +2,14 @@ use std::{fmt::Display, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProjectConfig {
     pub build: Build,
     pub qemu: Option<Qemu>,
+    pub uboot: Option<Uboot>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Build {
     pub target: String,
     pub cpu: Option<String>,
@@ -36,11 +37,12 @@ impl Default for ProjectConfig {
         Self {
             build: Default::default(),
             qemu: Some(Qemu::default()),
+            uboot: None,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Qemu {
     pub machine: Option<String>,
 }
@@ -51,6 +53,11 @@ impl Default for Qemu {
             machine: Some("virt".into()),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct Uboot {
+    pub serial: Option<String>,
 }
 
 impl Display for ProjectConfig {

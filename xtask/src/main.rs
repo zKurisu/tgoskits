@@ -1,4 +1,5 @@
 #![feature(path_file_prefix)]
+#![feature(option_get_or_insert_default)]
 
 mod compile;
 mod project;
@@ -12,7 +13,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 use compile::Compile;
 use project::Project;
 use qemu::Qemu;
-use std::{fs::File, io::Read};
+use std::{fs::File, io::{self, Read}};
+use uboot::UBoot;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -28,6 +30,7 @@ struct Cli {
 enum Commands {
     Build,
     Qemu(QemuArgs),
+    Uboot,
 }
 
 #[derive(Args, Debug)]
@@ -52,6 +55,11 @@ fn main() -> Result<()> {
         Commands::Qemu(a) => {
             project.build(a.debug)?;
             Qemu::run(&project, a)?;
+        }
+        Commands::Uboot => {
+
+            project.build(true)?;
+            UBoot::run(&project)?;
         }
     }
 

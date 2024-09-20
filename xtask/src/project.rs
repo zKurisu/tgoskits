@@ -49,12 +49,14 @@ impl Arch {
 #[derive(Default)]
 pub struct Project {
     pub config: ProjectConfig,
+    pub config_path: PathBuf,
     pub arch: Arch,
     pub compile: Option<Compile>,
 }
 impl Project {
     pub fn new(config: Option<String>) -> Result<Self> {
         let config = config.unwrap_or(".project.toml".to_string());
+        let config_path = PathBuf::from(&config);
         if !fs::exists(&config)? {
             let mut file = fs::File::create(&config)?;
             let config_str = ProjectConfig::default().to_string();
@@ -74,9 +76,8 @@ impl Project {
 
         Ok(Project {
             config,
-
+            config_path,
             arch,
-
             ..Default::default()
         })
     }
