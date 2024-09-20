@@ -1,4 +1,3 @@
-
 use alloc::{boxed::Box, string::ToString};
 
 use arm_pl011_rs::Pl011;
@@ -41,8 +40,7 @@ impl DriverGeneric for DriverPl011 {}
 impl RegisterPl011 {
     async fn new_pl011(config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
         let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
-        // let uart = Pl011::new(unsafe{NonNull::new_unchecked(0xfe201000 as *mut u8)}, None).await;
-        // let uart = Pl011::new(config.reg, None).await;
+
         Ok(Box::new(DriverPl011(uart)))
     }
 

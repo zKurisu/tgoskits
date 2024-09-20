@@ -16,6 +16,16 @@ pub struct UBoot {}
 
 impl UBoot {
     pub fn run(project: &Project) -> Result<()> {
+        let dtb_name = "phytium.dtb";
+        let dtb_load_addr = "0x90600000";
+        let kernel_bin = project
+            .compile
+            .as_ref()
+            .unwrap()
+            .bin
+            .file_name()
+            .unwrap().to_str().unwrap();
+
         let mut config = project.config.clone();
         let uboot = config.uboot.get_or_insert_default();
 
@@ -24,16 +34,33 @@ impl UBoot {
 
             let interfaces = NetworkInterface::show().unwrap();
             for (i, interface) in interfaces.iter().enumerate() {
-                let addr: Vec<Addr> = interface.addr;
-                println!(
-                    "{}. [{}] - [{:?}]",
-                    i,
-                    interface.name,
-                    match addr {
-                        Addr::V4(v4_if_addr) => v4_if_addr.ip.to_string(),
-                        Addr::V6(v6_if_addr) => v6_if_addr.ip.to_string(),
+                let addr_list: Vec<Addr> = interface.addr.to_vec();
+                for one in addr_list {
+                    if let Addr::V4(v4_if_addr) = one {
+                        println!("{}. [{}] - [{}]", i, interface.name, v4_if_addr.ip);
                     }
-                );
+                }
+            }
+            let mut input = String::new();
+            stdin().read_line(&mut input)?;
+
+            let index = input.trim().parse::<usize>()?;
+            println!("选择了 {}", interfaces[index].name);
+
+            uboot.net = Some(interfaces[index].name.clone());
+        }
+
+        let mut ip = String::new();
+
+        let interfaces = NetworkInterface::show().unwrap();
+        for interface in interfaces.iter() {
+            if &interface.name == uboot.net.as_ref().unwrap() {
+                let addr_list: Vec<Addr> = interface.addr.to_vec();
+                for one in addr_list {
+                    if let Addr::V4(v4_if_addr) = one {
+                        ip = v4_if_addr.ip.to_string();
+                    }
+                }
             }
         }
 
@@ -57,7 +84,9 @@ impl UBoot {
             .open()
             .expect("Failed to open port");
 
-        println!("使用串口： {}", port.name().unwrap_or_default());
+        println!("串口：{}", port.name().unwrap_or_default());
+        println!("TFTP: {}", ip);
+        println!("内核：{}", kernel_bin);
 
         let config_str = toml::to_string(&config)?;
 
@@ -83,6 +112,12 @@ impl UBoot {
 
         let mut in_shell = false;
 
+        let cmd = format!(
+            "dhcp {dtb_load_addr} {ip}:{dtb_name};fdt addr {dtb_load_addr};bootp {ip}:{kernel_bin};booti $loadaddr - {dtb_load_addr}"
+        );
+
+        println!("启动命令：{}", cmd);
+
         println!("等待 U-Boot 启动...");
 
         loop {
@@ -102,7 +137,9 @@ impl UBoot {
                             in_shell = true;
                             port.write(b"a")?;
                             sleep(Duration::from_secs(1));
-                            port.write_all(b"dhcp 0x90600000 10.3.10.22:phytium.dtb;fdt addr 0x90600000;bootp  10.3.10.22:kernel.bin;booti $loadaddr - 0x90600000\r\n")?;
+
+                            port.write_all(cmd.as_bytes())?;
+                            port.write_all(b"\r\n")?;
                         }
                     }
 

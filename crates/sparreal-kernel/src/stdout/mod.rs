@@ -2,7 +2,11 @@ use core::fmt::{self, Write};
 
 use alloc::{boxed::Box, string::String};
 
-use crate::{driver::DriverKind, driver_manager, platform, sync::RwLock};
+use crate::{
+    driver::{driver_manager, DriverKind},
+    platform,
+    sync::RwLock,
+};
 
 static STDOUT: RwLock<Option<Box<dyn StdoutWrite>>> = RwLock::new(None);
 

@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use aarch64_cpu::registers::*;
 use page_table_interface::*;
-use sparreal_kernel::{mem::*, KernelConfig};
+use sparreal_kernel::{kernel::KernelConfig, mem::*};
 
 use super::{
     debug::{debug_hex, debug_print},

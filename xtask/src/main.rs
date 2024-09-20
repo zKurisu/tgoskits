@@ -59,16 +59,5 @@ fn main() -> Result<()> {
         }
     }
 
-    // match &args.command {
-    //     Commands::Build => {
-    //         let mut project = Project::new(a.config.as_deref(), false)?;
-    //         project.build();
-    //     }
-    //     Commands::Qemu(a) => {
-    //         let mut project = Project::new(a.config.as_deref(), a.debug)?;
-    //         let qemu = project.qemu(a.dtb);
-    //     }
-    // }
-
     Ok(())
 }

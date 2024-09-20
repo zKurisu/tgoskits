@@ -13,6 +13,14 @@ rustup component add llvm-tools-preview
 rustup component add rust-src
 ```
 
+### Windows
+
+安装[Qemu](https://www.qemu.org/download/#windows), 并加入环境变量。
+
+### Linux
+
+安装[Qemu](https://www.qemu.org/download/#linux)
+
 ## 构建
 
 ```bash
@@ -32,3 +40,15 @@ cargo xtask qemu -d
 ```
 
 vscode 选择调试配置 `KDebug`， 点击 `Run and Debug` 按钮。
+
+## U-Boot 调试
+
+需要连接开发板串口。
+
+```bash
+cargo xtask uboot
+```
+
+## 配置
+
+首次执行 `xtask` 任务后，会在根目录生成默认配置文件 `.project.toml`。

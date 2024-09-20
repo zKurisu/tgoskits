@@ -9,6 +9,8 @@ use crate::sync::{RwLock, RwLockWriteGuard};
 pub mod device_tree;
 pub mod manager;
 
+pub use manager::{driver_manager, DriverManager};
+
 #[derive(Clone)]
 pub struct DriverLocked {
     pub inner: Arc<RwLock<Driver>>,

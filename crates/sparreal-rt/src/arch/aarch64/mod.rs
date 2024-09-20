@@ -8,18 +8,15 @@ use core::arch::asm;
 use aarch64_cpu::registers::*;
 use mmu::PageTable;
 use page_table_interface::{MapConfig, PageTableFn, PagingResult};
-use sparreal_kernel::{
-    mem::{PageAllocatorRef, Phys, Virt},
-    platform::Platform2,
-};
+use sparreal_kernel::{mem::*, platform::Platform};
 use sparreal_macros::api_impl;
 
 static mut VA_OFFSET: usize = 0;
 
-pub struct Platform2Impl;
+pub struct PlatformImpl;
 
 #[api_impl]
-impl Platform2 for Platform2Impl {
+impl Platform for PlatformImpl {
     unsafe fn wait_for_interrupt() {
         aarch64_cpu::asm::wfi();
     }
@@ -56,7 +53,7 @@ impl Platform2 for Platform2Impl {
                 allow_block,
                 access,
                 Some(&|addr: *const u8| {
-                    Platform2Impl::flush_tlb(Some(addr.into()));
+                    PlatformImpl::flush_tlb(Some(addr.into()));
                 }),
             )
         } else {

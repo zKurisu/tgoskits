@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-mod kernel;
+pub mod kernel;
 
 pub mod driver;
 pub mod executor;
@@ -16,6 +16,6 @@ pub mod sync;
 pub mod time;
 pub mod util;
 
-pub use kernel::*;
-pub use platform::Platform2;
+pub use kernel::{KernelConfig, MemoryRange};
+pub use platform::Platform;
 pub use sparreal_macros::entry;

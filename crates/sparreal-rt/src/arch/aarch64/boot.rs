@@ -5,7 +5,8 @@ use core::{
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use flat_device_tree::Fdt;
-use sparreal_kernel::{mem::*, util, KernelConfig, MemoryRange};
+use mem::*;
+use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::{

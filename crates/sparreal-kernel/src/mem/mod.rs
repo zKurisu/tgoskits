@@ -12,8 +12,8 @@ use log::*;
 use mmu::va_offset;
 
 use crate::{
+    kernel::KernelConfig,
     sync::{RwLock, RwLockWriteGuard},
-    KernelConfig,
 };
 
 #[global_allocator]
