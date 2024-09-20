@@ -8,12 +8,9 @@ mod shell;
 mod uboot;
 
 use anyhow::Result;
-use byte_unit::Byte;
-use clap::{Args, Parser, Subcommand, ValueEnum};
-use compile::Compile;
+use clap::*;
 use project::Project;
 use qemu::Qemu;
-use std::{fs::File, io::{self, Read}};
 use uboot::UBoot;
 
 /// Simple program to greet a person
@@ -23,11 +20,11 @@ struct Cli {
     #[arg(short, long)]
     config: Option<String>,
     #[command(subcommand)]
-    command: Commands,
+    command: SubCommands,
 }
 
 #[derive(Subcommand, Debug)]
-enum Commands {
+enum SubCommands {
     Build,
     Qemu(QemuArgs),
     Uboot,
@@ -49,15 +46,14 @@ fn main() -> Result<()> {
     let mut project = Project::new(args.config)?;
 
     match args.command {
-        Commands::Build => {
+        SubCommands::Build => {
             project.build(false)?;
         }
-        Commands::Qemu(a) => {
+        SubCommands::Qemu(a) => {
             project.build(a.debug)?;
             Qemu::run(&project, a)?;
         }
-        Commands::Uboot => {
-
+        SubCommands::Uboot => {
             project.build(true)?;
             UBoot::run(&project)?;
         }

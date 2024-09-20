@@ -1,14 +1,16 @@
 use anyhow::Result;
+use network_interface::Addr;
+use network_interface::NetworkInterface;
+use network_interface::NetworkInterfaceConfig;
 use std::{
     fs::{remove_file, File},
     io::{self, stdin, stdout, Read, Write},
-    process::Command,
     sync::{Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };
 
-use crate::{project::Project, shell::Shell as _};
+use crate::project::Project;
 
 pub struct UBoot {}
 
@@ -16,6 +18,24 @@ impl UBoot {
     pub fn run(project: &Project) -> Result<()> {
         let mut config = project.config.clone();
         let uboot = config.uboot.get_or_insert_default();
+
+        if uboot.net.is_none() {
+            println!("请选择网卡：");
+
+            let interfaces = NetworkInterface::show().unwrap();
+            for (i, interface) in interfaces.iter().enumerate() {
+                let addr: Vec<Addr> = interface.addr;
+                println!(
+                    "{}. [{}] - [{:?}]",
+                    i,
+                    interface.name,
+                    match addr {
+                        Addr::V4(v4_if_addr) => v4_if_addr.ip.to_string(),
+                        Addr::V6(v6_if_addr) => v6_if_addr.ip.to_string(),
+                    }
+                );
+            }
+        }
 
         if uboot.serial.is_none() {
             let ports = serialport::available_ports().expect("No ports found!");
@@ -37,6 +57,16 @@ impl UBoot {
             .open()
             .expect("Failed to open port");
 
+        println!("使用串口： {}", port.name().unwrap_or_default());
+
+        let config_str = toml::to_string(&config)?;
+
+        {
+            remove_file(&project.config_path)?;
+            let mut file = File::create(&project.config_path)?;
+            file.write_all(config_str.as_bytes())?;
+        }
+
         let mut buf = [0u8; 1];
         let mut history = Vec::new();
 
@@ -46,26 +76,28 @@ impl UBoot {
             let input = input.clone();
             move || loop {
                 let mut buf = [0u8; 1];
-                stdin().read_exact(&mut buf);
+                let _ = stdin().read_exact(&mut buf);
                 input.lock().unwrap().push(buf[0]);
             }
         });
 
         let mut in_shell = false;
 
+        println!("等待 U-Boot 启动...");
+
         loop {
             match port.read(&mut buf) {
-                Ok(t) => {
+                Ok(_t) => {
                     let ch = buf[0];
                     if ch == b'\n' && history.last() != Some(&b'\r') {
-                        stdout().write(b"\r");
+                        stdout().write(b"\r")?;
                         if in_shell {
                             history.clear();
                         }
                     }
                     history.push(ch);
                     if !in_shell {
-                        let mut s = String::from_utf8(history.to_vec())?;
+                        let s = String::from_utf8(history.to_vec())?;
                         if s.contains("Hit any key to stop autoboot") {
                             in_shell = true;
                             port.write(b"a")?;
@@ -89,7 +121,5 @@ impl UBoot {
                 Err(e) => eprintln!("{:?}", e),
             }
         }
-
-        Ok(())
     }
 }

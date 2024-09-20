@@ -1,7 +1,6 @@
 use std::{fs, io::Write, path::PathBuf};
 
 use anyhow::{Ok, Result};
-use serde::de;
 use sparreal_build::ProjectConfig;
 
 use crate::compile::Compile;
@@ -56,7 +55,6 @@ pub struct Project {
 impl Project {
     pub fn new(config: Option<String>) -> Result<Self> {
         let config = config.unwrap_or(".project.toml".to_string());
-        let config_path = PathBuf::from(&config);
         if !fs::exists(&config)? {
             let mut file = fs::File::create(&config)?;
             let config_str = ProjectConfig::default().to_string();
@@ -67,8 +65,6 @@ impl Project {
         let content = std::fs::read_to_string(&config_path)?;
 
         let config: ProjectConfig = toml::from_str(&content)?;
-
-        let pwd = std::fs::canonicalize(".")?;
 
         let target = &config.build.target;
 

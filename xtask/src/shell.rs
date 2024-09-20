@@ -1,7 +1,7 @@
-use ansi_rgb::{Foreground, magenta_pink};
+use ansi_rgb::{magenta_pink, Foreground};
 use anyhow::Result;
 use std::{
-    ffi::{OsStr, OsString},
+    ffi::OsString,
     io::{BufRead, BufReader},
     process::{Command, Stdio},
 };

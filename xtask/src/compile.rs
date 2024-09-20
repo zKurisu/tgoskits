@@ -7,7 +7,6 @@ use crate::{project::Project, shell::Shell as _};
 
 #[derive(Clone)]
 pub struct Compile {
-    pub debug: bool,
     pub bin: PathBuf,
 }
 
@@ -62,9 +61,6 @@ impl Compile {
         let img_size = std::fs::metadata(&bin).unwrap().len();
         println!("kernel image size: {:#}", Byte::from_u64(img_size));
 
-        Ok(Self {
-            bin: bin_path,
-            debug,
-        })
+        Ok(Self { bin: bin_path })
     }
 }

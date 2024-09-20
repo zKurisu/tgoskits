@@ -1,8 +1,6 @@
 use anyhow::Result;
-use core::str;
 use std::{
     fs::{remove_file, File},
-    io::Write,
     process::Command,
 };
 
@@ -30,7 +28,7 @@ impl Qemu {
 
         let bin = bin_path.display().to_string();
 
-        let drive = format!("file={},if=none,format=raw,id=x0", img.display());
+        // let drive = format!("file={},if=none,format=raw,id=x0", img.display());
         {
             println!("img: {}", img.display());
             let _ = remove_file(&img);

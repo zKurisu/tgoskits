@@ -58,6 +58,7 @@ impl Default for Qemu {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Uboot {
     pub serial: Option<String>,
+    pub net: Option<String>,
 }
 
 impl Display for ProjectConfig {
