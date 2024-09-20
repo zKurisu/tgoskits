@@ -1,18 +1,17 @@
+use anyhow::Result;
+use core::str;
 use std::{
     fs::{remove_file, File},
     io::Write,
     process::Command,
 };
 
-use crate::{project::Project, shell::Shell as _};
+use crate::{project::Project, shell::Shell as _, QemuArgs};
 
-pub struct Qemu<'a> {
-    command: Command,
-    project: &'a Project,
-}
+pub struct Qemu {}
 
-impl<'a> Qemu<'a> {
-    pub fn run(project: &'a Project, dtb: bool) -> Self {
+impl Qemu {
+    pub fn run(project: &Project, cli: QemuArgs) -> Result<()> {
         let mut machine = "virt".to_string();
 
         if let Some(qemu) = project.config.qemu.as_ref() {
@@ -21,12 +20,12 @@ impl<'a> Qemu<'a> {
             }
         }
 
-        if dtb {
+        if cli.dtb {
             let _ = remove_file("target/qemu.dtb");
             machine = format!("{},dumpdtb=target/qemu.dtb", machine);
         }
 
-        let bin_path = &project.compile.as_ref().unwrap().kernel_bin_path;
+        let bin_path = &project.compile.as_ref().unwrap().bin;
         let img = bin_path.parent().unwrap().join("img");
 
         let bin = bin_path.display().to_string();
@@ -60,7 +59,7 @@ impl<'a> Qemu<'a> {
             args.push(cpu);
         }
 
-        if project.debug {
+        if cli.debug {
             args.push("-s");
             args.push("-S");
         }
@@ -69,7 +68,6 @@ impl<'a> Qemu<'a> {
         command.args(args);
 
         command.exec().unwrap();
-
-        Self { project, command }
+        Ok(())
     }
 }

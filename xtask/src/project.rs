@@ -1,15 +1,23 @@
 use std::{fs, io::Write, path::PathBuf};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
+use serde::de;
 use sparreal_build::ProjectConfig;
 
-use crate::{compile::Compile, qemu::Qemu, shell::*};
+use crate::compile::Compile;
 
 pub enum Arch {
     Aarch64,
     Riscv64,
     X86_64,
 }
+
+impl Default for Arch {
+    fn default() -> Self {
+        Self::Aarch64
+    }
+}
+
 impl Arch {
     pub fn qemu_arch(&self) -> String {
         let arch = match self {
@@ -38,79 +46,54 @@ impl Arch {
     }
 }
 
+#[derive(Default)]
 pub struct Project {
-    pub target: String,
-    pub kernel_bin: String,
-    pub config_path: PathBuf,
-    pub kernel_linux_image: PathBuf,
-    pub output_dir: PathBuf,
-    pub arch: Arch,
-    pub config_toml: toml::Value,
-    pub debug: bool,
     pub config: ProjectConfig,
+    pub arch: Arch,
     pub compile: Option<Compile>,
 }
-
 impl Project {
-    pub fn new(config: Option<&str>, debug: bool) -> Result<Self> {
-        let config = config.unwrap_or(".project.toml");
-        if !fs::exists(config).unwrap() {
-            let mut file = fs::File::create(config).unwrap();
+    pub fn new(config: Option<String>) -> Result<Self> {
+        let config = config.unwrap_or(".project.toml".to_string());
+        if !fs::exists(&config)? {
+            let mut file = fs::File::create(&config)?;
             let config_str = ProjectConfig::default().to_string();
-            file.write_all(config_str.as_bytes()).unwrap();
+            file.write_all(config_str.as_bytes())?;
         }
-
-        let config_path = std::fs::canonicalize(config).unwrap();
+        let config_path = std::fs::canonicalize(&config)?;
 
         let content = std::fs::read_to_string(&config_path)?;
 
-        let config = toml::from_str(&content).unwrap();
-
-        let tb: toml::Value = toml::from_str(&content)?;
-
-        let build = tb["build"].as_table().unwrap();
-
-        let target = build["target"].as_str().unwrap().to_string();
-
-        let kernel_bin = build
-            .get("kernel_bin")
-            .map(|o| o.as_str().unwrap())
-            .unwrap_or("kernel.bin")
-            .to_string();
+        let config: ProjectConfig = toml::from_str(&content)?;
 
         let pwd = std::fs::canonicalize(".")?;
 
-        let output_dir =
-            pwd.join("target")
-                .join(&target)
-                .join(if debug { "debug" } else { "release" });
+        let target = &config.build.target;
 
         let arch = Arch::from_target(&target)?;
 
-        Ok(Self {
-            target,
-            kernel_bin,
-            config_path,
-            output_dir,
-            arch,
-            config_toml: tb,
-            debug,
+        Ok(Project {
             config,
-            compile: None,
-            kernel_linux_image: Default::default(),
+
+            arch,
+
+            ..Default::default()
         })
     }
 
-    pub fn build(&mut self) {
-        self.compile = Some(Compile::run(self));
+    pub fn build(&mut self, debug: bool) -> Result<()> {
+        let compile = Compile::run(self, debug)?;
+        self.compile = Some(compile);
+        Ok(())
     }
 
-    fn bin_path(&self) -> String {
-        self.output_dir.join(&self.kernel_bin).display().to_string()
-    }
+    pub fn output_dir(&self, debug: bool) -> PathBuf {
+        let pwd = std::fs::canonicalize(".").unwrap();
 
-    pub fn qemu(&mut self, dtb: bool) -> Qemu {
-        self.build();
-        Qemu::run(self, dtb)
+        let target = &self.config.build.target;
+
+        pwd.join("target")
+            .join(target)
+            .join(if debug { "debug" } else { "release" })
     }
 }

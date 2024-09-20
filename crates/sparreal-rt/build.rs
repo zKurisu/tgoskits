@@ -3,22 +3,22 @@ use std::{fs, path::PathBuf, str::FromStr};
 use sparreal_build::{Arch, ProjectConfig};
 
 fn main() {
-    println!("cargo:rerun-if-env-changed=BSP_FILE");
+    // println!("cargo:rerun-if-env-changed=BSP_FILE");
 
-    let config_path = std::env::var("BSP_FILE").unwrap_or_else(|_| {
-        println!("env BSP_FILE not set, use default config");
+    // let config_path = std::env::var("BSP_FILE").unwrap_or_else(|_| {
+    //     println!("env BSP_FILE not set, use default config");
 
-        let mf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    //     let mf = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-        mf.parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join(".project.toml")
-            .display()
-            .to_string()
-    });
-
+    //     mf.parent()
+    //         .unwrap()
+    //         .parent()
+    //         .unwrap()
+    //         .join(".project.toml")
+    //         .display()
+    //         .to_string()
+    // });
+    let config_path = String::new();
     let config = Config::new(config_path);
 
     // config.cfg_arch();
@@ -34,7 +34,7 @@ fn main() {
 }
 
 struct Config {
-    smp: usize,
+    // smp: usize,
     hart_stack_size: usize,
     out_dir: PathBuf,
     arch: Arch,
@@ -50,15 +50,15 @@ const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
 
 impl Config {
     fn new(config_path: String) -> Self {
-        let s = fs::read_to_string(&config_path)
-            .unwrap_or_else(|_| panic!("Config file not found in {}", &config_path));
+        // let s = fs::read_to_string(&config_path)
+        //     .unwrap_or_else(|_| panic!("Config file not found in {}", &config_path));
 
-        let cfg = ProjectConfig::from_str(&s).unwrap();
+        // let cfg = ProjectConfig::from_str(&s).unwrap();
         let arch = Arch::default();
 
         Self {
-            smp: cfg.build.smp,
-            hart_stack_size: cfg.build.hart_stack_size.unwrap_or(DEFAULT_HART_STACK_SIZE),
+            // smp: cfg.build.smp,
+            hart_stack_size: DEFAULT_HART_STACK_SIZE,
             out_dir: PathBuf::from(std::env::var("OUT_DIR").unwrap()),
             arch,
         }
@@ -80,10 +80,8 @@ impl Config {
             &format!("{:#x}", KERNEL_VADDR),
             // &format!("{:#x}", self.va_offset + self.kernel_load_addr),
         );
-        let ld_content = ld_content.replace(
-            "%STACK_SIZE%",
-            &format!("{:#x}", self.hart_stack_size * self.smp),
-        );
+        let ld_content =
+            ld_content.replace("%STACK_SIZE%", &format!("{:#x}", self.hart_stack_size));
         let ld_content =
             ld_content.replace("%CPU_STACK_SIZE%", &format!("{:#x}", self.hart_stack_size));
         std::fs::write(self.out_dir.join("link.x"), ld_content).expect("link.x write failed");
@@ -96,7 +94,7 @@ impl Config {
             pub const SMP: usize = {:#x};
             pub const HART_STACK_SIZE: usize = {:#x};
             "#,
-            self.smp, self.hart_stack_size
+            1, self.hart_stack_size
         );
 
         std::fs::write(self.out_dir.join("constant.rs"), const_content)
