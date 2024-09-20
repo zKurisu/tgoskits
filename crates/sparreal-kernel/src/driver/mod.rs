@@ -1,12 +1,30 @@
 use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull};
 
-use alloc::string::String;
+use alloc::{string::String, sync::Arc};
 use driver_interface::uart;
 use flat_device_tree::Fdt;
+
+use crate::sync::{RwLock, RwLockWriteGuard};
 
 pub mod device_tree;
 pub mod manager;
 
+#[derive(Clone)]
+pub struct DriverLocked {
+    pub inner: Arc<RwLock<Driver>>,
+}
+
+impl DriverLocked {
+    pub fn new(name: String, kind: DriverKind) -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(Driver { name, kind })),
+        }
+    }
+
+    pub fn write(&self) -> RwLockWriteGuard<'_, Driver> {
+        self.inner.write()
+    }
+}
 
 pub struct Driver {
     pub name: String,

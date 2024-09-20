@@ -4,6 +4,8 @@ use driver_interface::Register;
 use log::*;
 
 use crate::{
+    driver::device_tree::set_dtb_addr,
+    executor,
     logger::KLogger,
     mem::{self, *},
     platform::{self, app_main},
@@ -13,6 +15,7 @@ use crate::{
 pub use crate::driver::manager::*;
 
 pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
+    set_dtb_addr(kconfig.dtb_addr);
     let _ = log::set_logger(&KLogger);
     log::set_max_level(LevelFilter::Trace);
     stdout::set_stdout(EarlyDebugWrite {});
@@ -33,91 +36,15 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
 /// 2. If has MMU, it should be enabled.
 /// 3. alloc can be used after this function.
 pub unsafe fn run() -> ! {
+    executor::block_on(async {
+        driver_manager().init().await;
+    });
+
     app_main();
     loop {
         platform::wait_for_interrupt();
     }
 }
-
-// pub struct Kernel<P>
-// where
-//     P: Platform,
-// {
-//     module_base: ModuleBase<P>,
-//     driver: DriverManager<P>,
-// }
-
-// impl<P> Kernel<P>
-// where
-//     P: Platform,
-// {
-//     /// New kernel and initialize memory.
-//     ///
-//     /// # Safety
-//     ///
-//     /// 1. BSS section should be zeroed.
-//     /// 2. If has MMU, it should be enabled.
-//     /// 3. alloc can be used after this function.
-//     pub unsafe fn new(cfg: KernelConfig) -> Self {
-//         debug!("Initializing kernel...");
-//         let memory = MemoryManager::new();
-//         memory.init(&cfg);
-//         let module_base = ModuleBase {
-//             memory,
-//             time: Time::new(),
-//         };
-
-//         let driver = DriverManager::new(module_base.clone());
-//         Self {
-//             module_base,
-//             driver,
-//         }
-//     }
-
-//     /// Kernel entry point.
-//     ///
-//     /// # Safety
-//     ///
-//     pub unsafe fn run(&self) -> ! {
-//         let driver_manager = self.module_driver();
-
-//         executor::block_on(async move {
-//             driver_manager.init_stdout().await;
-//             self.print_welcome();
-//             driver_manager.init().await;
-//         });
-//         app_main();
-//         loop {
-//             P::wait_for_interrupt();
-//         }
-//     }
-
-//     pub fn module_driver(&self) -> DriverManager<P> {
-//         self.driver.clone()
-//     }
-
-//     pub fn module_memory(&self) -> MemoryManager<P> {
-//         self.module_base.memory.clone()
-//     }
-
-//     /// Global panic handler.
-//     pub fn panic_handler(&self, info: &PanicInfo) -> ! {
-//         error!("{info}");
-//         P::wait_for_interrupt();
-//         unreachable!()
-//     }
-
-//     pub fn module_time(&self) -> Time<P> {
-//         self.module_base.time.clone()
-//     }
-
-//     fn print_welcome(&self) {
-//         let version = env!("CARGO_PKG_VERSION");
-
-//         let _ = stdout::print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
-//         let _ = stdout::print(format_args!("{}\n", self.module_base.memory));
-//     }
-// }
 
 #[derive(Clone, Copy)]
 pub struct MemoryRange {
@@ -144,6 +71,7 @@ pub struct KernelConfig {
     pub early_debug_reg: Option<MemoryRange>,
     pub stack_top: Phys<u8>,
     pub cpu_count: usize,
+    pub dtb_addr: Option<NonNull<u8>>,
 }
 
 impl KernelConfig {
@@ -157,6 +85,7 @@ impl KernelConfig {
             main_memory_heap_offset: 0,
             stack_top: Phys::new(),
             cpu_count: 1,
+            dtb_addr: None,
         }
     }
 }

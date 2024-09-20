@@ -5,12 +5,13 @@ use alloc::{
 };
 use driver_interface::*;
 use flat_device_tree::node::{CellSize, FdtNode};
-use log::info;
+use log::{debug, info};
 
-use super::device_tree::get_device_tree;
+use super::{device_tree::get_device_tree, DriverLocked};
 use crate::{
     driver::DriverKind,
     mem::mmu::iomap,
+    stdout::{set_stdout, DriverWrite},
     sync::{RwLock, RwLockWriteGuard},
 };
 
@@ -49,9 +50,10 @@ impl DriverManager {
         }
     }
 
-    pub async fn init_stdout(&self) {
-        self.inner.write().init_stdout().await;
+    pub async fn init(&self) {
+        self.inner.write().init().await;
     }
+
     pub fn register(&self, register: Register) {
         self.inner
             .write()
@@ -65,11 +67,15 @@ impl DriverManager {
             g.registers.insert(reg.name.clone(), reg);
         }
     }
+
+    pub fn get_driver(&self, name: &str) -> Option<DriverLocked> {
+        self.inner.read().drivers.get(name).cloned()
+    }
 }
 
 struct Manager {
     registers: BTreeMap<String, Register>,
-    drivers: BTreeMap<String, KDriver>,
+    drivers: BTreeMap<String, DriverLocked>,
 }
 
 impl Manager {
@@ -81,23 +87,36 @@ impl Manager {
     }
 
     pub async fn init_stdout(&mut self) {
-        if let Some(stdout) = self.probe_stdout().await {}
-
-        let _ = self.probe_uart().await;
+        if let Some(stdout_name) = self.probe_stdout().await {
+            let out = DriverWrite::new(stdout_name);
+            set_stdout(out);
+        }
     }
 
-    async fn init(&mut self) {}
+    async fn init(&mut self) {
+        debug!("Driver manager init start!");
 
-    async fn probe_stdout(&mut self) -> Option<io::BoxWrite> {
+        self.init_stdout().await;
+
+        self.probe_uart().await;
+    }
+
+    fn add_driver(&mut self, name: String, kind: DriverKind) {
+        self.drivers
+            .insert(name.clone(), DriverLocked::new(name, kind));
+    }
+
+    async fn probe_stdout(&mut self) -> Option<String> {
         let fdt = get_device_tree().expect("no device tree found!");
         let chosen = fdt.chosen().ok()?;
         let stdout = chosen.stdout()?;
         let node = stdout.node();
         if let Some(d) = self.node_probe_uart(node).await {
-            let r: io::BoxWrite = d;
-            return Some(r);
-        }
+            let name = node.name.to_string();
 
+            self.add_driver(name.clone(), DriverKind::Uart(d));
+            return Some(name);
+        }
         None
     }
 
@@ -114,13 +133,7 @@ impl Manager {
         }
 
         if let Some(d) = self.node_probe_uart(node).await {
-            self.drivers.insert(
-                node.name.to_string(),
-                KDriver {
-                    name: node.name.to_string(),
-                    kind: DriverKind::Uart(d),
-                },
-            );
+            self.add_driver(node.name.to_string(), DriverKind::Uart(d));
         }
     }
 

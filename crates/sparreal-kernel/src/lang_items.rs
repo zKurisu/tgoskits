@@ -6,7 +6,7 @@ use crate::platform;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("panic: {}\r\n  {:?}", info.message(), info.location());
+    error!("{info}");
 
     loop {
         unsafe { platform::wait_for_interrupt() };
