@@ -37,8 +37,15 @@ pub trait Access {
     ///
     /// ptr must be allocated by [`alloc`].
     unsafe fn dealloc(&mut self, ptr: usize, layout: Layout);
-    fn phys_to_virt<T>(&self, phys: usize) -> NonNull<T> {
-        unsafe { NonNull::new_unchecked((phys + self.va_offset()) as *mut u8) }.cast()
+}
+
+pub trait PVConvert {
+    fn to_virt<T>(&self, access: &impl Access) -> NonNull<T>;
+}
+
+impl PVConvert for usize {
+    fn to_virt<T>(&self, access: &impl Access) -> NonNull<T> {
+        unsafe { NonNull::new_unchecked((self + access.va_offset()) as *mut u8) }.cast()
     }
 }
 
@@ -240,9 +247,7 @@ impl<'a, P: GenericPTE, const LEN: usize, const LEVEL: usize> PageTableRef<'a, P
     unsafe fn alloc_table(access: &mut impl Access) -> PagingResult<usize> {
         let layout = Layout::from_size_align_unchecked(Self::TABLE_SIZE, Self::TABLE_SIZE);
         if let Some(addr) = access.alloc(layout) {
-            access
-                .phys_to_virt::<u8>(addr)
-                .write_bytes(0, Self::TABLE_SIZE);
+            addr.to_virt::<u8>(access).write_bytes(0, Self::TABLE_SIZE);
             Ok(addr)
         } else {
             Err(PagingError::NoMemory)
@@ -410,7 +415,7 @@ pub trait PageTableFn {
             size,
             allow_block,
             access,
-            None::<fn(NonNull<u8>)>.as_ref(),
+            None::<fn(*const u8)>.as_ref(),
         )
     }
 
@@ -431,7 +436,7 @@ pub trait PageTableFn {
         size: usize,
         allow_block: bool,
         access: &mut impl Access,
-        on_page_mapped: Option<&impl Fn(NonNull<u8>)>,
+        on_page_mapped: Option<&impl Fn(*const u8)>,
     ) -> PagingResult {
         let mut vaddr = cfg.vaddr;
         let mut paddr = cfg.paddr;
@@ -468,7 +473,7 @@ pub trait PageTableFn {
                 )
             })?;
             if let Some(f) = on_page_mapped {
-                f(NonNull::new_unchecked(vaddr as *mut u8));
+                f(vaddr);
             }
             vaddr = vaddr.add(page_size);
             paddr += page_size as usize;

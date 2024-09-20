@@ -6,11 +6,12 @@ mod trap;
 use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
+use alloc::boxed::Box;
 use debug::DebugWriter;
 use mmu::PageTable;
 use page_table_interface::{Access, MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
-    mem::{PageAllocator, Phys, Virt},
+    mem::{PageAllocator, PageAllocatorRef, Phys, Virt},
     platform::{Mmu, Platform2},
     Platform,
 };
@@ -87,8 +88,8 @@ impl Platform2 for Platform2Impl {
         unsafe { debug::put_debug(ch as u8) };
     }
 
-    unsafe fn table_new(access: &mut PageAllocator) -> PagingResult<Phys<u8>> {
-        <PageTable as PageTableFn>::new(access).map(|table| table.paddr().into())
+    unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>> {
+        PageTable::new(access).map(|table| table.paddr().into())
     }
 
     unsafe fn table_map(
@@ -96,10 +97,23 @@ impl Platform2 for Platform2Impl {
         config: MapConfig,
         size: usize,
         allow_block: bool,
-        access: &mut PageAllocator,
+        flush: bool,
+        access: &mut PageAllocatorRef,
     ) -> PagingResult<()> {
         let mut table = PageTable::from_addr(table.into(), 4);
-        table.map_region(config, size, allow_block, access)
+        if flush {
+            table.map_region_with_handle(
+                config,
+                size,
+                allow_block,
+                access,
+                Some(&|addr: *const u8| {
+                    Platform2Impl::flush_tlb(Some(addr.into()));
+                }),
+            )
+        } else {
+            table.map_region(config, size, allow_block, access)
+        }
     }
 
     unsafe fn set_kernel_page_table(table: Phys<u8>) {

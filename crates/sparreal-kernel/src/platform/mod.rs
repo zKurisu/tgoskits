@@ -1,12 +1,13 @@
 use core::{fmt, ptr::NonNull, time::Duration};
 
+use alloc::boxed::Box;
 use buddy_system_allocator::Heap;
 use memory_addr::PhysAddr;
 pub use page_table_interface::PageTableFn;
 use page_table_interface::{Access, MapConfig, PagingResult};
 use sparreal_macros::api_trait;
 
-use crate::mem::{PageAllocator, Phys, Virt};
+use crate::mem::{PageAllocator, PageAllocatorRef, Phys, Virt};
 
 pub trait Platform: Mmu + Sync + Send {
     fn wait_for_interrupt();
@@ -71,13 +72,14 @@ pub trait Platform2 {
     unsafe fn current_ticks() -> u64;
     unsafe fn tick_hz() -> u64;
     unsafe fn debug_write_char(ch: char);
-    unsafe fn table_new(access: &mut PageAllocator) -> PagingResult<Phys<u8>>;
+    unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>>;
     unsafe fn table_map(
         table: Phys<u8>,
         config: MapConfig,
         size: usize,
         allow_block: bool,
-        access: &mut PageAllocator,
+        flush: bool,
+        access: &mut PageAllocatorRef,
     ) -> PagingResult<()>;
 
     unsafe fn set_kernel_page_table(table: Phys<u8>);
