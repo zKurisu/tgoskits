@@ -15,6 +15,7 @@ pub mod stdout;
 pub mod sync;
 pub mod time;
 pub mod util;
+pub mod irq;
 
 pub use kernel::{KernelConfig, MemoryRange};
 pub use platform::Platform;

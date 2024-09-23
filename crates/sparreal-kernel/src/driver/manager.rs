@@ -50,16 +50,7 @@ impl DriverManager {
     }
 
     pub async fn init(&self) {
-        let stdout = {
-            let mut g = self.inner.write();
-            g.probe_stdout().await
-        };
-        if let Some(out) = stdout {
-            let name = out.name();
-            info!("stdout: {}", name);
-            set_stdout(out);
-            info!("stdout init success!");
-        }
+        self.init_stdout().await;
         {
             let mut g = self.inner.write();
             g.init().await;
@@ -83,6 +74,19 @@ impl DriverManager {
     pub fn get_driver(&self, name: &str) -> Option<DriverLocked> {
         self.inner.read().get_driver(name)
     }
+
+    async fn init_stdout(&self) {
+        let stdout = {
+            let mut g = self.inner.write();
+            g.probe_stdout().await
+        };
+        if let Some(out) = stdout {
+            let name = out.name();
+            info!("stdout: {}", name);
+            set_stdout(out);
+            info!("stdout init success!");
+        }
+    }
 }
 
 struct Manager {
@@ -100,6 +104,10 @@ impl Manager {
 
     async fn init(&mut self) {
         debug!("Driver manager init start!");
+        self.probe_all().await;
+    }
+
+    pub async fn probe_all(&mut self) {
         self.probe_uart().await;
     }
 
@@ -152,7 +160,7 @@ impl Manager {
                         let start = (reg.starting_address as usize).into();
                         let size = reg.size?;
 
-                        info!(" @{} size: {:#X}", start, size);
+                        info!("    @{} size: {:#X}", start, size);
 
                         let reg_base = iomap(start, size);
 
@@ -162,7 +170,7 @@ impl Manager {
                             0
                         };
 
-                        info!(" clk: {}", clock_freq);
+                        info!("    clk: {}", clock_freq);
 
                         let config = uart::Config {
                             reg: reg_base,
@@ -174,7 +182,7 @@ impl Manager {
                         };
                         let uart = register.probe(config).await.ok()?;
 
-                        info!("Uart probe success!");
+                        info!("    probe success!");
 
                         return Some(uart);
                     }

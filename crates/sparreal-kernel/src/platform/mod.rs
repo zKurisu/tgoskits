@@ -44,4 +44,5 @@ pub trait Platform {
     unsafe fn set_user_page_table(table: Option<Phys<u8>>);
     unsafe fn get_kernel_page_table() -> Phys<u8>;
     unsafe fn flush_tlb(addr: Option<Virt<u8>>);
+    fn print_system_info();
 }

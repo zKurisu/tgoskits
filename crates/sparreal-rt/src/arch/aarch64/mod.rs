@@ -6,6 +6,7 @@ mod trap;
 use core::arch::asm;
 
 use aarch64_cpu::registers::*;
+use log::info;
 use mmu::PageTable;
 use page_table_interface::{MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{mem::*, platform::Platform};
@@ -86,5 +87,15 @@ impl Platform for PlatformImpl {
             // flush the entire TLB
             asm!("tlbi vmalle1; dsb sy; isb")
         };
+    }
+
+    fn print_system_info() {
+        info!(
+            "CPU: {}.{}.{}.{}",
+            MPIDR_EL1.read(MPIDR_EL1::Aff0),
+            MPIDR_EL1.read(MPIDR_EL1::Aff1),
+            MPIDR_EL1.read(MPIDR_EL1::Aff2),
+            MPIDR_EL1.read(MPIDR_EL1::Aff3)
+        );
     }
 }

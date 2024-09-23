@@ -8,6 +8,7 @@ use flat_device_tree::Fdt;
 use mem::*;
 use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
+use util::boot::StdoutReg;
 
 use crate::{
     arch::debug::{debug_print, init_debug, mmu_add_offset},
@@ -96,10 +97,14 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     TTBR0_EL1.set_baddr(table);
 
     KCONFIG.stack_top = KCONFIG.main_memory.start + KCONFIG.main_memory.size;
-    let stack_top = KCONFIG.stack_top.as_usize() + va_offset;
+
+    let mut stack_top = KCONFIG.stack_top.as_usize() + va_offset;
+
     debug_print("stack top: ");
     debug_hex(stack_top as _);
-    debug_print("\r\n");
+    debug_print(" - 8 \r\n");
+
+    stack_top -= 8;
 
     debug_println("table set");
     mmu_add_offset(va_offset);
@@ -109,6 +114,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     barrier::isb(barrier::SY);
+
+    debug_println("MMU enabled");
 
     asm!("
     MOV  sp,  {sp_top}
@@ -125,7 +132,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
-    debug_println("MMU enabled");
     KCONFIG.dtb_addr = NonNull::new(DTB_ADDR as _);
     crate::boot(KCONFIG.clone());
 }
@@ -149,6 +155,15 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
             init_debug(reg);
         }
     }
+    // let reg = StdoutReg {
+    //     reg: 0x2800D000 as _,
+    //     size: 0x1000,
+    // };
+    // KCONFIG.early_debug_reg = Some(MemoryRange {
+    //     start: reg.reg.into(),
+    //     size: reg.size,
+    // });
+    // init_debug(reg);
 
     debug_print("dtb @");
     debug_hex(dtb_addr as _);

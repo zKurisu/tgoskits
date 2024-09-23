@@ -2,7 +2,7 @@
 
 use core::{alloc::Layout, fmt::Debug, marker::PhantomData, ptr::NonNull};
 
-use log::{error, trace};
+use log::{error, trace, warn};
 
 /// The error type for page table operation failures.
 #[derive(Debug, PartialEq)]
@@ -467,10 +467,17 @@ pub trait PageTableFn {
                 access,
             )
             .inspect_err(|e| {
-                error!(
-                    "failed to map page: {:#x?}({:?}) -> {:#x?}, {:?}",
-                    vaddr as usize, page_size, paddr, e
-                )
+                if e == &PagingError::AlreadyMapped {
+                    warn!(
+                        "page already mapped: {:#p}({}) -> {:#x}",
+                        vaddr, page_size, paddr
+                    );
+                } else {
+                    error!(
+                        "failed to map page: {:#x?}({:?}) -> {:#x?}, {:?}",
+                        vaddr as usize, page_size, paddr, e
+                    )
+                }
             })?;
             if let Some(f) = on_page_mapped {
                 f(vaddr);

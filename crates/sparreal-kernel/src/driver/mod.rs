@@ -1,13 +1,13 @@
 use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull};
 
 use alloc::{string::String, sync::Arc};
-use driver_interface::uart;
 use flat_device_tree::Fdt;
 
 use crate::sync::{RwLock, RwLockWriteGuard};
 
 pub mod device_tree;
 pub mod manager;
+mod uart;
 
 pub use manager::{driver_manager, DriverManager};
 

@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-
 use alloc::string::ToString;
 use log::info;
 
@@ -18,6 +17,5 @@ fn main() {
 
     assert_eq!(st, "hello world");
 
-
-    panic!("panic!");
+    panic!("exit!");
 }

@@ -19,6 +19,7 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     log::set_max_level(LevelFilter::Trace);
     stdout::set_stdout(EarlyDebugWrite {});
     info!("Logger initialized.");
+    platform::print_system_info();
 
     mem::init(kconfig);
 
