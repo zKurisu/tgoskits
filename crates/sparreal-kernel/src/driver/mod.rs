@@ -26,6 +26,10 @@ impl DriverLocked {
     pub fn write(&self) -> RwLockWriteGuard<'_, Driver> {
         self.inner.write()
     }
+
+    pub fn name(&self) -> String {
+        self.inner.read().name.clone()
+    }
 }
 
 pub struct Driver {

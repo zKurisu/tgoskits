@@ -19,7 +19,7 @@ serde = { default-features = false, version = "1", features = [
     "alloc",
     "derive",
 ] }
-arm-pl011-rs = { version = "0.1" }
+arm-pl011-rs = { path = "crates/arm-pl011" }
 tock-registers = "0.8"
 goblin = "0.8"
 lock_api = "0.4"

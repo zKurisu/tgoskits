@@ -47,7 +47,7 @@ impl RegisterPl011 {
     fn conv_config(config: uart::Config) -> arm_pl011_rs::Config {
         arm_pl011_rs::Config {
             baud_rate: config.baud_rate,
-            clock_freq: config.clock_freq as _,
+            clock_freq: config.clock_freq,
             data_bits: match config.data_bits {
                 uart::DataBits::Bits5 => arm_pl011_rs::DataBits::Bits5,
                 uart::DataBits::Bits6 => arm_pl011_rs::DataBits::Bits6,

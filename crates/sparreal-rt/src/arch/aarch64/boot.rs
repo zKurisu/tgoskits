@@ -39,7 +39,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     KCONFIG.va_offset = va_offset;
     VA_OFFSET = va_offset;
 
-    let kernel_start = Phys::from(_skernel as *const u8).align_down(BYTES_1G);
     let mut kernel_end = Phys::from(_ekernel as *const u8);
 
     let new_dtb_addr = sparreal_kernel::driver::move_dtb(
@@ -61,6 +60,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_hex(_skernel as *const u8 as usize as _);
     debug_print("\r\n");
 
+    let kernel_start = Phys::from(_skernel as *const u8).align_down(BYTES_1M * 2);
     let kernel_size = kernel_end - kernel_start;
 
     if let Err(msg) = config_memory_by_fdt(kernel_start, kernel_size) {
@@ -250,9 +250,11 @@ unsafe fn config_memory_by_fdt(
         KCONFIG.main_memory.start = (region.starting_address as usize).into();
         KCONFIG.main_memory.size = region.size.unwrap_or_default();
         debug_print("memory @");
-        debug_hex(region.starting_address as usize as _);
+        debug_hex(KCONFIG.main_memory.start.as_usize() as _);
         debug_print(", size: ");
         debug_hex(region.size.unwrap_or_default() as _);
+        debug_print(" Kernel start: ");
+        debug_hex(kernel_start.as_usize() as _);
 
         if KCONFIG.main_memory.start == kernel_start {
             KCONFIG.main_memory_heap_offset = kernel_size;

@@ -1,6 +1,7 @@
 .section ".head.text","ax"
 .global _start
 
+// Linux header
 _start:
     // code0/code1
     nop

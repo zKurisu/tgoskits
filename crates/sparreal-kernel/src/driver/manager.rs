@@ -1,3 +1,5 @@
+use core::fmt::Write;
+
 use alloc::{
     collections::btree_map::BTreeMap,
     string::{String, ToString},
@@ -11,12 +13,11 @@ use super::{device_tree::get_device_tree, DriverLocked};
 use crate::{
     driver::DriverKind,
     mem::mmu::iomap,
-    stdout::{set_stdout, DriverWrite},
+    stdout::{self, set_stdout, DriverWrite, EarlyDebugWrite},
     sync::RwLock,
 };
 
 static MANAGER: RwLock<Option<DriverManager>> = RwLock::new(None);
-
 pub fn driver_manager() -> DriverManager {
     let d = MANAGER.read();
     match d.as_ref() {
@@ -49,7 +50,20 @@ impl DriverManager {
     }
 
     pub async fn init(&self) {
-        self.inner.write().init().await;
+        let stdout = {
+            let mut g = self.inner.write();
+            g.probe_stdout().await
+        };
+        if let Some(out) = stdout {
+            let name = out.name();
+            info!("stdout: {}", name);
+            set_stdout(out);
+            info!("stdout init success!");
+        }
+        {
+            let mut g = self.inner.write();
+            g.init().await;
+        }
     }
 
     pub fn register(&self, register: Register) {
@@ -67,7 +81,7 @@ impl DriverManager {
     }
 
     pub fn get_driver(&self, name: &str) -> Option<DriverLocked> {
-        self.inner.read().drivers.get(name).cloned()
+        self.inner.read().get_driver(name)
     }
 }
 
@@ -84,36 +98,28 @@ impl Manager {
         }
     }
 
-    pub async fn init_stdout(&mut self) {
-        if let Some(stdout_name) = self.probe_stdout().await {
-            let out = DriverWrite::new(stdout_name);
-            set_stdout(out);
-        }
-    }
-
     async fn init(&mut self) {
         debug!("Driver manager init start!");
-
-        self.init_stdout().await;
-
         self.probe_uart().await;
     }
 
-    fn add_driver(&mut self, name: String, kind: DriverKind) {
-        self.drivers
-            .insert(name.clone(), DriverLocked::new(name, kind));
+    fn add_driver(&mut self, name: String, kind: DriverKind) -> DriverLocked {
+        let driver = DriverLocked::new(name.clone(), kind);
+        self.drivers.insert(name, driver.clone());
+        driver
     }
-
-    async fn probe_stdout(&mut self) -> Option<String> {
+    pub fn get_driver(&self, name: &str) -> Option<DriverLocked> {
+        self.drivers.get(name).cloned()
+    }
+    async fn probe_stdout(&mut self) -> Option<DriverWrite> {
         let fdt = get_device_tree().expect("no device tree found!");
         let chosen = fdt.chosen().ok()?;
         let stdout = chosen.stdout()?;
         let node = stdout.node();
         if let Some(d) = self.node_probe_uart(node).await {
             let name = node.name.to_string();
-
-            self.add_driver(name.clone(), DriverKind::Uart(d));
-            return Some(name);
+            let driver = self.add_driver(name.clone(), DriverKind::Uart(d));
+            return Some(DriverWrite::new(&driver));
         }
         None
     }

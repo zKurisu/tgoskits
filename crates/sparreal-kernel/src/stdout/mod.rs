@@ -3,7 +3,7 @@ use core::fmt::{self, Write};
 use alloc::{boxed::Box, string::String};
 
 use crate::{
-    driver::{driver_manager, DriverKind},
+    driver::{driver_manager, DriverKind, DriverLocked},
     platform,
     sync::RwLock,
 };
@@ -26,22 +26,26 @@ pub fn set_stdout(stdout: impl StdoutWrite) {
 
 #[derive(Clone)]
 pub struct DriverWrite {
-    pub name: String,
+    pub driver: DriverLocked,
 }
 
 impl DriverWrite {
-    pub fn new(name: String) -> Self {
-        Self { name }
+    pub fn new(driver: &DriverLocked) -> Self {
+        Self {
+            driver: driver.clone(),
+        }
+    }
+
+    pub fn name(&self) -> String {
+        self.driver.name()
     }
 }
 
 impl Write for DriverWrite {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
-        if let Some(driver) = driver_manager().get_driver(&self.name) {
-            let mut g = driver.write();
-            if let DriverKind::Uart(uart) = &mut g.kind {
-                let _ = uart.write_all(s.as_bytes());
-            }
+        let mut g = self.driver.write();
+        if let DriverKind::Uart(uart) = &mut g.kind {
+            let _ = uart.write_all(s.as_bytes());
         }
         Ok(())
     }

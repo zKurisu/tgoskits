@@ -115,9 +115,7 @@ dependencies = [
 
 [[package]]
 name = "arm-pl011-rs"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c299c72b6f7a1c6cfe30e6a38e8dc7cfbe4452c1470dabf8401a4ee1315bd183"
+version = "0.1.2"
 dependencies = [
  "embedded-io",
  "embedded-io-async",
