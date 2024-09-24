@@ -5,6 +5,7 @@ use driver_interface::*;
 use embedded_io::*;
 use future::LocalBoxFuture;
 use futures::prelude::*;
+use log::debug;
 
 pub fn register() -> Register {
     Register {
@@ -39,6 +40,11 @@ impl DriverGeneric for DriverPl011 {}
 
 impl RegisterPl011 {
     async fn new_pl011(config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
+        debug!(
+            "Interupt: {}, {:?}",
+            config.interrupt.irq_id, config.interrupt.trigger
+        );
+
         let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
 
         Ok(Box::new(DriverPl011(uart)))

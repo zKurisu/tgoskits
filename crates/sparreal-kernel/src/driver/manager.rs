@@ -11,7 +11,8 @@ use log::{debug, info};
 
 use super::{device_tree::get_device_tree, DriverLocked};
 use crate::{
-    driver::DriverKind,
+    driver::{device_tree::FDTExtend as _, DriverKind},
+    irq::fdt_get_config,
     mem::mmu::iomap,
     stdout::{self, set_stdout, DriverWrite, EarlyDebugWrite},
     sync::RwLock,
@@ -175,6 +176,10 @@ impl Manager {
                             0
                         };
 
+                        let itrs = node.interrupt_list();
+
+                        let irq_config = fdt_get_config(&itrs[0]).unwrap();
+
                         info!("    clk: {}", clock_freq);
 
                         let config = uart::Config {
@@ -184,6 +189,7 @@ impl Manager {
                             data_bits: uart::DataBits::Bits8,
                             stop_bits: uart::StopBits::STOP1,
                             parity: uart::Parity::None,
+                            interrupt: irq_config,
                         };
                         let uart = register.probe(config).await.ok()?;
 

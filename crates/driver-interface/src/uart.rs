@@ -1,9 +1,9 @@
 use core::ptr::NonNull;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 use futures::future::LocalBoxFuture;
 
-use crate::{io, DriverResult};
+use crate::{io, irq::IrqConfig, DriverResult};
 
 pub trait Driver: super::DriverGeneric + io::Write {}
 
@@ -47,6 +47,7 @@ pub struct Config {
     pub data_bits: DataBits,
     pub stop_bits: StopBits,
     pub parity: Parity,
+    pub interrupt: IrqConfig,
 }
 
 unsafe impl Send for Config {}

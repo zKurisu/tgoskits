@@ -1,6 +1,7 @@
 use core::ptr::NonNull;
 
-use flat_device_tree::Fdt;
+use alloc::vec::Vec;
+use flat_device_tree::{node::FdtNode, Fdt};
 
 #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
@@ -16,5 +17,23 @@ pub fn get_device_tree() -> Option<Fdt<'static>> {
     }
 }
 
+pub trait FDTExtend {
+    fn interrupt_list(&self) -> Vec<Vec<usize>>;
+}
 
+impl FDTExtend for FdtNode<'_, '_> {
+    fn interrupt_list(&self) -> Vec<Vec<usize>> {
+        let mut ret = Vec::new();
+        let (size, mut itrs) = self.interrupts();
+        let mut elem = Vec::new();
+        while let Some(itr) = itrs.next() {
+            elem.push(itr);
 
+            if elem.len() == size {
+                ret.push(elem.clone());
+                elem = Vec::new();
+            }
+        }
+        ret
+    }
+}

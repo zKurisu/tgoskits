@@ -324,20 +324,19 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
     }
 
     /// Searches for the `interrupts` property.
-    pub fn interrupts(self) -> impl Iterator<Item = usize> + 'a {
+    pub fn interrupts(self) -> (usize, impl Iterator<Item = usize> + 'a) {
         let sizes = self.parent_interrupt_cells();
 
         let mut interrupt =
             self.properties().find(|p| p.name.eq("interrupts")).map(|p| FdtData::new(p.value));
 
-        core::iter::from_fn(move || match interrupt.as_mut() {
-            Some(stream) => match sizes {
-                Some(1) => Some(stream.u32()?.get() as usize),
-                Some(2) => Some(stream.u64()?.get() as usize),
-                _ => None,
-            },
-            None => None,
-        })
+        (
+            sizes.unwrap_or(1),
+            core::iter::from_fn(move || match interrupt.as_mut() {
+                Some(stream) => Some(stream.u32()?.get() as usize),
+                None => None,
+            }),
+        )
     }
 
     pub fn parent_ranges(self) -> impl Iterator<Item = MemoryRange> + 'b {

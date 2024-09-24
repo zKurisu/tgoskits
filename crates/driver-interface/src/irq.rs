@@ -12,6 +12,7 @@ pub trait Driver: super::DriverGeneric {
     fn enable_irq(&mut self, config: IrqConfig);
     fn disable_irq(&mut self, irq_id: usize);
     fn current_cpu_setup(&self);
+    fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqConfig;
 }
 
 pub type BoxDriver = Box<dyn Driver>;

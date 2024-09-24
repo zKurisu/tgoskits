@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, format, string::ToString};
+use alloc::{boxed::Box, format, string::ToString, vec::Vec};
 use arm_gic_driver::*;
 use driver_interface::{irq, DriverError, DriverGeneric, Register, RegisterKind};
 use futures::{future::LocalBoxFuture, FutureExt};
@@ -85,5 +85,42 @@ impl irq::Driver for DriverGic {
 
     fn current_cpu_setup(&self) {
         self.0.current_cpu_setup();
+    }
+
+    fn fdt_itr_to_config(&self, itr: &[usize]) -> irq::IrqConfig {
+        const SPI: usize = 0;
+        const PPI: usize = 1;
+
+        const TYPE_NONE: usize = 0;
+        const TYPE_EDGE_RISING: usize = 1;
+        const TYPE_EDGE_FALLING: usize = 2;
+        const TYPE_EDGE_BOTH: usize = TYPE_EDGE_FALLING | TYPE_EDGE_RISING;
+        const TYPE_LEVEL_HIGH: usize = 4;
+        const TYPE_LEVEL_LOW: usize = 8;
+
+        let num = itr[1] as u32;
+
+        let irq_id: u32 = match itr[0] {
+            SPI => IntId::spi(num),
+            PPI => IntId::ppi(num),
+            _ => panic!("Invalid irq type {}", itr[0]),
+        }
+        .into();
+
+        let trigger = match itr[2] {
+            TYPE_EDGE_RISING => irq::Trigger::Edge,
+            TYPE_EDGE_FALLING => irq::Trigger::Edge,
+            TYPE_EDGE_BOTH => irq::Trigger::Edge,
+            TYPE_LEVEL_HIGH => irq::Trigger::Level,
+            TYPE_LEVEL_LOW => irq::Trigger::Level,
+            _ => panic!("Invalid irq type {}", itr[2]),
+        };
+
+        irq::IrqConfig {
+            irq_id: irq_id as _,
+            trigger,
+            priority: 0,
+            cpu_list: Vec::new(),
+        }
     }
 }
