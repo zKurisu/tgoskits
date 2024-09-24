@@ -50,10 +50,15 @@ impl DriverManager {
     }
 
     pub async fn init(&self) {
+        {
+            let mut g = self.inner.write();
+            g.init_irq().await;
+        }
+
         self.init_stdout().await;
         {
             let mut g = self.inner.write();
-            g.init().await;
+            g.init_drivers().await;
         }
     }
 
@@ -89,9 +94,9 @@ impl DriverManager {
     }
 }
 
-struct Manager {
-    registers: BTreeMap<String, Register>,
-    drivers: BTreeMap<String, DriverLocked>,
+pub(super) struct Manager {
+    pub(super) registers: BTreeMap<String, Register>,
+    pub(super) drivers: BTreeMap<String, DriverLocked>,
 }
 
 impl Manager {
@@ -102,7 +107,7 @@ impl Manager {
         }
     }
 
-    async fn init(&mut self) {
+    async fn init_drivers(&mut self) {
         debug!("Driver manager init start!");
         self.probe_all().await;
     }
@@ -111,7 +116,7 @@ impl Manager {
         self.probe_uart().await;
     }
 
-    fn add_driver(&mut self, name: String, kind: DriverKind) -> DriverLocked {
+    pub(super) fn add_driver(&mut self, name: String, kind: DriverKind) -> DriverLocked {
         let driver = DriverLocked::new(name.clone(), kind);
         self.drivers.insert(name, driver.clone());
         driver

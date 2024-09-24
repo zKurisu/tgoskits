@@ -19,7 +19,7 @@ aarch64-cpu = "9.4.0"
 tock-registers = { workspace = true }
 arm-pl011-rs = { workspace = true }
 flat_device_tree = { workspace = true }
-
+arm-gic-driver = { workspace = true }
 
 [build-dependencies]
 sparreal-build = { workspace = true }

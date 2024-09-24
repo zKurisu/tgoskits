@@ -3,9 +3,10 @@ use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull};
 use alloc::{string::String, sync::Arc};
 use flat_device_tree::Fdt;
 
-use crate::sync::{RwLock, RwLockWriteGuard};
+use crate::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub mod device_tree;
+mod irq;
 pub mod manager;
 mod uart;
 
@@ -27,6 +28,10 @@ impl DriverLocked {
         self.inner.write()
     }
 
+    pub fn read(&self) -> RwLockReadGuard<'_, Driver> {
+        self.inner.read()
+    }
+
     pub fn name(&self) -> String {
         self.inner.read().name.clone()
     }
@@ -39,6 +44,7 @@ pub struct Driver {
 
 pub enum DriverKind {
     Uart(uart::BoxDriver),
+    Interupt(irq::BoxDriver),
     Spi,
     I2c,
 }

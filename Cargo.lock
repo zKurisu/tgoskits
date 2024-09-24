@@ -1091,6 +1091,7 @@ name = "sparreal-rt"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
+ "arm-gic-driver",
  "arm-pl011-rs",
  "driver-interface",
  "embedded-io",
