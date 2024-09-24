@@ -8,7 +8,6 @@ use flat_device_tree::Fdt;
 use mem::*;
 use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
-use util::boot::StdoutReg;
 
 use crate::{
     arch::debug::{debug_print, init_debug, mmu_add_offset},

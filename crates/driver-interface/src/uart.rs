@@ -1,6 +1,6 @@
 use core::ptr::NonNull;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use futures::future::LocalBoxFuture;
 
 use crate::{io, irq::IrqConfig, DriverResult};

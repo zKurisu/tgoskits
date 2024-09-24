@@ -1,4 +1,3 @@
-use core::fmt::Write;
 
 use alloc::{
     collections::btree_map::BTreeMap,
@@ -6,15 +5,13 @@ use alloc::{
     sync::Arc,
 };
 use driver_interface::*;
-use flat_device_tree::node::{CellSize, FdtNode};
+use flat_device_tree::node::FdtNode;
 use log::{debug, info};
 
 use super::{device_tree::get_device_tree, DriverLocked};
 use crate::{
-    driver::{device_tree::FDTExtend as _, DriverKind},
-    irq::fdt_get_config,
-    mem::mmu::iomap,
-    stdout::{self, set_stdout, DriverWrite, EarlyDebugWrite},
+    driver::DriverKind,
+    stdout::{set_stdout, DriverWrite},
     sync::RwLock,
 };
 
@@ -154,63 +151,4 @@ impl Manager {
             self.add_driver(node.name.to_string(), DriverKind::Uart(d));
         }
     }
-
-    async fn node_probe_uart(&mut self, node: FdtNode<'_, '_>) -> Option<uart::BoxDriver> {
-        let caps = node.compatible()?;
-        for one in caps.all() {
-            for register in self.registers.values() {
-                if register.compatible_matched(one) {
-                    if let RegisterKind::Uart(ref register) = register.kind {
-                        info!("Probe {} - uart: {}", node.name, one);
-                        let reg = node.reg_fix().next()?;
-                        let start = (reg.starting_address as usize).into();
-                        let size = reg.size?;
-
-                        info!("    @{} size: {:#X}", start, size);
-
-                        let reg_base = iomap(start, size);
-
-                        let clock_freq = if let Some(clk) = get_uart_clk(&node) {
-                            clk
-                        } else {
-                            0
-                        };
-
-                        let itrs = node.interrupt_list();
-
-                        let irq_config = fdt_get_config(&itrs[0]).unwrap();
-
-                        info!("    clk: {}", clock_freq);
-
-                        let config = uart::Config {
-                            reg: reg_base,
-                            baud_rate: 115200,
-                            clock_freq,
-                            data_bits: uart::DataBits::Bits8,
-                            stop_bits: uart::StopBits::STOP1,
-                            parity: uart::Parity::None,
-                            interrupt: irq_config,
-                        };
-                        let uart = register.probe(config).await.ok()?;
-
-                        info!("    probe success!");
-
-                        return Some(uart);
-                    }
-                }
-            }
-        }
-        None
-    }
-}
-
-fn get_uart_clk(uart_node: &FdtNode<'_, '_>) -> Option<u64> {
-    let fdt = get_device_tree()?;
-    let clk = uart_node.property("clocks")?;
-    for phandle in clk.iter_cell_size(CellSize::One) {
-        if let Some(node) = fdt.find_phandle(phandle as _) {
-            return node.property("clock-frequency")?.as_usize().map(|c| c as _);
-        }
-    }
-    None
 }

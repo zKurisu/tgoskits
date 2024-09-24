@@ -87,6 +87,7 @@ impl irq::Driver for DriverGic {
         self.0.current_cpu_setup();
     }
 
+    #[allow(unused)]
     fn fdt_itr_to_config(&self, itr: &[usize]) -> irq::IrqConfig {
         const SPI: usize = 0;
         const PPI: usize = 1;

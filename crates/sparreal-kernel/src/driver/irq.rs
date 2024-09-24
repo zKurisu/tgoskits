@@ -8,7 +8,7 @@ use log::{error, info};
 
 use crate::mem::mmu::iomap;
 
-use super::{device_tree::get_device_tree, manager::Manager, DriverKind, DriverLocked};
+use super::{device_tree::get_device_tree, manager::Manager, DriverKind};
 
 impl Manager {
     pub(super) async fn init_irq(&mut self) {

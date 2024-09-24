@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*, vec::Vec};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
 use driver_interface::irq::IrqConfig;
 use log::debug;
 

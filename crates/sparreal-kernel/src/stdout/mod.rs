@@ -3,7 +3,7 @@ use core::fmt::{self, Write};
 use alloc::{boxed::Box, string::String};
 
 use crate::{
-    driver::{driver_manager, DriverKind, DriverLocked},
+    driver::{DriverKind, DriverLocked},
     platform,
     sync::RwLock,
 };
