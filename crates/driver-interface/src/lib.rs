@@ -8,6 +8,7 @@ pub use futures::future::BoxFuture;
 
 pub mod io;
 pub mod uart;
+pub mod irq;
 
 pub type DriverResult<T = ()> = Result<T, DriverError>;
 
@@ -21,6 +22,7 @@ pub struct Register {
 
 pub enum RegisterKind {
     Uart(uart::BoxRegister),
+    Interupt(irq::BoxRegister),
     Spi,
 }
 
