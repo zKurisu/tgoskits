@@ -4,13 +4,12 @@ use super::{
 
 use crate::{driver::device_tree::FDTExtend as _, sync::RwLock};
 use alloc::{
-    boxed::Box,
     collections::btree_map::BTreeMap,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
-use driver_interface::{irq, uart, DriverGeneric, DriverKind, Register, RegisterKind};
+use driver_interface::{irq, uart, DriverKind, Register, RegisterKind};
 use log::{error, info};
 
 pub(super) static CONTAINER: Container = Container::new();
@@ -78,6 +77,9 @@ pub async fn probe_by_register(reg: Register) -> Option<()> {
     let config = node.probe_config();
 
     info!("Probe node [{}], driver [{}]", node.name, reg.name);
+    for irq in &config.irq {
+        info!("    Irq: {}, triger {:?}", irq.irq_id, irq.trigger);
+    }
 
     let kind = reg
         .probe
@@ -104,6 +106,10 @@ pub fn uart_list() -> Vec<DriverUart> {
         .collect()
 }
 
+pub fn uart_by_id(id: DriverId) -> Option<DriverArc<uart::BoxDriver>> {
+    CONTAINER.uart.read().get(&id).cloned()
+}
+
 pub fn irq_chip_list() -> Vec<DriverIrqChip> {
     let g = CONTAINER.irq_chip.read();
     g.iter()
@@ -116,6 +122,11 @@ pub fn irq_chip_list() -> Vec<DriverIrqChip> {
         })
         .collect()
 }
+
+pub fn irq_by_id(id: DriverId) -> Option<DriverArc<irq::BoxDriver>> {
+    CONTAINER.irq_chip.read().get(&id).cloned()
+}
+
 fn get_info(id: &DriverId) -> Option<DriverInfo> {
     CONTAINER.info.read().get(id).cloned()
 }

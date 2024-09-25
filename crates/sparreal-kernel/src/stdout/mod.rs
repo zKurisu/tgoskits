@@ -1,10 +1,6 @@
 use core::fmt::{self, Write};
 
-use alloc::{
-    boxed::Box,
-    string::{String, ToString},
-    sync::Arc,
-};
+use alloc::{boxed::Box, sync::Arc};
 use driver_interface::uart;
 
 use crate::{

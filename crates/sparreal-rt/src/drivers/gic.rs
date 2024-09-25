@@ -2,8 +2,8 @@ use alloc::vec;
 use alloc::{boxed::Box, format, vec::Vec};
 use arm_gic_driver::*;
 use driver_interface::{
-    irq, DriverError, DriverGeneric, DriverKind, DriverResult, Probe, ProbeConfig, Register,
-    RegisterKind,
+    irq, DriverError, DriverGeneric, DriverKind, DriverResult, IrqProbeConfig, Probe, ProbeConfig,
+    Register, RegisterKind,
 };
 use futures::{future::LocalBoxFuture, FutureExt};
 pub fn register_v2() -> Register {
@@ -99,7 +99,7 @@ impl irq::Driver for DriverGic {
     }
 
     #[allow(unused)]
-    fn fdt_itr_to_config(&self, itr: &[usize]) -> irq::IrqConfig {
+    fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqProbeConfig {
         const SPI: usize = 0;
         const PPI: usize = 1;
 
@@ -128,11 +128,9 @@ impl irq::Driver for DriverGic {
             _ => panic!("Invalid irq type {}", itr[2]),
         };
 
-        irq::IrqConfig {
+        IrqProbeConfig {
             irq_id: irq_id as _,
             trigger,
-            priority: 0,
-            cpu_list: Vec::new(),
         }
     }
 }

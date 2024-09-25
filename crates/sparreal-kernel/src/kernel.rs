@@ -5,7 +5,7 @@ use log::*;
 
 use crate::{
     driver::{self, device_tree::set_dtb_addr},
-    executor, irq,
+    executor,
     logger::KLogger,
     mem::{self, *},
     platform::{self, app_main},

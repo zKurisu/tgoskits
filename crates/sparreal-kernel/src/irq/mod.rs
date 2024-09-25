@@ -1,5 +1,5 @@
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
-use driver_interface::irq::{self, IrqConfig};
+use driver_interface::{irq::IrqConfig, IrqProbeConfig};
 use log::debug;
 
 use crate::{
@@ -17,11 +17,7 @@ pub enum IrqHandle {
     None,
 }
 
-pub fn fdt_get_config(irqs: &[usize]) -> Option<IrqConfig> {
-    let chip = get_chip()?;
-    let g = chip.driver.read();
-    Some(g.fdt_itr_to_config(irqs))
-}
+
 
 pub fn register_irq<N, F>(irq_id: usize, dev_name: N, handler: F)
 where

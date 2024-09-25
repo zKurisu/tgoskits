@@ -1,9 +1,9 @@
 pub use driver_interface::uart::*;
 use driver_interface::RegisterKind;
 use flat_device_tree::node::{CellSize, FdtNode};
-use log::{debug, info};
 
-use crate::{driver::device_tree::FDTExtend as _, irq::fdt_get_config, mem::mmu::iomap};
+
+
 
 // impl Manager {
 //     pub(super) async fn node_probe_uart(&mut self, node: FdtNode<'_, '_>) -> Option<BoxDriver> {

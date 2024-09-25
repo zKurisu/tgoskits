@@ -3,8 +3,11 @@ use core::ptr::NonNull;
 use alloc::vec::Vec;
 use driver_interface::ProbeConfig;
 use flat_device_tree::{node::FdtNode, Fdt};
+use log::debug;
 
 use crate::mem::mmu::iomap;
+
+use super::{irq_by_id, DriverId};
 
 #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
@@ -50,7 +53,14 @@ impl FDTExtend for FdtNode<'_, '_> {
         }
 
         if let Some(itr_node) = self.interrupt_parent() {
+            let id: DriverId = itr_node.name.into();
+            if let Some(irq) = irq_by_id(id) {
+                let g = irq.read();
 
+                for elem in itr_node.interrupt_list() {
+                    config.irq.push(g.fdt_itr_to_config(&elem));
+                }
+            }
         }
 
         config

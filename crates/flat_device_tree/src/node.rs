@@ -307,9 +307,15 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
 
     /// Searches for the interrupt parent, if the node contains one
     pub fn interrupt_parent(self) -> Option<FdtNode<'b, 'a>> {
-        self.properties()
+        if let Some(parent) = self
+            .properties()
             .find(|p| p.name.eq("interrupt-parent"))
             .and_then(|p| self.header.find_phandle(BigEndianU32::from_bytes(p.value)?.get()))
+        {
+            return Some(parent);
+        }
+
+        self.header.all_nodes().next()?.interrupt_parent()
     }
 
     /// `#interrupt-cells` property
@@ -378,7 +384,9 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
                 return Some(cell);
             }
 
-            if let Some(cell) = self.header.all_nodes().next()?.interrupt_parent()?.interrupt_cells() {
+            if let Some(cell) =
+                self.header.all_nodes().next()?.interrupt_parent()?.interrupt_cells()
+            {
                 return Some(cell);
             }
         }

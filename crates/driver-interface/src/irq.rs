@@ -1,5 +1,7 @@
 use alloc::{boxed::Box, vec::Vec};
 
+pub use crate::IrqProbeConfig;
+
 pub trait Driver: super::DriverGeneric {
     fn get_and_acknowledge_interrupt(&self) -> Option<usize>;
     fn end_interrupt(&self, irq_id: usize);
@@ -7,7 +9,7 @@ pub trait Driver: super::DriverGeneric {
     fn enable_irq(&mut self, config: IrqConfig);
     fn disable_irq(&mut self, irq_id: usize);
     fn current_cpu_setup(&self);
-    fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqConfig;
+    fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqProbeConfig;
 }
 
 pub type BoxDriver = Box<dyn Driver>;

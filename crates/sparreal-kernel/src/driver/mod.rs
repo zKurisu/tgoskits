@@ -1,15 +1,19 @@
 use core::ptr::{slice_from_raw_parts, slice_from_raw_parts_mut, NonNull};
 
 use alloc::{
-    boxed::Box,
     string::{String, ToString},
     sync::{Arc, Weak},
+    vec::Vec,
 };
-use driver_interface::{DriverGeneric, DriverKind};
+use device_tree::get_device_tree;
 use flat_device_tree::Fdt;
 use irq::init_irq;
+use log::info;
 
-use crate::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::{
+    stdout::{set_stdout, DriverWrite},
+    sync::RwLock,
+};
 
 mod container;
 pub mod device_tree;
@@ -61,4 +65,26 @@ pub unsafe fn move_dtb(src: *const u8, mut dst: NonNull<u8>) -> Option<&'static 
 
 pub async fn init() {
     init_irq().await;
+    init_stdout().await;
+    info!("Stdout ok!");
+}
+
+async fn init_stdout() -> Option<()> {
+    let fdt = get_device_tree()?;
+    let chosen = fdt.chosen().ok()?;
+    let stdout = chosen.stdout()?;
+    let node = stdout.node();
+    let caps = node.compatible()?.all().collect::<Vec<_>>();
+
+    let register = register_by_compatible(&caps)?;
+
+    probe_by_register(register).await?;
+
+    let driver = uart_by_id(node.name.into())?;
+
+    let stdout = DriverWrite::new(&driver);
+
+    set_stdout(stdout);
+
+    Some(())
 }

@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, string::ToString, vec};
+use alloc::{boxed::Box, vec};
 
 use arm_pl011_rs::Pl011;
 use driver_interface::*;
