@@ -1,9 +1,10 @@
 use core::ptr::NonNull;
 
+use driver_interface::Register;
 use log::*;
 
 use crate::{
-    driver::device_tree::set_dtb_addr,
+    driver::{self, device_tree::set_dtb_addr},
     executor, irq,
     logger::KLogger,
     mem::{self, *},
@@ -11,8 +12,6 @@ use crate::{
     println,
     stdout::{self, EarlyDebugWrite},
 };
-
-pub use crate::driver::manager::*;
 
 pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     set_dtb_addr(kconfig.dtb_addr);
@@ -29,6 +28,11 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     let _ = stdout::print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
 }
 
+/// 注册驱动
+pub fn driver_register_append(registers: impl IntoIterator<Item = Register>) {
+    driver::register_append(registers);
+}
+
 /// New kernel and initialize memory.
 ///
 /// # Safety
@@ -38,9 +42,7 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
 /// 3. alloc can be used after this function.
 pub unsafe fn run() -> ! {
     executor::block_on(async {
-        driver_manager().init_irq().await;
-        irq::current_cpu_setup();
-        driver_manager().init().await;
+        driver::init().await;
     });
 
     app_main();

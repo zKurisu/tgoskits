@@ -1,18 +1,19 @@
-use alloc::{boxed::Box, string::ToString};
+use alloc::{boxed::Box, string::ToString, vec};
 
 use arm_pl011_rs::Pl011;
 use driver_interface::*;
 use embedded_io::*;
-use future::LocalBoxFuture;
+use future::{FutureExt, LocalBoxFuture};
 use futures::prelude::*;
 use log::debug;
 
 pub fn register() -> Register {
-    Register {
-        name: "PL011".to_string(),
-        compatible: ["arm,pl011"].to_vec(),
-        kind: RegisterKind::Uart(Box::new(RegisterPl011 {})),
-    }
+    Register::new(
+        "PL011",
+        vec!["arm,pl011"],
+        RegisterKind::Uart,
+        RegisterPl011 {},
+    )
 }
 
 struct RegisterPl011 {}
@@ -73,11 +74,15 @@ impl RegisterPl011 {
     }
 }
 
-impl uart::Register for RegisterPl011 {
-    fn probe<'a>(
-        &self,
-        config: uart::Config,
-    ) -> LocalBoxFuture<'a, DriverResult<Box<dyn uart::Driver>>> {
-        Self::new_pl011(config).boxed_local()
+impl Probe for RegisterPl011 {
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
+        async move {
+            let uart = Pl011::new(config.reg[0], None).await;
+
+            let d = DriverKind::Uart(Box::new(DriverPl011(uart)));
+
+            Ok(d)
+        }
+        .boxed_local()
     }
 }

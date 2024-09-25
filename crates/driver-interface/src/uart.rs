@@ -1,18 +1,12 @@
 use core::ptr::NonNull;
 
 use alloc::boxed::Box;
-use futures::future::LocalBoxFuture;
 
 use crate::{io, irq::IrqConfig, DriverResult};
 
 pub trait Driver: super::DriverGeneric + io::Write {}
 
 pub type BoxDriver = Box<dyn Driver>;
-pub type BoxRegister = Box<dyn Register>;
-
-pub trait Register: Send + Sync + 'static {
-    fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<BoxDriver>>;
-}
 
 /// Word length.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -49,6 +43,3 @@ pub struct Config {
     pub parity: Parity,
     pub interrupt: IrqConfig,
 }
-
-unsafe impl Send for Config {}
-unsafe impl Sync for Config {}

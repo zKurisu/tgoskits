@@ -1,7 +1,10 @@
 use core::ptr::NonNull;
 
 use alloc::vec::Vec;
+use driver_interface::ProbeConfig;
 use flat_device_tree::{node::FdtNode, Fdt};
+
+use crate::mem::mmu::iomap;
 
 #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
@@ -19,6 +22,7 @@ pub fn get_device_tree() -> Option<Fdt<'static>> {
 
 pub trait FDTExtend {
     fn interrupt_list(&self) -> Vec<Vec<usize>>;
+    fn probe_config(&self) -> ProbeConfig;
 }
 
 impl FDTExtend for FdtNode<'_, '_> {
@@ -35,5 +39,20 @@ impl FDTExtend for FdtNode<'_, '_> {
             }
         }
         ret
+    }
+
+    fn probe_config(&self) -> ProbeConfig {
+        let mut config = ProbeConfig::default();
+
+        for reg in self.reg_fix() {
+            let reg_base = iomap(reg.starting_address.into(), reg.size.unwrap_or(0x1000));
+            config.reg.push(reg_base);
+        }
+
+        if let Some(itr_node) = self.interrupt_parent() {
+
+        }
+
+        config
     }
 }

@@ -1,9 +1,4 @@
-use core::ptr::NonNull;
-
 use alloc::{boxed::Box, vec::Vec};
-use futures::future::LocalBoxFuture;
-
-use crate::DriverResult;
 
 pub trait Driver: super::DriverGeneric {
     fn get_and_acknowledge_interrupt(&self) -> Option<usize>;
@@ -16,11 +11,6 @@ pub trait Driver: super::DriverGeneric {
 }
 
 pub type BoxDriver = Box<dyn Driver>;
-pub type BoxRegister = Box<dyn Register>;
-
-pub trait Register: Send + Sync + 'static {
-    fn probe<'a>(&self, config: Config) -> LocalBoxFuture<'a, DriverResult<BoxDriver>>;
-}
 
 #[derive(Debug, Clone)]
 pub struct IrqConfig {
@@ -29,14 +19,6 @@ pub struct IrqConfig {
     pub priority: usize,
     pub cpu_list: Vec<usize>,
 }
-
-pub struct Config {
-    pub reg1: NonNull<u8>,
-    pub reg2: NonNull<u8>,
-}
-
-unsafe impl Send for Config {}
-unsafe impl Sync for Config {}
 
 /// The trigger configuration for an interrupt.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

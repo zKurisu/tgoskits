@@ -12,6 +12,6 @@ pub use sparreal_kernel::*;
 
 unsafe fn boot(kconfig: kernel::KernelConfig) -> ! {
     kernel::init_log_and_memory(&kconfig);
-    kernel::driver_manager().register_all(drivers::registers());
+    kernel::driver_register_append(drivers::registers());
     kernel::run()
 }

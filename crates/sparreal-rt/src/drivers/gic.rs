@@ -1,50 +1,61 @@
-use alloc::{boxed::Box, format, string::ToString, vec::Vec};
+use alloc::vec;
+use alloc::{boxed::Box, format, vec::Vec};
 use arm_gic_driver::*;
-use driver_interface::{irq, DriverError, DriverGeneric, Register, RegisterKind};
+use driver_interface::{
+    irq, DriverError, DriverGeneric, DriverKind, DriverResult, Probe, ProbeConfig, Register,
+    RegisterKind,
+};
 use futures::{future::LocalBoxFuture, FutureExt};
 pub fn register_v2() -> Register {
-    Register {
-        name: "GICv2".to_string(),
-        compatible: ["arm,cortex-a15-gic"].to_vec(),
-        kind: RegisterKind::Interupt(Box::new(RegisterGicV2 {})),
-    }
+    Register::new(
+        "GICv2",
+        vec!["arm,cortex-a15-gic"],
+        RegisterKind::InteruptChip,
+        RegisterGicV2 {},
+    )
 }
 pub fn register_v3() -> Register {
-    Register {
-        name: "GICv3".to_string(),
-        compatible: ["arm,gic-v3"].to_vec(),
-        kind: RegisterKind::Interupt(Box::new(RegisterGicV3 {})),
-    }
+    Register::new(
+        "GICv3",
+        vec!["arm,gic-v3"],
+        RegisterKind::InteruptChip,
+        RegisterGicV3 {},
+    )
 }
 struct RegisterGicV2 {}
 
-impl irq::Register for RegisterGicV2 {
-    fn probe<'a>(
-        &self,
-        config: irq::Config,
-    ) -> LocalBoxFuture<'a, driver_interface::DriverResult<irq::BoxDriver>> {
+impl Probe for RegisterGicV2 {
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
         async move {
-            let gic = Gic::new(config.reg1, Config::V2 { gicc: config.reg2 })
-                .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
+            let gic = Gic::new(
+                config.reg[0],
+                Config::V2 {
+                    gicc: config.reg[1],
+                },
+            )
+            .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
             let b: irq::BoxDriver = Box::new(DriverGic(gic));
-            Ok(b)
+
+            Ok(DriverKind::InteruptChip(b))
         }
         .boxed_local()
     }
 }
 struct RegisterGicV3 {}
 
-impl irq::Register for RegisterGicV3 {
-    fn probe<'a>(
-        &self,
-        config: irq::Config,
-    ) -> LocalBoxFuture<'a, driver_interface::DriverResult<irq::BoxDriver>> {
+impl Probe for RegisterGicV3 {
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
         async move {
-            let gic = Gic::new(config.reg1, Config::V3 { gicr: config.reg2 })
-                .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
+            let gic = Gic::new(
+                config.reg[0],
+                Config::V3 {
+                    gicr: config.reg[1],
+                },
+            )
+            .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
 
             let b: irq::BoxDriver = Box::new(DriverGic(gic));
-            Ok(b)
+            Ok(DriverKind::InteruptChip(b))
         }
         .boxed_local()
     }
