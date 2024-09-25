@@ -9,6 +9,7 @@ pub use futures::future::BoxFuture;
 pub mod io;
 pub mod irq;
 pub mod uart;
+pub mod timer;
 
 pub type DriverResult<T = ()> = Result<T, DriverError>;
 
