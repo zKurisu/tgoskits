@@ -1,4 +1,3 @@
-
 use alloc::{
     collections::btree_map::BTreeMap,
     string::{String, ToString},
@@ -47,12 +46,12 @@ impl DriverManager {
         }
     }
 
-    pub async fn init(&self) {
-        {
-            let mut g = self.inner.write();
-            g.init_irq().await;
-        }
+    pub async fn init_irq(&self) {
+        let mut g = self.inner.write();
+        g.init_irq().await;
+    }
 
+    pub async fn init(&self) {
         self.init_stdout().await;
         {
             let mut g = self.inner.write();

@@ -4,10 +4,11 @@ use log::*;
 
 use crate::{
     driver::device_tree::set_dtb_addr,
-    executor,
+    executor, irq,
     logger::KLogger,
     mem::{self, *},
     platform::{self, app_main},
+    println,
     stdout::{self, EarlyDebugWrite},
 };
 
@@ -37,10 +38,13 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
 /// 3. alloc can be used after this function.
 pub unsafe fn run() -> ! {
     executor::block_on(async {
+        driver_manager().init_irq().await;
+        irq::current_cpu_setup();
         driver_manager().init().await;
     });
 
     app_main();
+    println!("Waiting for interrupt...");
     loop {
         platform::wait_for_interrupt();
     }

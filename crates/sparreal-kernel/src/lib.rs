@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(trait_upcasting)]
+#![feature(format_args_nl)]
 
 extern crate alloc;
 
@@ -21,3 +22,22 @@ pub mod util;
 pub use kernel::{KernelConfig, MemoryRange};
 pub use platform::Platform;
 pub use sparreal_macros::entry;
+
+
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {{
+        $crate::stdout::print(format_args!($($arg)*));
+    }};
+}
+
+#[macro_export]
+macro_rules! println {
+    () => {
+        $crate::print!("\n")
+    };
+    ($($arg:tt)*) => {{
+        $crate::stdout::print(format_args_nl!($($arg)*));
+    }};
+}
