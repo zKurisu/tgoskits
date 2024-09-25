@@ -1,7 +1,7 @@
 pub use driver_interface::uart::*;
 use driver_interface::RegisterKind;
 use flat_device_tree::node::{CellSize, FdtNode};
-use log::info;
+use log::{debug, info};
 
 use crate::{driver::device_tree::FDTExtend as _, irq::fdt_get_config, mem::mmu::iomap};
 
@@ -30,6 +30,8 @@ impl Manager {
                         };
 
                         let itrs = node.interrupt_list();
+
+                        debug!("Irq: {:?}", itrs);
 
                         let irq_config = fdt_get_config(&itrs[0]).unwrap();
 

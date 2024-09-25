@@ -325,7 +325,7 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
 
     /// Searches for the `interrupts` property.
     pub fn interrupts(self) -> (usize, impl Iterator<Item = usize> + 'a) {
-        let sizes = self.parent_interrupt_cells();
+        let sizes = self.find_interrupt_cells();
 
         let mut interrupt =
             self.properties().find(|p| p.name.eq("interrupts")).map(|p| FdtData::new(p.value));
@@ -366,6 +366,23 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
         }
 
         cell_sizes
+    }
+    pub(crate) fn find_interrupt_cells(self) -> Option<usize> {
+        if let Some(cell) = self.parent_interrupt_cells() {
+            return Some(cell);
+        }
+        if let Some(parent) = self.parent_props {
+            let parent =
+                FdtNode { name: "", props: parent, header: self.header, parent_props: None };
+            if let Some(cell) = parent.interrupt_cells() {
+                return Some(cell);
+            }
+
+            if let Some(cell) = self.header.all_nodes().next()?.interrupt_parent()?.interrupt_cells() {
+                return Some(cell);
+            }
+        }
+        None
     }
 
     pub(crate) fn parent_interrupt_cells(self) -> Option<usize> {

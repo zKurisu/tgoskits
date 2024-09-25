@@ -5,7 +5,6 @@ static MY_FDT: &[u8] = include_bytes!("../dtb/phytium.dtb");
 fn main() {
     let fdt = fdt::Fdt::new(MY_FDT).unwrap();
 
-
     fdt.memory_reservations().for_each(|r| {
         println!("Reservation @{:p} size {:#x}", r.address(), r.size());
     });
@@ -23,6 +22,11 @@ fn main() {
         stdout.node().reg_fix().for_each(|r| {
             println!("{:?}", r);
         });
+        
+
+        let (size, itr) = stdout.node().interrupts();
+
+        println!("{}, {:?}", size, itr.collect::<Vec<_>>());
 
         println!(
             "It would write stdout to: {} with params: {:?}",
