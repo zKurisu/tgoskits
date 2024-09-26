@@ -1,5 +1,5 @@
 use alloc::vec;
-use alloc::{boxed::Box, format, vec::Vec};
+use alloc::{boxed::Box, format};
 use arm_gic_driver::*;
 use driver_interface::{
     irq, DriverError, DriverGeneric, DriverKind, DriverResult, DriverSpecific, IrqProbeConfig,
@@ -106,13 +106,6 @@ impl irq::Driver for DriverGic {
         const SPI: usize = 0;
         const PPI: usize = 1;
 
-        const TYPE_NONE: usize = 0;
-        const TYPE_EDGE_RISING: usize = 1;
-        const TYPE_EDGE_FALLING: usize = 2;
-        const TYPE_EDGE_BOTH: usize = TYPE_EDGE_FALLING | TYPE_EDGE_RISING;
-        const TYPE_LEVEL_HIGH: usize = 4;
-        const TYPE_LEVEL_LOW: usize = 8;
-
         let num = itr[1] as u32;
 
         let irq_id: u32 = match itr[0] {
@@ -122,18 +115,41 @@ impl irq::Driver for DriverGic {
         }
         .into();
 
-        let trigger = match itr[2] {
-            TYPE_EDGE_RISING => irq::Trigger::EdgeRising,
-            TYPE_EDGE_FALLING => irq::Trigger::EdgeFailling,
-            TYPE_EDGE_BOTH => irq::Trigger::EdgeBoth,
-            TYPE_LEVEL_HIGH => irq::Trigger::LevelHigh,
-            TYPE_LEVEL_LOW => irq::Trigger::LevelLow,
-            _ => panic!("Invalid irq type {}", itr[2]),
+        let flag = TriggerFlag::from_bits_truncate(itr[2]);
+
+        let trigger = if flag.contains(TriggerFlag::EDGE_BOTH) {
+            irq::Trigger::EdgeBoth
+        } else if flag.contains(TriggerFlag::EDGE_RISING) {
+            irq::Trigger::EdgeRising
+        } else if flag.contains(TriggerFlag::EDGE_FALLING) {
+            irq::Trigger::EdgeFailling
+        } else if flag.contains(TriggerFlag::LEVEL_HIGH) {
+            irq::Trigger::LevelHigh
+        } else if flag.contains(TriggerFlag::LEVEL_LOW) {
+            irq::Trigger::LevelLow
+        } else {
+            panic!("Invalid irq type {}", itr[2])
         };
 
         IrqProbeConfig {
             irq_id: irq_id as _,
             trigger,
         }
+    }
+}
+
+use bitflags::bitflags;
+
+// The `bitflags!` macro generates `struct`s that manage a set of flags.
+bitflags! {
+    /// Represents a set of flags.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    struct TriggerFlag: usize {
+        const NONE = 0;
+        const EDGE_RISING = 1;
+        const EDGE_FALLING = 2;
+        const EDGE_BOTH = Self::EDGE_RISING.bits()| Self::EDGE_FALLING.bits();
+        const LEVEL_HIGH = 4;
+        const LEVEL_LOW = 8;
     }
 }

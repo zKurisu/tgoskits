@@ -70,11 +70,13 @@ pub trait Probe: Send + Sync + 'static {
 pub enum DriverKind {
     InteruptChip,
     Uart,
+    Timer,
 }
 
 pub enum DriverSpecific {
     Uart(uart::BoxDriver),
     InteruptChip(irq::BoxDriver),
+    Timer(timer::BoxDriver),
 }
 
 #[derive(Debug)]

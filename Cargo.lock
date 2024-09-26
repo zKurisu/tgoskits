@@ -1112,6 +1112,7 @@ dependencies = [
  "arm-gic-driver",
  "arm-pl011-rs",
  "arm_pl031",
+ "bitflags 2.6.0",
  "driver-interface",
  "embedded-io",
  "flat_device_tree",

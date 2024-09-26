@@ -1,6 +1,6 @@
 use super::{
     device_tree::get_device_tree, DriverArc, DriverCommon, DriverDescriptor, DriverId,
-    DriverIrqChip, DriverUart,
+    DriverIrqChip, DriverTimer, DriverUart,
 };
 
 use crate::{driver::device_tree::FDTExtend as _, sync::RwLock};
@@ -27,6 +27,7 @@ pub(super) struct Container {
     probed: RwLock<BTreeSet<DriverId>>,
     pub(super) uart: ContainerKind<DriverUart>,
     pub(super) irq_chip: ContainerKind<DriverIrqChip>,
+    pub(super) timer: ContainerKind<DriverTimer>,
 }
 
 impl Container {
@@ -36,6 +37,7 @@ impl Container {
             probed: RwLock::new(BTreeSet::new()),
             uart: new_kind(),
             irq_chip: new_kind(),
+            timer: new_kind(),
         }
     }
 }
@@ -53,6 +55,9 @@ pub fn add_driver<N: ToString>(id: DriverId, name: N, spec: DriverSpecific) {
         }
         DriverSpecific::InteruptChip(driver) => {
             add_to!(driver, CONTAINER.irq_chip);
+        }
+        DriverSpecific::Timer(driver) => {
+            add_to!(driver, CONTAINER.timer);
         }
     }
 }
