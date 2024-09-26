@@ -77,7 +77,7 @@ pub async fn probe_by_register(register: Register) -> Option<()> {
 pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
     let id: DriverId = node.name.into();
 
-    if CONTAINER.probed.read().contains(&id) {
+    if is_probed(&id) {
         return Some(());
     }
 
@@ -89,8 +89,12 @@ pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
     Some(())
 }
 
+pub(crate) fn is_probed(id: &DriverId) -> bool {
+    CONTAINER.probed.read().contains(id)
+}
+
 pub async fn probe(id: DriverId, config: ProbeConfig, register: Register) -> Option<()> {
-    if CONTAINER.probed.read().contains(&id) {
+    if is_probed(&id) {
         return None;
     }
     info!("Probe [{}], driver [{}]", id, register.name);

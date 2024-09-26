@@ -12,7 +12,7 @@ use crate::mem::mmu::iomap;
 
 use super::{irq_by_id, DriverId};
 
-#[link_section = ".data.boot"]
+// #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
 
 pub(crate) unsafe fn set_dtb_addr(addr: Option<NonNull<u8>>) {

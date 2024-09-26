@@ -50,13 +50,14 @@ impl Register {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ProbeConfig {
     pub reg: Vec<NonNull<u8>>,
     pub irq: Vec<IrqProbeConfig>,
     pub clock_freq: Vec<u64>,
 }
 
+#[derive(Clone)]
 pub struct IrqProbeConfig {
     pub irq_id: usize,
     pub trigger: Trigger,

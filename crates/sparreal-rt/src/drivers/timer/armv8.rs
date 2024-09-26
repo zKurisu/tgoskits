@@ -15,7 +15,12 @@ struct ProbeTimerArmv8 {}
 
 impl Probe for ProbeTimerArmv8 {
     fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
-        async move { Ok(DriverSpecific::Timer(Box::new(DriverTimerArmv8))) }.boxed_local()
+        async move {
+            let irq_ns = &config.irq[1];
+
+            Ok(DriverSpecific::Timer(Box::new(DriverTimerArmv8)))
+        }
+        .boxed_local()
     }
 }
 
