@@ -20,12 +20,13 @@ use crate::{
 
 mod container;
 pub mod device_tree;
+mod id;
 mod irq;
 mod timer;
 
 pub use container::*;
-
 pub use driver_interface::uart;
+pub use id::*;
 pub use irq::DriverIrqChip;
 pub use timer::DriverTimer;
 
@@ -39,22 +40,6 @@ pub async fn init() {
 
 pub type DriverArc<T> = Arc<RwLock<T>>;
 pub type DriverWeak<T> = Weak<RwLock<T>>;
-
-#[repr(transparent)]
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DriverId(String);
-
-impl From<&str> for DriverId {
-    fn from(value: &str) -> Self {
-        Self(value.to_string())
-    }
-}
-
-impl Display for DriverId {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct DriverDescriptor {
@@ -81,7 +66,7 @@ impl<T> DriverCommon<T> {
 
 impl Display for DriverDescriptor {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Driver({}) {}", self.id.0, self.name)
+        write!(f, "Driver({}) {}", self.id, self.name)
     }
 }
 
@@ -121,10 +106,11 @@ async fn init_stdout() -> Option<()> {
     let caps = node.compatible()?.all().collect::<Vec<_>>();
 
     let register = register_by_compatible(&caps)?;
+    let config = node.probe_config();
+    let id = config.id;
+    probe(config, register).await?;
 
-    probe(node.name.into(), node.probe_config(), register).await?;
-
-    let driver = uart_by_id(node.name.into())?;
+    let driver = uart_by_id(id)?;
 
     let stdout = UartWrite::new(&driver.spec);
 

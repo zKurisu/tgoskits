@@ -1,6 +1,6 @@
 use super::{
-    device_tree::get_device_tree, DriverArc, DriverCommon, DriverDescriptor, DriverId,
-    DriverIrqChip, DriverTimer, DriverUart,
+    device_tree::get_device_tree, driver_id_by_node_name, DriverArc, DriverCommon,
+    DriverDescriptor, DriverId, DriverIrqChip, DriverTimer, DriverUart,
 };
 
 use crate::{driver::device_tree::FDTExtend as _, sync::RwLock};
@@ -66,16 +66,14 @@ pub async fn probe_by_register(register: Register) -> Option<()> {
     let fdt = get_device_tree()?;
     let node = fdt.find_compatible(&register.compatible)?;
 
-    let id: DriverId = node.name.into();
-
     let config = node.probe_config();
 
-    probe(id, config, register).await;
+    probe(config, register).await;
     Some(())
 }
 
 pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
-    let id: DriverId = node.name.into();
+    let id = driver_id_by_node_name(node.name);
 
     if is_probed(&id) {
         return Some(());
@@ -85,7 +83,7 @@ pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
     let register = register_by_compatible(&caps)?;
     let config = node.probe_config();
 
-    probe(id, config, register).await;
+    probe(config, register).await;
     Some(())
 }
 
@@ -93,13 +91,17 @@ pub(crate) fn is_probed(id: &DriverId) -> bool {
     CONTAINER.probed.read().contains(id)
 }
 
-pub async fn probe(id: DriverId, config: ProbeConfig, register: Register) -> Option<()> {
+pub async fn probe(config: ProbeConfig, register: Register) -> Option<()> {
+    let id = config.id;
     if is_probed(&id) {
         return None;
     }
-    info!("Probe [{}], driver [{}]", id, register.name);
+    info!("[{}]Probe driver [{}]", id, register.name);
     for irq in &config.irq {
-        info!("    Irq: {}, triger {:?}", irq.irq_id, irq.trigger);
+        info!(
+            "[{}]    Irq: {}, triger {:?}",
+            id, irq.irq_id, irq.trigger
+        );
     }
 
     let kind = register
@@ -108,9 +110,9 @@ pub async fn probe(id: DriverId, config: ProbeConfig, register: Register) -> Opt
         .await
         .inspect_err(|e| error!("{:?}", e))
         .ok()?;
-    info!("Probe success!");
+    info!("[{}]Probe success!", id);
 
-    CONTAINER.probed.write().insert(id.clone());
+    CONTAINER.probed.write().insert(id);
 
     add_driver(id, register.name, kind);
     Some(())
