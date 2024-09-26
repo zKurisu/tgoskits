@@ -1,15 +1,15 @@
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
-use driver_interface::{irq::IrqConfig, IrqProbeConfig};
+use driver_interface::{irq::IrqConfig, DriverId, IrqProbeConfig};
 use log::debug;
 
 use crate::{
-    driver::{irq_chip_list, DriverIrqChip},
+    driver::{irq_chip_by_id_or_first, irq_chip_list, DriverIrqChip},
     sync::RwLock,
 };
 
 type Handler = Box<dyn Fn(usize) -> IrqHandle + Send + Sync>;
 
-static IRQ_VECTOR: RwLock<BTreeMap<usize, BTreeMap<String, Handler>>> =
+static IRQ_VECTOR: RwLock<BTreeMap<usize, BTreeMap<DriverId, Handler>>> =
     RwLock::new(BTreeMap::new());
 
 pub enum IrqHandle {
@@ -17,14 +17,21 @@ pub enum IrqHandle {
     None,
 }
 
-pub fn register_irq<N, F>(irq_id: usize, dev_name: N, handler: F)
+pub fn register_irq<F>(irq: IrqConfig, dev_id: DriverId, handler: F)
 where
-    N: ToString,
     F: Fn(usize) -> IrqHandle + Send + Sync + 'static,
 {
     let mut vector = IRQ_VECTOR.write();
-    let entry = vector.entry(irq_id).or_default();
-    entry.insert(dev_name.to_string(), Box::new(handler));
+    let entry = vector.entry(irq.irq_id).or_default();
+    entry.insert(dev_id, Box::new(handler));
+
+    //TODO
+    let controller_id = DriverId::default();
+
+    if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
+        debug!("irq chip: {}", chip.desc.name);
+        chip.spec.write().enable_irq(irq);
+    }
 }
 
 fn get_chip() -> Option<DriverIrqChip> {

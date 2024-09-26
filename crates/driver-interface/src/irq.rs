@@ -1,5 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
+use crate::DriverId;
 pub use crate::IrqProbeConfig;
 
 pub trait Driver: super::DriverGeneric {

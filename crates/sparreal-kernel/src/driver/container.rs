@@ -98,10 +98,7 @@ pub async fn probe(config: ProbeConfig, register: Register) -> Option<()> {
     }
     info!("[{}]Probe driver [{}]", id, register.name);
     for irq in &config.irq {
-        info!(
-            "[{}]    Irq: {}, triger {:?}",
-            id, irq.irq_id, irq.trigger
-        );
+        info!("[{}]    Irq: {}, triger {:?}", id, irq.irq_id, irq.trigger);
     }
 
     let kind = register
@@ -130,6 +127,10 @@ pub fn uart_by_id(id: DriverId) -> Option<DriverUart> {
 pub fn irq_chip_list() -> Vec<DriverIrqChip> {
     let g = CONTAINER.irq_chip.read();
     g.values().cloned().collect()
+}
+pub fn irq_chip_by_id_or_first(id: DriverId) -> Option<DriverIrqChip> {
+    let g = CONTAINER.irq_chip.read();
+    g.get(&id).or_else(|| g.values().next()).cloned()
 }
 
 pub fn irq_by_id(id: DriverId) -> Option<DriverIrqChip> {
