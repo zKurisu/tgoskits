@@ -9,7 +9,6 @@ use alloc::{
     vec::Vec,
 };
 use device_tree::{get_device_tree, FDTExtend};
-use driver_interface::timer;
 use flat_device_tree::{node::FdtNode, Fdt};
 use irq::init_irq;
 use log::{debug, error, info};
@@ -22,11 +21,13 @@ use crate::{
 mod container;
 pub mod device_tree;
 mod irq;
+mod timer;
 
 pub use container::*;
 
 pub use driver_interface::uart;
 pub use irq::DriverIrqChip;
+pub use timer::DriverTimer;
 
 pub async fn init() {
     init_irq().await;
@@ -144,4 +145,3 @@ async fn init_all() {
 }
 
 struct_driver!(DriverUart, uart::BoxDriver);
-struct_driver!(DriverTimer, timer::BoxDriver);
