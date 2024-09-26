@@ -52,12 +52,14 @@ impl FDTExtend for FdtNode<'_, '_> {
             config.reg.push(reg_base);
         }
 
+        let irq_origin = self.interrupt_list();
+
         if let Some(itr_node) = self.interrupt_parent() {
             let id: DriverId = itr_node.name.into();
             if let Some(irq) = irq_by_id(id) {
                 let g = irq.read();
 
-                for elem in itr_node.interrupt_list() {
+                for elem in irq_origin {
                     config.irq.push(g.fdt_itr_to_config(&elem));
                 }
             }

@@ -19,13 +19,12 @@ pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     log::set_max_level(LevelFilter::Trace);
     stdout::set_stdout(EarlyDebugWrite {});
     info!("Logger initialized.");
-    platform::print_system_info();
 
     mem::init(kconfig);
 
     let version = env!("CARGO_PKG_VERSION");
-
-    let _ = stdout::print(format_args!("Welcome to sparreal\nVersion: {version}\n",));
+    println!("Welcome to sparreal\nVersion: {version}");
+    platform::print_system_info();
 }
 
 /// 注册驱动

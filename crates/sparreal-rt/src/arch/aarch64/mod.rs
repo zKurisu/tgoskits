@@ -9,7 +9,9 @@ use aarch64_cpu::registers::*;
 use log::info;
 use mmu::PageTable;
 use page_table_interface::{MapConfig, PageTableFn, PagingResult};
-use sparreal_kernel::{mem::*, platform::Platform};
+use sparreal_kernel::{
+    driver::device_tree::get_device_tree, mem::*, platform::Platform, print, println,
+};
 use sparreal_macros::api_impl;
 
 static mut VA_OFFSET: usize = 0;
@@ -90,12 +92,26 @@ impl Platform for PlatformImpl {
     }
 
     fn print_system_info() {
-        info!(
+        println!(
             "CPU: {}.{}.{}.{}",
             MPIDR_EL1.read(MPIDR_EL1::Aff0),
             MPIDR_EL1.read(MPIDR_EL1::Aff1),
             MPIDR_EL1.read(MPIDR_EL1::Aff2),
             MPIDR_EL1.read(MPIDR_EL1::Aff3)
         );
+        let _ = print_board_info();
     }
+}
+
+fn print_board_info() -> Option<()> {
+    let fdt = get_device_tree()?;
+    let root = fdt.root().ok()?;
+    let caps = root.compatible().all();
+
+    print!("Board:");
+    for cap in caps {
+        print!(" {}", cap);
+    }
+    println!();
+    Some(())
 }
