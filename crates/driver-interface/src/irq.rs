@@ -25,8 +25,9 @@ pub struct IrqConfig {
 /// The trigger configuration for an interrupt.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Trigger {
-    /// The interrupt is edge triggered.
-    Edge,
-    /// The interrupt is level triggered.
-    Level,
+    EdgeBoth,
+    EdgeRising,
+    EdgeFailling,
+    LevelHigh,
+    LevelLow,
 }

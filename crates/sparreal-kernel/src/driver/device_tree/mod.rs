@@ -1,8 +1,11 @@
 use core::ptr::NonNull;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use driver_interface::ProbeConfig;
-use flat_device_tree::{node::FdtNode, Fdt};
+use flat_device_tree::{
+    node::{CellSize, FdtNode},
+    Fdt,
+};
 use log::debug;
 
 use crate::mem::mmu::iomap;
@@ -26,6 +29,7 @@ pub fn get_device_tree() -> Option<Fdt<'static>> {
 pub trait FDTExtend {
     fn interrupt_list(&self) -> Vec<Vec<usize>>;
     fn probe_config(&self) -> ProbeConfig;
+    fn find_clock(&self) -> Vec<u64>;
 }
 
 impl FDTExtend for FdtNode<'_, '_> {
@@ -57,7 +61,7 @@ impl FDTExtend for FdtNode<'_, '_> {
         if let Some(itr_node) = self.interrupt_parent() {
             let id: DriverId = itr_node.name.into();
             if let Some(irq) = irq_by_id(id) {
-                let g = irq.read();
+                let g = irq.spec.read();
 
                 for elem in irq_origin {
                     config.irq.push(g.fdt_itr_to_config(&elem));
@@ -65,6 +69,16 @@ impl FDTExtend for FdtNode<'_, '_> {
             }
         }
 
+        config.clock_freq = self.find_clock();
+
         config
+    }
+
+    fn find_clock(&self) -> Vec<u64> {
+        if let Some(clk) = self.clock_frequency() {
+            vec![clk]
+        } else {
+            self.clocks().filter_map(|c| c.clock_frequency()).collect()
+        }
     }
 }

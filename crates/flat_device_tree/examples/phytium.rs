@@ -22,7 +22,6 @@ fn main() {
         stdout.node().reg_fix().for_each(|r| {
             println!("{:?}", r);
         });
-        
 
         let (size, itr) = stdout.node().interrupts();
 
@@ -33,5 +32,9 @@ fn main() {
             stdout.node().name,
             stdout.params()
         );
+
+        for clk in stdout.node().clocks() {
+            println!("clock: {},  {:?}", clk.name, clk.clock_frequency());
+        }
     }
 }

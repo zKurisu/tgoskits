@@ -27,14 +27,14 @@ pub trait DriverGeneric: Send + Sync + 'static {}
 pub struct Register {
     pub name: String,
     pub compatible: Vec<&'static str>,
-    pub kind: RegisterKind,
+    pub kind: DriverKind,
     pub probe: Arc<dyn Probe>,
 }
 impl Register {
     pub fn new(
         name: &str,
         compatible: Vec<&'static str>,
-        kind: RegisterKind,
+        kind: DriverKind,
         probe: impl Probe,
     ) -> Self {
         Register {
@@ -63,16 +63,16 @@ pub struct IrqProbeConfig {
 }
 
 pub trait Probe: Send + Sync + 'static {
-    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>>;
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>>;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RegisterKind {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DriverKind {
     InteruptChip,
     Uart,
 }
 
-pub enum DriverKind {
+pub enum DriverSpecific {
     Uart(uart::BoxDriver),
     InteruptChip(irq::BoxDriver),
 }

@@ -11,7 +11,7 @@ pub fn register() -> Register {
     Register::new(
         "PL011",
         vec!["arm,pl011"],
-        RegisterKind::Uart,
+        DriverKind::Uart,
         RegisterPl011 {},
     )
 }
@@ -40,17 +40,6 @@ impl io::Write for DriverPl011 {
 impl DriverGeneric for DriverPl011 {}
 
 impl RegisterPl011 {
-    async fn new_pl011(config: uart::Config) -> DriverResult<Box<dyn uart::Driver>> {
-        debug!(
-            "Interupt: {}, {:?}",
-            config.interrupt.irq_id, config.interrupt.trigger
-        );
-
-        let uart = Pl011::new(config.reg, Some(Self::conv_config(config))).await;
-
-        Ok(Box::new(DriverPl011(uart)))
-    }
-
     fn conv_config(config: uart::Config) -> arm_pl011_rs::Config {
         arm_pl011_rs::Config {
             baud_rate: config.baud_rate,
@@ -75,11 +64,29 @@ impl RegisterPl011 {
 }
 
 impl Probe for RegisterPl011 {
-    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
-        async move {
-            let uart = Pl011::new(config.reg[0], None).await;
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
+        let clock_freq = config.clock_freq[0];
+        debug!(
+            "Interupt: {}, {:?}, clk: {}Mhz",
+            config.irq[0].irq_id,
+            config.irq[0].trigger,
+            clock_freq / 1_000_000,
+        );
 
-            let d = DriverKind::Uart(Box::new(DriverPl011(uart)));
+        async move {
+            let uart = Pl011::new(
+                config.reg[0],
+                Some(arm_pl011_rs::Config {
+                    baud_rate: 115200,
+                    clock_freq,
+                    data_bits: arm_pl011_rs::DataBits::Bits8,
+                    stop_bits: arm_pl011_rs::StopBits::STOP1,
+                    parity: arm_pl011_rs::Parity::None,
+                }),
+            )
+            .await;
+
+            let d = DriverSpecific::Uart(Box::new(DriverPl011(uart)));
 
             Ok(d)
         }

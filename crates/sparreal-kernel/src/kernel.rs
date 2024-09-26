@@ -13,6 +13,12 @@ use crate::{
     stdout::{self, EarlyDebugWrite},
 };
 
+/// 初始化日志和内存
+///
+/// # Safety
+///
+/// 1. BSS 应当清零。
+/// 2. 若有MMU，应当已开启，且虚拟地址与代码段映射一致。
 pub unsafe fn init_log_and_memory(kconfig: &KernelConfig) {
     set_dtb_addr(kconfig.dtb_addr);
     let _ = log::set_logger(&KLogger);
@@ -32,13 +38,11 @@ pub fn driver_register_append(registers: impl IntoIterator<Item = Register>) {
     driver::register_append(registers);
 }
 
-/// New kernel and initialize memory.
+/// 运行内核主逻辑
 ///
 /// # Safety
 ///
-/// 1. BSS section should be zeroed.
-/// 2. If has MMU, it should be enabled.
-/// 3. alloc can be used after this function.
+/// 需在 [init_log_and_memory] 之后执行，[run] 之前可用 [driver_register_append] 注册驱动。
 pub unsafe fn run() -> ! {
     executor::block_on(async {
         driver::init().await;
@@ -66,16 +70,26 @@ impl MemoryRange {
     }
 }
 
+/// 内核配置
 #[derive(Clone)]
 pub struct KernelConfig {
+    /// 虚拟地址物理地址偏移
     pub va_offset: usize,
+    /// 内核代码段内存区域
     pub reserved_memory: Option<MemoryRange>,
+    /// 主内存
     pub main_memory: MemoryRange,
+    /// 主内存已使用部分的偏移
     pub main_memory_heap_offset: usize,
+    /// 每个CPU栈大小
     pub hart_stack_size: usize,
+    /// 调试日志寄存器地址
     pub early_debug_reg: Option<MemoryRange>,
+    /// 栈顶
     pub stack_top: Phys<u8>,
+    /// cpu数量
     pub cpu_count: usize,
+    /// 设备树地址
     pub dtb_addr: Option<NonNull<u8>>,
 }
 

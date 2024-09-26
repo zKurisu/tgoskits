@@ -17,8 +17,6 @@ pub enum IrqHandle {
     None,
 }
 
-
-
 pub fn register_irq<N, F>(irq_id: usize, dev_name: N, handler: F)
 where
     N: ToString,
@@ -35,7 +33,7 @@ fn get_chip() -> Option<DriverIrqChip> {
 
 pub fn handle_irq() {
     if let Some(chip) = get_chip() {
-        let c = chip.driver.read();
+        let c = chip.spec.read();
 
         let irq_id = c.get_and_acknowledge_interrupt();
         if let Some(irq_id) = irq_id {

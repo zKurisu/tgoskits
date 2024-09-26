@@ -298,6 +298,14 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
                     cell_sizes.size_cells =
                         BigEndianU32::from_bytes(property.value).unwrap_or_default().get().into();
                 }
+                "#clock-cells" => {
+                    cell_sizes.clock_cells =
+                        BigEndianU32::from_bytes(property.value).unwrap_or_default().get().into();
+                }
+                "#interrupt-cells" => {
+                    cell_sizes.interrupt_cells =
+                        BigEndianU32::from_bytes(property.value).unwrap_or_default().get().into();
+                }
                 _ => {}
             }
         }
@@ -343,6 +351,25 @@ impl<'b, 'a: 'b> FdtNode<'b, 'a> {
                 None => None,
             }),
         )
+    }
+
+    pub fn clocks(self) -> impl Iterator<Item = FdtNode<'b, 'a>> {
+        let mut clocks = self.property("clocks").map(|prop| prop.iter_cell_size(CellSize::One));
+
+        core::iter::from_fn(move || match clocks.as_mut() {
+            Some(stream) => self.header.find_phandle(stream.next()? as u32),
+            None => None,
+        })
+    }
+
+    pub fn clock_frequency(self) -> Option<u64> {
+        let size = self.cell_sizes();
+        let prop = self.property("clock-frequency")?;
+
+        match size.clock_cells {
+            CellSize::None => prop.iter_cell_size(CellSize::One).next(),
+            _ => prop.iter_cell_size(size.clock_cells).next(),
+        }
     }
 
     pub fn parent_ranges(self) -> impl Iterator<Item = MemoryRange> + 'b {
@@ -420,12 +447,21 @@ pub struct CellSizes {
     pub address_cells: CellSize,
     /// Size of values representing a size
     pub size_cells: CellSize,
+
+    pub clock_cells: CellSize,
+
+    pub interrupt_cells: CellSize,
 }
 
 impl CellSizes {
     /// Creates a new [CellSizes].
     pub const fn new() -> Self {
-        Self { address_cells: CellSize::Two, size_cells: CellSize::One }
+        Self {
+            address_cells: CellSize::Two,
+            size_cells: CellSize::One,
+            clock_cells: CellSize::None,
+            interrupt_cells: CellSize::Three,
+        }
     }
 }
 

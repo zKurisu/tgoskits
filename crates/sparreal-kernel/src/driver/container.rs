@@ -1,15 +1,17 @@
 use super::{
-    device_tree::get_device_tree, DriverArc, DriverId, DriverInfo, DriverIrqChip, DriverUart,
+    device_tree::get_device_tree, DriverArc, DriverCommon, DriverDescriptor, DriverId,
+    DriverIrqChip, DriverUart,
 };
 
 use crate::{driver::device_tree::FDTExtend as _, sync::RwLock};
 use alloc::{
-    collections::btree_map::BTreeMap,
+    collections::{btree_map::BTreeMap, btree_set::BTreeSet},
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
-use driver_interface::{irq, uart, DriverKind, Register, RegisterKind};
+use driver_interface::{irq, uart, DriverKind, DriverSpecific, ProbeConfig, Register};
+use flat_device_tree::node::FdtNode;
 use log::{error, info};
 
 pub(super) static CONTAINER: Container = Container::new();
@@ -20,68 +22,78 @@ const fn new_kind<T>() -> ContainerKind<T> {
     return RwLock::new(BTreeMap::new());
 }
 
-fn new_driver_locked<N: ToString, T>(id: DriverId, name: N, kind: T) -> (DriverInfo, DriverArc<T>) {
-    (
-        DriverInfo {
-            id,
-            name: name.to_string(),
-        },
-        Arc::new(RwLock::new(kind)),
-    )
-}
-
 pub(super) struct Container {
     pub(super) registers: RwLock<BTreeMap<String, Register>>,
-    pub(super) info: ContainerKind<DriverInfo>,
-    pub(super) uart: ContainerKind<DriverArc<uart::BoxDriver>>,
-    pub(super) irq_chip: ContainerKind<DriverArc<irq::BoxDriver>>,
+    probed: RwLock<BTreeSet<DriverId>>,
+    pub(super) uart: ContainerKind<DriverUart>,
+    pub(super) irq_chip: ContainerKind<DriverIrqChip>,
 }
 
 impl Container {
     const fn new() -> Self {
         Self {
             registers: RwLock::new(BTreeMap::new()),
+            probed: RwLock::new(BTreeSet::new()),
             uart: new_kind(),
             irq_chip: new_kind(),
-            info: new_kind(),
         }
     }
 }
-pub fn add_driver<N: ToString>(id: DriverId, name: N, kind: DriverKind) {
+pub fn add_driver<N: ToString>(id: DriverId, name: N, spec: DriverSpecific) {
     macro_rules! add_to {
-        ($driver:expr, $field:expr) => {
-            let (info, driver) = new_driver_locked(id.clone(), name.to_string(), $driver);
-            CONTAINER.info.write().insert(id.clone(), info);
-            $field.write().insert(id, driver);
+        ($driver:expr,$field:expr) => {
+            let d = DriverCommon::new(id.clone(), name, $driver);
+            $field.write().insert(id, d.into());
         };
     }
 
-    match kind {
-        DriverKind::Uart(driver) => {
+    match spec {
+        DriverSpecific::Uart(driver) => {
             add_to!(driver, CONTAINER.uart);
         }
-        DriverKind::InteruptChip(driver) => {
+        DriverSpecific::InteruptChip(driver) => {
             add_to!(driver, CONTAINER.irq_chip);
         }
     }
 }
 
-pub async fn probe_by_register(reg: Register) -> Option<()> {
+pub async fn probe_by_register(register: Register) -> Option<()> {
     let fdt = get_device_tree()?;
-    let node = fdt.find_compatible(&reg.compatible)?;
+    let node = fdt.find_compatible(&register.compatible)?;
 
-    if CONTAINER.info.read().contains_key(&node.name.into()) {
-        return None;
-    }
+    let id: DriverId = node.name.into();
 
     let config = node.probe_config();
 
-    info!("Probe node [{}], driver [{}]", node.name, reg.name);
+    probe(id, config, register).await;
+    Some(())
+}
+
+pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
+    let id: DriverId = node.name.into();
+
+    if CONTAINER.probed.read().contains(&id) {
+        return Some(());
+    }
+
+    let caps = node.compatible()?.all().collect::<Vec<_>>();
+    let register = register_by_compatible(&caps)?;
+    let config = node.probe_config();
+
+    probe(id, config, register).await;
+    Some(())
+}
+
+pub async fn probe(id: DriverId, config: ProbeConfig, register: Register) -> Option<()> {
+    if CONTAINER.probed.read().contains(&id) {
+        return None;
+    }
+    info!("Probe [{}], driver [{}]", id, register.name);
     for irq in &config.irq {
         info!("    Irq: {}, triger {:?}", irq.irq_id, irq.trigger);
     }
 
-    let kind = reg
+    let kind = register
         .probe
         .probe(config)
         .await
@@ -89,46 +101,28 @@ pub async fn probe_by_register(reg: Register) -> Option<()> {
         .ok()?;
     info!("Probe success!");
 
-    add_driver(node.name.into(), reg.name, kind);
+    CONTAINER.probed.write().insert(id.clone());
+
+    add_driver(id, register.name, kind);
     Some(())
 }
 
 pub fn uart_list() -> Vec<DriverUart> {
     let g = CONTAINER.uart.read();
-    g.iter()
-        .map(|(k, v)| {
-            let info = get_info(k).unwrap();
-            DriverUart {
-                info,
-                driver: v.clone(),
-            }
-        })
-        .collect()
+    g.values().cloned().collect()
 }
 
-pub fn uart_by_id(id: DriverId) -> Option<DriverArc<uart::BoxDriver>> {
+pub fn uart_by_id(id: DriverId) -> Option<DriverUart> {
     CONTAINER.uart.read().get(&id).cloned()
 }
 
 pub fn irq_chip_list() -> Vec<DriverIrqChip> {
     let g = CONTAINER.irq_chip.read();
-    g.iter()
-        .map(|(k, v)| {
-            let info = get_info(k).unwrap();
-            DriverIrqChip {
-                info,
-                driver: v.clone(),
-            }
-        })
-        .collect()
+    g.values().cloned().collect()
 }
 
-pub fn irq_by_id(id: DriverId) -> Option<DriverArc<irq::BoxDriver>> {
+pub fn irq_by_id(id: DriverId) -> Option<DriverIrqChip> {
     CONTAINER.irq_chip.read().get(&id).cloned()
-}
-
-fn get_info(id: &DriverId) -> Option<DriverInfo> {
-    CONTAINER.info.read().get(id).cloned()
 }
 
 pub fn register_append(registers: impl IntoIterator<Item = Register>) {
@@ -150,7 +144,12 @@ pub fn register_by_compatible(compatible: &[&str]) -> Option<Register> {
     None
 }
 
-pub fn register_by_kind(kind: RegisterKind) -> Vec<Register> {
+pub fn register_by_kind(kind: DriverKind) -> Vec<Register> {
     let c = CONTAINER.registers.read();
     c.values().filter(|one| one.kind == kind).cloned().collect()
+}
+
+pub fn register_all() -> Vec<Register> {
+    let c = CONTAINER.registers.read();
+    c.values().cloned().collect()
 }

@@ -26,11 +26,11 @@ pub fn set_stdout(stdout: impl StdoutWrite) {
 }
 
 #[derive(Clone)]
-pub struct DriverWrite {
+pub struct UartWrite {
     pub driver: DriverWeak<uart::BoxDriver>,
 }
 
-impl DriverWrite {
+impl UartWrite {
     pub fn new(driver: &DriverArc<uart::BoxDriver>) -> Self {
         Self {
             driver: Arc::downgrade(driver),
@@ -38,7 +38,7 @@ impl DriverWrite {
     }
 }
 
-impl Write for DriverWrite {
+impl Write for UartWrite {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
         if let Some(arc) = self.driver.upgrade() {
             let mut g = arc.write();
@@ -47,7 +47,7 @@ impl Write for DriverWrite {
         Ok(())
     }
 }
-impl StdoutWrite for DriverWrite {}
+impl StdoutWrite for UartWrite {}
 
 #[derive(Clone, Copy)]
 pub struct EarlyDebugWrite;

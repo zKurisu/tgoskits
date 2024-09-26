@@ -2,15 +2,15 @@ use alloc::vec;
 use alloc::{boxed::Box, format, vec::Vec};
 use arm_gic_driver::*;
 use driver_interface::{
-    irq, DriverError, DriverGeneric, DriverKind, DriverResult, IrqProbeConfig, Probe, ProbeConfig,
-    Register, RegisterKind,
+    irq, DriverError, DriverGeneric, DriverKind, DriverResult, DriverSpecific, IrqProbeConfig,
+    Probe, ProbeConfig, Register,
 };
 use futures::{future::LocalBoxFuture, FutureExt};
 pub fn register_v2() -> Register {
     Register::new(
         "GICv2",
         vec!["arm,cortex-a15-gic"],
-        RegisterKind::InteruptChip,
+        DriverKind::InteruptChip,
         RegisterGicV2 {},
     )
 }
@@ -18,14 +18,14 @@ pub fn register_v3() -> Register {
     Register::new(
         "GICv3",
         vec!["arm,gic-v3"],
-        RegisterKind::InteruptChip,
+        DriverKind::InteruptChip,
         RegisterGicV3 {},
     )
 }
 struct RegisterGicV2 {}
 
 impl Probe for RegisterGicV2 {
-    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
             let gic = Gic::new(
                 config.reg[0],
@@ -36,7 +36,7 @@ impl Probe for RegisterGicV2 {
             .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
             let b: irq::BoxDriver = Box::new(DriverGic(gic));
 
-            Ok(DriverKind::InteruptChip(b))
+            Ok(DriverSpecific::InteruptChip(b))
         }
         .boxed_local()
     }
@@ -44,7 +44,7 @@ impl Probe for RegisterGicV2 {
 struct RegisterGicV3 {}
 
 impl Probe for RegisterGicV3 {
-    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverKind>> {
+    fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
             let gic = Gic::new(
                 config.reg[0],
@@ -55,7 +55,7 @@ impl Probe for RegisterGicV3 {
             .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
 
             let b: irq::BoxDriver = Box::new(DriverGic(gic));
-            Ok(DriverKind::InteruptChip(b))
+            Ok(DriverSpecific::InteruptChip(b))
         }
         .boxed_local()
     }
@@ -82,8 +82,11 @@ impl irq::Driver for DriverGic {
         self.0.irq_enable(IrqConfig {
             intid: unsafe { IntId::raw(config.irq_id as _) },
             trigger: match config.trigger {
-                irq::Trigger::Edge => Trigger::Edge,
-                irq::Trigger::Level => Trigger::Level,
+                irq::Trigger::EdgeRising => Trigger::Edge,
+                irq::Trigger::EdgeFailling => Trigger::Edge,
+                irq::Trigger::EdgeBoth => Trigger::Edge,
+                irq::Trigger::LevelLow => Trigger::Level,
+                irq::Trigger::LevelHigh => Trigger::Level,
             },
             priority: config.priority as _,
             cpu_list: &[CPUTarget::CORE0],
@@ -120,11 +123,11 @@ impl irq::Driver for DriverGic {
         .into();
 
         let trigger = match itr[2] {
-            TYPE_EDGE_RISING => irq::Trigger::Edge,
-            TYPE_EDGE_FALLING => irq::Trigger::Edge,
-            TYPE_EDGE_BOTH => irq::Trigger::Edge,
-            TYPE_LEVEL_HIGH => irq::Trigger::Level,
-            TYPE_LEVEL_LOW => irq::Trigger::Level,
+            TYPE_EDGE_RISING => irq::Trigger::EdgeRising,
+            TYPE_EDGE_FALLING => irq::Trigger::EdgeFailling,
+            TYPE_EDGE_BOTH => irq::Trigger::EdgeBoth,
+            TYPE_LEVEL_HIGH => irq::Trigger::LevelHigh,
+            TYPE_LEVEL_LOW => irq::Trigger::LevelLow,
             _ => panic!("Invalid irq type {}", itr[2]),
         };
 
