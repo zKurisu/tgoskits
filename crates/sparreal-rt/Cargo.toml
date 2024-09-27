@@ -22,6 +22,7 @@ arm-pl011-rs = { workspace = true }
 flat_device_tree = { workspace = true }
 arm-gic-driver = { workspace = true }
 arm_pl031 = "0.2.1"
+arm-gic = "0.1.1"
 
 [build-dependencies]
 sparreal-build = { workspace = true }

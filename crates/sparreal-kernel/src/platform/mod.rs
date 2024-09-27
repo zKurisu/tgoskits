@@ -45,4 +45,7 @@ pub trait Platform {
     unsafe fn get_kernel_page_table() -> Phys<u8>;
     unsafe fn flush_tlb(addr: Option<Virt<u8>>);
     fn print_system_info();
+
+    fn irqs_enable();
+    fn irqs_disable();
 }

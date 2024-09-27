@@ -147,18 +147,7 @@ IRQHandler:
 	stp	x0, x1, [sp,#-0x10]!
 	str	x2, [sp,#-0x10]!
 
-	MRS   X0, S3_0_C12_C12_0 /* ICCIAR in x0 as parameter. */
-
-	/* Maintain the ICCIAR value across the function call. */
-	STP		X0, X1, [SP, #-0x10]!
-
 	bl	__handle_irq
-
-	/* Restore the ICCIAR value. */
-	LDP		X0, X1, [SP], #0x10
-
-	/* End IRQ processing by writing ICCIAR to the EOI register. */
-	MSR   S3_0_C12_C12_1, x0
 
 	/* Restore the status of SPSR, ELR and CPTR from stack */
 	ldr	x2,[sp],0x10

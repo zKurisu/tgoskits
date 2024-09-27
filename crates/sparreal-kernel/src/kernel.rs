@@ -48,7 +48,7 @@ pub unsafe fn run() -> ! {
     spin_on(async {
         driver::init().await;
     });
-
+    platform::irqs_enable();
     app_main();
     println!("Waiting for interrupt...");
     loop {

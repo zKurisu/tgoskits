@@ -1,5 +1,7 @@
 use alloc::vec;
 use alloc::{boxed::Box, format};
+use arm_gic::gicv3::GicV3;
+use arm_gic::irq_enable;
 use arm_gic_driver::*;
 use driver_interface::{
     irq, DriverError, DriverGeneric, DriverKind, DriverResult, DriverSpecific, IrqProbeConfig,
@@ -101,40 +103,8 @@ impl irq::Driver for DriverGic {
         self.0.current_cpu_setup();
     }
 
-    #[allow(unused)]
     fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqProbeConfig {
-        const SPI: usize = 0;
-        const PPI: usize = 1;
-
-        let num = itr[1] as u32;
-
-        let irq_id: u32 = match itr[0] {
-            SPI => IntId::spi(num),
-            PPI => IntId::ppi(num),
-            _ => panic!("Invalid irq type {}", itr[0]),
-        }
-        .into();
-
-        let flag = TriggerFlag::from_bits_truncate(itr[2]);
-
-        let trigger = if flag.contains(TriggerFlag::EDGE_BOTH) {
-            irq::Trigger::EdgeBoth
-        } else if flag.contains(TriggerFlag::EDGE_RISING) {
-            irq::Trigger::EdgeRising
-        } else if flag.contains(TriggerFlag::EDGE_FALLING) {
-            irq::Trigger::EdgeFailling
-        } else if flag.contains(TriggerFlag::LEVEL_HIGH) {
-            irq::Trigger::LevelHigh
-        } else if flag.contains(TriggerFlag::LEVEL_LOW) {
-            irq::Trigger::LevelLow
-        } else {
-            panic!("Invalid irq type {}", itr[2])
-        };
-
-        IrqProbeConfig {
-            irq_id: irq_id as _,
-            trigger,
-        }
+        fdt_itr_to_config(itr)
     }
 }
 
@@ -151,5 +121,40 @@ bitflags! {
         const EDGE_BOTH = Self::EDGE_RISING.bits()| Self::EDGE_FALLING.bits();
         const LEVEL_HIGH = 4;
         const LEVEL_LOW = 8;
+    }
+}
+
+fn fdt_itr_to_config(itr: &[usize]) -> IrqProbeConfig {
+    const SPI: usize = 0;
+    const PPI: usize = 1;
+
+    let num = itr[1] as u32;
+
+    let irq_id: u32 = match itr[0] {
+        SPI => IntId::spi(num),
+        PPI => IntId::ppi(num),
+        _ => panic!("Invalid irq type {}", itr[0]),
+    }
+    .into();
+
+    let flag = TriggerFlag::from_bits_truncate(itr[2]);
+
+    let trigger = if flag.contains(TriggerFlag::EDGE_BOTH) {
+        irq::Trigger::EdgeBoth
+    } else if flag.contains(TriggerFlag::EDGE_RISING) {
+        irq::Trigger::EdgeRising
+    } else if flag.contains(TriggerFlag::EDGE_FALLING) {
+        irq::Trigger::EdgeFailling
+    } else if flag.contains(TriggerFlag::LEVEL_HIGH) {
+        irq::Trigger::LevelHigh
+    } else if flag.contains(TriggerFlag::LEVEL_LOW) {
+        irq::Trigger::LevelLow
+    } else {
+        panic!("Invalid irq type {}", itr[2])
+    };
+
+    IrqProbeConfig {
+        irq_id: irq_id as _,
+        trigger,
     }
 }

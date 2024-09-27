@@ -15,15 +15,16 @@ unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
             ESR_EL1::EC::Value::SVC64 => {
                 warn!("No syscall is supported currently!");
             }
-            ESR_EL1::EC::Value::DataAbortLowerEL => handle_data_abort(tf, iss, true),
-            ESR_EL1::EC::Value::DataAbortCurrentEL => handle_data_abort(tf, iss, false),
+            ESR_EL1::EC::Value::DataAbortLowerEL => handle_data_abort(iss, true),
+            ESR_EL1::EC::Value::DataAbortCurrentEL => handle_data_abort(iss, false),
             ESR_EL1::EC::Value::Brk64 => {
                 // debug!("BRK #{:#x} @ {:#x} ", iss, tf.elr);
                 // tf.elr += 4;
             }
             _ => {
                 panic!(
-                    "Unhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+                    "\r\n{}\r\nUnhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+                    tf,
                     elr,
                     esr.get(),
                     esr.read(ESR_EL1::EC),
@@ -60,8 +61,7 @@ unsafe extern "C" fn __handle_serror(tf: &TrapFrame) {
 unsafe extern "C" fn __handle_frq() {
     panic!("frq")
 }
-fn handle_data_abort(tf: &TrapFrame, iss: u64, _is_user: bool) {
-    error!("{}", tf);
+fn handle_data_abort(iss: u64, _is_user: bool) {
     let wnr = (iss & (1 << 6)) != 0; // WnR: Write not Read
     let cm = (iss & (1 << 8)) != 0; // CM: Cache maintenance
     let reason = if wnr & !cm {

@@ -101,6 +101,14 @@ impl Platform for PlatformImpl {
         );
         let _ = print_board_info();
     }
+
+    fn irqs_enable() {
+        unsafe { asm!("msr daifclr, #2") };
+    }
+
+    fn irqs_disable() {
+        unsafe { asm!("msr daifset, #2") };
+    }
 }
 
 fn print_board_info() -> Option<()> {
