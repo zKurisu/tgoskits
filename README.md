@@ -4,6 +4,10 @@
 
 ## 环境搭建
 
+```shell
+git clone --recurse-submodules  git@github.com:qclic/sparreal-os.git
+```
+
 1. 安装 Rust
 2. 安装依赖
 
@@ -87,7 +91,7 @@ unsafe fn boot(kconfig: kernel::KernelConfig) -> ! {
     // 初始化日志和内存分配器。
     kernel::init_log_and_memory(&kconfig);
     // 注册驱动
-    kernel::driver_manager().register_all(drivers::registers());
+    kernel::driver_register_append(drivers::registers());
     // 启动内核
     kernel::run()
 }
