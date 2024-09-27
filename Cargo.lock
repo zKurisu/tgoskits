@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "arm-gic-driver"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "enum_dispatch",
  "log",
@@ -1093,6 +1093,7 @@ dependencies = [
  "pasts",
  "rgb",
  "sparreal-macros",
+ "spin_on",
 ]
 
 [[package]]

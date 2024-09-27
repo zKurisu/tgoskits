@@ -2,6 +2,7 @@ use core::ptr::NonNull;
 
 use driver_interface::Register;
 use log::*;
+use spin_on::spin_on;
 
 use crate::{
     driver::{self, device_tree::set_dtb_addr},
@@ -44,7 +45,7 @@ pub fn driver_register_append(registers: impl IntoIterator<Item = Register>) {
 ///
 /// 需在 [init_log_and_memory] 之后执行，[run] 之前可用 [driver_register_append] 注册驱动。
 pub unsafe fn run() -> ! {
-    executor::block_on(async {
+    spin_on(async {
         driver::init().await;
     });
 

@@ -20,7 +20,7 @@ vector_table_el1:
     B CommonHandler
     .balign 0x80
     curr_el_spx_irq: 
-    B .
+    B IRQHandler
     .balign 0x80
     curr_el_spx_frq: 
     B .
@@ -86,6 +86,36 @@ CommonHandler:
   LDP      x18, x19, [sp], #16
   LDP      x29, x30, [sp], #16
   ERET
+
+IRQHandler:
+  STP      x29, x30, [sp, #-16]!
+  STP      x18, x19, [sp, #-16]!
+  STP      x16, x17, [sp, #-16]!
+  STP      x14, x15, [sp, #-16]!
+  STP      x12, x13, [sp, #-16]!
+  STP      x10, x11, [sp, #-16]!
+  STP      x8, x9, [sp, #-16]!
+  STP      x6, x7, [sp, #-16]!
+  STP      x4, x5, [sp, #-16]!
+  STP      x2, x3, [sp, #-16]!
+  STP      x0, x1, [sp, #-16]!
+  MOV      x0, sp
+
+  bl       handle_irq
+
+  LDP      x0, x1, [sp], #16
+  LDP      x2, x3, [sp], #16
+  LDP      x4, x5, [sp], #16
+  LDP      x6, x7, [sp], #16
+  LDP      x8, x9, [sp], #16
+  LDP      x10, x11, [sp], #16
+  LDP      x12, x13, [sp], #16
+  LDP      x14, x15, [sp], #16
+  LDP      x16, x17, [sp], #16
+  LDP      x18, x19, [sp], #16
+  LDP      x29, x30, [sp], #16
+  ERET
+
 
 
 

@@ -1,5 +1,5 @@
 use aarch64_cpu::registers::*;
-use log::warn;
+use log::{debug, warn};
 use memory_addr::VirtAddr;
 
 #[no_mangle]
@@ -34,6 +34,7 @@ unsafe extern "C" fn handle_sync(tf: &TrapFrame) {
 
 #[no_mangle]
 unsafe extern "C" fn handle_irq() {
+    debug!("IRQ!");
     sparreal_kernel::irq::handle_irq();
 }
 

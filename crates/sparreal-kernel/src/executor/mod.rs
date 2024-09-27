@@ -1,8 +1,8 @@
-use core::hint::spin_loop;
-use core::ptr;
-use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
+// use core::hint::spin_loop;
+// use core::ptr;
+// use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
 
-use pasts::prelude::*;
+// use pasts::prelude::*;
 
 
 // pub fn init_exeutor() {
@@ -24,24 +24,24 @@ use pasts::prelude::*;
 // }
 
 
-static VTABLE: RawWakerVTable = RawWakerVTable::new(
-    |_| RawWaker::new(ptr::null(), &VTABLE),
-    |_| {},
-    |_| {},
-    |_| {},
-);
+// static VTABLE: RawWakerVTable = RawWakerVTable::new(
+//     |_| RawWaker::new(ptr::null(), &VTABLE),
+//     |_| {},
+//     |_| {},
+//     |_| {},
+// );
 
-pub fn block_on<F: Future>(mut fut: F) -> F::Output {
-    // safety: we don't move the future after this line.
-    let mut fut = unsafe { Pin::new_unchecked(&mut fut) };
+// pub fn block_on<F: Future>(mut fut: F) -> F::Output {
+//     // safety: we don't move the future after this line.
+//     let mut fut = unsafe { Pin::new_unchecked(&mut fut) };
 
-    let raw_waker = RawWaker::new(ptr::null(), &VTABLE);
-    let waker = unsafe { Waker::from_raw(raw_waker) };
-    let mut cx = Context::from_waker(&waker);
-    loop {
-        if let Poll::Ready(res) = fut.as_mut().poll(&mut cx) {
-            return res;
-        }
-        spin_loop();
-    }
-}
+//     let raw_waker = RawWaker::new(ptr::null(), &VTABLE);
+//     let waker = unsafe { Waker::from_raw(raw_waker) };
+//     let mut cx = Context::from_waker(&waker);
+//     loop {
+//         if let Poll::Ready(res) = fut.as_mut().poll(&mut cx) {
+//             return res;
+//         }
+//         spin_loop();
+//     }
+// }

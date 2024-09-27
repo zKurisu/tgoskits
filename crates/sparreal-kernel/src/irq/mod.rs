@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
 use driver_interface::{irq::IrqConfig, DriverId, IrqProbeConfig};
-use log::debug;
+use log::{debug, info};
 
 use crate::{
     driver::{irq_chip_by_id_or_first, irq_chip_list, DriverIrqChip},
@@ -29,7 +29,10 @@ where
     let controller_id = DriverId::default();
 
     if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
-        debug!("irq chip: {}", chip.desc.name);
+        info!(
+            "[{}]Enable irq {} on chip: {} ",
+            dev_id, irq.irq_id, chip.desc.name
+        );
         chip.spec.write().enable_irq(irq);
     }
 }

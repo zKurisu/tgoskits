@@ -12,8 +12,11 @@ fn main() {
     info!("hello world");
     let s = "hello world".to_string();
     let st = s.as_str();
-    // let a = *(dtb_addr as *const u8);
-    // let b = a + 1;
+
+    unsafe {
+        // let a = *(0xffff_ffff_ffff_ffff as *const u8);
+        // println!("{:x}", a);
+    }
 
     assert_eq!(st, "hello world");
 }
