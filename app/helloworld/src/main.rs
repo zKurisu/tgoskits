@@ -13,10 +13,10 @@ fn main() {
     let s = "hello world".to_string();
     let st = s.as_str();
 
-    unsafe {
-        // let a = *(0xffff_ffff_ffff_ffff as *const u8);
-        // println!("{:x}", a);
-    }
+    // unsafe {
+    // let a = *(0xffff_ffff_ffff_ffff as *const u8);
+    // sparreal_rt::println!("{:x}", a);
+    // }
 
     assert_eq!(st, "hello world");
 }
