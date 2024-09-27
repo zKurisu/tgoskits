@@ -15,21 +15,21 @@ fn level_to_rgb(level: Level) -> RGB8 {
 }
 
 fn level_icon(level: Level) -> &'static str {
-    // match level {
-    //     Level::Error => "💥",
-    //     Level::Warn => "⚠️ ",
-    //     Level::Info => "💡",
-    //     Level::Debug => "🐛",
-    //     Level::Trace => "🔍",
-    // }
-
     match level {
-        Level::Error => "Error",
-        Level::Warn => "Warn ",
-        Level::Info => "Info ",
-        Level::Debug => "Debug",
-        Level::Trace => "Trace",
+        Level::Error => "💥",
+        Level::Warn => "⚠️",
+        Level::Info => "💡",
+        Level::Debug => "🐛",
+        Level::Trace => "🔍",
     }
+
+    // match level {
+    //     Level::Error => "Error",
+    //     Level::Warn => "Warn ",
+    //     Level::Info => "Info ",
+    //     Level::Debug => "Debug",
+    //     Level::Trace => "Trace",
+    // }
 }
 
 macro_rules! format_record {
@@ -37,7 +37,7 @@ macro_rules! format_record {
         format_args!(
             "{}",
             format_args!(
-                "{} {:.3?} [{path}:{line}] {args}\n",
+                "{} {:.3?} [{path}:{line}] {args}\r\n",
                 // "{} [{path}:{line}] {args}\n",
                 level_icon($record.level()),
                 $d,

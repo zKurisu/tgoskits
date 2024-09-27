@@ -55,7 +55,7 @@ pub struct EarlyDebugWrite;
 impl Write for EarlyDebugWrite {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
         unsafe {
-            s.chars().for_each(|ch| {
+            s.bytes().for_each(|ch| {
                 platform::debug_write_char(ch);
             });
         }

@@ -29,7 +29,7 @@ pub trait Platform {
     unsafe fn wait_for_interrupt();
     unsafe fn current_ticks() -> u64;
     unsafe fn tick_hz() -> u64;
-    unsafe fn debug_write_char(ch: char);
+    unsafe fn debug_write_char(ch: u8);
     unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>>;
     unsafe fn table_map(
         table: Phys<u8>,

@@ -32,8 +32,8 @@ impl Platform for PlatformImpl {
         CNTFRQ_EL0.get()
     }
 
-    unsafe fn debug_write_char(ch: char) {
-        unsafe { debug::put_debug(ch as u8) };
+    unsafe fn debug_write_char(ch: u8) {
+        unsafe { debug::put_debug(ch ) };
     }
 
     unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>> {
