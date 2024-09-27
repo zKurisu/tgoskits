@@ -24,8 +24,8 @@ impl Probe for ProbeTimerArmv8 {
     fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
             let irq_ns = &config.irq[1];
-            CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE::SET);
-            CNTP_TVAL_EL0.set(0);
+            // CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE::SET);
+            // CNTP_TVAL_EL0.set(0);
 
             register_irq(
                 IrqConfig {
@@ -41,50 +41,9 @@ impl Probe for ProbeTimerArmv8 {
                 },
             );
 
-            // register_irq(
-            //     IrqConfig {
-            //         irq_id: config.irq[0].irq_id,
-            //         trigger: config.irq[0].trigger,
-            //         priority: 0,
-            //         cpu_list: vec![0],
-            //     },
-            //     config.id,
-            //     move |irq| {
-            //         info!("armv8 timer irq!");
-            //         IrqHandle::Handled
-            //     },
-            // );
-
-            // register_irq(
-            //     IrqConfig {
-            //         irq_id: config.irq[2].irq_id,
-            //         trigger: config.irq[2].trigger,
-            //         priority: 0,
-            //         cpu_list: vec![0],
-            //     },
-            //     config.id,
-            //     move |irq| {
-            //         info!("armv8 timer irq!");
-            //         IrqHandle::Handled
-            //     },
-            // );
-            // register_irq(
-            //     IrqConfig {
-            //         irq_id: config.irq[3].irq_id,
-            //         trigger: config.irq[3].trigger,
-            //         priority: 0,
-            //         cpu_list: vec![0],
-            //     },
-            //     config.id,
-            //     move |irq| {
-            //         info!("armv8 timer irq!");
-            //         IrqHandle::Handled
-            //     },
-            // );
-
             let timer = Box::new(DriverTimerArmv8 {});
 
-            timer.set_one_shot(Duration::from_millis(2000));
+            // timer.set_one_shot(Duration::from_millis(2000));
             Ok(DriverSpecific::Timer(timer))
         }
         .boxed_local()
