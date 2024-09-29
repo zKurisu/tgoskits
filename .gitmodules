@@ -1,6 +1,6 @@
 [submodule "crates/arm-pl011"]
 	path = crates/arm-pl011
-	url = git@gitee.com:zr233/arm-pl011-rs.git
+	url = https://gitee.com:zr233/arm-pl011-rs.git
 [submodule "crates/arm-gic"]
 	path = crates/arm-gic
-	url = git@gitee.com:zr233/arm-gic-driver.git
+	url = https://gitee.com:zr233/arm-gic-driver.git
