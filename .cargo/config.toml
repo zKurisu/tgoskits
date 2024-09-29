@@ -1,3 +1,5 @@
 [alias]
-xtask = "run --package xtask --"
+xtask = "run   --package xtask --"
 
+# [build]
+# target = "aarch64-unknown-none"

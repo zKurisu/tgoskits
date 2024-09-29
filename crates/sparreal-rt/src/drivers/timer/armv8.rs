@@ -24,8 +24,8 @@ impl Probe for ProbeTimerArmv8 {
     fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
             let irq_ns = &config.irq[1];
-            // CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE::SET);
-            // CNTP_TVAL_EL0.set(0);
+            CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE::SET);
+            CNTP_TVAL_EL0.set(0);
 
             register_irq(
                 IrqConfig {
@@ -43,7 +43,7 @@ impl Probe for ProbeTimerArmv8 {
 
             let timer = Box::new(DriverTimerArmv8 {});
 
-            // timer.set_one_shot(Duration::from_millis(2000));
+            timer.set_one_shot(Duration::from_millis(2000));
             Ok(DriverSpecific::Timer(timer))
         }
         .boxed_local()

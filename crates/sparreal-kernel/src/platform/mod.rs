@@ -1,3 +1,4 @@
+use alloc::string::String;
 use page_table_interface::{MapConfig, PagingResult};
 use sparreal_macros::api_trait;
 
@@ -48,4 +49,6 @@ pub trait Platform {
 
     fn irqs_enable();
     fn irqs_disable();
+    fn cpu_id() -> u64;
+    fn cpu_id_display() -> String;
 }
