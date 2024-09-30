@@ -65,7 +65,7 @@ impl FDTExtend for FdtNode<'_, '_> {
                 let g = irq.spec.read();
 
                 for elem in irq_origin {
-                    config.irq.push(g.fdt_itr_to_config(&elem));
+                    config.irq.push(g.fdt_parse_config(&elem));
                 }
             }
         }

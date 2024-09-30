@@ -68,7 +68,7 @@ impl Probe for RegisterPl011 {
         let clock_freq = config.clock_freq[0];
         debug!(
             "Interupt: {}, {:?}, clk: {}Mhz",
-            config.irq[0].irq_id,
+            config.irq[0].irq,
             config.irq[0].trigger,
             clock_freq / 1_000_000,
         );

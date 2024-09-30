@@ -98,7 +98,7 @@ pub async fn probe(config: ProbeConfig, register: Register) -> Option<()> {
     }
     info!("[{}]Probe driver [{}]", id, register.name);
     for irq in &config.irq {
-        info!("[{}]    Irq: {}, triger {:?}", id, irq.irq_id, irq.trigger);
+        info!("[{}]    Irq: {}, triger {:?}", id, irq.irq, irq.trigger);
     }
 
     let kind = register

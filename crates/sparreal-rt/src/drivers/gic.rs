@@ -80,9 +80,9 @@ impl irq::Driver for DriverGic {
         self.0.irq_max()
     }
 
-    fn enable_irq(&mut self, config: irq::IrqConfig) {
+    fn irq_enable(&mut self, config: irq::IrqConfig) {
         self.0.irq_enable(IrqConfig {
-            intid: unsafe { IntId::raw(config.irq_id as _) },
+            intid: unsafe { IntId::raw(config.irq as _) },
             trigger: match config.trigger {
                 irq::Trigger::EdgeRising => Trigger::Edge,
                 irq::Trigger::EdgeFailling => Trigger::Edge,
@@ -95,7 +95,7 @@ impl irq::Driver for DriverGic {
         });
     }
 
-    fn disable_irq(&mut self, irq_id: usize) {
+    fn irq_enable(&mut self, irq_id: usize) {
         self.0.irq_disable(unsafe { IntId::raw(irq_id as _) });
     }
 
@@ -103,7 +103,7 @@ impl irq::Driver for DriverGic {
         self.0.current_cpu_setup();
     }
 
-    fn fdt_itr_to_config(&self, itr: &[usize]) -> IrqProbeConfig {
+    fn fdt_parse_config(&self, itr: &[usize]) -> IrqProbeConfig {
         fdt_itr_to_config(itr)
     }
 }
@@ -154,7 +154,7 @@ fn fdt_itr_to_config(itr: &[usize]) -> IrqProbeConfig {
     };
 
     IrqProbeConfig {
-        irq_id: irq_id as _,
+        irq: irq_id as _,
         trigger,
     }
 }
