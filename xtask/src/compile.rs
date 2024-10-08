@@ -21,12 +21,18 @@ impl Compile {
 
         let bin_path = project.output_dir(debug).join(bin_name);
 
+        let log_level = format!("{:?}", project.config.build.log_level);
+
+        let features_log_level = format!("log/release_max_level_{}", log_level.to_lowercase());
+
         let mut args = vec![
             "rustc",
             "-p",
             &project.config.build.package,
             "--target",
             &project.config.build.target,
+            "--features",
+            &features_log_level,
         ];
 
         if !debug {

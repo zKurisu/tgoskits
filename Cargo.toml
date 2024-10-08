@@ -8,7 +8,7 @@ nb = "1.1"
 embedded-hal-nb = "1.0"
 embedded-hal-async = "1.0"
 embedded-io = "0.6.1"
-log = { version = "0.4", features = ["release_max_level_trace"] }
+log = { version = "0.4" }
 colored = "2.1"
 clap = { version = "4.5" }
 ansi_rgb = { version = "0.2" }

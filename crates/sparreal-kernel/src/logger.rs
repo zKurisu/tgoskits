@@ -22,14 +22,6 @@ fn level_icon(level: Level) -> &'static str {
         Level::Debug => "🐛",
         Level::Trace => "🔍",
     }
-
-    // match level {
-    //     Level::Error => "Error",
-    //     Level::Warn => "Warn ",
-    //     Level::Info => "Info ",
-    //     Level::Debug => "Debug",
-    //     Level::Trace => "Trace",
-    // }
 }
 
 macro_rules! format_record {
@@ -60,7 +52,6 @@ impl Log for KLogger {
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
             let duration = crate::time::since_boot();
-
             stdout::print(format_record!(record, duration));
         }
     }

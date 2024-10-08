@@ -10,6 +10,15 @@ pub struct ProjectConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum LogLevel {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Build {
     pub target: String,
     pub cpu: Option<String>,
@@ -17,6 +26,7 @@ pub struct Build {
     pub hart_stack_size: Option<usize>,
     pub package: String,
     pub smp: usize,
+    pub log_level: LogLevel,
 }
 
 impl Default for Build {
@@ -28,6 +38,7 @@ impl Default for Build {
             package: "helloworld".into(),
             smp: 1,
             hart_stack_size: None,
+            log_level: LogLevel::Info,
         }
     }
 }
