@@ -124,8 +124,22 @@ dependencies = [
 
 [[package]]
 name = "arm-gic-driver"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
+ "aarch64-cpu",
+ "bitflags 2.6.0",
+ "enum_dispatch",
+ "log",
+ "tock-registers",
+]
+
+[[package]]
+name = "arm-gic-driver"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43150ac8db596a65cf52d0ed486dd1e47034212ffe7ad0b307a0e2942ba24542"
+dependencies = [
+ "aarch64-cpu",
  "bitflags 2.6.0",
  "enum_dispatch",
  "log",
@@ -1121,7 +1135,7 @@ version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
  "arm-gic",
- "arm-gic-driver",
+ "arm-gic-driver 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "arm-pl011-rs",
  "arm_pl031",
  "bitflags 2.6.0",
