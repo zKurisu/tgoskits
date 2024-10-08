@@ -4,9 +4,8 @@ use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, vec};
 use driver_interface::*;
 use futures::{future::LocalBoxFuture, FutureExt};
-use irq::IrqConfig;
 use log::info;
-use sparreal_kernel::irq::{register_irq, IrqHandle};
+use sparreal_kernel::irq::{register_irq, IrqConfig, IrqHandle};
 use timer::Driver;
 
 pub fn register() -> Register {
@@ -29,13 +28,13 @@ impl Probe for ProbeTimerArmv8 {
 
             register_irq(
                 IrqConfig {
-                    irq_id: irq_ns.irq_id,
+                    irq: irq_ns.irq,
                     trigger: irq_ns.trigger,
                     priority: 0,
-                    cpu_list: vec![0],
+                    cpu_list: vec![],
                 },
                 config.id,
-                move |irq| {
+                move |_irq| {
                     info!("armv8 timer irq!");
                     IrqHandle::Handled
                 },
@@ -43,7 +42,7 @@ impl Probe for ProbeTimerArmv8 {
 
             let timer = Box::new(DriverTimerArmv8 {});
 
-            // timer.set_one_shot(Duration::from_millis(2000));
+            timer.set_one_shot(Duration::from_millis(2000));
             Ok(DriverSpecific::Timer(timer))
         }
         .boxed_local()

@@ -6,7 +6,6 @@ use spin_on::spin_on;
 
 use crate::{
     driver::{self, device_tree::set_dtb_addr},
-    executor,
     logger::KLogger,
     mem::{self, *},
     platform::{self, app_main},

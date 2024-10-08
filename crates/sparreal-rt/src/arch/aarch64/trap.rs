@@ -1,4 +1,4 @@
-use core::fmt::{self, Display, Formatter};
+use core::fmt;
 
 use aarch64_cpu::registers::*;
 use log::*;
@@ -45,7 +45,7 @@ unsafe extern "C" fn __handle_irq() {
 unsafe extern "C" fn __handle_serror(tf: &TrapFrame) {
     error!("SError exception:");
     let esr = ESR_EL1.extract();
-    let iss = esr.read(ESR_EL1::ISS);
+    let _iss = esr.read(ESR_EL1::ISS);
     let elr = ELR_EL1.get();
     error!("{}", tf);
     panic!(
@@ -116,7 +116,7 @@ pub struct TrapFrame {
     pub x1: u64,
 }
 
-impl Display for TrapFrame {
+impl fmt::Display for TrapFrame {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "TrapFrame:")?;
         writeln!(f, "  spsr: {:#x}", self.spsr)?;

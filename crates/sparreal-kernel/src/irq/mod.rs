@@ -1,5 +1,5 @@
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
-use driver_interface::{irq::IrqConfig, DriverId, IrqProbeConfig};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use driver_interface::{irq::Trigger, DriverId};
 use log::{debug, info};
 
 use crate::{
@@ -17,12 +17,20 @@ pub enum IrqHandle {
     None,
 }
 
-pub fn register_irq<F>(irq: IrqConfig, dev_id: DriverId, handler: F)
+#[derive(Debug, Clone)]
+pub struct IrqConfig {
+    pub irq: usize,
+    pub trigger: Trigger,
+    pub priority: usize,
+    pub cpu_list: Vec<u64>,
+}
+
+pub fn register_irq<F>(cfg: IrqConfig, dev_id: DriverId, handler: F)
 where
     F: Fn(usize) -> IrqHandle + Send + Sync + 'static,
 {
     let mut vector = IRQ_VECTOR.write();
-    let entry = vector.entry(irq.irq_id).or_default();
+    let entry = vector.entry(cfg.irq).or_default();
     entry.insert(dev_id, Box::new(handler));
 
     //TODO
@@ -31,9 +39,12 @@ where
     if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
         info!(
             "[{}]Enable irq {} on chip: {} ",
-            dev_id, irq.irq_id, chip.desc.name
+            dev_id, cfg.irq, chip.desc.name
         );
-        chip.spec.write().enable_irq(irq);
+        let mut c = chip.spec.write();
+        c.irq_enable(cfg.irq);
+        c.set_priority(cfg.irq, cfg.priority);
+        c.set_trigger(cfg.irq, cfg.trigger);
     }
 }
 
@@ -66,5 +77,3 @@ fn handle_irq_by_id(irq_id: usize) {
         }
     }
 }
-
-

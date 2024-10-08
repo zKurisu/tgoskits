@@ -6,7 +6,7 @@ mod trap;
 use core::arch::asm;
 
 use aarch64_cpu::registers::*;
-use log::info;
+use alloc::{format, string::String};
 use mmu::PageTable;
 use page_table_interface::{MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
@@ -33,7 +33,7 @@ impl Platform for PlatformImpl {
     }
 
     unsafe fn debug_write_char(ch: u8) {
-        unsafe { debug::put_debug(ch ) };
+        unsafe { debug::put_debug(ch) };
     }
 
     unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>> {
@@ -108,6 +108,19 @@ impl Platform for PlatformImpl {
 
     fn irqs_disable() {
         unsafe { asm!("msr daifset, #2") };
+    }
+
+    fn cpu_id() -> u64 {
+        MPIDR_EL1.get()
+    }
+    fn cpu_id_display() -> String {
+        format!(
+            "{}.{}.{}.{}",
+            MPIDR_EL1.read(MPIDR_EL1::Aff0),
+            MPIDR_EL1.read(MPIDR_EL1::Aff1),
+            MPIDR_EL1.read(MPIDR_EL1::Aff2),
+            MPIDR_EL1.read(MPIDR_EL1::Aff3)
+        )
     }
 }
 

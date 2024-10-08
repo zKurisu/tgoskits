@@ -60,7 +60,7 @@ pub struct ProbeConfig {
 
 #[derive(Clone)]
 pub struct IrqProbeConfig {
-    pub irq_id: usize,
+    pub irq: usize,
     pub trigger: Trigger,
 }
 
