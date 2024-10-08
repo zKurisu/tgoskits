@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use alloc::boxed::Box;
 
-use crate::{io, irq::IrqConfig, DriverResult};
+use crate::io;
 
 pub trait Driver: super::DriverGeneric + io::Write {}
 
@@ -41,5 +41,4 @@ pub struct Config {
     pub data_bits: DataBits,
     pub stop_bits: StopBits,
     pub parity: Parity,
-    pub interrupt: IrqConfig,
 }

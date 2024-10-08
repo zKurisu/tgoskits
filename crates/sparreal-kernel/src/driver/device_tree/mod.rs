@@ -2,15 +2,11 @@ use core::ptr::NonNull;
 
 use alloc::{vec, vec::Vec};
 use driver_interface::ProbeConfig;
-use flat_device_tree::{
-    node::{CellSize, FdtNode},
-    Fdt,
-};
-use log::debug;
+use flat_device_tree::{node::FdtNode, Fdt};
 
 use crate::mem::mmu::iomap;
 
-use super::{driver_id_by_node_name, irq_by_id, DriverId};
+use super::{driver_id_by_node_name, irq_by_id};
 
 // #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;

@@ -1,5 +1,3 @@
-use core::fmt::Display;
-
 use crate::sync::RwLock;
 use alloc::{
     collections::btree_map::BTreeMap,

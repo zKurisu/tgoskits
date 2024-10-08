@@ -1,10 +1,10 @@
 pub use driver_interface::irq::*;
 use driver_interface::DriverKind;
-use log::{debug, info};
+use log::info;
 
 use crate::{platform, struct_driver};
 
-use super::{irq_chip_list, probe_by_register, register_by_kind, DriverCommon, DriverDescriptor};
+use super::{irq_chip_list, probe_by_register, register_by_kind};
 
 pub(super) async fn init_irq() {
     for reg in register_by_kind(DriverKind::InteruptChip) {

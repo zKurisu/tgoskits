@@ -1,8 +1,5 @@
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, string::*};
-use driver_interface::{
-    irq::{IrqConfig, Trigger},
-    DriverId, IrqProbeConfig,
-};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use driver_interface::{irq::Trigger, DriverId};
 use log::{debug, info};
 
 use crate::{

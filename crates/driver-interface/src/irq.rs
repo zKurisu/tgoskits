@@ -8,7 +8,7 @@ pub trait Driver: super::DriverGeneric {
     fn end_interrupt(&self, irq: usize);
     fn irq_max_size(&self) -> usize;
     fn irq_enable(&mut self, irq: usize);
-    fn irq_enable(&mut self, irq: usize);
+    fn irq_disable(&mut self, irq: usize);
     fn current_cpu_setup(&self);
     fn set_priority(&mut self, irq: usize, priority: usize);
     fn set_trigger(&mut self, irq: usize, triger: Trigger);

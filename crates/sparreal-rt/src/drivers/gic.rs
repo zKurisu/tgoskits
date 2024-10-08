@@ -1,12 +1,8 @@
 use alloc::vec;
 use alloc::{boxed::Box, format};
-use arm_gic::gicv3::GicV3;
-use arm_gic::irq_enable;
 use arm_gic_driver::*;
-use driver_interface::{
-    irq, DriverError, DriverGeneric, DriverKind, DriverResult, DriverSpecific, IrqProbeConfig,
-    Probe, ProbeConfig, Register,
-};
+use driver_interface::*;
+
 use futures::{future::LocalBoxFuture, FutureExt};
 pub fn register_v2() -> Register {
     Register::new(
@@ -29,14 +25,9 @@ struct RegisterGicV2 {}
 impl Probe for RegisterGicV2 {
     fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
-            let gic = Gic::new(
-                config.reg[0],
-                Config::V2 {
-                    gicc: config.reg[1],
-                },
-            )
-            .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
-            let b: irq::BoxDriver = Box::new(DriverGic(gic));
+            let gic = GicV2::new(config.reg[0], config.reg[1])
+                .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
+            let b: irq::BoxDriver = Box::new(DriverGicV2(gic));
 
             Ok(DriverSpecific::InteruptChip(b))
         }
@@ -48,23 +39,24 @@ struct RegisterGicV3 {}
 impl Probe for RegisterGicV3 {
     fn probe<'a>(&self, config: ProbeConfig) -> LocalBoxFuture<'a, DriverResult<DriverSpecific>> {
         async move {
-            let gic = Gic::new(
-                config.reg[0],
-                Config::V3 {
-                    gicr: config.reg[1],
-                },
-            )
-            .map_err(|e| DriverError::Init(format!("{:?}", e)))?;
+            let gic = unsafe {
+                GicV3::new(config.reg[0], config.reg[1])
+                    .map_err(|e| DriverError::Init(format!("{:?}", e)))
+            }?;
 
-            let b: irq::BoxDriver = Box::new(DriverGic(gic));
+            let b: irq::BoxDriver = Box::new(DriverGicV3(gic));
             Ok(DriverSpecific::InteruptChip(b))
         }
         .boxed_local()
     }
 }
-struct DriverGic(Gic);
-impl DriverGeneric for DriverGic {}
-impl irq::Driver for DriverGic {
+struct DriverGicV2(GicV2);
+struct DriverGicV3(GicV3);
+
+impl DriverGeneric for DriverGicV2 {}
+impl DriverGeneric for DriverGicV3 {}
+
+impl irq::Driver for DriverGicV2 {
     fn get_and_acknowledge_interrupt(&self) -> Option<usize> {
         self.0.get_and_acknowledge_interrupt().map(|id| {
             let id: u32 = id.into();
@@ -77,25 +69,10 @@ impl irq::Driver for DriverGic {
     }
 
     fn irq_max_size(&self) -> usize {
-        self.0.irq_max()
+        self.0.irq_max_size()
     }
 
-    fn irq_enable(&mut self, config: irq::IrqConfig) {
-        self.0.irq_enable(IrqConfig {
-            intid: unsafe { IntId::raw(config.irq as _) },
-            trigger: match config.trigger {
-                irq::Trigger::EdgeRising => Trigger::Edge,
-                irq::Trigger::EdgeFailling => Trigger::Edge,
-                irq::Trigger::EdgeBoth => Trigger::Edge,
-                irq::Trigger::LevelLow => Trigger::Level,
-                irq::Trigger::LevelHigh => Trigger::Level,
-            },
-            priority: config.priority as _,
-            cpu_list: &[CPUTarget::CORE0],
-        });
-    }
-
-    fn irq_enable(&mut self, irq_id: usize) {
+    fn irq_disable(&mut self, irq_id: usize) {
         self.0.irq_disable(unsafe { IntId::raw(irq_id as _) });
     }
 
@@ -106,9 +83,90 @@ impl irq::Driver for DriverGic {
     fn fdt_parse_config(&self, itr: &[usize]) -> IrqProbeConfig {
         fdt_itr_to_config(itr)
     }
+
+    fn set_priority(&mut self, irq: usize, priority: usize) {
+        self.0
+            .set_priority(unsafe { IntId::raw(irq as _) }, priority);
+    }
+
+    fn set_trigger(&mut self, irq: usize, trigger: irq::Trigger) {
+        self.0.set_trigger(
+            unsafe { IntId::raw(irq as _) },
+            match trigger {
+                irq::Trigger::EdgeBoth => Trigger::Edge,
+                irq::Trigger::EdgeRising => Trigger::Edge,
+                irq::Trigger::EdgeFailling => Trigger::Edge,
+                irq::Trigger::LevelHigh => Trigger::Level,
+                irq::Trigger::LevelLow => Trigger::Level,
+            },
+        );
+    }
+
+    fn set_bind_cpu(&mut self, irq: usize, cpu_list: &[u64]) {
+        todo!()
+    }
+
+    fn irq_enable(&mut self, irq: usize) {
+        self.0.irq_enable(unsafe { IntId::raw(irq as _) });
+    }
+}
+impl irq::Driver for DriverGicV3 {
+    fn get_and_acknowledge_interrupt(&self) -> Option<usize> {
+        self.0.get_and_acknowledge_interrupt().map(|id| {
+            let id: u32 = id.into();
+            id as _
+        })
+    }
+
+    fn end_interrupt(&self, irq_id: usize) {
+        self.0.end_interrupt(unsafe { IntId::raw(irq_id as _) });
+    }
+
+    fn irq_max_size(&self) -> usize {
+        self.0.irq_max_size()
+    }
+
+    fn irq_disable(&mut self, irq_id: usize) {
+        self.0.irq_disable(unsafe { IntId::raw(irq_id as _) });
+    }
+
+    fn current_cpu_setup(&self) {
+        self.0.current_cpu_setup();
+    }
+
+    fn fdt_parse_config(&self, itr: &[usize]) -> IrqProbeConfig {
+        fdt_itr_to_config(itr)
+    }
+
+    fn set_priority(&mut self, irq: usize, priority: usize) {
+        self.0
+            .set_priority(unsafe { IntId::raw(irq as _) }, priority);
+    }
+
+    fn set_trigger(&mut self, irq: usize, trigger: irq::Trigger) {
+        self.0.set_trigger(
+            unsafe { IntId::raw(irq as _) },
+            match trigger {
+                irq::Trigger::EdgeBoth => Trigger::Edge,
+                irq::Trigger::EdgeRising => Trigger::Edge,
+                irq::Trigger::EdgeFailling => Trigger::Edge,
+                irq::Trigger::LevelHigh => Trigger::Level,
+                irq::Trigger::LevelLow => Trigger::Level,
+            },
+        );
+    }
+
+    fn set_bind_cpu(&mut self, irq: usize, cpu_list: &[u64]) {
+        todo!()
+    }
+
+    fn irq_enable(&mut self, irq: usize) {
+        self.0.irq_enable(unsafe { IntId::raw(irq as _) });
+    }
 }
 
 use bitflags::bitflags;
+use sparreal_kernel::irq::IrqConfig;
 
 // The `bitflags!` macro generates `struct`s that manage a set of flags.
 bitflags! {

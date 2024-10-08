@@ -9,9 +9,9 @@ use alloc::{
     vec::Vec,
 };
 use device_tree::{get_device_tree, FDTExtend};
-use flat_device_tree::{node::FdtNode, Fdt};
+use flat_device_tree::Fdt;
 use irq::init_irq;
-use log::{debug, error, info};
+use log::info;
 
 use crate::{
     stdout::{set_stdout, UartWrite},

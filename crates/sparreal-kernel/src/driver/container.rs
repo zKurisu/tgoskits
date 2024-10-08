@@ -1,16 +1,15 @@
 use super::{
-    device_tree::get_device_tree, driver_id_by_node_name, DriverArc, DriverCommon,
-    DriverDescriptor, DriverId, DriverIrqChip, DriverTimer, DriverUart,
+    device_tree::get_device_tree, driver_id_by_node_name, DriverId, DriverIrqChip, DriverTimer,
+    DriverUart,
 };
 
 use crate::{driver::device_tree::FDTExtend as _, sync::RwLock};
 use alloc::{
     collections::{btree_map::BTreeMap, btree_set::BTreeSet},
     string::{String, ToString},
-    sync::Arc,
     vec::Vec,
 };
-use driver_interface::{irq, uart, DriverKind, DriverSpecific, ProbeConfig, Register};
+use driver_interface::{DriverKind, DriverSpecific, ProbeConfig, Register};
 use flat_device_tree::node::FdtNode;
 use log::{error, info};
 
@@ -44,7 +43,7 @@ impl Container {
 pub fn add_driver<N: ToString>(id: DriverId, name: N, spec: DriverSpecific) {
     macro_rules! add_to {
         ($driver:expr,$field:expr) => {
-            let d = DriverCommon::new(id.clone(), name, $driver);
+            let d = $crate::driver::DriverCommon::new(id.clone(), name, $driver);
             $field.write().insert(id, d.into());
         };
     }
