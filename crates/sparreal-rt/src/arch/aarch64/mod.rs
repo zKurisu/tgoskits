@@ -7,7 +7,6 @@ use core::arch::asm;
 
 use aarch64_cpu::registers::*;
 use alloc::{format, string::String};
-use log::info;
 use mmu::PageTable;
 use page_table_interface::{MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
@@ -115,7 +114,6 @@ impl Platform for PlatformImpl {
         MPIDR_EL1.get()
     }
     fn cpu_id_display() -> String {
-        
         format!(
             "{}.{}.{}.{}",
             MPIDR_EL1.read(MPIDR_EL1::Aff0),

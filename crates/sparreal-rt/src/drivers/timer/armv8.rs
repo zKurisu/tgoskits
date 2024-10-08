@@ -5,11 +5,7 @@ use alloc::{boxed::Box, vec};
 use driver_interface::*;
 use futures::{future::LocalBoxFuture, FutureExt};
 use log::info;
-use sparreal_kernel::{
-    irq::{register_irq, IrqConfig, IrqHandle},
-    kernel,
-    platform::cpu_id,
-};
+use sparreal_kernel::irq::{register_irq, IrqConfig, IrqHandle};
 use timer::Driver;
 
 pub fn register() -> Register {
@@ -38,7 +34,7 @@ impl Probe for ProbeTimerArmv8 {
                     cpu_list: vec![],
                 },
                 config.id,
-                move |irq| {
+                move |_irq| {
                     info!("armv8 timer irq!");
                     IrqHandle::Handled
                 },
