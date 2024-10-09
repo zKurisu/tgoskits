@@ -137,8 +137,22 @@ dependencies = [
 
 [[package]]
 name = "arm-pl011-rs"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
+ "bitflags 2.6.0",
+ "embedded-io",
+ "embedded-io-async",
+ "spin_on",
+ "tock-registers",
+]
+
+[[package]]
+name = "arm-pl011-rs"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d477686936e1a46d87799a5dd19d746110be6ebad7814db562042bd41b7934c"
+dependencies = [
+ "bitflags 2.6.0",
  "embedded-io",
  "embedded-io-async",
  "spin_on",
@@ -1125,7 +1139,7 @@ dependencies = [
  "aarch64-cpu",
  "arm-gic",
  "arm-gic-driver",
- "arm-pl011-rs",
+ "arm-pl011-rs 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "arm_pl031",
  "bitflags 2.6.0",
  "driver-interface",
