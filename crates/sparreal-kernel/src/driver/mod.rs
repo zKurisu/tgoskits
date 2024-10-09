@@ -43,7 +43,7 @@ pub type DriverWeak<T> = Weak<RwLock<T>>;
 
 #[derive(Debug, Clone)]
 pub struct DriverDescriptor {
-    pub id: DriverId,
+    pub id: DeviceId,
     pub name: String,
 }
 
@@ -53,7 +53,7 @@ pub(crate) struct DriverCommon<T> {
     pub spec: DriverArc<T>,
 }
 impl<T> DriverCommon<T> {
-    pub fn new<N: ToString>(id: DriverId, name: N, spec: T) -> DriverCommon<T> {
+    pub fn new<N: ToString>(id: DeviceId, name: N, spec: T) -> DriverCommon<T> {
         Self {
             desc: DriverDescriptor {
                 id,

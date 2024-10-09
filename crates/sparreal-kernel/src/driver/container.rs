@@ -1,5 +1,5 @@
 use super::{
-    device_tree::get_device_tree, driver_id_by_node_name, DriverId, DriverIrqChip, DriverTimer,
+    device_tree::get_device_tree, driver_id_by_node_name, DeviceId, DriverIrqChip, DriverTimer,
     DriverUart,
 };
 
@@ -15,7 +15,7 @@ use log::{error, info};
 
 pub(super) static CONTAINER: Container = Container::new();
 
-type ContainerKind<T> = RwLock<BTreeMap<DriverId, T>>;
+type ContainerKind<T> = RwLock<BTreeMap<DeviceId, T>>;
 
 const fn new_kind<T>() -> ContainerKind<T> {
     return RwLock::new(BTreeMap::new());
@@ -23,7 +23,7 @@ const fn new_kind<T>() -> ContainerKind<T> {
 
 pub(super) struct Container {
     pub(super) registers: RwLock<BTreeMap<String, Register>>,
-    probed: RwLock<BTreeSet<DriverId>>,
+    probed: RwLock<BTreeSet<DeviceId>>,
     pub(super) uart: ContainerKind<DriverUart>,
     pub(super) irq_chip: ContainerKind<DriverIrqChip>,
     pub(super) timer: ContainerKind<DriverTimer>,
@@ -39,26 +39,30 @@ impl Container {
             timer: new_kind(),
         }
     }
-}
-pub fn add_driver<N: ToString>(id: DriverId, name: N, spec: DriverSpecific) {
-    macro_rules! add_to {
-        ($driver:expr,$field:expr) => {
-            let d = $crate::driver::DriverCommon::new(id.clone(), name, $driver);
-            $field.write().insert(id, d.into());
-        };
-    }
 
-    match spec {
-        DriverSpecific::Uart(driver) => {
-            add_to!(driver, CONTAINER.uart);
+    pub fn add_driver(&self, id: DeviceId, name: String, spec: DriverSpecific) {
+        macro_rules! add_to {
+            ($driver:expr,$field:ident) => {
+                let d = $crate::driver::DriverCommon::new(id.clone(), name, $driver);
+                self.$field.write().insert(id, d.into());
+            };
         }
-        DriverSpecific::InteruptChip(driver) => {
-            add_to!(driver, CONTAINER.irq_chip);
-        }
-        DriverSpecific::Timer(driver) => {
-            add_to!(driver, CONTAINER.timer);
+
+        match spec {
+            DriverSpecific::Uart(driver) => {
+                add_to!(driver, uart);
+            }
+            DriverSpecific::InteruptChip(driver) => {
+                add_to!(driver, irq_chip);
+            }
+            DriverSpecific::Timer(driver) => {
+                add_to!(driver, timer);
+            }
         }
     }
+}
+pub fn add_driver<N: ToString>(id: DeviceId, name: N, spec: DriverSpecific) {
+    CONTAINER.add_driver(id, name.to_string(), spec);
 }
 
 pub async fn probe_by_register(register: Register) -> Option<()> {
@@ -86,7 +90,7 @@ pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
     Some(())
 }
 
-pub(crate) fn is_probed(id: &DriverId) -> bool {
+pub(crate) fn is_probed(id: &DeviceId) -> bool {
     CONTAINER.probed.read().contains(id)
 }
 
@@ -119,7 +123,7 @@ pub fn uart_list() -> Vec<DriverUart> {
     g.values().cloned().collect()
 }
 
-pub fn uart_by_id(id: DriverId) -> Option<DriverUart> {
+pub fn uart_by_id(id: DeviceId) -> Option<DriverUart> {
     CONTAINER.uart.read().get(&id).cloned()
 }
 
@@ -127,12 +131,12 @@ pub fn irq_chip_list() -> Vec<DriverIrqChip> {
     let g = CONTAINER.irq_chip.read();
     g.values().cloned().collect()
 }
-pub fn irq_chip_by_id_or_first(id: DriverId) -> Option<DriverIrqChip> {
+pub fn irq_chip_by_id_or_first(id: DeviceId) -> Option<DriverIrqChip> {
     let g = CONTAINER.irq_chip.read();
     g.get(&id).or_else(|| g.values().next()).cloned()
 }
 
-pub fn irq_by_id(id: DriverId) -> Option<DriverIrqChip> {
+pub fn irq_by_id(id: DeviceId) -> Option<DriverIrqChip> {
     CONTAINER.irq_chip.read().get(&id).cloned()
 }
 

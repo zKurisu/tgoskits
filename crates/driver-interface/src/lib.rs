@@ -52,7 +52,7 @@ impl Register {
 
 #[derive(Default, Clone)]
 pub struct ProbeConfig {
-    pub id: DriverId,
+    pub id: DeviceId,
     pub reg: Vec<NonNull<u8>>,
     pub irq: Vec<IrqProbeConfig>,
     pub clock_freq: Vec<u64>,
@@ -90,21 +90,21 @@ pub enum DriverError {
 
 #[repr(transparent)]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DriverId(u64);
+pub struct DeviceId(u64);
 
-impl Into<u64> for DriverId {
+impl Into<u64> for DeviceId {
     fn into(self) -> u64 {
         self.0
     }
 }
 
-impl From<u64> for DriverId {
+impl From<u64> for DeviceId {
     fn from(value: u64) -> Self {
         Self(value)
     }
 }
 
-impl Display for DriverId {
+impl Display for DeviceId {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{}", self.0)
     }

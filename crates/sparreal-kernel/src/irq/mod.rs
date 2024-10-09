@@ -1,5 +1,5 @@
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
-use driver_interface::{irq::Trigger, DriverId};
+use driver_interface::{irq::Trigger, DeviceId};
 use log::{debug, info};
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
 
 type Handler = Box<dyn Fn(usize) -> IrqHandle + Send + Sync>;
 
-static IRQ_VECTOR: RwLock<BTreeMap<usize, BTreeMap<DriverId, Handler>>> =
+static IRQ_VECTOR: RwLock<BTreeMap<usize, BTreeMap<DeviceId, Handler>>> =
     RwLock::new(BTreeMap::new());
 
 pub enum IrqHandle {
@@ -25,7 +25,7 @@ pub struct IrqConfig {
     pub cpu_list: Vec<u64>,
 }
 
-pub fn register_irq<F>(cfg: IrqConfig, dev_id: DriverId, handler: F)
+pub fn register_irq<F>(cfg: IrqConfig, dev_id: DeviceId, handler: F)
 where
     F: Fn(usize) -> IrqHandle + Send + Sync + 'static,
 {
@@ -34,7 +34,7 @@ where
     entry.insert(dev_id, Box::new(handler));
 
     //TODO
-    let controller_id = DriverId::default();
+    let controller_id = DeviceId::default();
 
     if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
         info!(
