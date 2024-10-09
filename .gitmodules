@@ -1,3 +1,0 @@
-[submodule "crates/arm-pl011"]
-	path = crates/arm-pl011
-	url = git@gitee.com:zr233/arm-pl011-rs.git
