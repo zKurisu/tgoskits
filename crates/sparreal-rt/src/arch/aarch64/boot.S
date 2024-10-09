@@ -49,12 +49,12 @@ _start_boot:
   
   ADR      x11, .
   LDR      x10, =_start_boot
-  SUB      x10, x10, x11 // x10 = va_offset
+  SUB      x18, x10, x11 // x10 = va_offset
 
   MOV      x19, x0        // x9 = dtb_addr
 
   LDR      x1, =_stack_top
-  SUB      x1, x1, x10 // X1 == STACK_TOP
+  SUB      x1, x1, x18 // X1 == STACK_TOP
 
   MRS      x2, MPIDR_EL1
   AND      x2, x2, #0xFF // X2 == CPU number.
@@ -65,6 +65,7 @@ _start_boot:
   MUL      x3, x2, x3 // Create separated stack spaces 
   SUB      x1, x1, x3 // for each processor
   MOV      sp, x1
+
 
   BL       __switch_to_el1
 
@@ -83,7 +84,7 @@ _el1_entry:
 
 
   MOV      x0, x19
-  MOV      x1, x10
+  MOV      x1, x18
   BL       __rust_main
   B        .
 

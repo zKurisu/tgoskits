@@ -54,7 +54,7 @@ fn main() -> Result<()> {
             Qemu::run(&project, a)?;
         }
         SubCommands::Uboot => {
-            project.build(true)?;
+            project.build(false)?;
             UBoot::run(&project)?;
         }
     }

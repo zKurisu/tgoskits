@@ -45,7 +45,6 @@ impl Compile {
                 "RUSTFLAGS",
                 "-C link-arg=-Tlink.x -C link-arg=-no-pie -C link-arg=-znostart-stop-gc",
             )
-            // .env("BSP_FILE", &project.config_path)
             .exec()?;
 
         let elf = project
