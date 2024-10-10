@@ -101,9 +101,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
     debug_print("stack top: ");
     debug_hex(stack_top as _);
-    debug_print(" - 8 \r\n");
-
-    stack_top -= 8;
+    debug_print("\r\n");
+    // debug_print(" - 16 \r\n");
+    // stack_top -= 16;
 
     debug_println("table set");
     mmu_add_offset(va_offset);

@@ -8,10 +8,10 @@ pub use driver_interface::DeviceId;
 
 static MANAGER: RwLock<IdManager> = RwLock::new(IdManager::new());
 
-pub fn driver_id_by_node_name(name: &str) -> DeviceId {
+pub fn device_id_by_node_name(name: &str) -> DeviceId {
     MANAGER.write().id_by_node_name(name)
 }
-pub fn driver_id_next() -> DeviceId {
+pub fn device_id_next() -> DeviceId {
     let mut g = MANAGER.write();
     g.id_iter += 1;
     g.id_iter.into()

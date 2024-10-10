@@ -6,7 +6,7 @@ use flat_device_tree::{node::FdtNode, Fdt};
 
 use crate::mem::mmu::iomap;
 
-use super::{driver_id_by_node_name, irq_by_id};
+use super::{device_id_by_node_name, irq_by_id};
 
 // #[link_section = ".data.boot"]
 static mut DTB_ADDR: Option<NonNull<u8>> = None;
@@ -46,7 +46,7 @@ impl FDTExtend for FdtNode<'_, '_> {
 
     fn probe_config(&self) -> ProbeConfig {
         let mut config = ProbeConfig::default();
-        config.id = driver_id_by_node_name(self.name);
+        config.id = device_id_by_node_name(self.name);
 
         for reg in self.reg_fix() {
             let reg_base = iomap(reg.starting_address.into(), reg.size.unwrap_or(0x1000));
@@ -56,7 +56,7 @@ impl FDTExtend for FdtNode<'_, '_> {
         let irq_origin = self.interrupt_list();
 
         if let Some(itr_node) = self.interrupt_parent() {
-            let id = driver_id_by_node_name(itr_node.name);
+            let id = device_id_by_node_name(itr_node.name);
             if let Some(irq) = irq_by_id(id) {
                 let g = irq.spec.read();
 

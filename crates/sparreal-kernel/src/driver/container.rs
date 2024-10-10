@@ -1,5 +1,5 @@
 use super::{
-    device_tree::get_device_tree, driver_id_by_node_name, DeviceId, DriverIrqChip, DriverTimer,
+    device_tree::get_device_tree, device_id_by_node_name, DeviceId, DriverIrqChip, DriverTimer,
     DriverUart,
 };
 
@@ -76,7 +76,7 @@ pub async fn probe_by_register(register: Register) -> Option<()> {
 }
 
 pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
-    let id = driver_id_by_node_name(node.name);
+    let id = device_id_by_node_name(node.name);
 
     if is_probed(&id) {
         return Some(());
