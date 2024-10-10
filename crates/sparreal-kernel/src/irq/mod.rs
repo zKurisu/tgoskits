@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
+use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
 use driver_interface::{irq::Trigger, DeviceId};
 use log::{debug, info, warn};
 
@@ -19,6 +19,7 @@ struct Vector(BTreeMap<usize, VectorPerCpu>);
 unsafe impl Send for Vector {}
 unsafe impl Sync for Vector {}
 
+#[allow(unused)]
 impl Vector {
     const fn new() -> Self {
         Self(BTreeMap::new())

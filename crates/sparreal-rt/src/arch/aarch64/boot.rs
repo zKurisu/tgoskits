@@ -1,7 +1,6 @@
 use core::{
     arch::{asm, global_asm},
     ptr::{addr_of, slice_from_raw_parts_mut, NonNull},
-    u64,
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
@@ -101,7 +100,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
     KCONFIG.stack_top = KCONFIG.main_memory.start + KCONFIG.main_memory.size;
 
-    let mut stack_top = KCONFIG.stack_top.as_usize() + va_offset;
+    let stack_top = KCONFIG.stack_top.as_usize() + va_offset;
 
     debug_print("stack top: ");
     debug_hex(stack_top as _);
@@ -286,7 +285,7 @@ unsafe fn config_memory_by_fdt(
                 < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
         {
             KCONFIG.main_memory_heap_offset =
-                (kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize());
+                kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize();
             debug_print(", Kernel is in this memory, used: ");
             debug_hex(KCONFIG.main_memory_heap_offset as _);
             debug_println("\r\n");

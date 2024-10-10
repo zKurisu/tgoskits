@@ -1,5 +1,3 @@
-use core::time::Duration;
-
 use alloc::boxed::Box;
 
 pub trait Driver: super::DriverGeneric {

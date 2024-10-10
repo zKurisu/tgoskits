@@ -4,7 +4,7 @@ use alloc::vec::Vec;
 pub use driver_interface::timer::*;
 
 use crate::{
-    irq::{irq_set_handle, IrqConfig, IrqHandle},
+    irq::{irq_set_handle, IrqHandle},
     struct_driver,
 };
 
@@ -12,6 +12,7 @@ use super::CONTAINER;
 
 struct_driver!(DriverTimer, BoxDriver);
 
+#[allow(unused)]
 pub fn list() -> Vec<DriverTimer> {
     let g = CONTAINER.timer.read();
     g.values().map(|one| one.clone()).collect()

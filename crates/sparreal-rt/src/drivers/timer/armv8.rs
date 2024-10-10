@@ -1,11 +1,9 @@
-use core::time::Duration;
 
 use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, vec};
 use driver_interface::*;
 use futures::{future::LocalBoxFuture, FutureExt};
-use log::info;
-use sparreal_kernel::irq::{irq_setup, IrqConfig, IrqHandle};
+use sparreal_kernel::irq::irq_setup;
 use timer::Driver;
 use tock_registers::interfaces::ReadWriteable;
 
