@@ -1,6 +1,7 @@
 use core::{
     arch::{asm, global_asm},
     ptr::{addr_of, slice_from_raw_parts_mut, NonNull},
+    u64,
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
@@ -10,7 +11,10 @@ use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::{
-    arch::debug::{debug_print, init_debug, mmu_add_offset},
+    arch::{
+        debug::{debug_print, init_debug, mmu_add_offset},
+        PlatformImpl,
+    },
     consts::*,
 };
 
@@ -102,19 +106,24 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_print("stack top: ");
     debug_hex(stack_top as _);
     debug_print("\r\n");
-    // debug_print(" - 16 \r\n");
-    // stack_top -= 16;
+
+    debug_print("TCR_EL1:");
+    debug_hex(TCR_EL1.get());
+    debug_println("\r\n");
+
+    // let ptr = 0x3082ffe8 as *const u8;
+    // debug_hex(ptr.read_volatile() as _);
 
     debug_println("table set");
+
     mmu_add_offset(va_offset);
     if DTB_ADDR > 0 {
         DTB_ADDR += va_offset;
     }
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    PlatformImpl::flush_tlb(None);
     barrier::isb(barrier::SY);
-
-    debug_println("MMU enabled");
 
     asm!("
     MOV  sp,  {sp_top}
@@ -131,6 +140,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
+    debug_println("MMU enabled");
+    
     KCONFIG.dtb_addr = NonNull::new(DTB_ADDR as _);
     crate::boot(KCONFIG.clone());
 }
@@ -270,8 +281,12 @@ unsafe fn config_memory_by_fdt(
         debug_print(" Kernel start: ");
         debug_hex(kernel_start.as_usize() as _);
 
-        if KCONFIG.main_memory.start == kernel_start {
-            KCONFIG.main_memory_heap_offset = kernel_size;
+        if KCONFIG.main_memory.start.as_usize() <= kernel_start.as_usize()
+            && kernel_start.as_usize()
+                < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
+        {
+            KCONFIG.main_memory_heap_offset =
+                (kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize());
             debug_print(", Kernel is in this memory, used: ");
             debug_hex(KCONFIG.main_memory_heap_offset as _);
             debug_println("\r\n");
