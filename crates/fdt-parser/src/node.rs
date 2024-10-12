@@ -212,4 +212,10 @@ impl ByteBuffer<'_> {
 
         Some(FdtProperty { len, name_offset })
     }
+
+    fn skip_nops(&mut self) {
+        while let Some(FDT_NOP) = self.peek_u32().map(|n| n.get()) {
+            self.skip(4);
+        }
+    }
 }

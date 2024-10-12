@@ -73,17 +73,13 @@ impl<'a> ByteBuffer<'a> {
     }
 
     pub fn u32(&mut self) -> Option<BigEndianU32> {
-        let ret = BigEndianU32::from_bytes(self.bytes)?;
-        self.skip(4)?;
-
-        Some(ret)
+        let bytes = self.take(4)?;
+        BigEndianU32::from_bytes(bytes)
     }
 
     pub fn u64(&mut self) -> Option<BigEndianU64> {
-        let ret = BigEndianU64::from_bytes(self.bytes)?;
-        self.skip(8)?;
-
-        Some(ret)
+        let bytes = self.take(8)?;
+        BigEndianU64::from_bytes(bytes)
     }
 
     pub fn skip(&mut self, n_bytes: usize) -> Option<()> {
@@ -96,34 +92,28 @@ impl<'a> ByteBuffer<'a> {
     }
 
     pub fn peek_u32(&self) -> Option<BigEndianU32> {
-        Self::new(self.remaining()).u32()
+        let bytes = self.bytes.get(..4)?;
+        BigEndianU32::from_bytes(bytes)
     }
 
     pub fn is_empty(&self) -> bool {
         self.remaining().is_empty()
     }
 
-    pub fn skip_nops(&mut self) {
-        while let Some(FDT_NOP) = self.peek_u32().map(|n| n.get()) {
-            let _ = self.u32();
-        }
-    }
+
 
     pub fn take(&mut self, bytes: usize) -> Option<&'a [u8]> {
         if self.bytes.len() >= bytes {
             let ret = self.bytes.get(..bytes)?;
             self.skip(bytes);
-
             return Some(ret);
         }
-
         None
     }
     pub fn skip_4_aligned(&mut self, len: usize) {
         self.skip((len + 3) & !0x3);
     }
 }
-
 
 /// A raw `reg` property value set
 #[derive(Debug, Clone, Copy, PartialEq)]
