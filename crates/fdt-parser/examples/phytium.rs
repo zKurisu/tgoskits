@@ -5,4 +5,8 @@ fn main() {
     let fdt = FdtRef::from_bytes(bytes).unwrap();
 
     println!("fdt size: {}", fdt.total_size());
+
+    for node in fdt.all_nodes() {
+        println!("node: {}  {}", node.level, node.name);
+    }
 }

@@ -1,9 +1,8 @@
-const FDT_BEGIN_NODE: u32 = 1;
-const FDT_END_NODE: u32 = 2;
-const FDT_PROP: u32 = 3;
-pub(crate) const FDT_NOP: u32 = 4;
-const FDT_END: u32 = 5;
-
+pub const FDT_BEGIN_NODE: u32 = 1;
+pub const FDT_END_NODE: u32 = 2;
+pub const FDT_PROP: u32 = 3;
+pub const FDT_NOP: u32 = 4;
+pub const FDT_END: u32 = 5;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -22,7 +21,9 @@ impl BigEndianU32 {
 
     /// Attempts to convert a byte buffer into a [BigEndianU32].
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        Some(BigEndianU32(u32::from_be_bytes(bytes.get(..4)?.try_into().ok()?)))
+        Some(BigEndianU32(u32::from_be_bytes(
+            bytes.get(..4)?.try_into().ok()?,
+        )))
     }
 }
 
@@ -49,7 +50,9 @@ impl BigEndianU64 {
 
     /// Attempts to convert a byte buffer into a [BigEndianU64].
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        Some(BigEndianU64(u64::from_be_bytes(bytes.get(..8)?.try_into().ok()?)))
+        Some(BigEndianU64(u64::from_be_bytes(
+            bytes.get(..8)?.try_into().ok()?,
+        )))
     }
 }
 
@@ -59,13 +62,12 @@ impl Default for BigEndianU64 {
     }
 }
 
-
 #[derive(Debug, Clone, Copy)]
-pub struct ByteReader<'a> {
+pub struct ByteBuffer<'a> {
     bytes: &'a [u8],
 }
 
-impl<'a> ByteReader<'a> {
+impl<'a> ByteBuffer<'a> {
     pub fn new(bytes: &'a [u8]) -> Self {
         Self { bytes }
     }
@@ -117,5 +119,19 @@ impl<'a> ByteReader<'a> {
 
         None
     }
+    pub fn skip_4_aligned(&mut self, len: usize) {
+        self.skip((len + 3) & !0x3);
+    }
 }
 
+
+/// A raw `reg` property value set
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RawReg<'a> {
+    /// Big-endian encoded bytes making up the address portion of the property.
+    /// Length will always be a multiple of 4 bytes.
+    pub address: &'a [u8],
+    /// Big-endian encoded bytes making up the size portion of the property.
+    /// Length will always be a multiple of 4 bytes.
+    pub size: &'a [u8],
+}
