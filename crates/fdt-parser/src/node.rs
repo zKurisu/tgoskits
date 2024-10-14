@@ -119,8 +119,8 @@ impl<'a> NodeProperty<'a> {
     /// Attempt to parse the property value as a `usize`
     pub fn as_usize(self) -> Option<usize> {
         match self.value.len() {
-            4 => BigEndianU32::from_bytes(self.value).map(|i| i.get() as usize),
-            8 => BigEndianU64::from_bytes(self.value).map(|i| i.get() as usize),
+            4 => Fdt32::from_bytes(self.value).map(|i| i.get() as usize),
+            8 => Fdt64::from_bytes(self.value).map(|i| i.get() as usize),
             _ => None,
         }
     }
@@ -201,8 +201,8 @@ impl<'a> NodeProperty<'a> {
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 struct FdtProperty {
-    len: BigEndianU32,
-    name_offset: BigEndianU32,
+    len: Fdt32,
+    name_offset: Fdt32,
 }
 
 impl ByteBuffer<'_> {
