@@ -2,7 +2,8 @@ use core::ffi::CStr;
 
 use crate::cell::{CellSize, CellSizes};
 use crate::error::FdtResult;
-use crate::{define::*, FdtRef};
+use crate::read::FdtReader;
+use crate::{define::*, Fdt, FdtRef};
 use crate::{error::FdtError, ByteBuffer, FdtHeader};
 
 /// A devicetree node
@@ -217,5 +218,30 @@ impl ByteBuffer<'_> {
         while let Some(FDT_NOP) = self.peek_u32().map(|n| n.get()) {
             self.skip(4);
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct Node<'a, 'b: 'a> {
+    pub level: usize,
+    fdt: Fdt<'a>,
+    pub name: &'a str,
+    body: FdtReader<'a, 'b>,
+}
+
+impl<'a, 'b: 'a> Node<'a, 'b> {
+    pub(crate) fn new(level: usize, fdt: Fdt<'a>, reader: &mut FdtReader<'a, 'b>) -> Self {
+        let name = reader.take_unit_name().unwrap();
+
+        Self {
+            level,
+            fdt,
+            body: reader.clone(),
+            name,
+        }
+    }
+
+    pub fn name(&self) -> &'a str {
+        self.name
     }
 }

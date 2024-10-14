@@ -1,3 +1,5 @@
+use core::str::Utf8Error;
+
 pub type FdtResult<T = ()> = Result<T, FdtError>;
 
 #[derive(Debug)]
@@ -17,4 +19,12 @@ pub enum FdtError {
     BufferTooSmall,
 
     MissingProperty,
+
+    Utf8Parse,
+}
+
+impl From<Utf8Error> for FdtError {
+    fn from(_value: Utf8Error) -> Self {
+        FdtError::Utf8Parse
+    }
 }
