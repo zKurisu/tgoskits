@@ -1,6 +1,8 @@
 use core::{ffi::CStr, iter, ptr::NonNull};
 
-use crate::{error::*, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token};
+use crate::{
+    cell::MetaData, error::*, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
+};
 
 #[derive(Clone)]
 pub struct Fdt<'a> {
@@ -59,16 +61,71 @@ impl<'a> Fdt<'a> {
         let reader = self.reader(self.header.off_dt_struct.get() as _);
         FdtIter {
             fdt: self.clone(),
-            level: 0,
+            parent_index: 0,
             reader,
+            stack: Default::default(),
+            meta: Default::default(),
         }
     }
 }
 
+#[derive(Default)]
+struct MetaStack {
+    address_cells: [Option<u8>; 12],
+    size_cells: [Option<u8>; 12],
+    clock_cells: [Option<u8>; 12],
+    interrupt_cells: [Option<u8>; 12],
+    gpio_cells: [Option<u8>; 12],
+    dma_cells: [Option<u8>; 12],
+    cooling_cells: [Option<u8>; 12],
+}
+
 pub struct FdtIter<'a, 'b: 'a> {
     fdt: Fdt<'a>,
-    level: usize,
+    parent_index: usize,
     reader: FdtReader<'a, 'b>,
+    stack: MetaStack,
+    meta: MetaData,
+}
+
+impl<'a, 'b: 'a> FdtIter<'a, 'b> {
+    fn get_meta(&self) -> MetaData {
+        let mut meta = MetaData::default();
+        macro_rules! get_size {
+            ($cell:ident) => {{
+                let mut size = 0;
+                for i in (0..self.parent_index).rev() {
+                    if let Some(cell_size) = self.stack.$cell[i] {
+                        size = cell_size;
+                        break;
+                    }
+                }
+                meta.$cell = size;
+            }};
+        }
+
+        get_size!(address_cells);
+        get_size!(size_cells);
+        get_size!(clock_cells);
+        get_size!(interrupt_cells);
+        get_size!(gpio_cells);
+        get_size!(dma_cells);
+        get_size!(cooling_cells);
+
+        meta
+    }
+
+    fn next_level(&mut self) {
+        self.parent_index += 1;
+        let i = self.parent_index;
+        self.stack.address_cells[i] = None;
+        self.stack.size_cells[i] = None;
+        self.stack.clock_cells[i] = None;
+        self.stack.interrupt_cells[i] = None;
+        self.stack.gpio_cells[i] = None;
+        self.stack.dma_cells[i] = None;
+        self.stack.cooling_cells[i] = None;
+    }
 }
 
 impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
@@ -80,12 +137,30 @@ impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
 
             match token {
                 Token::BeginNode => {
-                    let node = Node::new(self.level as _, self.fdt.clone(), &mut self.reader);
-                    self.level += 1;
+                    let mut node = Node::new(self.parent_index as _, &mut self.reader);
+                    self.next_level();
+                    for prop in node.propertys() {
+                        macro_rules! update_cell {
+                            ($cell:ident) => {
+                                self.stack.$cell[self.parent_index] = Some(prop.u32() as _)
+                            };
+                        }
+                        match prop.name {
+                            "#address-cells" => update_cell!(address_cells),
+                            "#size-cells" => update_cell!(size_cells),
+                            "#clock-cells" => update_cell!(clock_cells),
+                            "#interrupt-cells" => update_cell!(interrupt_cells),
+                            "#gpio-cells" => update_cell!(gpio_cells),
+                            "#dma-cells" => update_cell!(dma_cells),
+                            "#cooling-cells" => update_cell!(cooling_cells),
+                            _ => {}
+                        }
+                    }
+                    node.meta = self.get_meta();
                     return Some(node);
                 }
                 Token::EndNode => {
-                    self.level -= 1;
+                    self.parent_index -= 1;
                 }
                 Token::Prop => {
                     let _ = self.reader.take_prop();

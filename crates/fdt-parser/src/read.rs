@@ -107,3 +107,13 @@ pub struct Property<'a, 'b: 'a> {
     pub name: &'a str,
     data: FdtReader<'a, 'b>,
 }
+
+impl<'a, 'b: 'a> Property<'a, 'b> {
+    pub fn raw_value(&self) -> &'a [u8] {
+        self.data.remaining()
+    }
+
+    pub fn u32(&self) -> u32 {
+        self.data.clone().take_u32().unwrap()
+    }
+}
