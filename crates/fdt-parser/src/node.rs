@@ -1,8 +1,6 @@
-use core::iter;
-
-use crate::cell::MetaData;
+use crate::meta::MetaData;
 use crate::read::{FdtReader, Property};
-use crate::{Fdt, Token};
+use crate::{Cell, CellSilceIter, Fdt, MemoryRegion, Reg, Token};
 
 #[derive(Clone)]
 pub struct Node<'a, 'b: 'a> {
@@ -31,6 +29,44 @@ impl<'a, 'b: 'a> Node<'a, 'b> {
     pub fn propertys(&self) -> impl Iterator<Item = Property<'a, 'b>> + '_ {
         let reader = self.body.clone();
         PropIter { reader }
+    }
+
+    pub fn reg(&self) -> impl Iterator<Item = Reg> + 'a {
+        let mut iter = self.propertys();
+        let reg = iter.find(|x| x.name.eq("reg"));
+
+        let address_cell = self.meta.address_cells;
+        let size_cell = self.meta.size_cells;
+
+        RegIter {
+            address_cell,
+            size_cell,
+            prop: reg,
+        }
+    }
+}
+
+struct RegIter<'a, 'b: 'a> {
+    address_cell: u8,
+    size_cell: u8,
+    prop: Option<Property<'a, 'b>>,
+}
+impl<'a, 'b: 'a> Iterator for RegIter<'a, 'b> {
+    type Item = Reg;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(prop) = &mut self.prop {
+            let address_bytes_num = self.address_cell as usize * 4;
+            let address = prop.data.take(address_bytes_num)?;
+            let size = if self.size_cell > 0 {
+                Some(prop.data.take_by_cell_size(self.size_cell)?)
+            } else {
+                None
+            };
+            Some(Reg::new(self.address_cell, address, size))
+        } else {
+            None
+        }
     }
 }
 

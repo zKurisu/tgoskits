@@ -1,6 +1,6 @@
 #![no_std]
 
-mod cell;
+mod meta;
 mod define;
 pub mod error;
 mod fdt;

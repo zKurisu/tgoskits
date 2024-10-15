@@ -1,7 +1,7 @@
 use core::{ffi::CStr, iter, ptr::NonNull};
 
 use crate::{
-    cell::MetaData, error::*, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
+    error::*, meta::MetaData, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
 };
 
 #[derive(Clone)]
@@ -61,7 +61,7 @@ impl<'a> Fdt<'a> {
         let reader = self.reader(self.header.off_dt_struct.get() as _);
         FdtIter {
             fdt: self.clone(),
-            parent_index: 0,
+            current_level: 0,
             reader,
             stack: Default::default(),
             meta: Default::default(),
@@ -82,7 +82,7 @@ struct MetaStack {
 
 pub struct FdtIter<'a, 'b: 'a> {
     fdt: Fdt<'a>,
-    parent_index: usize,
+    current_level: usize,
     reader: FdtReader<'a, 'b>,
     stack: MetaStack,
     meta: MetaData,
@@ -91,10 +91,11 @@ pub struct FdtIter<'a, 'b: 'a> {
 impl<'a, 'b: 'a> FdtIter<'a, 'b> {
     fn get_meta(&self) -> MetaData {
         let mut meta = MetaData::default();
+        let level = self.current_level;
         macro_rules! get_size {
             ($cell:ident) => {{
                 let mut size = 0;
-                for i in (0..self.parent_index).rev() {
+                for i in (0..level).rev() {
                     if let Some(cell_size) = self.stack.$cell[i] {
                         size = cell_size;
                         break;
@@ -116,8 +117,19 @@ impl<'a, 'b: 'a> FdtIter<'a, 'b> {
     }
 
     fn next_level(&mut self) {
-        self.parent_index += 1;
-        let i = self.parent_index;
+        self.current_level += 1;
+        let i = self.current_level;
+        self.stack.address_cells[i] = None;
+        self.stack.size_cells[i] = None;
+        self.stack.clock_cells[i] = None;
+        self.stack.interrupt_cells[i] = None;
+        self.stack.gpio_cells[i] = None;
+        self.stack.dma_cells[i] = None;
+        self.stack.cooling_cells[i] = None;
+    }
+    fn parent_level(&mut self) {
+        self.current_level -= 1;
+        let i = self.current_level;
         self.stack.address_cells[i] = None;
         self.stack.size_cells[i] = None;
         self.stack.clock_cells[i] = None;
@@ -137,12 +149,12 @@ impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
 
             match token {
                 Token::BeginNode => {
-                    let mut node = Node::new(self.parent_index as _, &mut self.reader);
                     self.next_level();
+                    let mut node = Node::new(self.current_level as _, &mut self.reader);
                     for prop in node.propertys() {
                         macro_rules! update_cell {
                             ($cell:ident) => {
-                                self.stack.$cell[self.parent_index] = Some(prop.u32() as _)
+                                self.stack.$cell[self.current_level - 1] = Some(prop.u32() as _)
                             };
                         }
                         match prop.name {
@@ -160,7 +172,7 @@ impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
                     return Some(node);
                 }
                 Token::EndNode => {
-                    self.parent_index -= 1;
+                    self.parent_level();
                 }
                 Token::Prop => {
                     let _ = self.reader.take_prop();

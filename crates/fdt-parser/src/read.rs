@@ -7,7 +7,7 @@ use crate::{
 
 #[derive(Clone)]
 pub(crate) struct FdtReader<'a, 'b: 'a> {
-    fdt: &'b Fdt<'a>,
+    pub fdt: &'b Fdt<'a>,
     bytes: &'a [u8],
 }
 
@@ -26,6 +26,14 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
         let bytes = self.take(8)?;
         let fdt64: Fdt64 = bytes.into();
         Some(fdt64.get())
+    }
+
+    pub fn take_by_cell_size(&mut self, cell_size: u8) -> Option<usize> {
+        match cell_size {
+            1 => self.take_u32().map(|s| s as usize),
+            2 => self.take_u64().map(|s| s as usize),
+            _ => panic!("invalid cell size {}", cell_size),
+        }
     }
 
     pub fn skip(&mut self, n_bytes: usize) -> FdtResult {
@@ -63,6 +71,11 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
             return Some(ret);
         }
         None
+    }
+
+    pub fn take_by(&mut self, offset: usize) -> Option<Self> {
+        let bytes = self.take(offset)?;
+        Some(FdtReader::new(self.fdt, bytes))
     }
 
     pub fn take_aligned(&mut self, len: usize) -> Option<&'a [u8]> {
@@ -105,7 +118,7 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
 
 pub struct Property<'a, 'b: 'a> {
     pub name: &'a str,
-    data: FdtReader<'a, 'b>,
+    pub(crate) data: FdtReader<'a, 'b>,
 }
 
 impl<'a, 'b: 'a> Property<'a, 'b> {
