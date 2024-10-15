@@ -69,22 +69,34 @@ impl<'a> Fdt<'a> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MetaStack {
-    address_cells: [Option<u8>; 12],
-    size_cells: [Option<u8>; 12],
-    clock_cells: [Option<u8>; 12],
-    interrupt_cells: [Option<u8>; 12],
-    gpio_cells: [Option<u8>; 12],
-    dma_cells: [Option<u8>; 12],
-    cooling_cells: [Option<u8>; 12],
+    address_cells: Option<u8>,
+    size_cells: Option<u8>,
+    clock_cells: Option<u8>,
+    interrupt_cells: Option<u8>,
+    gpio_cells: Option<u8>,
+    dma_cells: Option<u8>,
+    cooling_cells: Option<u8>,
+}
+
+impl MetaStack {
+    fn clean(&mut self) {
+        self.address_cells = None;
+        self.size_cells = None;
+        self.clock_cells = None;
+        self.interrupt_cells = None;
+        self.gpio_cells = None;
+        self.dma_cells = None;
+        self.cooling_cells = None;
+    }
 }
 
 pub struct FdtIter<'a, 'b: 'a> {
     fdt: Fdt<'a>,
     current_level: usize,
     reader: FdtReader<'a, 'b>,
-    stack: MetaStack,
+    stack: [MetaStack; 12],
     meta: MetaData,
 }
 
@@ -96,7 +108,7 @@ impl<'a, 'b: 'a> FdtIter<'a, 'b> {
             ($cell:ident) => {{
                 let mut size = 0;
                 for i in (0..level).rev() {
-                    if let Some(cell_size) = self.stack.$cell[i] {
+                    if let Some(cell_size) = self.stack[i].$cell {
                         size = cell_size;
                         break;
                     }
@@ -119,24 +131,12 @@ impl<'a, 'b: 'a> FdtIter<'a, 'b> {
     fn next_level(&mut self) {
         self.current_level += 1;
         let i = self.current_level;
-        self.stack.address_cells[i] = None;
-        self.stack.size_cells[i] = None;
-        self.stack.clock_cells[i] = None;
-        self.stack.interrupt_cells[i] = None;
-        self.stack.gpio_cells[i] = None;
-        self.stack.dma_cells[i] = None;
-        self.stack.cooling_cells[i] = None;
+        self.stack[i].clean();
     }
     fn parent_level(&mut self) {
         self.current_level -= 1;
         let i = self.current_level;
-        self.stack.address_cells[i] = None;
-        self.stack.size_cells[i] = None;
-        self.stack.clock_cells[i] = None;
-        self.stack.interrupt_cells[i] = None;
-        self.stack.gpio_cells[i] = None;
-        self.stack.dma_cells[i] = None;
-        self.stack.cooling_cells[i] = None;
+        self.stack[i].clean();
     }
 }
 
@@ -154,7 +154,7 @@ impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
                     for prop in node.propertys() {
                         macro_rules! update_cell {
                             ($cell:ident) => {
-                                self.stack.$cell[self.current_level - 1] = Some(prop.u32() as _)
+                                self.stack[self.current_level - 1].$cell = Some(prop.u32() as _)
                             };
                         }
                         match prop.name {

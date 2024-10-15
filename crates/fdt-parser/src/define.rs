@@ -374,13 +374,11 @@ impl Reg {
     }
 
     pub fn address_raw(&self) -> [u32; 3] {
-        unsafe {
-            let ptr: *const u32 = self.address.as_ptr().cast();
-            let mut ret = [0; 3];
-            let src = unsafe { &*slice_from_raw_parts(ptr, 3) };
-            ret.copy_from_slice(src);
-            ret
-        }
+        let ptr: *const u32 = self.address.as_ptr().cast();
+        let mut ret = [0; 3];
+        let src = unsafe { &*slice_from_raw_parts(ptr, 3) };
+        ret.copy_from_slice(src);
+        ret
     }
 
     pub fn address(&self) -> usize {
@@ -415,4 +413,17 @@ impl Debug for Reg {
             f.write_str("None>")
         }
     }
+}
+
+/// Range mapping child bus addresses to parent bus addresses
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MemoryRange {
+    /// Starting address on child bus
+    pub child_bus_address: usize,
+    /// The high bits of the child bus' starting address, if present
+    pub child_bus_address_hi: u32,
+    /// Starting address on parent bus
+    pub parent_bus_address: usize,
+    /// Size of range
+    pub size: usize,
 }
