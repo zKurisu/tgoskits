@@ -1,6 +1,6 @@
 use core::{
     fmt::{Debug, Display},
-    mem,
+    ptr::NonNull,
 };
 
 use crate::error::*;
@@ -27,35 +27,27 @@ impl From<u32> for Token {
     }
 }
 
-const FDT_TAGSIZE: usize = size_of::<Fdt32>();
-
-pub const FDT_BEGIN_NODE: u32 = 1;
-pub const FDT_END_NODE: u32 = 2;
-pub const FDT_PROP: u32 = 3;
-pub const FDT_NOP: u32 = 4;
-pub const FDT_END: u32 = 5;
-
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
-pub struct Fdt32(u32);
+pub struct Fdt32([u8; 4]);
 
 impl Fdt32 {
     pub const fn new() -> Self {
-        Self(0)
+        Self([0; 4])
     }
 
     pub fn get(self) -> u32 {
-        self.0
+        u32::from_be_bytes(self.0)
     }
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        Some(Fdt32(u32::from_be_bytes(bytes.get(..4)?.try_into().ok()?)))
+        Some(Self(bytes.get(..4)?.try_into().ok()?))
     }
 }
 
 impl From<&[u8]> for Fdt32 {
     fn from(value: &[u8]) -> Self {
-        Fdt32(u32::from_be_bytes(value.try_into().unwrap()))
+        Fdt32(value.get(..4).unwrap().try_into().unwrap())
     }
 }
 
@@ -67,24 +59,24 @@ impl Default for Fdt32 {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
-pub struct Fdt64(u64);
+pub struct Fdt64([u8; 8]);
 
 impl Fdt64 {
     pub const fn new() -> Self {
-        Self(0)
+        Self([0; 8])
     }
 
     pub fn get(&self) -> u64 {
-        self.0
+        u64::from_be_bytes(self.0)
     }
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        Some(Fdt64(u64::from_be_bytes(bytes.get(..8)?.try_into().ok()?)))
+        Some(Self(bytes.get(..8)?.try_into().ok()?))
     }
 }
 impl From<&[u8]> for Fdt64 {
     fn from(value: &[u8]) -> Self {
-        Fdt64(u64::from_be_bytes(value.try_into().unwrap()))
+        Self(value.get(..8).unwrap().try_into().unwrap())
     }
 }
 impl Default for Fdt64 {
@@ -218,8 +210,22 @@ impl FdtHeader {
         })
     }
 
-    pub(crate) fn from_bytes(bytes: &[u8]) -> FdtResult<Self> {
-        Self::_from_bytes(bytes).ok_or(FdtError::BufferTooSmall)
+    pub fn from_bytes(bytes: &[u8]) -> FdtResult<Self> {
+        // Self::_from_bytes(bytes).ok_or(FdtError::BufferTooSmall)
+
+        if bytes.len() < size_of::<FdtHeader>() {
+            return Err(FdtError::BufferTooSmall);
+        }
+
+        unsafe {
+            let ptr: *const FdtHeader = bytes.as_ptr().cast();
+            Ok(ptr.read())
+        }
+    }
+
+    pub fn from_ptr(ptr: NonNull<u8>) -> FdtResult<Self> {
+        let ptr: NonNull<FdtHeader> = ptr.cast();
+        unsafe { Ok(ptr.as_ref().clone()) }
     }
 }
 

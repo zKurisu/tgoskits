@@ -1,8 +1,6 @@
-use core::{iter, ptr::NonNull};
+use core::{ffi::CStr, iter, ptr::NonNull};
 
-use crate::{
-    error::*, node::Node, read::FdtReader, Fdt64, FdtHeader, FdtReserveEntry, MemoryRegion, Token,
-};
+use crate::{error::*, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token};
 
 #[derive(Clone)]
 pub struct Fdt<'a> {
@@ -28,7 +26,7 @@ impl<'a> Fdt<'a> {
     }
 
     fn reader<'b: 'a>(&'b self, offset: usize) -> FdtReader<'a, 'b> {
-        FdtReader::new(&self.header, &self.data[offset..])
+        FdtReader::new(self, &self.data[offset..])
     }
 
     pub fn version(&self) -> usize {
@@ -49,7 +47,13 @@ impl<'a> Fdt<'a> {
         })
     }
 
-    // fn get_string(&self, offset: usize) {}
+    pub(crate) fn get_str<'b: 'a>(&'b self, offset: usize) -> FdtResult<&'a str> {
+        let reader = self.reader(self.header.off_dt_strings.get() as usize + offset);
+        let s = CStr::from_bytes_until_nul(reader.remaining())
+            .map_err(|_e| FdtError::Utf8Parse)?
+            .to_str()?;
+        Ok(s)
+    }
 
     pub fn all_nodes<'b: 'a>(&'b self) -> impl Iterator<Item = Node<'a, 'b>> {
         let reader = self.reader(self.header.off_dt_struct.get() as _);

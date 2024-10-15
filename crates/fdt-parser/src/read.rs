@@ -2,18 +2,18 @@ use core::ffi::CStr;
 
 use crate::{
     error::{FdtError, FdtResult},
-    Fdt32, Fdt64, FdtHeader, FdtReserveEntry, MemoryRegion, Token,
+    Fdt, Fdt32, Fdt64, FdtReserveEntry, Token,
 };
 
 #[derive(Clone)]
 pub(crate) struct FdtReader<'a, 'b: 'a> {
-    header: &'b FdtHeader,
+    fdt: &'b Fdt<'a>,
     bytes: &'a [u8],
 }
 
 impl<'a, 'b: 'a> FdtReader<'a, 'b> {
-    pub fn new(header: &'b FdtHeader, bytes: &'a [u8]) -> Self {
-        Self { header, bytes }
+    pub fn new(fdt: &'b Fdt<'a>, bytes: &'a [u8]) -> Self {
+        Self { fdt, bytes }
     }
 
     pub fn take_u32(&mut self) -> Option<u32> {
@@ -89,21 +89,21 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
         Ok(if unit_name.is_empty() { "/" } else { unit_name })
     }
 
-    pub fn take_prop(&mut self) -> Option<FdtProp> {
+    pub fn take_prop(&mut self) -> Option<Property<'a, 'b>> {
         let len = self.take_u32()?;
         let nameoff = self.take_u32()?;
         let bytes = self.take_aligned(len as _)?;
-        Some(FdtProp {
-            nameoff,
+        Some(Property {
+            name: self.fdt.get_str(nameoff as _).unwrap_or("<error>"),
             data: FdtReader {
-                header: &self.header,
+                fdt: &self.fdt,
                 bytes,
             },
         })
     }
 }
 
-pub(crate) struct FdtProp<'a, 'b: 'a> {
-    nameoff: u32,
+pub struct Property<'a, 'b: 'a> {
+    pub name: &'a str,
     data: FdtReader<'a, 'b>,
 }
