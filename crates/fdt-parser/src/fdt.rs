@@ -31,7 +31,7 @@ impl<'a> Fdt<'a> {
         Self::from_bytes(unsafe { core::slice::from_raw_parts(ptr.as_ptr(), real_size) })
     }
 
-    fn reader<'b: 'a>(&'b self, offset: usize) -> FdtReader<'a, 'b> {
+    fn reader(&'a self, offset: usize) -> FdtReader<'a> {
         FdtReader::new(self, &self.data[offset..])
     }
 
@@ -61,7 +61,7 @@ impl<'a> Fdt<'a> {
         Ok(s)
     }
 
-    pub fn all_nodes<'b: 'a>(&'b self) -> impl Iterator<Item = Node<'a, 'b>> {
+    pub fn all_nodes(&'a self) -> impl Iterator<Item = Node<'a>> {
         let reader = self.reader(self.header.off_dt_struct.get() as _);
         FdtIter {
             fdt: self.clone(),
@@ -74,7 +74,7 @@ impl<'a> Fdt<'a> {
 }
 
 #[derive(Default, Clone)]
-struct MetaStack<'a, 'b: 'a> {
+struct MetaStack<'a> {
     address_cells: Option<u8>,
     size_cells: Option<u8>,
     clock_cells: Option<u8>,
@@ -82,10 +82,10 @@ struct MetaStack<'a, 'b: 'a> {
     gpio_cells: Option<u8>,
     dma_cells: Option<u8>,
     cooling_cells: Option<u8>,
-    range: Option<MemoryRegionSilce<'a, 'b>>,
+    range: Option<MemoryRegionSilce<'a>>,
 }
 
-impl<'a, 'b: 'a> MetaStack<'a, 'b> {
+impl<'a> MetaStack<'a> {
     fn clean(&mut self) {
         self.address_cells = None;
         self.size_cells = None;
@@ -98,15 +98,15 @@ impl<'a, 'b: 'a> MetaStack<'a, 'b> {
     }
 }
 
-pub struct FdtIter<'a, 'b: 'a> {
+pub struct FdtIter<'a> {
     fdt: Fdt<'a>,
     current_level: usize,
-    reader: FdtReader<'a, 'b>,
-    stack: [MetaStack<'a, 'b>; 12],
+    reader: FdtReader<'a>,
+    stack: [MetaStack<'a>; 12],
     meta: MetaData,
 }
 
-impl<'a, 'b: 'a> FdtIter<'a, 'b> {
+impl<'a> FdtIter<'a> {
     fn get_meta(&self) -> MetaData {
         let mut meta = MetaData::default();
         let level = self.current_level;
@@ -146,8 +146,8 @@ impl<'a, 'b: 'a> FdtIter<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> Iterator for FdtIter<'a, 'b> {
-    type Item = Node<'a, 'b>;
+impl<'a> Iterator for FdtIter<'a> {
+    type Item = Node<'a,>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {

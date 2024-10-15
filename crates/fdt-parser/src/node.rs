@@ -3,15 +3,15 @@ use crate::read::{FdtReader, Property};
 use crate::{Cell, CellSilceIter, Fdt, FdtRange, MemoryRegion, Reg, Token};
 
 #[derive(Clone)]
-pub struct Node<'a, 'b: 'a> {
+pub struct Node<'a> {
     pub level: usize,
     pub name: &'a str,
     pub(crate) meta: MetaData,
-    body: FdtReader<'a, 'b>,
+    body: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> Node<'a, 'b> {
-    pub(crate) fn new(level: usize, reader: &mut FdtReader<'a, 'b>) -> Self {
+impl<'a> Node<'a> {
+    pub(crate) fn new(level: usize, reader: &mut FdtReader<'a>) -> Self {
         let name = reader.take_unit_name().unwrap();
 
         Self {
@@ -26,7 +26,7 @@ impl<'a, 'b: 'a> Node<'a, 'b> {
         self.name
     }
 
-    pub fn propertys(&self) -> impl Iterator<Item = Property<'a, 'b>> + '_ {
+    pub fn propertys(&self) -> impl Iterator<Item = Property<'a>> + '_ {
         let reader = self.body.clone();
         PropIter { reader }
     }
@@ -46,12 +46,12 @@ impl<'a, 'b: 'a> Node<'a, 'b> {
     }
 }
 
-struct RegIter<'a, 'b: 'a> {
+struct RegIter<'a> {
     address_cell: u8,
     size_cell: u8,
-    prop: Option<Property<'a, 'b>>,
+    prop: Option<Property<'a>>,
 }
-impl<'a, 'b: 'a> Iterator for RegIter<'a, 'b> {
+impl<'a> Iterator for RegIter<'a> {
     type Item = Reg;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -70,12 +70,12 @@ impl<'a, 'b: 'a> Iterator for RegIter<'a, 'b> {
     }
 }
 
-struct PropIter<'a, 'b: 'a> {
-    reader: FdtReader<'a, 'b>,
+struct PropIter<'a> {
+    reader: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> Iterator for PropIter<'a, 'b> {
-    type Item = Property<'a, 'b>;
+impl<'a> Iterator for PropIter<'a> {
+    type Item = Property<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -93,13 +93,13 @@ impl<'a, 'b: 'a> Iterator for PropIter<'a, 'b> {
 }
 
 #[derive(Clone)]
-pub(crate) struct MemoryRegionSilce<'a, 'b: 'a> {
+pub(crate) struct MemoryRegionSilce<'a> {
     address_cell: u8,
     size_cell: u8,
-    reader: FdtReader<'a, 'b>,
+    reader: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> MemoryRegionSilce<'a, 'b> {
+impl<'a> MemoryRegionSilce<'a> {
     pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
         MemoryRegionIter {
             address_cell: self.address_cell,
@@ -109,13 +109,13 @@ impl<'a, 'b: 'a> MemoryRegionSilce<'a, 'b> {
     }
 }
 
-struct MemoryRegionIter<'a, 'b: 'a> {
+struct MemoryRegionIter<'a> {
     address_cell: u8,
     size_cell: u8,
-    reader: FdtReader<'a, 'b>,
+    reader: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> Iterator for MemoryRegionIter<'a, 'b> {
+impl<'a> Iterator for MemoryRegionIter<'a> {
     type Item = FdtRange;
 
     fn next(&mut self) -> Option<Self::Item> {

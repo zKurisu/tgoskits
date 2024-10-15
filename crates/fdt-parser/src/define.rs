@@ -275,16 +275,16 @@ impl Debug for MemoryRegion {
 }
 
 #[derive(Clone)]
-pub struct Cell<'a, 'b: 'a> {
+pub struct Cell<'a> {
     address_cell: u8,
     size_cell: u8,
-    data: FdtReader<'a, 'b>,
+    data: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> IntoIterator for Cell<'a, 'b> {
+impl<'a> IntoIterator for Cell<'a> {
     type Item = usize;
 
-    type IntoIter = CellIter<'a, 'b>;
+    type IntoIter = CellIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         CellIter::new(self.address_cell, self.size_cell, self.data.clone())
@@ -292,15 +292,15 @@ impl<'a, 'b: 'a> IntoIterator for Cell<'a, 'b> {
 }
 
 #[derive(Clone)]
-pub struct CellIter<'a, 'b: 'a> {
+pub struct CellIter<'a> {
     address_cell: u8,
     size_cell: u8,
     i: usize,
-    data: FdtReader<'a, 'b>,
+    data: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> CellIter<'a, 'b> {
-    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a, 'b>) -> Self {
+impl<'a> CellIter<'a> {
+    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a>) -> Self {
         Self {
             address_cell,
             size_cell,
@@ -310,7 +310,7 @@ impl<'a, 'b: 'a> CellIter<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> Iterator for CellIter<'a, 'b> {
+impl<'a> Iterator for CellIter<'a> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -320,14 +320,14 @@ impl<'a, 'b: 'a> Iterator for CellIter<'a, 'b> {
     }
 }
 
-pub struct CellSilceIter<'a, 'b: 'a> {
+pub struct CellSilceIter<'a> {
     address_cell: u8,
     size_cell: u8,
-    data: FdtReader<'a, 'b>,
+    data: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> CellSilceIter<'a, 'b> {
-    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a, 'b>) -> Self {
+impl<'a> CellSilceIter<'a> {
+    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a>) -> Self {
         Self {
             address_cell,
             size_cell,
@@ -336,8 +336,8 @@ impl<'a, 'b: 'a> CellSilceIter<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> Iterator for CellSilceIter<'a, 'b> {
-    type Item = Cell<'a, 'b>;
+impl<'a> Iterator for CellSilceIter<'a> {
+    type Item = Cell<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.data.is_empty() {

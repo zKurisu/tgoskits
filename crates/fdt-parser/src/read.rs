@@ -6,12 +6,12 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub(crate) struct FdtReader<'a, 'b: 'a> {
-    pub fdt: &'b Fdt<'a>,
+pub(crate) struct FdtReader<'a> {
+    pub fdt: &'a Fdt<'a>,
     bytes: &'a [u8],
 }
 
-impl<'a, 'b: 'a> FdtReader<'a, 'b> {
+impl<'a> FdtReader<'a> {
     pub fn new(fdt: &'a Fdt<'a>, bytes: &'a [u8]) -> Self {
         Self { fdt, bytes }
     }
@@ -102,7 +102,7 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
         Ok(if unit_name.is_empty() { "/" } else { unit_name })
     }
 
-    pub fn take_prop(&mut self) -> Option<Property<'a, 'b>> {
+    pub fn take_prop(&mut self) -> Option<Property<'a>> {
         let len = self.take_u32()?;
         let nameoff = self.take_u32()?;
         let bytes = self.take_aligned(len as _)?;
@@ -116,12 +116,12 @@ impl<'a, 'b: 'a> FdtReader<'a, 'b> {
     }
 }
 
-pub struct Property<'a, 'b: 'a> {
+pub struct Property<'a> {
     pub name: &'a str,
-    pub(crate) data: FdtReader<'a, 'b>,
+    pub(crate) data: FdtReader<'a>,
 }
 
-impl<'a, 'b: 'a> Property<'a, 'b> {
+impl<'a> Property<'a> {
     pub fn raw_value(&self) -> &'a [u8] {
         self.data.remaining()
     }
