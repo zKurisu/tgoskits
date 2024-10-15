@@ -1,7 +1,11 @@
 use core::{ffi::CStr, iter, ptr::NonNull};
 
 use crate::{
-    error::*, meta::MetaData, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
+    error::*,
+    meta::MetaData,
+    node::{MemoryRegionSilce, Node},
+    read::FdtReader,
+    FdtHeader, MemoryRegion, Token,
 };
 
 #[derive(Clone)]
@@ -70,7 +74,7 @@ impl<'a> Fdt<'a> {
 }
 
 #[derive(Default, Clone)]
-struct MetaStack {
+struct MetaStack<'a, 'b: 'a> {
     address_cells: Option<u8>,
     size_cells: Option<u8>,
     clock_cells: Option<u8>,
@@ -78,9 +82,10 @@ struct MetaStack {
     gpio_cells: Option<u8>,
     dma_cells: Option<u8>,
     cooling_cells: Option<u8>,
+    range: Option<MemoryRegionSilce<'a, 'b>>,
 }
 
-impl MetaStack {
+impl<'a, 'b: 'a> MetaStack<'a, 'b> {
     fn clean(&mut self) {
         self.address_cells = None;
         self.size_cells = None;
@@ -89,6 +94,7 @@ impl MetaStack {
         self.gpio_cells = None;
         self.dma_cells = None;
         self.cooling_cells = None;
+        self.range = None;
     }
 }
 
@@ -96,7 +102,7 @@ pub struct FdtIter<'a, 'b: 'a> {
     fdt: Fdt<'a>,
     current_level: usize,
     reader: FdtReader<'a, 'b>,
-    stack: [MetaStack; 12],
+    stack: [MetaStack<'a, 'b>; 12],
     meta: MetaData,
 }
 

@@ -12,7 +12,7 @@ pub(crate) struct FdtReader<'a, 'b: 'a> {
 }
 
 impl<'a, 'b: 'a> FdtReader<'a, 'b> {
-    pub fn new(fdt: &'b Fdt<'a>, bytes: &'a [u8]) -> Self {
+    pub fn new(fdt: &'a Fdt<'a>, bytes: &'a [u8]) -> Self {
         Self { fdt, bytes }
     }
 

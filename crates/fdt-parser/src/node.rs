@@ -1,6 +1,6 @@
 use crate::meta::MetaData;
 use crate::read::{FdtReader, Property};
-use crate::{Cell, CellSilceIter, Fdt, MemoryRegion, Reg, Token};
+use crate::{Cell, CellSilceIter, Fdt, FdtRange, MemoryRegion, Reg, Token};
 
 #[derive(Clone)]
 pub struct Node<'a, 'b: 'a> {
@@ -89,5 +89,36 @@ impl<'a, 'b: 'a> Iterator for PropIter<'a, 'b> {
             }
         }
         self.reader.take_prop()
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct MemoryRegionSilce<'a, 'b: 'a> {
+    address_cell: u8,
+    size_cell: u8,
+    reader: FdtReader<'a, 'b>,
+}
+
+impl<'a, 'b: 'a> MemoryRegionSilce<'a, 'b> {
+    pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
+        MemoryRegionIter {
+            address_cell: self.address_cell,
+            size_cell: self.size_cell,
+            reader: self.reader.clone(),
+        }
+    }
+}
+
+struct MemoryRegionIter<'a, 'b: 'a> {
+    address_cell: u8,
+    size_cell: u8,
+    reader: FdtReader<'a, 'b>,
+}
+
+impl<'a, 'b: 'a> Iterator for MemoryRegionIter<'a, 'b> {
+    type Item = FdtRange;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }

@@ -417,7 +417,7 @@ impl Debug for Reg {
 
 /// Range mapping child bus addresses to parent bus addresses
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MemoryRange {
+pub struct FdtRange {
     /// Starting address on child bus
     pub child_bus_address: usize,
     /// The high bits of the child bus' starting address, if present
@@ -427,3 +427,5 @@ pub struct MemoryRange {
     /// Size of range
     pub size: usize,
 }
+
+
