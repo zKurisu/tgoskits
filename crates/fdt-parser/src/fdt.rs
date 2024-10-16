@@ -6,8 +6,8 @@ use crate::{
 
 #[derive(Clone)]
 pub struct Fdt<'a> {
-    pub header: FdtHeader,
-    pub data: &'a [u8],
+    pub(crate) header: FdtHeader,
+    pub(crate) data: &'a [u8],
 }
 
 impl<'a> Fdt<'a> {

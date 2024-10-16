@@ -1,10 +1,11 @@
 #![no_std]
 
-mod meta;
 mod define;
 pub mod error;
 mod fdt;
+mod meta;
 mod node;
+mod property;
 mod read;
 
 use define::*;

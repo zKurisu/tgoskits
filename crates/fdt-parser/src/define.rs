@@ -1,6 +1,6 @@
 use core::{
     fmt::{Debug, Display},
-    ptr::{slice_from_raw_parts, NonNull},
+    ptr::NonNull,
 };
 
 use crate::{error::*, read::FdtReader};
@@ -205,139 +205,22 @@ impl Debug for MemoryRegion {
     }
 }
 
-#[derive(Clone)]
-pub struct Cell<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    data: FdtReader<'a>,
-}
-
-impl<'a> IntoIterator for Cell<'a> {
-    type Item = usize;
-
-    type IntoIter = CellIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        CellIter::new(self.address_cell, self.size_cell, self.data.clone())
-    }
-}
-
-#[derive(Clone)]
-pub struct CellIter<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    i: usize,
-    data: FdtReader<'a>,
-}
-
-impl<'a> CellIter<'a> {
-    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a>) -> Self {
-        Self {
-            address_cell,
-            size_cell,
-            data,
-            i: 0,
-        }
-    }
-}
-
-impl<'a> Iterator for CellIter<'a> {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let one = self.data.take_by_cell_size(self.size_cell)?;
-        self.i += 1;
-        Some(one)
-    }
-}
-
-pub struct CellSilceIter<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    data: FdtReader<'a>,
-}
-
-impl<'a> CellSilceIter<'a> {
-    pub(crate) fn new(address_cell: u8, size_cell: u8, data: FdtReader<'a>) -> Self {
-        Self {
-            address_cell,
-            size_cell,
-            data,
-        }
-    }
-}
-
-impl<'a> Iterator for CellSilceIter<'a> {
-    type Item = Cell<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.data.is_empty() {
-            return None;
-        }
-
-        let offset = self.address_cell as usize * 4 + self.size_cell as usize * 4;
-        let data = self.data.take_by(offset)?;
-
-        Some(Cell {
-            address_cell: self.address_cell,
-            size_cell: self.size_cell,
-            data,
-        })
-    }
-}
 #[derive(Clone, Copy)]
-pub struct Reg {
-    address_cell: u8,
-    pub(crate) address: [u8; 12],
+pub struct FdtReg {
+    /// parent bus address
+    pub address: u128,
+    /// child bus address
+    pub child_bus_address: u128,
     pub size: Option<usize>,
 }
 
-impl Reg {
-    pub(crate) fn new(address_cell: u8, address: &[u8], size: Option<usize>) -> Self {
-        let len = address_cell as usize * 4;
-        let mut addr = [0; 4 * 3];
-        addr[..len].copy_from_slice(&address[..len]);
-        Self {
-            address: addr,
-            size,
-            address_cell,
-        }
-    }
-
-    pub fn address_raw(&self) -> [u32; 3] {
-        let ptr: *const u32 = self.address.as_ptr().cast();
-        let mut ret = [0; 3];
-        let src = unsafe { &*slice_from_raw_parts(ptr, 3) };
-        ret.copy_from_slice(src);
-        ret
-    }
-
-    pub fn address(&self) -> usize {
-        match self.address_cell {
-            1 => {
-                let fdt32: Fdt32 = self.address[..4].into();
-                fdt32.get() as usize
-            }
-            2 => {
-                let fdt64: Fdt64 = self.address[..8].into();
-                fdt64.get() as usize
-            }
-            _ => panic!(
-                "address-cell is {}, should use [address_raw]",
-                self.address_cell
-            ),
-        }
-    }
-}
-
-impl Debug for Reg {
+impl Debug for FdtReg {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if self.address_cell > 2 {
-            f.write_fmt(format_args!("<{:?}, ", self.address_raw()))?;
-        } else {
-            f.write_fmt(format_args!("<{:#x}, ", self.address()))?;
+        f.write_fmt(format_args!("<{:#x}", self.address))?;
+        if self.child_bus_address != self.address {
+            f.write_fmt(format_args!("({:#x})", self.child_bus_address))?;
         }
-
+        f.write_fmt(format_args!(", "))?;
         if let Some(s) = self.size {
             f.write_fmt(format_args!("{:#x}>", s))
         } else {
@@ -401,9 +284,9 @@ impl<'a> Iterator for FdtRangeIter<'a> {
     type Item = FdtRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let child_bus_address = self.reader.take_by_cell_size2(self.address_cell)?;
-        let parent_bus_address = self.reader.take_by_cell_size2(self.address_cell)?;
-        let size = self.reader.take_by_cell_size(self.size_cell)?;
+        let child_bus_address = self.reader.take_by_cell_size(self.address_cell)?;
+        let parent_bus_address = self.reader.take_by_cell_size(self.address_cell)?;
+        let size = self.reader.take_by_cell_size(self.size_cell)? as usize;
         Some(FdtRange {
             child_bus_address,
             parent_bus_address,

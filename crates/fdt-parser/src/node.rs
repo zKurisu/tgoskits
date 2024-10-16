@@ -1,8 +1,8 @@
 use core::iter;
 
-use crate::meta::MetaData;
-use crate::read::{FdtReader, Property};
-use crate::{Cell, CellSilceIter, Fdt, FdtRange, FdtRangeSilce, MemoryRegion, Reg, Token};
+use crate::{
+    meta::MetaData, property::Property, read::FdtReader, FdtRange, FdtRangeSilce, FdtReg, Token,
+};
 
 #[derive(Clone)]
 pub struct Node<'a> {
@@ -37,7 +37,7 @@ impl<'a> Node<'a> {
         self.propertys().find(|x| x.name.eq(name))
     }
 
-    pub fn reg(&self) -> impl Iterator<Item = Reg> + 'a {
+    pub fn reg(&self) -> impl Iterator<Item = FdtReg> + 'a {
         let mut iter = self.propertys();
         let reg = iter.find(|x| x.name.eq("reg"));
 
@@ -48,7 +48,22 @@ impl<'a> Node<'a> {
             address_cell,
             size_cell,
             prop: reg,
+            node: self.clone(),
         }
+    }
+
+    pub(crate) fn node_address_cells(&self) -> Option<u8> {
+        self.find_property("#address-cells")?
+            .data
+            .take_u32()
+            .map(|o| o as u8)
+    }
+
+    pub(crate) fn node_size_cells(&self) -> Option<u8> {
+        self.find_property("#size-cells")?
+            .data
+            .take_u32()
+            .map(|o| o as u8)
     }
 
     pub fn ranges(&self) -> impl Iterator<Item = FdtRange> + 'a {
@@ -73,20 +88,35 @@ struct RegIter<'a> {
     address_cell: u8,
     size_cell: u8,
     prop: Option<Property<'a>>,
+    node: Node<'a>,
 }
 impl<'a> Iterator for RegIter<'a> {
-    type Item = Reg;
+    type Item = FdtReg;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(prop) = &mut self.prop {
-            let address_bytes_num = self.address_cell as usize * 4;
-            let address = prop.data.take(address_bytes_num)?;
+            let child_address_cell = self.node.node_address_cells().unwrap();
+            let child_bus_address = prop.data.take_by_cell_size(child_address_cell)?;
+            
+            let mut address = child_bus_address;
+            for one in self.node.ranges() {
+                if child_bus_address >= one.child_bus_address
+                    && child_bus_address < one.child_bus_address + one.size as u128
+                {
+                    address = child_bus_address - one.child_bus_address + one.parent_bus_address;
+                }
+            }
+
             let size = if self.size_cell > 0 {
-                Some(prop.data.take_by_cell_size(self.size_cell)?)
+                Some(prop.data.take_by_cell_size(self.size_cell)? as usize)
             } else {
                 None
             };
-            Some(Reg::new(self.address_cell, address, size))
+            Some(FdtReg {
+                address,
+                child_bus_address,
+                size,
+            })
         } else {
             None
         }

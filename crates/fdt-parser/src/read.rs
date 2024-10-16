@@ -2,6 +2,7 @@ use core::ffi::CStr;
 
 use crate::{
     error::{FdtError, FdtResult},
+    property::Property,
     Fdt, Fdt32, Fdt64, FdtReserveEntry, Token,
 };
 
@@ -35,18 +36,19 @@ impl<'a> FdtReader<'a> {
         Some(out)
     }
 
-    pub fn take_by_cell_size(&mut self, cell_size: u8) -> Option<usize> {
-        match cell_size {
-            1 => self.take_u32().map(|s| s as usize),
-            2 => self.take_u64().map(|s| s as usize),
-            _ => panic!("invalid cell size {}", cell_size),
-        }
+    pub fn take_u128(&mut self) -> Option<u128> {
+        let mut out = self.take_u64()? as _;
+        let one = self.take_u64()? as u128;
+        out += one << 64;
+        Some(out)
     }
-    pub fn take_by_cell_size2(&mut self, cell_size: u8) -> Option<u128> {
+
+    pub fn take_by_cell_size(&mut self, cell_size: u8) -> Option<u128> {
         match cell_size {
             1 => self.take_u32().map(|s| s as _),
             2 => self.take_u64().map(|s| s as _),
             3 => self.take_u96(),
+            4 => self.take_u128(),
             _ => panic!("invalid cell size {}", cell_size),
         }
     }
@@ -127,31 +129,5 @@ impl<'a> FdtReader<'a> {
                 bytes,
             },
         })
-    }
-}
-
-pub struct Property<'a> {
-    pub name: &'a str,
-    pub(crate) data: FdtReader<'a>,
-}
-
-impl<'a> Property<'a> {
-    pub fn raw_value(&self) -> &'a [u8] {
-        self.data.remaining()
-    }
-
-    pub fn u32(&self) -> u32 {
-        self.data.clone().take_u32().unwrap()
-    }
-
-    pub fn u64(&self) -> u64 {
-        self.data.clone().take_u64().unwrap()
-    }
-
-    pub fn str(&self) -> &'a str {
-        CStr::from_bytes_until_nul(self.data.remaining())
-            .unwrap()
-            .to_str()
-            .unwrap()
     }
 }
