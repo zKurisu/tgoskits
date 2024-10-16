@@ -14,6 +14,13 @@ fn main() {
         println!("{}{}", space, node.name());
 
         if node.reg().count() > 0 {
+
+            println!("{} -range: ", space);
+
+            for range in node.ranges() {
+                println!("{}     {:?}", space, range);
+            }
+
             println!("{} - reg: ", space);
             for cell in node.reg() {
                 println!("{}     {:?}", space, cell);

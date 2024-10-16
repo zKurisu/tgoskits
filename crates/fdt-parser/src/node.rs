@@ -1,12 +1,14 @@
+use core::iter;
+
 use crate::meta::MetaData;
 use crate::read::{FdtReader, Property};
-use crate::{Cell, CellSilceIter, Fdt, FdtRange, MemoryRegion, Reg, Token};
+use crate::{Cell, CellSilceIter, Fdt, FdtRange, FdtRangeSilce, MemoryRegion, Reg, Token};
 
 #[derive(Clone)]
 pub struct Node<'a> {
     pub level: usize,
     pub name: &'a str,
-    pub(crate) meta: MetaData,
+    pub(crate) meta: MetaData<'a>,
     body: FdtReader<'a>,
 }
 
@@ -31,18 +33,39 @@ impl<'a> Node<'a> {
         PropIter { reader }
     }
 
+    pub fn find_property(&self, name: &str) -> Option<Property<'a>> {
+        self.propertys().find(|x| x.name.eq(name))
+    }
+
     pub fn reg(&self) -> impl Iterator<Item = Reg> + 'a {
         let mut iter = self.propertys();
         let reg = iter.find(|x| x.name.eq("reg"));
 
-        let address_cell = self.meta.address_cells;
-        let size_cell = self.meta.size_cells;
+        let address_cell = self.meta.address_cells.unwrap();
+        let size_cell = self.meta.size_cells.unwrap();
 
         RegIter {
             address_cell,
             size_cell,
             prop: reg,
         }
+    }
+
+    pub fn ranges(&self) -> impl Iterator<Item = FdtRange> + 'a {
+        let mut iter = self.meta.range.clone().map(|m| m.iter());
+        iter::from_fn(move || match &mut iter {
+            Some(i) => i.next(),
+            None => None,
+        })
+    }
+
+    pub(crate) fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
+        let prop = self.find_property("ranges")?;
+        Some(FdtRangeSilce::new(
+            self.meta.address_cells.unwrap(),
+            self.meta.size_cells.unwrap(),
+            prop.data.clone(),
+        ))
     }
 }
 
@@ -93,7 +116,7 @@ impl<'a> Iterator for PropIter<'a> {
 }
 
 #[derive(Clone)]
-pub(crate) struct MemoryRegionSilce<'a> {
+pub struct MemoryRegionSilce<'a> {
     address_cell: u8,
     size_cell: u8,
     reader: FdtReader<'a>,

@@ -1,11 +1,7 @@
 use core::{ffi::CStr, iter, ptr::NonNull};
 
 use crate::{
-    error::*,
-    meta::MetaData,
-    node::{MemoryRegionSilce, Node},
-    read::FdtReader,
-    FdtHeader, MemoryRegion, Token,
+    error::*, meta::MetaData, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
 };
 
 #[derive(Clone)]
@@ -73,49 +69,24 @@ impl<'a> Fdt<'a> {
     }
 }
 
-#[derive(Default, Clone)]
-struct MetaStack<'a> {
-    address_cells: Option<u8>,
-    size_cells: Option<u8>,
-    clock_cells: Option<u8>,
-    interrupt_cells: Option<u8>,
-    gpio_cells: Option<u8>,
-    dma_cells: Option<u8>,
-    cooling_cells: Option<u8>,
-    range: Option<MemoryRegionSilce<'a>>,
-}
-
-impl<'a> MetaStack<'a> {
-    fn clean(&mut self) {
-        self.address_cells = None;
-        self.size_cells = None;
-        self.clock_cells = None;
-        self.interrupt_cells = None;
-        self.gpio_cells = None;
-        self.dma_cells = None;
-        self.cooling_cells = None;
-        self.range = None;
-    }
-}
-
 pub struct FdtIter<'a> {
     fdt: Fdt<'a>,
     current_level: usize,
     reader: FdtReader<'a>,
-    stack: [MetaStack<'a>; 12],
-    meta: MetaData,
+    stack: [MetaData<'a>; 12],
+    meta: MetaData<'a>,
 }
 
 impl<'a> FdtIter<'a> {
-    fn get_meta(&self) -> MetaData {
+    fn get_meta(&self) -> MetaData<'a> {
         let mut meta = MetaData::default();
         let level = self.current_level;
-        macro_rules! get_size {
+        macro_rules! get_field {
             ($cell:ident) => {{
-                let mut size = 0;
+                let mut size = None;
                 for i in (0..level).rev() {
-                    if let Some(cell_size) = self.stack[i].$cell {
-                        size = cell_size;
+                    if let Some(cell_size) = &self.stack[i].$cell {
+                        size = Some(cell_size.clone());
                         break;
                     }
                 }
@@ -123,31 +94,31 @@ impl<'a> FdtIter<'a> {
             }};
         }
 
-        get_size!(address_cells);
-        get_size!(size_cells);
-        get_size!(clock_cells);
-        get_size!(interrupt_cells);
-        get_size!(gpio_cells);
-        get_size!(dma_cells);
-        get_size!(cooling_cells);
-
+        get_field!(address_cells);
+        get_field!(size_cells);
+        get_field!(clock_cells);
+        get_field!(interrupt_cells);
+        get_field!(gpio_cells);
+        get_field!(dma_cells);
+        get_field!(cooling_cells);
+        get_field!(range);
         meta
     }
 
     fn next_level(&mut self) {
         self.current_level += 1;
         let i = self.current_level;
-        self.stack[i].clean();
+        self.stack[i] = MetaData::default();
     }
     fn parent_level(&mut self) {
         self.current_level -= 1;
         let i = self.current_level;
-        self.stack[i].clean();
+        self.stack[i] = MetaData::default();
     }
 }
 
 impl<'a> Iterator for FdtIter<'a> {
-    type Item = Node<'a,>;
+    type Item = Node<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -157,10 +128,12 @@ impl<'a> Iterator for FdtIter<'a> {
                 Token::BeginNode => {
                     self.next_level();
                     let mut node = Node::new(self.current_level as _, &mut self.reader);
+                    let index = self.current_level - 1;
+
                     for prop in node.propertys() {
                         macro_rules! update_cell {
                             ($cell:ident) => {
-                                self.stack[self.current_level - 1].$cell = Some(prop.u32() as _)
+                                self.stack[index].$cell = Some(prop.u32() as _)
                             };
                         }
                         match prop.name {
@@ -175,6 +148,9 @@ impl<'a> Iterator for FdtIter<'a> {
                         }
                     }
                     node.meta = self.get_meta();
+                    self.stack[index].range = node.node_ranges();
+                    node.meta = self.get_meta();
+
                     return Some(node);
                 }
                 Token::EndNode => {

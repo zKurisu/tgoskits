@@ -28,6 +28,13 @@ impl<'a> FdtReader<'a> {
         Some(fdt64.get())
     }
 
+    pub fn take_u96(&mut self) -> Option<u128> {
+        let mut out = self.take_u64()? as _;
+        let one = self.take_u32()? as u128;
+        out += one << 64;
+        Some(out)
+    }
+
     pub fn take_by_cell_size(&mut self, cell_size: u8) -> Option<usize> {
         match cell_size {
             1 => self.take_u32().map(|s| s as usize),
@@ -35,7 +42,14 @@ impl<'a> FdtReader<'a> {
             _ => panic!("invalid cell size {}", cell_size),
         }
     }
-
+    pub fn take_by_cell_size2(&mut self, cell_size: u8) -> Option<u128> {
+        match cell_size {
+            1 => self.take_u32().map(|s| s as _),
+            2 => self.take_u64().map(|s| s as _),
+            3 => self.take_u96(),
+            _ => panic!("invalid cell size {}", cell_size),
+        }
+    }
     pub fn skip(&mut self, n_bytes: usize) -> FdtResult {
         self.bytes = self.bytes.get(n_bytes..).ok_or(FdtError::BufferTooSmall)?;
         Ok(())
@@ -128,5 +142,16 @@ impl<'a> Property<'a> {
 
     pub fn u32(&self) -> u32 {
         self.data.clone().take_u32().unwrap()
+    }
+
+    pub fn u64(&self) -> u64 {
+        self.data.clone().take_u64().unwrap()
+    }
+
+    pub fn str(&self) -> &'a str {
+        CStr::from_bytes_until_nul(self.data.remaining())
+            .unwrap()
+            .to_str()
+            .unwrap()
     }
 }

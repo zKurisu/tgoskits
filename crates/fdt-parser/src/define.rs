@@ -85,57 +85,6 @@ impl Default for Fdt64 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct ByteBuffer<'a> {
-    bytes: &'a [u8],
-}
-
-impl<'a> ByteBuffer<'a> {
-    pub fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes }
-    }
-
-    pub fn u32(&mut self) -> Option<Fdt32> {
-        let bytes = self.take(4)?;
-        Fdt32::from_bytes(bytes)
-    }
-
-    pub fn u64(&mut self) -> Option<Fdt64> {
-        let bytes = self.take(8)?;
-        Fdt64::from_bytes(bytes)
-    }
-
-    pub fn skip(&mut self, n_bytes: usize) -> Option<()> {
-        self.bytes = self.bytes.get(n_bytes..)?;
-        Some(())
-    }
-
-    pub fn remaining(&self) -> &'a [u8] {
-        self.bytes
-    }
-
-    pub fn peek_u32(&self) -> Option<Fdt32> {
-        let bytes = self.bytes.get(..4)?;
-        Fdt32::from_bytes(bytes)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.remaining().is_empty()
-    }
-
-    pub fn take(&mut self, bytes: usize) -> Option<&'a [u8]> {
-        if self.bytes.len() >= bytes {
-            let ret = self.bytes.get(..bytes)?;
-            self.skip(bytes);
-            return Some(ret);
-        }
-        None
-    }
-    pub fn skip_4_aligned(&mut self, len: usize) {
-        self.skip((len + 3) & !0x3);
-    }
-}
-
 /// A raw `reg` property value set
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RawReg<'a> {
@@ -194,25 +143,7 @@ impl FdtHeader {
         start..end
     }
 
-    fn _from_bytes(bytes: &[u8]) -> Option<Self> {
-        let mut buff = ByteBuffer::new(bytes);
-        Some(Self {
-            magic: buff.u32()?,
-            totalsize: buff.u32()?,
-            off_dt_struct: buff.u32()?,
-            off_dt_strings: buff.u32()?,
-            off_mem_rsvmap: buff.u32()?,
-            version: buff.u32()?,
-            last_comp_version: buff.u32()?,
-            boot_cpuid_phys: buff.u32()?,
-            size_dt_strings: buff.u32()?,
-            size_dt_struct: buff.u32()?,
-        })
-    }
-
     pub fn from_bytes(bytes: &[u8]) -> FdtResult<Self> {
-        // Self::_from_bytes(bytes).ok_or(FdtError::BufferTooSmall)
-
         if bytes.len() < size_of::<FdtHeader>() {
             return Err(FdtError::BufferTooSmall);
         }
@@ -416,16 +347,67 @@ impl Debug for Reg {
 }
 
 /// Range mapping child bus addresses to parent bus addresses
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct FdtRange {
     /// Starting address on child bus
-    pub child_bus_address: usize,
-    /// The high bits of the child bus' starting address, if present
-    pub child_bus_address_hi: u32,
+    pub child_bus_address: u128,
     /// Starting address on parent bus
-    pub parent_bus_address: usize,
+    pub parent_bus_address: u128,
     /// Size of range
     pub size: usize,
 }
 
+impl Debug for FdtRange {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_fmt(format_args!(
+            "Range {{ child_bus_address: {:#x}, parent_bus_address: {:#x}, size: {:#x} }}",
+            self.child_bus_address, self.parent_bus_address, self.size
+        ))
+    }
+}
 
+#[derive(Clone)]
+pub struct FdtRangeSilce<'a> {
+    address_cell: u8,
+    size_cell: u8,
+    reader: FdtReader<'a>,
+}
+
+impl<'a> FdtRangeSilce<'a> {
+    pub(crate) fn new(address_cell: u8, size_cell: u8, reader: FdtReader<'a>) -> Self {
+        Self {
+            address_cell,
+            size_cell,
+            reader,
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
+        FdtRangeIter {
+            address_cell: self.address_cell,
+            size_cell: self.size_cell,
+            reader: self.reader.clone(),
+        }
+    }
+}
+#[derive(Clone)]
+struct FdtRangeIter<'a> {
+    address_cell: u8,
+    size_cell: u8,
+    reader: FdtReader<'a>,
+}
+
+impl<'a> Iterator for FdtRangeIter<'a> {
+    type Item = FdtRange;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let child_bus_address = self.reader.take_by_cell_size2(self.address_cell)?;
+        let parent_bus_address = self.reader.take_by_cell_size2(self.address_cell)?;
+        let size = self.reader.take_by_cell_size(self.size_cell)?;
+        Some(FdtRange {
+            child_bus_address,
+            parent_bus_address,
+            size,
+        })
+    }
+}
