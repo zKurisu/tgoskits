@@ -92,7 +92,8 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
         + TCR_EL1::T1SZ.val(16);
     TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
-    barrier::isb(barrier::SY);
+
+    PlatformImpl::flush_tlb(None);
 
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
@@ -119,9 +120,10 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     if DTB_ADDR > 0 {
         DTB_ADDR += va_offset;
     }
+    PlatformImpl::flush_tlb(None);
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-    PlatformImpl::flush_tlb(None);
+    // PlatformImpl::flush_tlb(None);
     barrier::isb(barrier::SY);
 
     asm!("
@@ -140,7 +142,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_println("MMU enabled");
-    
+
     KCONFIG.dtb_addr = NonNull::new(DTB_ADDR as _);
     crate::boot(KCONFIG.clone());
 }

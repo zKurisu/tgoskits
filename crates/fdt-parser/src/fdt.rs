@@ -28,7 +28,7 @@ impl<'a> Fdt<'a> {
     }
 
     fn reader(&'a self, offset: usize) -> FdtReader<'a> {
-        FdtReader::new(self, &self.data[offset..])
+        FdtReader::new(&self.data[offset..])
     }
 
     pub fn version(&self) -> usize {
@@ -60,21 +60,23 @@ impl<'a> Fdt<'a> {
     pub fn all_nodes(&'a self) -> impl Iterator<Item = Node<'a>> {
         let reader = self.reader(self.header.off_dt_struct.get() as _);
         FdtIter {
-            fdt: self.clone(),
+            fdt: self,
             current_level: 0,
             reader,
             stack: Default::default(),
-            meta: Default::default(),
+            node_reader: None,
+            node_name: "",
         }
     }
 }
 
 pub struct FdtIter<'a> {
-    fdt: Fdt<'a>,
+    fdt: &'a Fdt<'a>,
     current_level: usize,
     reader: FdtReader<'a>,
     stack: [MetaData<'a>; 12],
-    meta: MetaData<'a>,
+    node_reader: Option<FdtReader<'a>>,
+    node_name: &'a str,
 }
 
 impl<'a> FdtIter<'a> {
@@ -104,16 +106,59 @@ impl<'a> FdtIter<'a> {
         get_field!(range);
         meta
     }
+    fn get_meta_parent(&self) -> MetaData<'a> {
+        let mut meta = MetaData::default();
+        let level = match self.level_parent_index() {
+            Some(l) => l,
+            None => return MetaData::default(),
+        } + 1;
+        macro_rules! get_field {
+            ($cell:ident) => {{
+                let mut size = None;
+                for i in (0..level).rev() {
+                    if let Some(cell_size) = &self.stack[i].$cell {
+                        size = Some(cell_size.clone());
+                        break;
+                    }
+                }
+                meta.$cell = size;
+            }};
+        }
 
-    fn next_level(&mut self) {
+        get_field!(address_cells);
+        get_field!(size_cells);
+        get_field!(clock_cells);
+        get_field!(interrupt_cells);
+        get_field!(gpio_cells);
+        get_field!(dma_cells);
+        get_field!(cooling_cells);
+        get_field!(range);
+        meta
+    }
+    fn level_current_index(&self) -> usize {
+        self.current_level - 1
+    }
+    fn level_parent_index(&self) -> Option<usize> {
+        if self.level_current_index() > 0 {
+            Some(self.level_current_index() - 1)
+        } else {
+            None
+        }
+    }
+
+    fn handle_node_begin(&mut self) {
         self.current_level += 1;
-        let i = self.current_level;
+        let i = self.level_current_index();
         self.stack[i] = MetaData::default();
     }
-    fn parent_level(&mut self) {
+    fn handle_node_end(&mut self) {
         self.current_level -= 1;
-        let i = self.current_level;
+        let i = self.level_current_index();
         self.stack[i] = MetaData::default();
+    }
+
+    fn finish_node(&mut self) -> Option<Node<'a>> {
+        None
     }
 }
 
@@ -126,38 +171,83 @@ impl<'a> Iterator for FdtIter<'a> {
 
             match token {
                 Token::BeginNode => {
-                    self.next_level();
-                    let mut node = Node::new(self.current_level as _, &mut self.reader);
-                    let index = self.current_level - 1;
+                    let node = self.finish_node();
 
-                    for prop in node.propertys() {
-                        macro_rules! update_cell {
-                            ($cell:ident) => {
-                                self.stack[index].$cell = Some(prop.u32() as _)
-                            };
-                        }
-                        match prop.name {
-                            "#address-cells" => update_cell!(address_cells),
-                            "#size-cells" => update_cell!(size_cells),
-                            "#clock-cells" => update_cell!(clock_cells),
-                            "#interrupt-cells" => update_cell!(interrupt_cells),
-                            "#gpio-cells" => update_cell!(gpio_cells),
-                            "#dma-cells" => update_cell!(dma_cells),
-                            "#cooling-cells" => update_cell!(cooling_cells),
-                            _ => {}
-                        }
+                    // let mut node = None;
+                    // if let Some(reader) = node_reader.take() {
+                    //     let level = self.current_level;
+                    //     let meta = self.stack[self.level_current_index()].clone();
+                    //     let meta_parent = self.get_meta_parent();
+
+                    //     node = Some(Node::new(
+                    //         self.fdt,
+                    //         level,
+                    //         node_name,
+                    //         reader,
+                    //         meta_parent,
+                    //         meta,
+                    //     ));
+                    // }
+                    self.handle_node_begin();
+                    self.node_name = self.reader.take_unit_name().unwrap();
+                    self.node_reader = Some(self.reader.clone());
+
+                    if node.is_some() {
+                        return node;
                     }
-                    node.meta = self.get_meta();
-                    self.stack[index].range = node.node_ranges();
-                    node.meta = self.get_meta();
+                    // let mut node = Node::new(self.current_level as _, &mut self.reader);
+                    // let index = self.current_level - 1;
 
-                    return Some(node);
+                    // for prop in node.propertys() {
+                    //     macro_rules! update_cell {
+                    //         ($cell:ident) => {
+                    //             self.stack[index].$cell = Some(prop.u32() as _)
+                    //         };
+                    //     }
+                    //     match prop.name {
+                    //         "#address-cells" => update_cell!(address_cells),
+                    //         "#size-cells" => update_cell!(size_cells),
+                    //         "#clock-cells" => update_cell!(clock_cells),
+                    //         "#interrupt-cells" => update_cell!(interrupt_cells),
+                    //         "#gpio-cells" => update_cell!(gpio_cells),
+                    //         "#dma-cells" => update_cell!(dma_cells),
+                    //         "#cooling-cells" => update_cell!(cooling_cells),
+                    //         _ => {}
+                    //     }
+                    // }
+                    // node.meta = self.get_meta();
+                    // self.stack[index].range = node.node_ranges();
+                    // node.meta = self.get_meta();
+
+                    // return Some(node);
                 }
                 Token::EndNode => {
-                    self.parent_level();
+                    let node = self.finish_node();
+
+                    self.handle_node_end();
+
+                    if node.is_some() {
+                        return node;
+                    }
                 }
                 Token::Prop => {
-                    let _ = self.reader.take_prop();
+                    let prop = self.reader.take_prop(&self.fdt)?;
+                    let index = self.level_current_index();
+                    macro_rules! update_cell {
+                        ($cell:ident) => {
+                            self.stack[index].$cell = Some(prop.u32() as _)
+                        };
+                    }
+                    match prop.name {
+                        "#address-cells" => update_cell!(address_cells),
+                        "#size-cells" => update_cell!(size_cells),
+                        "#clock-cells" => update_cell!(clock_cells),
+                        "#interrupt-cells" => update_cell!(interrupt_cells),
+                        "#gpio-cells" => update_cell!(gpio_cells),
+                        "#dma-cells" => update_cell!(dma_cells),
+                        "#cooling-cells" => update_cell!(cooling_cells),
+                        _ => {}
+                    }
                 }
                 Token::End => return None,
                 _ => {}

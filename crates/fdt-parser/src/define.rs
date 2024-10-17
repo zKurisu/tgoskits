@@ -252,41 +252,45 @@ impl Debug for FdtRange {
 #[derive(Clone)]
 pub struct FdtRangeSilce<'a> {
     address_cell: u8,
+    address_cell_parent: u8,
     size_cell: u8,
     reader: FdtReader<'a>,
 }
 
 impl<'a> FdtRangeSilce<'a> {
-    pub(crate) fn new(address_cell: u8, size_cell: u8, reader: FdtReader<'a>) -> Self {
+    pub(crate) fn new(
+        address_cell: u8,
+        address_cell_parent: u8,
+        size_cell: u8,
+        reader: FdtReader<'a>,
+    ) -> Self {
         Self {
             address_cell,
+            address_cell_parent,
             size_cell,
             reader,
         }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
-        FdtRangeIter {
-            address_cell: self.address_cell,
-            size_cell: self.size_cell,
-            reader: self.reader.clone(),
-        }
+        FdtRangeIter { s: self.clone() }
     }
 }
 #[derive(Clone)]
 struct FdtRangeIter<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    reader: FdtReader<'a>,
+    s: FdtRangeSilce<'a>,
 }
 
 impl<'a> Iterator for FdtRangeIter<'a> {
     type Item = FdtRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let child_bus_address = self.reader.take_by_cell_size(self.address_cell)?;
-        let parent_bus_address = self.reader.take_by_cell_size(self.address_cell)?;
-        let size = self.reader.take_by_cell_size(self.size_cell)? as usize;
+        let child_bus_address = self.s.reader.take_by_cell_size(self.s.address_cell)?;
+        let parent_bus_address = self
+            .s
+            .reader
+            .take_by_cell_size(self.s.address_cell_parent)?;
+        let size = self.s.reader.take_by_cell_size(self.s.size_cell)? as usize;
         Some(FdtRange {
             child_bus_address,
             parent_bus_address,

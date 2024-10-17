@@ -1,26 +1,36 @@
 use core::iter;
 
 use crate::{
-    meta::MetaData, property::Property, read::FdtReader, FdtRange, FdtRangeSilce, FdtReg, Token,
+    meta::MetaData, property::Property, read::FdtReader, Fdt, FdtRange, FdtRangeSilce, FdtReg,
+    Token,
 };
 
 #[derive(Clone)]
 pub struct Node<'a> {
     pub level: usize,
     pub name: &'a str,
+    fdt: &'a Fdt<'a>,
+    pub(crate) meta_parent: MetaData<'a>,
     pub(crate) meta: MetaData<'a>,
     body: FdtReader<'a>,
 }
 
 impl<'a> Node<'a> {
-    pub(crate) fn new(level: usize, reader: &mut FdtReader<'a>) -> Self {
-        let name = reader.take_unit_name().unwrap();
-
+    pub(crate) fn new(
+        fdt: &'a Fdt<'a>,
+        level: usize,
+        name: &'a str,
+        reader: FdtReader<'a>,
+        meta_parent: MetaData<'a>,
+        meta: MetaData<'a>,
+    ) -> Self {
         Self {
+            fdt,
             level,
-            body: reader.clone(),
+            body: reader,
             name,
-            meta: MetaData::default(),
+            meta,
+            meta_parent,
         }
     }
 
@@ -30,7 +40,10 @@ impl<'a> Node<'a> {
 
     pub fn propertys(&self) -> impl Iterator<Item = Property<'a>> + '_ {
         let reader = self.body.clone();
-        PropIter { reader }
+        PropIter {
+            reader,
+            fdt: self.fdt,
+        }
     }
 
     pub fn find_property(&self, name: &str) -> Option<Property<'a>> {
@@ -41,30 +54,41 @@ impl<'a> Node<'a> {
         let mut iter = self.propertys();
         let reg = iter.find(|x| x.name.eq("reg"));
 
-        let address_cell = self.meta.address_cells.unwrap();
-        let size_cell = self.meta.size_cells.unwrap();
-
         RegIter {
-            address_cell,
-            size_cell,
+            address_cell: self.address_cells().unwrap(),
+            size_cell: self.size_cells().unwrap(),
             prop: reg,
             node: self.clone(),
         }
     }
 
-    pub(crate) fn node_address_cells(&self) -> Option<u8> {
-        self.find_property("#address-cells")?
-            .data
-            .take_u32()
-            .map(|o| o as u8)
+    fn address_cells(&self) -> Option<u8> {
+        if let Some(a) = self.meta.address_cells {
+            return Some(a);
+        }
+        self.meta_parent.address_cells
     }
 
-    pub(crate) fn node_size_cells(&self) -> Option<u8> {
-        self.find_property("#size-cells")?
-            .data
-            .take_u32()
-            .map(|o| o as u8)
+    fn size_cells(&self) -> Option<u8> {
+        if let Some(a) = self.meta.size_cells {
+            return Some(a);
+        }
+        self.meta_parent.size_cells
     }
+
+    // pub(crate) fn node_address_cells(&self) -> Option<u8> {
+    //     self.find_property("#address-cells")?
+    //         .data
+    //         .take_u32()
+    //         .map(|o| o as u8)
+    // }
+
+    // pub(crate) fn node_size_cells(&self) -> Option<u8> {
+    //     self.find_property("#size-cells")?
+    //         .data
+    //         .take_u32()
+    //         .map(|o| o as u8)
+    // }
 
     pub fn ranges(&self) -> impl Iterator<Item = FdtRange> + 'a {
         let mut iter = self.meta.range.clone().map(|m| m.iter());
@@ -78,6 +102,7 @@ impl<'a> Node<'a> {
         let prop = self.find_property("ranges")?;
         Some(FdtRangeSilce::new(
             self.meta.address_cells.unwrap(),
+            self.meta_parent.address_cells.unwrap(),
             self.meta.size_cells.unwrap(),
             prop.data.clone(),
         ))
@@ -95,9 +120,9 @@ impl<'a> Iterator for RegIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(prop) = &mut self.prop {
-            let child_address_cell = self.node.node_address_cells().unwrap();
+            let child_address_cell = self.node.address_cells().unwrap();
             let child_bus_address = prop.data.take_by_cell_size(child_address_cell)?;
-            
+
             let mut address = child_bus_address;
             for one in self.node.ranges() {
                 if child_bus_address >= one.child_bus_address
@@ -124,6 +149,7 @@ impl<'a> Iterator for RegIter<'a> {
 }
 
 struct PropIter<'a> {
+    fdt: &'a Fdt<'a>,
     reader: FdtReader<'a>,
 }
 
@@ -141,7 +167,7 @@ impl<'a> Iterator for PropIter<'a> {
                 None => return None,
             }
         }
-        self.reader.take_prop()
+        self.reader.take_prop(self.fdt)
     }
 }
 

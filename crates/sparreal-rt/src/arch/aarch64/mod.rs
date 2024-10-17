@@ -84,10 +84,10 @@ impl Platform for PlatformImpl {
 
     unsafe fn flush_tlb(addr: Option<Virt<u8>>) {
         if let Some(vaddr) = addr {
-            asm!("tlbi vaae1is, {}; dsb sy; isb", in(reg) vaddr.as_usize())
+            asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr.as_usize())
         } else {
             // flush the entire TLB
-            asm!("tlbi vmalle1; dsb sy; isb")
+            asm!("tlbi vmalle1; dsb nsh; isb")
         };
     }
 

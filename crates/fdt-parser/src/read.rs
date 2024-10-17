@@ -8,13 +8,12 @@ use crate::{
 
 #[derive(Clone)]
 pub(crate) struct FdtReader<'a> {
-    pub fdt: &'a Fdt<'a>,
     bytes: &'a [u8],
 }
 
 impl<'a> FdtReader<'a> {
-    pub fn new(fdt: &'a Fdt<'a>, bytes: &'a [u8]) -> Self {
-        Self { fdt, bytes }
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes }
     }
 
     pub fn take_u32(&mut self) -> Option<u32> {
@@ -91,7 +90,7 @@ impl<'a> FdtReader<'a> {
 
     pub fn take_by(&mut self, offset: usize) -> Option<Self> {
         let bytes = self.take(offset)?;
-        Some(FdtReader::new(self.fdt, bytes))
+        Some(FdtReader::new(bytes))
     }
 
     pub fn take_aligned(&mut self, len: usize) -> Option<&'a [u8]> {
@@ -118,16 +117,13 @@ impl<'a> FdtReader<'a> {
         Ok(if unit_name.is_empty() { "/" } else { unit_name })
     }
 
-    pub fn take_prop(&mut self) -> Option<Property<'a>> {
+    pub fn take_prop(&mut self, fdt: &'a Fdt<'a>) -> Option<Property<'a>> {
         let len = self.take_u32()?;
         let nameoff = self.take_u32()?;
         let bytes = self.take_aligned(len as _)?;
         Some(Property {
-            name: self.fdt.get_str(nameoff as _).unwrap_or("<error>"),
-            data: FdtReader {
-                fdt: &self.fdt,
-                bytes,
-            },
+            name: fdt.get_str(nameoff as _).unwrap_or("<error>"),
+            data: FdtReader { bytes },
         })
     }
 }
