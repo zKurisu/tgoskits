@@ -10,7 +10,9 @@ pub struct Node<'a> {
     pub level: usize,
     pub name: &'a str,
     fdt: &'a Fdt<'a>,
-    pub(crate) meta_parent: MetaData<'a>,
+    /// 父节点的元数据
+    pub(crate) meta_parents: MetaData<'a>,
+    /// 当前节点的元数据
     pub(crate) meta: MetaData<'a>,
     body: FdtReader<'a>,
 }
@@ -21,7 +23,7 @@ impl<'a> Node<'a> {
         level: usize,
         name: &'a str,
         reader: FdtReader<'a>,
-        meta_parent: MetaData<'a>,
+        meta_parents: MetaData<'a>,
         meta: MetaData<'a>,
     ) -> Self {
         Self {
@@ -30,7 +32,7 @@ impl<'a> Node<'a> {
             body: reader,
             name,
             meta,
-            meta_parent,
+            meta_parents,
         }
     }
 
@@ -65,20 +67,20 @@ impl<'a> Node<'a> {
         if let Some(a) = self.meta.address_cells {
             return Some(a);
         }
-        self.meta_parent.address_cells
+        self.meta_parents.address_cells
     }
 
     fn size_cells(&self) -> Option<u8> {
         if let Some(a) = self.meta.size_cells {
             return Some(a);
         }
-        self.meta_parent.size_cells
+        self.meta_parents.size_cells
     }
 
     pub fn ranges(&self) -> impl Iterator<Item = FdtRange> + 'a {
         let mut iter = self.meta.range.clone().map(|m| m.iter());
         if iter.is_none() {
-            iter = self.meta_parent.range.clone().map(|m| m.iter());
+            iter = self.meta_parents.range.clone().map(|m| m.iter());
         }
 
         iter::from_fn(move || match &mut iter {
@@ -92,7 +94,7 @@ impl<'a> Node<'a> {
 
         Some(FdtRangeSilce::new(
             self.meta.address_cells.unwrap(),
-            self.meta_parent.address_cells.unwrap(),
+            self.meta_parents.address_cells.unwrap(),
             self.meta.size_cells.unwrap(),
             prop.data.clone(),
         ))
@@ -107,7 +109,7 @@ impl<'a> Node<'a> {
         let phandle = if let Some(p) = self.meta.interrupt_parent {
             Some(p)
         } else {
-            self.meta_parent.interrupt_parent
+            self.meta_parents.interrupt_parent
         }?;
 
         self.fdt.get_node_by_phandle(phandle)
