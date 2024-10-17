@@ -80,7 +80,6 @@ pub struct FdtIter<'a> {
 }
 
 impl<'a> FdtIter<'a> {
-
     fn get_meta_parent(&self) -> MetaData<'a> {
         let mut meta = MetaData::default();
         let level = match self.level_parent_index() {
@@ -108,6 +107,7 @@ impl<'a> FdtIter<'a> {
         get_field!(dma_cells);
         get_field!(cooling_cells);
         get_field!(range);
+
         meta
     }
     fn level_current_index(&self) -> usize {
@@ -131,19 +131,17 @@ impl<'a> FdtIter<'a> {
 
     fn finish_node(&mut self) -> Option<Node<'a>> {
         let reader = self.node_reader.take()?;
-
         let level = self.current_level;
         let meta = self.stack[self.level_current_index()].clone();
         let meta_parent = self.get_meta_parent();
 
-        Some(Node::new(
-            self.fdt,
-            level,
-            self.node_name,
-            reader,
-            meta_parent,
-            meta,
-        ))
+        let mut node = Node::new(self.fdt, level, self.node_name, reader, meta_parent, meta);
+        let ranges = node.node_ranges();
+        self.stack[self.level_current_index()].range = ranges.clone();
+
+        node.meta.range = ranges;
+
+        Some(node)
     }
 }
 

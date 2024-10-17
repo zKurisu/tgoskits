@@ -76,30 +76,23 @@ impl<'a> Node<'a> {
         self.meta_parent.size_cells
     }
 
-    // pub(crate) fn node_address_cells(&self) -> Option<u8> {
-    //     self.find_property("#address-cells")?
-    //         .data
-    //         .take_u32()
-    //         .map(|o| o as u8)
-    // }
-
-    // pub(crate) fn node_size_cells(&self) -> Option<u8> {
-    //     self.find_property("#size-cells")?
-    //         .data
-    //         .take_u32()
-    //         .map(|o| o as u8)
-    // }
-
     pub fn ranges(&self) -> impl Iterator<Item = FdtRange> + 'a {
         let mut iter = self.meta.range.clone().map(|m| m.iter());
+        if iter.is_none() {
+            iter = self.meta_parent.range.clone().map(|m| m.iter());
+        }
+
         iter::from_fn(move || match &mut iter {
             Some(i) => i.next(),
             None => None,
         })
     }
 
-    pub(crate) fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
+    pub fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
         let prop = self.find_property("ranges")?;
+        if prop.data.is_empty() {
+            return None;
+        }
         Some(FdtRangeSilce::new(
             self.meta.address_cells.unwrap(),
             self.meta_parent.address_cells.unwrap(),
