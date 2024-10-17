@@ -80,32 +80,7 @@ pub struct FdtIter<'a> {
 }
 
 impl<'a> FdtIter<'a> {
-    fn get_meta(&self) -> MetaData<'a> {
-        let mut meta = MetaData::default();
-        let level = self.current_level;
-        macro_rules! get_field {
-            ($cell:ident) => {{
-                let mut size = None;
-                for i in (0..level).rev() {
-                    if let Some(cell_size) = &self.stack[i].$cell {
-                        size = Some(cell_size.clone());
-                        break;
-                    }
-                }
-                meta.$cell = size;
-            }};
-        }
 
-        get_field!(address_cells);
-        get_field!(size_cells);
-        get_field!(clock_cells);
-        get_field!(interrupt_cells);
-        get_field!(gpio_cells);
-        get_field!(dma_cells);
-        get_field!(cooling_cells);
-        get_field!(range);
-        meta
-    }
     fn get_meta_parent(&self) -> MetaData<'a> {
         let mut meta = MetaData::default();
         let level = match self.level_parent_index() {
@@ -150,15 +125,25 @@ impl<'a> FdtIter<'a> {
         self.current_level += 1;
         let i = self.level_current_index();
         self.stack[i] = MetaData::default();
-    }
-    fn handle_node_end(&mut self) {
-        self.current_level -= 1;
-        let i = self.level_current_index();
-        self.stack[i] = MetaData::default();
+        self.node_name = self.reader.take_unit_name().unwrap();
+        self.node_reader = Some(self.reader.clone());
     }
 
     fn finish_node(&mut self) -> Option<Node<'a>> {
-        None
+        let reader = self.node_reader.take()?;
+
+        let level = self.current_level;
+        let meta = self.stack[self.level_current_index()].clone();
+        let meta_parent = self.get_meta_parent();
+
+        Some(Node::new(
+            self.fdt,
+            level,
+            self.node_name,
+            reader,
+            meta_parent,
+            meta,
+        ))
     }
 }
 
@@ -172,60 +157,14 @@ impl<'a> Iterator for FdtIter<'a> {
             match token {
                 Token::BeginNode => {
                     let node = self.finish_node();
-
-                    // let mut node = None;
-                    // if let Some(reader) = node_reader.take() {
-                    //     let level = self.current_level;
-                    //     let meta = self.stack[self.level_current_index()].clone();
-                    //     let meta_parent = self.get_meta_parent();
-
-                    //     node = Some(Node::new(
-                    //         self.fdt,
-                    //         level,
-                    //         node_name,
-                    //         reader,
-                    //         meta_parent,
-                    //         meta,
-                    //     ));
-                    // }
                     self.handle_node_begin();
-                    self.node_name = self.reader.take_unit_name().unwrap();
-                    self.node_reader = Some(self.reader.clone());
-
                     if node.is_some() {
                         return node;
                     }
-                    // let mut node = Node::new(self.current_level as _, &mut self.reader);
-                    // let index = self.current_level - 1;
-
-                    // for prop in node.propertys() {
-                    //     macro_rules! update_cell {
-                    //         ($cell:ident) => {
-                    //             self.stack[index].$cell = Some(prop.u32() as _)
-                    //         };
-                    //     }
-                    //     match prop.name {
-                    //         "#address-cells" => update_cell!(address_cells),
-                    //         "#size-cells" => update_cell!(size_cells),
-                    //         "#clock-cells" => update_cell!(clock_cells),
-                    //         "#interrupt-cells" => update_cell!(interrupt_cells),
-                    //         "#gpio-cells" => update_cell!(gpio_cells),
-                    //         "#dma-cells" => update_cell!(dma_cells),
-                    //         "#cooling-cells" => update_cell!(cooling_cells),
-                    //         _ => {}
-                    //     }
-                    // }
-                    // node.meta = self.get_meta();
-                    // self.stack[index].range = node.node_ranges();
-                    // node.meta = self.get_meta();
-
-                    // return Some(node);
                 }
                 Token::EndNode => {
                     let node = self.finish_node();
-
-                    self.handle_node_end();
-
+                    self.current_level -= 1;
                     if node.is_some() {
                         return node;
                     }
@@ -249,7 +188,9 @@ impl<'a> Iterator for FdtIter<'a> {
                         _ => {}
                     }
                 }
-                Token::End => return None,
+                Token::End => {
+                    return self.finish_node();
+                }
                 _ => {}
             }
         }
