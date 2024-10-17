@@ -14,9 +14,9 @@ fn main() {
     }
     let mut i = 0;
     for node in fdt.all_nodes() {
-        // if i > 20 {
-        //     break;
-        // }
+        if i > 40 {
+            break;
+        }
         let space = " ".repeat((node.level - 1) * 4);
         println!("{}{}", space, node.name());
 
@@ -27,17 +27,6 @@ fn main() {
             }
         }
 
-        // if let Some(s) = node.node_ranges() {
-        //     println!("{} -node range: ", space);
-        //     for range in s.iter() {
-        //         println!("{}     {:?}", space, range);
-        //     }
-        // }
-        // println!("{} -range: ", space);
-        // for range in node.ranges() {
-        //     println!("{}     {:?}", space, range);
-        // }
-
         if let Some(reg) = node.reg() {
             println!("{} - reg: ", space);
             for cell in reg {
@@ -45,8 +34,5 @@ fn main() {
             }
         }
         i += 1;
-        // for prop in node.propertys() {
-        //     println!("{} - {}", space, prop.name);
-        // }
     }
 }

@@ -1174,6 +1174,7 @@ dependencies = [
  "bitflags 2.6.0",
  "driver-interface",
  "embedded-io",
+ "fdt-parser",
  "flat_device_tree",
  "futures",
  "log",

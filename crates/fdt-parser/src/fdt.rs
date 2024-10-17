@@ -1,7 +1,7 @@
 use core::{ffi::CStr, iter, ptr::NonNull};
 
 use crate::{
-    error::*, meta::MetaData, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Token,
+    error::*, meta::MetaData, node::Node, read::FdtReader, FdtHeader, MemoryRegion, Phandle, Token,
 };
 
 #[derive(Clone)]
@@ -68,6 +68,19 @@ impl<'a> Fdt<'a> {
             node_name: "",
         }
     }
+
+    pub fn get_node_by_phandle(&'a self, phandle: Phandle) -> Option<Node<'a>> {
+        self.all_nodes()
+            .find(|x| match x.phandle() {
+                Some(p) => p.eq(&phandle),
+                None => false,
+            })
+            .clone()
+    }
+
+    pub fn get_node_by_name(&'a self, name: &str) -> Option<Node<'a>> {
+        self.all_nodes().find(|x| x.name().eq(name)).clone()
+    }
 }
 
 pub struct FdtIter<'a> {
@@ -107,6 +120,7 @@ impl<'a> FdtIter<'a> {
         get_field!(dma_cells);
         get_field!(cooling_cells);
         get_field!(range);
+        get_field!(interrupt_parent);
 
         meta
     }
@@ -138,6 +152,7 @@ impl<'a> FdtIter<'a> {
         let mut node = Node::new(self.fdt, level, self.node_name, reader, meta_parent, meta);
         let ranges = node.node_ranges();
         self.stack[self.level_current_index()].range = ranges.clone();
+        self.stack[self.level_current_index()].interrupt_parent = node.node_interrupt_parent();
 
         node.meta.range = ranges;
 

@@ -298,3 +298,19 @@ impl<'a> Iterator for FdtRangeIter<'a> {
         })
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct Phandle(u32);
+
+impl From<u32> for Phandle {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
+impl Display for Phandle {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "<{:#x}>", self.0)
+    }
+}

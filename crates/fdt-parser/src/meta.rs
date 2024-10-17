@@ -1,4 +1,4 @@
-use crate::FdtRangeSilce;
+use crate::{node::Node, FdtRangeSilce, Phandle};
 
 #[derive(Clone, Default)]
 pub(crate) struct MetaData<'a> {
@@ -10,4 +10,5 @@ pub(crate) struct MetaData<'a> {
     pub dma_cells: Option<u8>,
     pub cooling_cells: Option<u8>,
     pub range: Option<FdtRangeSilce<'a>>,
+    pub interrupt_parent: Option<Phandle>,
 }

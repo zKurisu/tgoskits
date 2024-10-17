@@ -2,7 +2,7 @@ use core::iter;
 
 use crate::{
     meta::MetaData, property::Property, read::FdtReader, Fdt, FdtRange, FdtRangeSilce, FdtReg,
-    Token,
+    Phandle, Token,
 };
 
 #[derive(Clone)]
@@ -87,9 +87,9 @@ impl<'a> Node<'a> {
         })
     }
 
-    pub fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
+    pub(crate) fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
         let prop = self.find_property("ranges")?;
-       
+
         Some(FdtRangeSilce::new(
             self.meta.address_cells.unwrap(),
             self.meta_parent.address_cells.unwrap(),
@@ -98,9 +98,29 @@ impl<'a> Node<'a> {
         ))
     }
 
+    pub fn node_interrupt_parent(&self) -> Option<Phandle> {
+        let prop = self.find_property("interrupt-parent")?;
+        Some(prop.u32().into())
+    }
+
+    pub fn interrupt_parent(&self) -> Option<Node<'a>> {
+        let phandle = if let Some(p) = self.meta.interrupt_parent {
+            Some(p)
+        } else {
+            self.meta_parent.interrupt_parent
+        }?;
+
+        self.fdt.get_node_by_phandle(phandle)
+    }
+
     pub fn compatible(&self) -> Option<impl Iterator<Item = &'a str> + 'a> {
         let mut prop = self.find_property("compatible")?;
         Some(iter::from_fn(move || prop.data.take_str()))
+    }
+
+    pub fn phandle(&self) -> Option<Phandle> {
+        let prop = self.find_property("phandle")?;
+        Some(prop.u32().into())
     }
 }
 

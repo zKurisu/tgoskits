@@ -35,6 +35,7 @@ flat_device_tree = { path = "crates/flat_device_tree" }
 driver-interface = { path = "crates/driver-interface" }
 arm-gic-driver = "0.2"
 arm-pl011-rs = "0.1.3"
+fdt-parser = { path = "crates/fdt-parser" }
 
 [workspace.package]
 version = "0.1.0"

@@ -184,6 +184,7 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
 }
 
 unsafe fn device_tree() -> Option<Fdt<'static>> {
+
     return Fdt::from_ptr(DTB_ADDR as _).ok();
 }
 
