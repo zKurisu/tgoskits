@@ -20,6 +20,13 @@ fn main() {
         let space = " ".repeat((node.level - 1) * 4);
         println!("{}{}", space, node.name());
 
+        if let Some(cap) = node.compatible() {
+            println!("{} -compatible: ", space);
+            for cap in cap {
+                println!("{}     {:?}", space, cap);
+            }
+        }
+
         // if let Some(s) = node.node_ranges() {
         //     println!("{} -node range: ", space);
         //     for range in s.iter() {
@@ -31,9 +38,9 @@ fn main() {
         //     println!("{}     {:?}", space, range);
         // }
 
-        if node.reg().count() > 0 {
+        if let Some(reg) = node.reg() {
             println!("{} - reg: ", space);
-            for cell in node.reg() {
+            for cell in reg {
                 println!("{}     {:?}", space, cell);
             }
         }

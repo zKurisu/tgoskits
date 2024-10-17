@@ -88,10 +88,10 @@ impl<'a> FdtReader<'a> {
         None
     }
 
-    pub fn take_by(&mut self, offset: usize) -> Option<Self> {
-        let bytes = self.take(offset)?;
-        Some(FdtReader::new(bytes))
-    }
+    // pub fn take_by(&mut self, offset: usize) -> Option<Self> {
+    //     let bytes = self.take(offset)?;
+    //     Some(FdtReader::new(bytes))
+    // }
 
     pub fn take_aligned(&mut self, len: usize) -> Option<&'a [u8]> {
         let bytes = (len + 3) & !0x3;
@@ -125,5 +125,19 @@ impl<'a> FdtReader<'a> {
             name: fdt.get_str(nameoff as _).unwrap_or("<error>"),
             data: FdtReader { bytes },
         })
+    }
+
+    pub fn take_str(&mut self) -> Option<&'a str> {
+        let s = CStr::from_bytes_until_nul(self.remaining())
+            .ok()?
+            .to_str()
+            .ok()?;
+
+        let _ = self.skip(s.bytes().len() + 1);
+        if s.is_empty() {
+            None
+        } else {
+            Some(s)
+        }
     }
 }

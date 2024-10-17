@@ -50,16 +50,15 @@ impl<'a> Node<'a> {
         self.propertys().find(|x| x.name.eq(name))
     }
 
-    pub fn reg(&self) -> impl Iterator<Item = FdtReg> + 'a {
+    pub fn reg(&self) -> Option<impl Iterator<Item = FdtReg> + 'a> {
         let mut iter = self.propertys();
-        let reg = iter.find(|x| x.name.eq("reg"));
+        let reg = iter.find(|x| x.name.eq("reg"))?;
 
-        RegIter {
-            address_cell: self.address_cells().unwrap(),
+        Some(RegIter {
             size_cell: self.size_cells().unwrap(),
             prop: reg,
             node: self.clone(),
-        }
+        })
     }
 
     fn address_cells(&self) -> Option<u8> {
@@ -90,9 +89,7 @@ impl<'a> Node<'a> {
 
     pub fn node_ranges(&self) -> Option<FdtRangeSilce<'a>> {
         let prop = self.find_property("ranges")?;
-        if prop.data.is_empty() {
-            return None;
-        }
+       
         Some(FdtRangeSilce::new(
             self.meta.address_cells.unwrap(),
             self.meta_parent.address_cells.unwrap(),
@@ -100,44 +97,44 @@ impl<'a> Node<'a> {
             prop.data.clone(),
         ))
     }
+
+    pub fn compatible(&self) -> Option<impl Iterator<Item = &'a str> + 'a> {
+        let mut prop = self.find_property("compatible")?;
+        Some(iter::from_fn(move || prop.data.take_str()))
+    }
 }
 
 struct RegIter<'a> {
-    address_cell: u8,
     size_cell: u8,
-    prop: Option<Property<'a>>,
+    prop: Property<'a>,
     node: Node<'a>,
 }
 impl<'a> Iterator for RegIter<'a> {
     type Item = FdtReg;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(prop) = &mut self.prop {
-            let child_address_cell = self.node.address_cells().unwrap();
-            let child_bus_address = prop.data.take_by_cell_size(child_address_cell)?;
+        let child_address_cell = self.node.address_cells().unwrap();
+        let child_bus_address = self.prop.data.take_by_cell_size(child_address_cell)?;
 
-            let mut address = child_bus_address;
-            for one in self.node.ranges() {
-                if child_bus_address >= one.child_bus_address
-                    && child_bus_address < one.child_bus_address + one.size as u128
-                {
-                    address = child_bus_address - one.child_bus_address + one.parent_bus_address;
-                }
+        let mut address = child_bus_address;
+        for one in self.node.ranges() {
+            if child_bus_address >= one.child_bus_address
+                && child_bus_address < one.child_bus_address + one.size as u128
+            {
+                address = child_bus_address - one.child_bus_address + one.parent_bus_address;
             }
+        }
 
-            let size = if self.size_cell > 0 {
-                Some(prop.data.take_by_cell_size(self.size_cell)? as usize)
-            } else {
-                None
-            };
-            Some(FdtReg {
-                address,
-                child_bus_address,
-                size,
-            })
+        let size = if self.size_cell > 0 {
+            Some(self.prop.data.take_by_cell_size(self.size_cell)? as usize)
         } else {
             None
-        }
+        };
+        Some(FdtReg {
+            address,
+            child_bus_address,
+            size,
+        })
     }
 }
 
@@ -164,33 +161,33 @@ impl<'a> Iterator for PropIter<'a> {
     }
 }
 
-#[derive(Clone)]
-pub struct MemoryRegionSilce<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    reader: FdtReader<'a>,
-}
+// #[derive(Clone)]
+// pub struct MemoryRegionSilce<'a> {
+//     address_cell: u8,
+//     size_cell: u8,
+//     reader: FdtReader<'a>,
+// }
 
-impl<'a> MemoryRegionSilce<'a> {
-    pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
-        MemoryRegionIter {
-            address_cell: self.address_cell,
-            size_cell: self.size_cell,
-            reader: self.reader.clone(),
-        }
-    }
-}
+// impl<'a> MemoryRegionSilce<'a> {
+//     pub fn iter(&self) -> impl Iterator<Item = FdtRange> + 'a {
+//         MemoryRegionIter {
+//             address_cell: self.address_cell,
+//             size_cell: self.size_cell,
+//             reader: self.reader.clone(),
+//         }
+//     }
+// }
 
-struct MemoryRegionIter<'a> {
-    address_cell: u8,
-    size_cell: u8,
-    reader: FdtReader<'a>,
-}
+// struct MemoryRegionIter<'a> {
+//     address_cell: u8,
+//     size_cell: u8,
+//     reader: FdtReader<'a>,
+// }
 
-impl<'a> Iterator for MemoryRegionIter<'a> {
-    type Item = FdtRange;
+// impl<'a> Iterator for MemoryRegionIter<'a> {
+//     type Item = FdtRange;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        todo!()
-    }
-}
+//     fn next(&mut self) -> Option<Self::Item> {
+//         todo!()
+//     }
+// }
