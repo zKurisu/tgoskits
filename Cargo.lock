@@ -1261,6 +1261,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tftpd"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed9022b8871cfc4c5aa3ac9219ba0e4533e272d60e3b9bf5fa33bf1545431c6a"
+
+[[package]]
 name = "thiserror"
 version = "1.0.63"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1532,6 +1538,7 @@ dependencies = [
  "serde",
  "serialport",
  "sparreal-build",
+ "tftpd",
  "toml",
 ]
 

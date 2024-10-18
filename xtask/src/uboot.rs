@@ -2,6 +2,7 @@ use anyhow::Result;
 use network_interface::Addr;
 use network_interface::NetworkInterface;
 use network_interface::NetworkInterfaceConfig;
+use std::path::PathBuf;
 use std::{
     fs::{remove_file, File},
     io::{self, stdin, stdout, Read, Write},
@@ -24,7 +25,11 @@ impl UBoot {
             .unwrap()
             .bin
             .file_name()
-            .unwrap().to_str().unwrap();
+            .unwrap()
+            .to_str()
+            .unwrap();
+
+        let out_dir = project.compile.as_ref().unwrap().bin.parent().unwrap();
 
         let mut config = project.config.clone();
         let uboot = config.uboot.get_or_insert_default();
@@ -110,6 +115,8 @@ impl UBoot {
             }
         });
 
+        Self::run_tftp(out_dir.as_os_str().to_str().unwrap());
+
         let mut in_shell = false;
 
         let cmd = format!(
@@ -158,5 +165,19 @@ impl UBoot {
                 Err(e) => eprintln!("{:?}", e),
             }
         }
+    }
+
+    fn run_tftp(file_dir: &str) {
+        // use tftpd::{Config, Server};
+        // println!("启动 TFTP 服务器...");
+        // println!("文件目录：{}", file_dir);
+        // let file_dir = file_dir.to_string();
+
+        // std::thread::spawn(move || {
+        //     let config =
+        //         Config::new([file_dir, "-p".to_string(), "69".to_string()].into_iter()).unwrap();
+        //     let mut server = Server::new(&config).unwrap();
+        //     server.listen();
+        // });
     }
 }

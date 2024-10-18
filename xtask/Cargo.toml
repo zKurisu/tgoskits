@@ -13,3 +13,4 @@ byte-unit = "5.1.4"
 sparreal-build = { workspace = true }
 serialport = "4.5.0"
 network-interface = "2.0.0"
+tftpd = "0.3.1"
