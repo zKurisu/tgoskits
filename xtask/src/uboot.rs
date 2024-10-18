@@ -115,7 +115,13 @@ impl UBoot {
             }
         });
 
-        Self::run_tftp(out_dir.as_os_str().to_str().unwrap());
+        Self::run_tftp(
+            out_dir
+                .as_os_str()
+                .to_str()
+                .unwrap()
+                .trim_start_matches("\\\\?\\"),
+        );
 
         let mut in_shell = false;
 
@@ -168,16 +174,16 @@ impl UBoot {
     }
 
     fn run_tftp(file_dir: &str) {
-        // use tftpd::{Config, Server};
-        // println!("启动 TFTP 服务器...");
-        // println!("文件目录：{}", file_dir);
-        // let file_dir = file_dir.to_string();
+        use tftpd::{Config, Server};
+        println!("启动 TFTP 服务器...");
+        println!("文件目录：{}", file_dir);
+        let mut config = Config::default();
+        config.directory = PathBuf::from(file_dir);
+        config.send_directory = config.directory.clone();
 
-        // std::thread::spawn(move || {
-        //     let config =
-        //         Config::new([file_dir, "-p".to_string(), "69".to_string()].into_iter()).unwrap();
-        //     let mut server = Server::new(&config).unwrap();
-        //     server.listen();
-        // });
+        std::thread::spawn(move || {
+            let mut server = Server::new(&config).unwrap();
+            server.listen();
+        });
     }
 }
