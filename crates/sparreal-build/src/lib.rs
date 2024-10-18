@@ -70,6 +70,7 @@ impl Default for Qemu {
 pub struct Uboot {
     pub serial: Option<String>,
     pub net: Option<String>,
+    pub dtb_file: String,
 }
 
 impl Display for ProjectConfig {

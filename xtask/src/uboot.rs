@@ -2,6 +2,7 @@ use anyhow::Result;
 use network_interface::Addr;
 use network_interface::NetworkInterface;
 use network_interface::NetworkInterfaceConfig;
+use std::fs;
 use std::path::PathBuf;
 use std::{
     fs::{remove_file, File},
@@ -17,7 +18,17 @@ pub struct UBoot {}
 
 impl UBoot {
     pub fn run(project: &Project) -> Result<()> {
-        let dtb_name = "phytium.dtb";
+        let dtb_file = project.config.uboot.as_ref().unwrap().dtb_file.clone();
+        if dtb_file.is_empty() {
+            panic!("dtb_file 为空")
+        }
+        let dtb_file = PathBuf::from(dtb_file);
+        let dtb_name = dtb_file
+            .file_name()
+            .expect("dtb_file 需要文件名")
+            .to_str()
+            .unwrap();
+
         let dtb_load_addr = "0x90600000";
         let kernel_bin = project
             .compile
@@ -30,6 +41,9 @@ impl UBoot {
             .unwrap();
 
         let out_dir = project.compile.as_ref().unwrap().bin.parent().unwrap();
+        let dtb_tmp = out_dir.join(dtb_name);
+        let _ = fs::remove_file(&dtb_tmp);
+        fs::copy(&dtb_file, &dtb_tmp).unwrap();
 
         let mut config = project.config.clone();
         let uboot = config.uboot.get_or_insert_default();
