@@ -2,6 +2,7 @@ mod boot;
 mod debug;
 mod mmu;
 mod trap;
+mod psci;
 
 use core::arch::asm;
 
@@ -20,6 +21,10 @@ pub struct PlatformImpl;
 
 #[api_impl]
 impl Platform for PlatformImpl {
+    unsafe fn shutdown(){
+        psci::system_off();
+    }
+
     unsafe fn wait_for_interrupt() {
         aarch64_cpu::asm::wfi();
     }

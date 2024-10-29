@@ -27,6 +27,7 @@ pub fn app_main() {
 
 #[api_trait]
 pub trait Platform {
+    unsafe fn shutdown();
     unsafe fn wait_for_interrupt();
     unsafe fn current_ticks() -> u64;
     unsafe fn tick_hz() -> u64;

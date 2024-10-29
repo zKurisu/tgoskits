@@ -15,3 +15,10 @@ unsafe fn boot(kconfig: kernel::KernelConfig) -> ! {
     kernel::driver_register_append(drivers::registers());
     kernel::run()
 }
+
+pub fn shutdown() -> ! {
+    unsafe {
+        arch::PlatformImpl::shutdown();
+    }
+    unreachable!()
+}
