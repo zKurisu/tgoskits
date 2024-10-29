@@ -8,7 +8,7 @@ bare-test = { workspace = true }
 log = { workspace = true }
 
 
-[test-qemu]
+[test-qemu.aarch64]
 machine = "virt"
 cpu = "cortex-a53"
 graphic = false
