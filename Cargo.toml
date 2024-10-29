@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["app/helloworld", "crates/*", "xtask"]
+members = ["app/helloworld", "app/simple_test", "crates/*", "xtask"]
 
 [workspace.dependencies]
 embedded-hal = "1.0"
@@ -33,6 +33,7 @@ page-table = { path = "crates/page-table" }
 page-table-interface = { path = "crates/page-table-interface" }
 flat_device_tree = { path = "crates/flat_device_tree" }
 driver-interface = { path = "crates/driver-interface" }
+bare-test = { path = "crates/bare-test" }
 arm-gic-driver = "0.2"
 arm-pl011-rs = "0.1.3"
 

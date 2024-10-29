@@ -1,0 +1,8 @@
+[package]
+name = "bare-test"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sparreal-rt = { workspace = true }
+log = { workspace = true, features=["max_level_error"] }

@@ -1,0 +1,8 @@
+[package]
+name = "simple_test"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bare-test = { workspace = true }
+log = { workspace = true }
