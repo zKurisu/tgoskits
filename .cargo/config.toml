@@ -1,14 +1,5 @@
 [target.'cfg(all(target_os = "none"))']
 runner = "ostool cargo-test"
-rustflags = [
-    "-C",
-    "link-arg=-Tlink.x",
-    "-C",
-    "link-arg=-no-pie",
-    "-C",
-    "link-arg=-znostart-stop-gc",
-]
-
 
 [build]
 target = "aarch64-unknown-none"

@@ -3,7 +3,7 @@ name = "simple_test"
 version.workspace = true
 edition.workspace = true
 
-[dependencies]
+[dev-dependencies]
 bare-test = { workspace = true }
 log = { workspace = true }
 
@@ -13,3 +13,5 @@ machine = "virt"
 cpu = "cortex-a53"
 graphic = false
 args = ""
+
+

@@ -8,6 +8,13 @@ fn main() {
     config.gen_const();
     // // Put the linker script somewhere the linker can find it.
     config.gen_linker_script();
+    
+
+
+    println!("cargo::rustc-link-arg=-Tlink.x");
+    println!("cargo::rustc-link-arg=-no-pie");
+    println!("cargo::rustc-link-arg=-znostart-stop-gc");
+
 
     println!("cargo:rustc-link-search={}", config.out_dir.display());
     println!("cargo:rerun-if-changed=Link.ld");
