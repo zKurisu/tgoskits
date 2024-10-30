@@ -8,16 +8,16 @@ mmu = []
 
 
 [dependencies]
-log = { workspace = true }
+log = "0.4"
 buddy_system_allocator = "0.10"
 sparreal-macros = { workspace = true }
 memory_addr = { workspace = true }
-page-table-generic = { workspace = true }
+page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
 flat_device_tree = { workspace = true }
 lock_api = { workspace = true }
 driver-interface = { workspace = true }
 pasts = { version = "0.14", default-features = false }
 rgb = { workspace = true }
 ansi_rgb = { workspace = true }
-embedded-hal-async = { workspace = true }
+embedded-hal-async = "1.0"
 spin_on = "0.1"

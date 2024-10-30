@@ -1,7 +1,12 @@
 [package]
 name = "sparreal-macros"
-version = { workspace = true }
-edition = { workspace = true }
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+description = "macros for sparreal"
+authors = ["周睿 <zrufo747@outlook.com>"]
+repository = "https://github.com/qclic/sparreal-os/tree/main/crates/sparreal-macros"
+categories = ["embedded", "no-std"]
 
 [lib]
 proc-macro = true
