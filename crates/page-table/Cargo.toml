@@ -9,7 +9,7 @@ log = "0.4"
 page-table-interface = { workspace = true }
 
 [target.'cfg(any(target_arch = "aarch64", doc))'.dependencies]
-aarch64-cpu = "9.4"
+aarch64-cpu = "10.0.0"
 
 [target.'cfg(any(target_arch = "x86_64", doc))'.dependencies]
 x86_64 = "0.15"

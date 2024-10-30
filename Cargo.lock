@@ -4,9 +4,9 @@ version = 4
 
 [[package]]
 name = "aarch64-cpu"
-version = "9.4.0"
+version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac42a04a61c19fc8196dd728022a784baecc5d63d7e256c01ad1b3fbfab26287"
+checksum = "6a21cd0131c25c438e19cd6a774adf7e3f64f7f4d723022882facc2dee0f8bc9"
 dependencies = [
  "tock-registers",
 ]
@@ -114,19 +114,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "arm-gic"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84eab3ef073fa1f664c9173e44f2437ce413e41d0ae8f17edd632a1bbcc89c4d"
-dependencies = [
- "bitflags 2.6.0",
-]
-
-[[package]]
 name = "arm-gic-driver"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43150ac8db596a65cf52d0ed486dd1e47034212ffe7ad0b307a0e2942ba24542"
+checksum = "10b0c0473d2f65788d49adc1d04ced24f9cc1ed81ed1f91c488674db83f48c9a"
 dependencies = [
  "aarch64-cpu",
  "bitflags 2.6.0",
@@ -137,9 +128,9 @@ dependencies = [
 
 [[package]]
 name = "arm-pl011-rs"
-version = "0.1.3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d477686936e1a46d87799a5dd19d746110be6ebad7814db562042bd41b7934c"
+checksum = "876d8b1707dc1e8b07936ef9a8177a59eec7d0c850d54e0eb5fec705e3de05fa"
 dependencies = [
  "bitflags 2.6.0",
  "embedded-io",
@@ -1142,7 +1133,6 @@ name = "sparreal-rt"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu",
- "arm-gic",
  "arm-gic-driver",
  "arm-pl011-rs",
  "arm_pl031",
@@ -1268,9 +1258,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tock-registers"
-version = "0.8.1"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
+checksum = "2b9e2fdb3a1e862c0661768b7ed25390811df1947a8acbfbefe09b47078d93c4"
 
 [[package]]
 name = "toml"

@@ -19,12 +19,10 @@ serde = { default-features = false, version = "1", features = [
     "alloc",
     "derive",
 ] }
-tock-registers = "0.8"
-goblin = "0.8"
+tock-registers = "0.9"
+goblin = "0.9"
 lock_api = "0.4"
 futures = { version = "0.3", default-features = false }
-
-
 sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
@@ -34,8 +32,8 @@ page-table-interface = { path = "crates/page-table-interface" }
 flat_device_tree = { path = "crates/flat_device_tree" }
 driver-interface = { path = "crates/driver-interface" }
 bare-test = { path = "crates/bare-test" }
-arm-gic-driver = "0.2"
-arm-pl011-rs = "0.1.3"
+arm-gic-driver = "0.3"
+arm-pl011-rs = "0.2"
 
 [workspace.package]
 version = "0.1.0"
