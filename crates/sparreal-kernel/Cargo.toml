@@ -12,7 +12,7 @@ log = { workspace = true }
 buddy_system_allocator = "0.10"
 sparreal-macros = { workspace = true }
 memory_addr = { workspace = true }
-page-table-interface = { workspace = true }
+page-table-generic = { workspace = true }
 flat_device_tree = { workspace = true }
 lock_api = { workspace = true }
 driver-interface = { workspace = true }

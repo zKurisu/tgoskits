@@ -1,5 +1,5 @@
 use alloc::string::String;
-use page_table_interface::{MapConfig, PagingResult};
+use page_table_generic::{MapConfig, PagingResult};
 use sparreal_macros::api_trait;
 
 use crate::mem::{PageAllocatorRef, Phys, Virt};

@@ -1,5 +1,5 @@
 use core::{fmt::Debug, mem::transmute};
-use page_table_interface::{GenericPTE, PTEConfig, PageAttribute};
+use page_table_generic::{GenericPTE, PTEConfig, PageAttribute};
 
 #[allow(unused)]
 #[repr(u64)]

@@ -107,7 +107,7 @@ impl<'a> PageAllocatorRef<'a> {
     }
 }
 
-impl page_table_interface::Access for PageAllocatorRef<'_> {
+impl page_table_generic::Access for PageAllocatorRef<'_> {
     fn va_offset(&self) -> usize {
         va_offset()
     }
@@ -138,7 +138,7 @@ impl PageAllocator {
 }
 
 #[cfg(feature = "mmu")]
-impl page_table_interface::Access for PageAllocator {
+impl page_table_generic::Access for PageAllocator {
     fn va_offset(&self) -> usize {
         va_offset()
     }

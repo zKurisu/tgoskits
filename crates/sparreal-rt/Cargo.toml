@@ -11,7 +11,7 @@ early-print = []
 log = { workspace = true }
 sparreal-kernel = { workspace = true, features = ["mmu"] }
 page-table = { workspace = true }
-page-table-interface = { workspace = true }
+page-table-generic = { workspace = true }
 driver-interface = { workspace = true }
 futures = { workspace = true, default-features = false, features = ["alloc"] }
 embedded-io = { workspace = true }

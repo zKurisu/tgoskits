@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use super::*;
 use log::debug;
-pub use page_table_interface::*;
+pub use page_table_generic::*;
 
 use crate::platform;
 

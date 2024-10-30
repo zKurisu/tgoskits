@@ -1,5 +1,5 @@
 [package]
-name = "page-table-interface"
+name = "page-table-generic"
 version.workspace = true
 edition.workspace = true
 

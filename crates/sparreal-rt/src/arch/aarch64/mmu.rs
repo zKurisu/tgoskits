@@ -1,7 +1,7 @@
 use core::ptr::NonNull;
 
 use aarch64_cpu::registers::*;
-use page_table_interface::*;
+use page_table_generic::*;
 use sparreal_kernel::{kernel::KernelConfig, mem::*};
 
 use super::{
@@ -15,7 +15,7 @@ extern "C" {
     fn _ekernel();
 }
 
-pub type PageTable = page_table_interface::PageTableRef<'static, page_table::PTE, 512, 4>;
+pub type PageTable = page_table_generic::PageTableRef<'static, page_table::PTE, 512, 4>;
 
 pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
     let heap_size =

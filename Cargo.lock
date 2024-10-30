@@ -740,12 +740,12 @@ dependencies = [
  "bitflags 2.6.0",
  "env_logger",
  "log",
- "page-table-interface",
+ "page-table-generic",
  "x86_64",
 ]
 
 [[package]]
-name = "page-table-interface"
+name = "page-table-generic"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.6.0",
@@ -1112,7 +1112,7 @@ dependencies = [
  "lock_api",
  "log",
  "memory_addr",
- "page-table-interface",
+ "page-table-generic",
  "pasts",
  "rgb",
  "sparreal-macros",
@@ -1144,7 +1144,7 @@ dependencies = [
  "log",
  "memory_addr",
  "page-table",
- "page-table-interface",
+ "page-table-generic",
  "sparreal-build",
  "sparreal-kernel",
  "sparreal-macros",

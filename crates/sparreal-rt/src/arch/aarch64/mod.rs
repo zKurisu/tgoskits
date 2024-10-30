@@ -9,7 +9,7 @@ use core::arch::asm;
 use aarch64_cpu::registers::*;
 use alloc::{format, string::String};
 use mmu::PageTable;
-use page_table_interface::{MapConfig, PageTableFn, PagingResult};
+use page_table_generic::{MapConfig, PageTableFn, PagingResult};
 use sparreal_kernel::{
     driver::device_tree::get_device_tree, mem::*, platform::Platform, print, println,
 };
