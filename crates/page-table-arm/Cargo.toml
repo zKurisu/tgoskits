@@ -13,7 +13,7 @@ categories = ["no-std"]
 [dependencies]
 bitflags = "2.6"
 log = "0.4"
-page-table-generic = { workspace = true, version = "0.0.1" }
+page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
 aarch64-cpu = "10.0.0"
 
 
