@@ -3,6 +3,10 @@ name = "sparreal-rt"
 version = { workspace = true }
 edition = { workspace = true }
 
+[features]
+default = ["early-print"]
+early-print = []
+
 [dependencies]
 log = { workspace = true }
 sparreal-kernel = { workspace = true, features = ["mmu"] }

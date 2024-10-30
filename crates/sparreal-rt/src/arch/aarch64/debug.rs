@@ -9,25 +9,28 @@ pub unsafe fn mmu_add_offset(va_offset: usize) {
 }
 
 pub unsafe fn put_debug(char: u8) {
-    // const BASE: usize = 0;
-    // const BASE: usize = 0x2800D000;
-    // const BASE: usize = 0xFE20_1000;
-    if OUT_REG == 0 {
-        return;
+    #[cfg(feature = "early_print")]
+    {
+        // const BASE: usize = 0;
+        // const BASE: usize = 0x2800D000;
+        // const BASE: usize = 0xFE20_1000;
+        if OUT_REG == 0 {
+            return;
+        }
+
+        // let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
+        //     OUT_REG + VA_OFFSET
+        // } else {
+        //     OUT_REG
+        // };
+
+        let base = OUT_REG;
+
+        let state = (base + 0x18) as *mut u8;
+        let put = (base) as *mut u8;
+        while (state.read_volatile() & (0x20 as u8)) != 0 {}
+        put.write_volatile(char);
     }
-
-    // let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
-    //     OUT_REG + VA_OFFSET
-    // } else {
-    //     OUT_REG
-    // };
-
-    let base = OUT_REG;
-
-    let state = (base + 0x18) as *mut u8;
-    let put = (base) as *mut u8;
-    while (state.read_volatile() & (0x20 as u8)) != 0 {}
-    put.write_volatile(char);
 }
 
 pub struct DebugWriter;
