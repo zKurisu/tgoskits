@@ -5,6 +5,7 @@ extern crate sparreal_rt;
 
 pub use sparreal_rt::*;
 
+
 pub fn test_runner(tests: &[&dyn Fn()]) {
     pub use sparreal_rt::println;
     println!("Running {} tests", tests.len());

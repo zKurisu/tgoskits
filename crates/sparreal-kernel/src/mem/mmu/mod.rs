@@ -102,7 +102,7 @@ pub(crate) unsafe fn init_table(
     Ok(())
 }
 
-pub(crate) fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
+pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     unsafe {
         let table = platform::get_kernel_page_table();
         let paddr = paddr.align_down(0x1000);

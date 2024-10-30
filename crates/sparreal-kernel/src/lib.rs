@@ -19,6 +19,8 @@ pub mod trap;
 pub mod util;
 
 pub use kernel::{KernelConfig, MemoryRange};
+pub use mem::mmu::iomap;
+pub use mem::PhysAddr;
 pub use platform::Platform;
 pub use sparreal_macros::entry;
 
