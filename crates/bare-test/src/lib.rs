@@ -13,6 +13,6 @@ pub fn test_runner(tests: &[&dyn Fn()]) {
         test();
         println!("[test {} passed]", i);
     }
-
+    println!("All tests passed");
     shutdown()
 }

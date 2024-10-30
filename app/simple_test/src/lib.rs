@@ -19,12 +19,14 @@ mod test2 {
     extern crate bare_test;
 
     use bare_test::println;
-    use log::info;
-
     #[test_case]
-    fn trivial_assertion() {
-        println!("hello world from test!");
-        info!("trivial assertion... ");
+    fn it_works2() {
+        println!("test2... ");
+        assert_eq!(1, 2);
+    }
+    #[test_case]
+    fn it_works1() {
+        println!("test1... ");
         assert_eq!(1, 1);
     }
 }

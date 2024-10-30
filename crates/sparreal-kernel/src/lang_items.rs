@@ -8,7 +8,8 @@ use crate::platform;
 fn panic(info: &PanicInfo) -> ! {
     error!("{info}");
 
-    loop {
-        unsafe { platform::wait_for_interrupt() };
-    }
+    unsafe {
+        platform::shutdown();
+    };
+    unreachable!()
 }
