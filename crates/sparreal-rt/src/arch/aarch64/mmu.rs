@@ -15,7 +15,7 @@ extern "C" {
     fn _ekernel();
 }
 
-pub type PageTable = page_table_generic::PageTableRef<'static, page_table::PTE, 512, 4>;
+pub type PageTable = page_table_generic::PageTableRef<'static, page_table_arm::PTE, 512, 4>;
 
 pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
     let heap_size =
@@ -73,7 +73,7 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
         );
     }
 
-    MAIR_EL1.set(page_table::AttrIndex::mair_value());
+    MAIR_EL1.set(page_table_arm::AttrIndex::mair_value());
 
     table.paddr() as _
 }

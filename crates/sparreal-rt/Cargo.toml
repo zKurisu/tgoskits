@@ -10,7 +10,6 @@ early-print = []
 [dependencies]
 log = { workspace = true }
 sparreal-kernel = { workspace = true, features = ["mmu"] }
-page-table = { workspace = true }
 page-table-generic = { workspace = true }
 driver-interface = { workspace = true }
 futures = { workspace = true, default-features = false, features = ["alloc"] }
@@ -26,6 +25,7 @@ arm-pl011-rs = { workspace = true }
 flat_device_tree = { workspace = true }
 arm-gic-driver = { workspace = true }
 arm_pl031 = "0.2.1"
+page-table-arm = { workspace = true }
 
 [build-dependencies]
 sparreal-build = { workspace = true }

@@ -27,7 +27,7 @@ sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
 sparreal-build = { path = "crates/sparreal-build" }
-page-table = { path = "crates/page-table" }
+page-table-arm = { path = "crates/page-table-arm" }
 page-table-generic = { path = "crates/page-table-generic" }
 flat_device_tree = { path = "crates/flat_device_tree" }
 driver-interface = { path = "crates/driver-interface" }
