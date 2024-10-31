@@ -1,6 +1,6 @@
 [package]
 name = "bare-test"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
