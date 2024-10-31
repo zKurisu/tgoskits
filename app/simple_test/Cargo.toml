@@ -7,3 +7,5 @@ edition.workspace = true
 bare-test = { workspace = true }
 log = { workspace = true }
 
+[build-dependencies]
+sparreal-macros = { workspace = true }

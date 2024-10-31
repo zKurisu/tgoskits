@@ -177,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "bare-test"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "log",
  "sparreal-rt",
@@ -1083,6 +1083,7 @@ version = "0.1.0"
 dependencies = [
  "bare-test",
  "log",
+ "sparreal-macros",
 ]
 
 [[package]]

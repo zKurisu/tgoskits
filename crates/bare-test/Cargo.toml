@@ -1,8 +1,14 @@
 [package]
 name = "bare-test"
-version.workspace = true
-edition.workspace = true
+version = "0.0.1"
+authors = ["Zhourui <zrufo747@outlook.com>"]
+edition = "2021"
+repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
+license = "MPL-2.0"
+description = "A test framework for bare metal."
+keywords      = ["test", "case", "testing", "testcase", "unittest"]
+categories    = ["development-tools", "development-tools::testing"]
 
 [dependencies]
-sparreal-rt = { path = "../sparreal-rt", no-default-features = true }
-log = { workspace = true, features = ["max_level_error"] }
+sparreal-rt = { version = "0.0.1", path = "../sparreal-rt", no-default-features = true }
+log = { version = "0.4", features = ["max_level_error"] }

@@ -222,3 +222,13 @@ pub fn api_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
     .into()
 }
+
+#[proc_macro]
+pub fn build_test_setup(_input: TokenStream) -> TokenStream {
+    quote! {
+    println!("cargo::rustc-link-arg-tests=-Tlink.x");
+    println!("cargo::rustc-link-arg-tests=-no-pie");
+    println!("cargo::rustc-link-arg-tests=-znostart-stop-gc");
+    }
+    .into()
+}
