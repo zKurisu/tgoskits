@@ -4,5 +4,5 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-sparreal-rt = { workspace = true }
-log = { workspace = true, features=["max_level_error"] }
+sparreal-rt = { path = "../sparreal-rt", no-default-features = true }
+log = { workspace = true, features = ["max_level_error"] }

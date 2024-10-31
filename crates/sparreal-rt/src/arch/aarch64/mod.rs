@@ -1,8 +1,8 @@
 mod boot;
 mod debug;
 mod mmu;
-mod trap;
 mod psci;
+mod trap;
 
 use core::arch::asm;
 
@@ -21,7 +21,7 @@ pub struct PlatformImpl;
 
 #[api_impl]
 impl Platform for PlatformImpl {
-    unsafe fn shutdown(){
+    unsafe fn shutdown() {
         psci::system_off();
     }
 
@@ -131,8 +131,8 @@ impl Platform for PlatformImpl {
 
 fn print_board_info() -> Option<()> {
     let fdt = get_device_tree()?;
-    let root = fdt.root().ok()?;
-    let caps = root.compatible().all();
+    let root = fdt.all_nodes().next()?;
+    let caps = root.compatibles();
 
     print!("Board:");
     for cap in caps {

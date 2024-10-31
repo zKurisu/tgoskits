@@ -9,7 +9,6 @@ use alloc::{
     vec::Vec,
 };
 use device_tree::{get_device_tree, FDTExtend};
-use flat_device_tree::Fdt;
 use irq::init_irq;
 use log::info;
 
@@ -100,10 +99,10 @@ pub unsafe fn move_dtb(src: *const u8, mut dst: NonNull<u8>) -> Option<&'static 
 
 async fn init_stdout() -> Option<()> {
     let fdt = get_device_tree()?;
-    let chosen = fdt.chosen().ok()?;
+    let chosen = fdt.chosen()?;
     let stdout = chosen.stdout()?;
-    let node = stdout.node();
-    let caps = node.compatible()?.all().collect::<Vec<_>>();
+    let node = stdout.node;
+    let caps = node.compatibles().collect::<Vec<_>>();
 
     let register = register_by_compatible(&caps)?;
     let config = node.probe_config();

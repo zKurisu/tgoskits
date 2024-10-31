@@ -1,5 +1,5 @@
 use super::{
-    device_tree::get_device_tree, device_id_by_node_name, DeviceId, DriverIrqChip, DriverTimer,
+    device_id_by_node_name, device_tree::get_device_tree, DeviceId, DriverIrqChip, DriverTimer,
     DriverUart,
 };
 
@@ -10,7 +10,6 @@ use alloc::{
     vec::Vec,
 };
 use driver_interface::{DriverKind, DriverSpecific, ProbeConfig, Register};
-use flat_device_tree::node::FdtNode;
 use log::{error, info};
 
 pub(super) static CONTAINER: Container = Container::new();
@@ -67,7 +66,7 @@ pub fn add_driver<N: ToString>(id: DeviceId, name: N, spec: DriverSpecific) {
 
 pub async fn probe_by_register(register: Register) -> Option<()> {
     let fdt = get_device_tree()?;
-    let node = fdt.find_compatible(&register.compatible)?;
+    let node = fdt.find_compatible(&register.compatible).next()?;
 
     let config = node.probe_config();
 
@@ -75,14 +74,14 @@ pub async fn probe_by_register(register: Register) -> Option<()> {
     Some(())
 }
 
-pub async fn probe_by_node(node: FdtNode<'_, '_>) -> Option<()> {
+pub async fn probe_by_node(node: fdt_parser::Node<'_>) -> Option<()> {
     let id = device_id_by_node_name(node.name);
 
     if is_probed(&id) {
         return Some(());
     }
 
-    let caps = node.compatible()?.all().collect::<Vec<_>>();
+    let caps = node.compatibles().collect::<Vec<_>>();
     let register = register_by_compatible(&caps)?;
     let config = node.probe_config();
 

@@ -453,6 +453,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "fdt-parser"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a9a892b0b0d6e124b776b35384a71939a3cc4bafe9219df45832c3cf33b500e"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "flat_device_tree"
 version = "3.1.1"
 
@@ -1095,7 +1104,7 @@ dependencies = [
  "buddy_system_allocator",
  "driver-interface",
  "embedded-hal-async",
- "flat_device_tree",
+ "fdt-parser",
  "lock_api",
  "log",
  "memory_addr",
@@ -1126,6 +1135,7 @@ dependencies = [
  "bitflags 2.6.0",
  "driver-interface",
  "embedded-io",
+ "fdt-parser",
  "flat_device_tree",
  "futures",
  "log",

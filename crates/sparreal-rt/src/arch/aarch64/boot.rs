@@ -166,6 +166,14 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
             init_debug(reg);
         }
     }
+    if let Some(dtb) = NonNull::new(dtb_addr as *mut u8) {
+        if let Ok(fdt) = fdt_parser::Fdt::from_ptr(dtb) {
+            let cpu = fdt.boot_cpuid_phys();
+            debug_print("DTB boot CPU: ");
+            debug_hex(cpu as _);
+            debug_print("\r\n");
+        }
+    }
     // let reg = StdoutReg {
     //     reg: 0x2800D000 as _,
     //     size: 0x1000,
@@ -184,7 +192,6 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
 }
 
 unsafe fn device_tree() -> Option<Fdt<'static>> {
-
     return Fdt::from_ptr(DTB_ADDR as _).ok();
 }
 

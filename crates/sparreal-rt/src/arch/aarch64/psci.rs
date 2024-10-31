@@ -85,12 +85,9 @@ fn psci_call(func: u32, arg0: usize, arg1: usize, arg2: usize) -> Result<(), Psc
     let dtb = get_device_tree().ok_or(PsciError::NotSupported)?;
     let node = dtb
         .find_compatible(&["arm,psci"])
+        .next()
         .ok_or(PsciError::NotSupported)?;
-    let method = node
-        .property("method")
-        .unwrap()
-        .as_str()
-        .ok_or(PsciError::NotSupported)?;
+    let method = node.find_property("method").unwrap().str();
 
     let ret = match method {
         "smc" => arm_smccc_smc(func, arg0, arg1, arg2),

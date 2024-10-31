@@ -9,7 +9,7 @@ pub unsafe fn mmu_add_offset(va_offset: usize) {
 }
 
 pub unsafe fn put_debug(char: u8) {
-    #[cfg(feature = "early_print")]
+    #[cfg(feature = "early-print")]
     {
         // const BASE: usize = 0;
         // const BASE: usize = 0x2800D000;
