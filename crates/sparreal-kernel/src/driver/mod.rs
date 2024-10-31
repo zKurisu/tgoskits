@@ -9,6 +9,7 @@ use alloc::{
     vec::Vec,
 };
 use device_tree::{get_device_tree, FDTExtend};
+use fdt_parser::Fdt;
 use irq::init_irq;
 use log::info;
 
@@ -89,7 +90,7 @@ macro_rules! struct_driver {
 }
 
 pub unsafe fn move_dtb(src: *const u8, mut dst: NonNull<u8>) -> Option<&'static [u8]> {
-    let fdt = Fdt::from_ptr(src).ok()?;
+    let fdt = Fdt::from_ptr(NonNull::new_unchecked(src as usize as _)).ok()?;
     let size = fdt.total_size();
     let dest = &mut *slice_from_raw_parts_mut(dst.as_mut(), size);
     let src = &*slice_from_raw_parts(src, size);

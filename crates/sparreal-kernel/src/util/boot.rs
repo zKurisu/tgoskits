@@ -1,6 +1,6 @@
-use flat_device_tree::Fdt;
-
 use core::{fmt::Write, ptr::NonNull};
+
+use fdt_parser::Fdt;
 
 pub fn boot_debug_hex(mut w: impl Write, v: u64) {
     const HEX_BUF_SIZE: usize = 20; // 最大长度，包括前缀"0x"和数字
@@ -36,12 +36,12 @@ pub struct StdoutReg {
 }
 
 pub unsafe fn stdout_reg(dtb: NonNull<u8>) -> Option<StdoutReg> {
-    let fdt = Fdt::from_ptr(dtb.as_ptr()).ok()?;
-    let chosen = fdt.chosen().ok()?;
+    let fdt = Fdt::from_ptr(dtb).ok()?;
+    let chosen = fdt.chosen()?;
     if let Some(stdout) = chosen.stdout() {
-        let r = stdout.node().reg_fix().next()?;
+        let r = stdout.node.reg()?.next()?;
         return Some(StdoutReg {
-            reg: r.starting_address,
+            reg: r.address as usize as _,
             size: r.size.unwrap_or_default(),
         });
     }

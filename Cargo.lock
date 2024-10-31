@@ -454,9 +454,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "fdt-parser"
-version = "0.3.4"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a9a892b0b0d6e124b776b35384a71939a3cc4bafe9219df45832c3cf33b500e"
+checksum = "a8b07b9c581a4b9e23f48714b49b2c722a1f7496735033eb1d935e561e89765a"
 dependencies = [
  "log",
 ]
