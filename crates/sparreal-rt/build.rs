@@ -1,26 +1,37 @@
 use std::path::PathBuf;
 
-use sparreal_build::Arch;
-
 fn main() {
     let config = Config::new();
 
     config.gen_const();
     // // Put the linker script somewhere the linker can find it.
     config.gen_linker_script();
-    
-
 
     println!("cargo::rustc-link-arg=-Tlink.x");
     println!("cargo::rustc-link-arg=-no-pie");
     println!("cargo::rustc-link-arg=-znostart-stop-gc");
 
-
     println!("cargo:rustc-link-search={}", config.out_dir.display());
     println!("cargo:rerun-if-changed=Link.ld");
     // println!("cargo:rerun-if-changed=build.rs");
 }
+#[derive(Debug)]
+pub enum Arch {
+    Aarch64,
+    Riscv64,
+    X86_64,
+}
 
+impl Default for Arch {
+    fn default() -> Self {
+        match std::env::var("CARGO_CFG_TARGET_ARCH").unwrap().as_str() {
+            "aarch64" => Arch::Aarch64,
+            "riscv64" => Arch::Riscv64,
+            "x86_64" => Arch::X86_64,
+            _ => unimplemented!(),
+        }
+    }
+}
 struct Config {
     // smp: usize,
     hart_stack_size: usize,
@@ -30,19 +41,14 @@ struct Config {
 
 // 8MiB stack size per hart
 const DEFAULT_HART_STACK_SIZE: usize = 8 * 1024 * 1024;
-
-// const KERNEL_VADDR: u64 = 0x0;
-// const KERNEL_VADDR: u64 = 0xb208_0000;
 const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
-// const KERNEL_VADDR: u64 = 0x0000_0000_0008_0000;
-// const KERNEL_VADDR: u64 = 0x0000_0000_40080000;
+
 
 impl Config {
     fn new() -> Self {
         let arch = Arch::default();
 
         Self {
-            // smp: cfg.build.smp,
             hart_stack_size: DEFAULT_HART_STACK_SIZE,
             out_dir: PathBuf::from(std::env::var("OUT_DIR").unwrap()),
             arch,
@@ -63,7 +69,6 @@ impl Config {
         let ld_content = ld_content.replace(
             "%KERNEL_VADDR%",
             &format!("{:#x}", KERNEL_VADDR),
-            // &format!("{:#x}", self.va_offset + self.kernel_load_addr),
         );
         let ld_content =
             ld_content.replace("%STACK_SIZE%", &format!("{:#x}", self.hart_stack_size));

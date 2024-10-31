@@ -1,32 +1,36 @@
 [package]
 name = "sparreal-rt"
-version = { workspace = true }
-edition = { workspace = true }
+version = "0.0.1"
+authors = ["Zhourui <zrufo747@outlook.com>"]
+edition = "2021"
+repository = "https://github.com/qclic/sparreal-os"
+license = "MPL-2.0"
+description = "Sparreal OS Runtime"
+keywords = ["os"]
+categories = ["embedded", "no-std"]
 
 [features]
 default = []
 early-print = []
 
 [dependencies]
-log = { workspace = true }
-sparreal-kernel = { workspace = true, features = ["mmu"] }
-page-table-generic = { workspace = true }
-driver-interface = { workspace = true }
-futures = { workspace = true, default-features = false, features = ["alloc"] }
-embedded-io = { workspace = true }
-memory_addr = { workspace = true }
-sparreal-macros = { workspace = true }
+log = "0.4"
+sparreal-kernel = { version = "0.0.1", path = "../sparreal-kernel", features = [
+    "mmu",
+] }
+page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
+driver-interface = { version = "0.0.1", path = "../driver-interface" }
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
+embedded-io = "0.6"
+memory_addr = "0.3"
+sparreal-macros = { version = "0.0.1", path = "../sparreal-macros" }
 bitflags = "2.6"
 fdt-parser = "0.3"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "10.0"
-tock-registers = { workspace = true }
-arm-pl011-rs = { workspace = true }
-flat_device_tree = { workspace = true }
-arm-gic-driver = { workspace = true }
+tock-registers = "0.9"
+arm-pl011-rs = "0.2"
+arm-gic-driver = "0.3"
 arm_pl031 = "0.2.1"
-page-table-arm = { workspace = true }
-
-[build-dependencies]
-sparreal-build = { workspace = true }
+page-table-arm = { version = "0.0.1", path = "../page-table-arm" }

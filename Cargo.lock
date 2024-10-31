@@ -454,9 +454,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "fdt-parser"
-version = "0.3.7"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3635e89c15a160c2f9eae62da3c5e1d4e36f3eedcbf2d6734570c929e2d28be6"
+checksum = "c06467f9981da7a789725cb3941d4c453f96bbb899b3e7043caa3b04acaecfe8"
 
 [[package]]
 name = "flat_device_tree"
@@ -1123,7 +1123,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",
@@ -1133,13 +1133,11 @@ dependencies = [
  "driver-interface",
  "embedded-io",
  "fdt-parser",
- "flat_device_tree",
  "futures",
  "log",
  "memory_addr",
  "page-table-arm",
  "page-table-generic",
- "sparreal-build",
  "sparreal-kernel",
  "sparreal-macros",
  "tock-registers",

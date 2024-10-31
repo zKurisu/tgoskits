@@ -4,7 +4,7 @@ use core::{
 };
 
 use aarch64_cpu::{asm::barrier, registers::*};
-use flat_device_tree::Fdt;
+use fdt_parser::Fdt;
 use mem::*;
 use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
@@ -192,7 +192,7 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
 }
 
 unsafe fn device_tree() -> Option<Fdt<'static>> {
-    return Fdt::from_ptr(DTB_ADDR as _).ok();
+    return Fdt::from_ptr(NonNull::new(DTB_ADDR as _)?).ok();
 }
 
 #[no_mangle]
@@ -261,47 +261,52 @@ unsafe fn config_memory_by_fdt(
     kernel_size: usize,
 ) -> Result<(), &'static str> {
     let fdt = device_tree().ok_or("FDT not found")?;
-    for resv in fdt.memory_reservations() {
-        let addr = Phys::from(resv.address()).align_down(BYTES_1G);
-        if addr == kernel_start {
-            let range = MemoryRange {
-                start: addr,
-                size: resv.size().max(kernel_size + fdt.total_size()),
-            };
-            KCONFIG.reserved_memory = Some(range);
-            debug_print("Reserving memory kernel @");
-            debug_hex(addr.as_usize() as _);
-            debug_print(" size: ");
-            debug_hex(range.size as _);
-            debug_print("\r\n");
-            break;
+    for resv in fdt.reserved_memory() {
+        if let Some(resv) = resv.reg().and_then(|mut r| r.next()) {
+            let addr = Phys::from(resv.address as usize).align_down(BYTES_1G);
+            if addr == kernel_start {
+                let range = MemoryRange {
+                    start: addr,
+                    size: resv
+                        .size
+                        .unwrap_or_default()
+                        .max(kernel_size + fdt.total_size()),
+                };
+                KCONFIG.reserved_memory = Some(range);
+                debug_print("Reserving memory kernel @");
+                debug_hex(addr.as_usize() as _);
+                debug_print(" size: ");
+                debug_hex(range.size as _);
+                debug_print("\r\n");
+                break;
+            }
         }
     }
 
-    let memory = fdt.memory().map_err(|_e| "memory node not found")?;
+    for node in fdt.memory() {
+        if let Some(region) = node.reg().and_then(|mut r| r.next()) {
+            KCONFIG.main_memory.start = (region.address as usize).into();
+            KCONFIG.main_memory.size = region.size.unwrap_or_default();
+            debug_print("memory @");
+            debug_hex(KCONFIG.main_memory.start.as_usize() as _);
+            debug_print(", size: ");
+            debug_hex(region.size.unwrap_or_default() as _);
+            debug_print(" Kernel start: ");
+            debug_hex(kernel_start.as_usize() as _);
 
-    for region in memory.regions() {
-        KCONFIG.main_memory.start = (region.starting_address as usize).into();
-        KCONFIG.main_memory.size = region.size.unwrap_or_default();
-        debug_print("memory @");
-        debug_hex(KCONFIG.main_memory.start.as_usize() as _);
-        debug_print(", size: ");
-        debug_hex(region.size.unwrap_or_default() as _);
-        debug_print(" Kernel start: ");
-        debug_hex(kernel_start.as_usize() as _);
-
-        if KCONFIG.main_memory.start.as_usize() <= kernel_start.as_usize()
-            && kernel_start.as_usize()
-                < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
-        {
-            KCONFIG.main_memory_heap_offset =
-                kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize();
-            debug_print(", Kernel is in this memory, used: ");
-            debug_hex(KCONFIG.main_memory_heap_offset as _);
-            debug_println("\r\n");
-            return Ok(());
-        } else {
-            debug_println(", Kernel is not in this memory");
+            if KCONFIG.main_memory.start.as_usize() <= kernel_start.as_usize()
+                && kernel_start.as_usize()
+                    < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
+            {
+                KCONFIG.main_memory_heap_offset =
+                    kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize();
+                debug_print(", Kernel is in this memory, used: ");
+                debug_hex(KCONFIG.main_memory_heap_offset as _);
+                debug_println("\r\n");
+                return Ok(());
+            } else {
+                debug_println(", Kernel is not in this memory");
+            }
         }
     }
     if KCONFIG.main_memory.size == 0 {
