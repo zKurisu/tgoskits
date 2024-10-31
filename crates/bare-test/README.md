@@ -15,6 +15,8 @@ A test framework for testing the bare metal.
     ```toml
     [target.'cfg(all(target_os = "none"))']
     runner = "ostool cargo-test"
+    [build]
+    target = "aarch64-unknown-none"
     ```
 
 3. setup `cargo.toml`.
