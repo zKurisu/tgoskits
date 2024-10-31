@@ -375,7 +375,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "driver-interface"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "embedded-io",
  "futures",
@@ -1095,7 +1095,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "ansi_rgb",
  "buddy_system_allocator",

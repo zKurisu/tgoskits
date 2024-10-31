@@ -1,7 +1,13 @@
 [package]
 name = "driver-interface"
-version.workspace = true
-edition.workspace = true
+version = "0.0.1"
+authors = ["Zhourui <zrufo747@outlook.com>"]
+edition = "2021"
+repository = "https://github.com/qclic/sparreal-os"
+license = "MPL-2.0"
+description = "Sparreal OS kernel"
+keywords = ["os", "driver"]
+categories = ["embedded", "no-std"]
 
 [dependencies]
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
