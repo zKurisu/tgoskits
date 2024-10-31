@@ -233,9 +233,9 @@ dependencies = [
 
 [[package]]
 name = "buddy_system_allocator"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7913f22349ffcfc6ca0ca9a656ec26cfbba538ed49c31a273dff2c5d1ea83d9"
+checksum = "a1a0108968a3a2dab95b089c0fc3f1afa7759aa5ebe6f1d86d206d6f7ba726eb"
 dependencies = [
  "spin",
 ]
@@ -454,12 +454,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "fdt-parser"
-version = "0.3.5"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8b07b9c581a4b9e23f48714b49b2c722a1f7496735033eb1d935e561e89765a"
-dependencies = [
- "log",
-]
+checksum = "3635e89c15a160c2f9eae62da3c5e1d4e36f3eedcbf2d6734570c929e2d28be6"
 
 [[package]]
 name = "flat_device_tree"
