@@ -284,30 +284,56 @@ unsafe fn config_memory_by_fdt(
     }
 
     for node in fdt.memory() {
-        if let Some(region) = node.reg().and_then(|mut r| r.next()) {
-            KCONFIG.main_memory.start = (region.address as usize).into();
-            KCONFIG.main_memory.size = region.size.unwrap_or_default();
-            debug_print("memory @");
-            debug_hex(KCONFIG.main_memory.start.as_usize() as _);
-            debug_print(", size: ");
-            debug_hex(region.size.unwrap_or_default() as _);
-            debug_print(" Kernel start: ");
-            debug_hex(kernel_start.as_usize() as _);
+        debug_hex(kernel_start.as_usize() as _);
 
-            if KCONFIG.main_memory.start.as_usize() <= kernel_start.as_usize()
-                && kernel_start.as_usize()
-                    < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
+        for region in node.regions() {
+            let address = region.address as usize;
+            debug_print("\r\nmemory @");
+            debug_hex(address as _);
+            debug_print(", size: ");
+            debug_hex(region.size as _);
+            debug_print("\r\n");
+
+            if address <= kernel_start.as_usize() && kernel_start.as_usize() < address + region.size
             {
-                KCONFIG.main_memory_heap_offset =
-                    kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize();
+                KCONFIG.main_memory.start = address.into();
+                KCONFIG.main_memory.size = region.size;
+                KCONFIG.main_memory_heap_offset = kernel_start.as_usize() + kernel_size - address;
+
+                debug_print("Kernel start: ");
+                debug_hex(kernel_start.as_usize() as _);
                 debug_print(", Kernel is in this memory, used: ");
                 debug_hex(KCONFIG.main_memory_heap_offset as _);
                 debug_println("\r\n");
+
                 return Ok(());
-            } else {
-                debug_println(", Kernel is not in this memory");
             }
         }
+
+        // for region in node.regions() {
+        //     KCONFIG.main_memory.start = (region.address as usize).into();
+        //     KCONFIG.main_memory.size = region.size;
+        //     debug_print("memory @");
+        //     debug_hex(KCONFIG.main_memory.start.as_usize() as _);
+        //     debug_print(", size: ");
+        //     debug_hex(region.size as _);
+        //     debug_print(" Kernel start: ");
+        //     debug_hex(kernel_start.as_usize() as _);
+
+        //     if KCONFIG.main_memory.start.as_usize() <= kernel_start.as_usize()
+        //         && kernel_start.as_usize()
+        //             < KCONFIG.main_memory.start.as_usize() + KCONFIG.main_memory.size
+        //     {
+        //         KCONFIG.main_memory_heap_offset =
+        //             kernel_start.as_usize() + kernel_size - KCONFIG.main_memory.start.as_usize();
+        //         debug_print(", Kernel is in this memory, used: ");
+        //         debug_hex(KCONFIG.main_memory_heap_offset as _);
+        //         debug_println("\r\n");
+        //         return Ok(());
+        //     } else {
+        //         debug_println(", Kernel is not in this memory");
+        //     }
+        // }
     }
     if KCONFIG.main_memory.size == 0 {
         Err("No memory region found")

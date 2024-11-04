@@ -454,9 +454,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "fdt-parser"
-version = "0.3.8"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06467f9981da7a789725cb3941d4c453f96bbb899b3e7043caa3b04acaecfe8"
+checksum = "0a8cc0eef6272699b5eecb36301c1b78d7d505e68df232b5b385fc1489dca9cc"
 
 [[package]]
 name = "flat_device_tree"
