@@ -9,10 +9,10 @@ extern crate syn;
 mod api_trait;
 
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Ident, Span};
 use syn::{
     parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments,
-    TraitItem, Type, Visibility,
+    TraitItem, TraitItemFn, Type, Visibility,
 };
 
 /// Attribute to declare the entry point of the program
@@ -135,6 +135,11 @@ fn is_simple_type(ty: &Type, name: &str) -> bool {
     false
 }
 
+fn func_ident(trait_ident: &Ident, func_ident: &Ident) -> Ident {
+    let trait_ident = trait_ident.to_string().to_ascii_lowercase();
+    format_ident!("__sparreal_api_{}_{}", trait_ident, func_ident)
+}
+
 #[proc_macro_attribute]
 pub fn api_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as ItemTrait);
@@ -147,7 +152,7 @@ pub fn api_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
             let inputs = func.sig.inputs.clone();
             let output = func.sig.output.clone();
 
-            let api_name = format_ident!("__sparreal_api_{}", ident);
+            let api_name = func_ident(&f.ident, &ident);
 
             let mut args = Vec::new();
 
@@ -194,7 +199,11 @@ pub fn api_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
             let inputs = func.sig.inputs.clone();
             let output = func.sig.output.clone();
 
-            let api_name = format_ident!("__sparreal_api_{}", ident);
+            let api_name = func_ident(
+                f.trait_.clone().unwrap().1.get_ident().unwrap(),
+                &func.sig.ident,
+            );
+
             let mut args = Vec::new();
 
             for arg in &inputs {

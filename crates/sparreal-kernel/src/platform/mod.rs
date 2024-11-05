@@ -53,3 +53,13 @@ pub trait Platform {
     fn cpu_id() -> u64;
     fn cpu_id_display() -> String;
 }
+
+
+
+
+pub trait PlatformPageTable {
+    fn set_table(addr: usize);
+    fn get_table() -> usize;
+    fn flush_tlb(addr: Option<*const u8>);    
+    
+}
