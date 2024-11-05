@@ -4,9 +4,9 @@ use aarch64_cpu::registers::*;
 use page_table_generic::*;
 use sparreal_kernel::{kernel::KernelConfig, mem::*};
 
-use crate::debug_hex;
+use crate::{debug_hex, early_debug::debug_print};
 
-use super::{debug::debug_print, VA_OFFSET};
+use super::VA_OFFSET;
 
 extern "C" {
     fn _skernel();

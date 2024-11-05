@@ -11,14 +11,13 @@ use tock_registers::interfaces::ReadWriteable;
 
 use crate::{
     arch::{
-        debug::{debug_print, init_debug, mmu_add_offset},
+        debug::{init_debug, mmu_add_offset},
         PlatformImpl,
     },
-    consts::*, debug_hex,
+    consts::*, debug_hex, early_debug::{debug_print, debug_println},
 };
 
 use super::{
-    debug::{debug_fmt, debug_println},
     mmu, VA_OFFSET,
 };
 
@@ -110,10 +109,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_print("TCR_EL1:");
     debug_hex!(TCR_EL1.get());
     debug_println("\r\n");
-
-    // let ptr = 0x3082ffe8 as *const u8;
-    // debug_hex!(ptr.read_volatile() as _);
-
     debug_println("table set");
 
     mmu_add_offset(va_offset);

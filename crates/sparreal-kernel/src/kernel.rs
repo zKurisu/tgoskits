@@ -55,6 +55,7 @@ pub unsafe fn run() -> ! {
     }
 }
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct MemoryRange {
     pub start: Phys<u8>,
@@ -70,6 +71,7 @@ impl MemoryRange {
     }
 }
 
+#[repr(C)]
 /// 内核配置
 #[derive(Clone)]
 pub struct KernelConfig {
@@ -87,8 +89,6 @@ pub struct KernelConfig {
     pub early_debug_reg: Option<MemoryRange>,
     /// 栈顶
     pub stack_top: Phys<u8>,
-    /// cpu数量
-    pub cpu_count: usize,
     /// 设备树地址
     pub dtb_addr: Option<NonNull<u8>>,
 }
@@ -103,7 +103,6 @@ impl KernelConfig {
             main_memory: MemoryRange::new(),
             main_memory_heap_offset: 0,
             stack_top: Phys::new(),
-            cpu_count: 1,
             dtb_addr: None,
         }
     }

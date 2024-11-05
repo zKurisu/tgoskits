@@ -27,7 +27,7 @@ pub unsafe fn init(kconfig: &KernelConfig) {
     #[cfg(feature = "mmu")]
     mmu::set_va_offset(kconfig.va_offset);
 
-    let stack_size = kconfig.hart_stack_size * kconfig.cpu_count;
+    let stack_size = kconfig.hart_stack_size * 1;
     let start = (kconfig.main_memory.start + kconfig.main_memory_heap_offset).to_virt();
     let size = kconfig.main_memory.size - kconfig.main_memory_heap_offset - stack_size;
     let stack_top = kconfig.stack_top.to_virt();
@@ -76,16 +76,7 @@ unsafe impl GlobalAlloc for LockedHeap {
         self.write().dealloc(NonNull::new_unchecked(ptr), layout);
     }
 }
-// #[allow(unused)]
-// pub(crate) trait VirtToPhys {
-//     fn to_phys(&self) -> PhysAddr;
-// }
 
-// impl<T> VirtToPhys for NonNull<T> {
-//     fn to_phys(&self) -> PhysAddr {
-//         (self.as_ptr() as usize - va_offset()).into()
-//     }
-// }
 
 pub(crate) trait PhysToVirt<T> {
     fn to_virt(self) -> Virt<T>;

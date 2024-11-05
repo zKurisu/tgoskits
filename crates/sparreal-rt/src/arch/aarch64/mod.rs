@@ -38,7 +38,10 @@ impl Platform for PlatformImpl {
     }
 
     unsafe fn debug_write_char(ch: u8) {
-        unsafe { debug::put_debug(ch) };
+        unsafe {
+            #[cfg(feature = "early-print")]
+            debug::put_debug(ch)
+        };
     }
 
     unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>> {
