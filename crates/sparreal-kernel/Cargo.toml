@@ -16,7 +16,7 @@ mmu = []
 [dependencies]
 log = "0.4"
 buddy_system_allocator = "0.11"
-sparreal-macros = { version = "0.0.1", path = "../sparreal-macros" }
+sparreal-macros = { version = "0.0.2", path = "../sparreal-macros" }
 memory_addr = "0.3"
 page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
 fdt-parser = "0.3.10"
