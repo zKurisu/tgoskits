@@ -65,6 +65,6 @@ mod test {
             }
         }
 
-        boot_debug_hex(TestWriter {}, 0x12345678);
+        boot_debug_hex!(TestWriter {}, 0x12345678);
     }
 }

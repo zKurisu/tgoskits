@@ -4,10 +4,9 @@ use aarch64_cpu::registers::*;
 use page_table_generic::*;
 use sparreal_kernel::{kernel::KernelConfig, mem::*};
 
-use super::{
-    debug::{debug_hex, debug_print},
-    VA_OFFSET,
-};
+use crate::debug_hex;
+
+use super::{debug::debug_print, VA_OFFSET};
 
 extern "C" {
     fn _skernel();
@@ -23,9 +22,9 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
     let heap_start = kconfig.main_memory.start + kconfig.main_memory_heap_offset + heap_size;
 
     debug_print("Page Allocator [");
-    debug_hex(heap_start.as_usize() as _);
+    debug_hex!(heap_start.as_usize());
     debug_print(", ");
-    debug_hex((heap_start.as_usize() + heap_size) as _);
+    debug_hex!((heap_start.as_usize() + heap_size));
     debug_print(")\r\n");
 
     let mut access = PageAllocator::new(
@@ -36,7 +35,7 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
     let mut table = <PageTable as PageTableFn>::new(&mut access).unwrap();
 
     debug_print("Table @");
-    debug_hex(table.paddr() as _);
+    debug_hex!(table.paddr());
     debug_print("\r\n");
 
     if let Some(memory) = &kconfig.reserved_memory {
@@ -91,11 +90,11 @@ unsafe fn map_boot_region(
     debug_print("map ");
     debug_print(name);
     debug_print(" @");
-    debug_hex(virt as _);
+    debug_hex!(virt);
     debug_print(" -> ");
-    debug_hex(paddr.as_usize() as _);
+    debug_hex!(paddr.as_usize());
     debug_print(" size: ");
-    debug_hex(size as _);
+    debug_hex!(size);
     debug_print("\r\n");
 
     let _ = table.map_region(

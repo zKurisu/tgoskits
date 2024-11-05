@@ -11,19 +11,9 @@ pub unsafe fn mmu_add_offset(va_offset: usize) {
 pub unsafe fn put_debug(char: u8) {
     #[cfg(feature = "early-print")]
     {
-        // const BASE: usize = 0;
-        // const BASE: usize = 0x2800D000;
-        // const BASE: usize = 0xFE20_1000;
         if OUT_REG == 0 {
             return;
         }
-
-        // let base = if SCTLR_EL1.matches_any(SCTLR_EL1::M::SET) {
-        //     OUT_REG + VA_OFFSET
-        // } else {
-        //     OUT_REG
-        // };
-
         let base = OUT_REG;
 
         let state = (base + 0x18) as *mut u8;
@@ -56,6 +46,17 @@ pub fn debug_print(d: &str) {
     let _ = DebugWriter {}.write_str(d);
 }
 
-pub fn debug_hex(v: u64) {
+#[macro_export]
+macro_rules! debug_hex {
+    ($v:expr) => {
+        $crate::arch::debug::_debug_hex($v as _)
+    };
+}
+
+pub fn _debug_hex(v: u64) {
     util::boot::boot_debug_hex(DebugWriter {}, v);
+}
+
+pub fn debug_fmt(args: fmt::Arguments<'_>) {
+    let _ = DebugWriter {}.write_fmt(args);
 }

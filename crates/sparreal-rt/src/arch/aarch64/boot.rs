@@ -14,11 +14,11 @@ use crate::{
         debug::{debug_print, init_debug, mmu_add_offset},
         PlatformImpl,
     },
-    consts::*,
+    consts::*, debug_hex,
 };
 
 use super::{
-    debug::{debug_hex, debug_println},
+    debug::{debug_fmt, debug_println},
     mmu, VA_OFFSET,
 };
 
@@ -52,15 +52,15 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     if let Some(addr) = new_dtb_addr {
         debug_print("DTB moved to ");
         DTB_ADDR = addr.as_ptr() as usize;
-        debug_hex(DTB_ADDR as _);
+        debug_hex!(DTB_ADDR);
         debug_print(", size: ");
-        debug_hex(addr.len() as _);
+        debug_hex!(addr.len());
         debug_println("\r\n");
         kernel_end = kernel_end + addr.len();
     }
 
     debug_print("Kernel @");
-    debug_hex(_skernel as *const u8 as usize as _);
+    debug_hex!(_skernel as *const u8 as usize );
     debug_print("\r\n");
 
     let kernel_start = Phys::from(_skernel as *const u8).align_down(BYTES_1M * 2);
@@ -104,15 +104,15 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     let stack_top = KCONFIG.stack_top.as_usize() + va_offset;
 
     debug_print("stack top: ");
-    debug_hex(stack_top as _);
+    debug_hex!(stack_top );
     debug_print("\r\n");
 
     debug_print("TCR_EL1:");
-    debug_hex(TCR_EL1.get());
+    debug_hex!(TCR_EL1.get());
     debug_println("\r\n");
 
     // let ptr = 0x3082ffe8 as *const u8;
-    // debug_hex(ptr.read_volatile() as _);
+    // debug_hex!(ptr.read_volatile() as _);
 
     debug_println("table set");
 
@@ -142,7 +142,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
 #[no_mangle]
 unsafe extern "C" fn __rust_main_after_mmu() -> ! {
     debug_println("MMU enabled");
-
     KCONFIG.dtb_addr = NonNull::new(DTB_ADDR as _);
     crate::boot(KCONFIG.clone());
 }
@@ -170,24 +169,15 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
         if let Ok(fdt) = fdt_parser::Fdt::from_ptr(dtb) {
             let cpu = fdt.boot_cpuid_phys();
             debug_print("DTB boot CPU: ");
-            debug_hex(cpu as _);
+            debug_hex!(cpu );
             debug_print("\r\n");
         }
     }
-    // let reg = StdoutReg {
-    //     reg: 0x2800D000 as _,
-    //     size: 0x1000,
-    // };
-    // KCONFIG.early_debug_reg = Some(MemoryRange {
-    //     start: reg.reg.into(),
-    //     size: reg.size,
-    // });
-    // init_debug(reg);
 
     debug_print("dtb @");
-    debug_hex(dtb_addr as _);
+    debug_hex!(dtb_addr );
     debug_print(" va_offset: ");
-    debug_hex(va_offset as _);
+    debug_hex!(va_offset);
     debug_print("\r\n");
 }
 
@@ -274,9 +264,9 @@ unsafe fn config_memory_by_fdt(
                 };
                 KCONFIG.reserved_memory = Some(range);
                 debug_print("Reserving memory kernel @");
-                debug_hex(addr.as_usize() as _);
+                debug_hex!(addr.as_usize() );
                 debug_print(" size: ");
-                debug_hex(range.size as _);
+                debug_hex!(range.size );
                 debug_print("\r\n");
                 break;
             }
@@ -284,14 +274,14 @@ unsafe fn config_memory_by_fdt(
     }
 
     for node in fdt.memory() {
-        debug_hex(kernel_start.as_usize() as _);
+        debug_hex!(kernel_start.as_usize() );
 
         for region in node.regions() {
             let address = region.address as usize;
             debug_print("\r\nmemory @");
-            debug_hex(address as _);
+            debug_hex!(address );
             debug_print(", size: ");
-            debug_hex(region.size as _);
+            debug_hex!(region.size );
             debug_print("\r\n");
 
             if address <= kernel_start.as_usize() && kernel_start.as_usize() < address + region.size
@@ -301,9 +291,9 @@ unsafe fn config_memory_by_fdt(
                 KCONFIG.main_memory_heap_offset = kernel_start.as_usize() + kernel_size - address;
 
                 debug_print("Kernel start: ");
-                debug_hex(kernel_start.as_usize() as _);
+                debug_hex!(kernel_start.as_usize() );
                 debug_print(", Kernel is in this memory, used: ");
-                debug_hex(KCONFIG.main_memory_heap_offset as _);
+                debug_hex!(KCONFIG.main_memory_heap_offset );
                 debug_println("\r\n");
 
                 return Ok(());
