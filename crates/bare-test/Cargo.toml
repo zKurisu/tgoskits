@@ -10,5 +10,5 @@ keywords      = ["test", "case", "testing", "testcase", "unittest"]
 categories    = ["development-tools", "development-tools::testing"]
 
 [dependencies]
-sparreal-rt = { version = "0.0.1", path = "../sparreal-rt", no-default-features = true }
+sparreal-rt = { version = "0.0.2", path = "../sparreal-rt", no-default-features = true }
 log = { version = "0.4" }
