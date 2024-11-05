@@ -23,7 +23,7 @@ driver-interface = { version = "0.0.1", path = "../driver-interface" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"
 memory_addr = "0.3"
-sparreal-macros = { version = "0.0.1", path = "../sparreal-macros" }
+sparreal-macros = { version = "0.0.2", path = "../sparreal-macros" }
 bitflags = "2.6"
 fdt-parser = "0.3"
 
