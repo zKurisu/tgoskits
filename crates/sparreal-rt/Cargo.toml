@@ -1,6 +1,6 @@
 [package]
 name = "sparreal-rt"
-version = "0.0.2"
+version = "0.0.5"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os"
@@ -15,7 +15,7 @@ early-print = []
 
 [dependencies]
 log = "0.4"
-sparreal-kernel = { version = "0.0.1", path = "../sparreal-kernel", features = [
+sparreal-kernel = { version = "0.0.5", path = "../sparreal-kernel", features = [
     "mmu",
 ] }
 page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
@@ -23,7 +23,7 @@ driver-interface = { version = "0.0.1", path = "../driver-interface" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"
 memory_addr = "0.3"
-sparreal-macros = { version = "0.0.2", path = "../sparreal-macros" }
+sparreal-macros = { version = "0.0.5", path = "../sparreal-macros" }
 bitflags = "2.6"
 fdt-parser = "0.3"
 
