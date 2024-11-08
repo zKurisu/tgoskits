@@ -1,4 +1,7 @@
-use core::fmt::{self, Write};
+use core::{
+    fmt::{self, Write},
+    marker::PhantomData,
+};
 
 use sparreal_kernel::{util, Platform};
 
@@ -26,9 +29,12 @@ impl fmt::Write for DebugWriter {
     }
 }
 
+pub(crate) fn debug_endl() {
+    let _ = DebugWriter {}.write_str("\r\n");
+}
 pub(crate) fn debug_println(d: &str) {
     let _ = DebugWriter {}.write_str(d);
-    let _ = DebugWriter {}.write_str("\r\n");
+    debug_endl();
 }
 pub(crate) fn debug_print(d: &str) {
     let _ = DebugWriter {}.write_str(d);

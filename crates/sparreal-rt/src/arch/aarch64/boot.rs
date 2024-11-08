@@ -14,12 +14,12 @@ use crate::{
         debug::{init_debug, mmu_add_offset},
         PlatformImpl,
     },
-    consts::*, debug_hex, early_debug::{debug_print, debug_println},
+    consts::*,
+    debug_hex,
+    early_debug::{debug_print, debug_println},
 };
 
-use super::{
-    mmu, VA_OFFSET,
-};
+use super::{mmu, VA_OFFSET};
 
 global_asm!(include_str!("boot.S"));
 global_asm!(include_str!("vectors.S"));
@@ -59,7 +59,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     }
 
     debug_print("Kernel @");
-    debug_hex!(_skernel as *const u8 as usize );
+    debug_hex!(_skernel as *const u8 as usize);
     debug_print("\r\n");
 
     let kernel_start = Phys::from(_skernel as *const u8).align_down(BYTES_1M * 2);
@@ -103,7 +103,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     let stack_top = KCONFIG.stack_top.as_usize() + va_offset;
 
     debug_print("stack top: ");
-    debug_hex!(stack_top );
+    debug_hex!(stack_top);
     debug_print("\r\n");
 
     debug_print("TCR_EL1:");
@@ -164,13 +164,13 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
         if let Ok(fdt) = fdt_parser::Fdt::from_ptr(dtb) {
             let cpu = fdt.boot_cpuid_phys();
             debug_print("DTB boot CPU: ");
-            debug_hex!(cpu );
+            debug_hex!(cpu);
             debug_print("\r\n");
         }
     }
 
     debug_print("dtb @");
-    debug_hex!(dtb_addr );
+    debug_hex!(dtb_addr);
     debug_print(" va_offset: ");
     debug_hex!(va_offset);
     debug_print("\r\n");
@@ -259,9 +259,9 @@ unsafe fn config_memory_by_fdt(
                 };
                 KCONFIG.reserved_memory = Some(range);
                 debug_print("Reserving memory kernel @");
-                debug_hex!(addr.as_usize() );
+                debug_hex!(addr.as_usize());
                 debug_print(" size: ");
-                debug_hex!(range.size );
+                debug_hex!(range.size);
                 debug_print("\r\n");
                 break;
             }
@@ -269,14 +269,14 @@ unsafe fn config_memory_by_fdt(
     }
 
     for node in fdt.memory() {
-        debug_hex!(kernel_start.as_usize() );
+        debug_hex!(kernel_start.as_usize());
 
         for region in node.regions() {
             let address = region.address as usize;
             debug_print("\r\nmemory @");
-            debug_hex!(address );
+            debug_hex!(address);
             debug_print(", size: ");
-            debug_hex!(region.size );
+            debug_hex!(region.size);
             debug_print("\r\n");
 
             if address <= kernel_start.as_usize() && kernel_start.as_usize() < address + region.size
@@ -286,9 +286,9 @@ unsafe fn config_memory_by_fdt(
                 KCONFIG.main_memory_heap_offset = kernel_start.as_usize() + kernel_size - address;
 
                 debug_print("Kernel start: ");
-                debug_hex!(kernel_start.as_usize() );
+                debug_hex!(kernel_start.as_usize());
                 debug_print(", Kernel is in this memory, used: ");
-                debug_hex!(KCONFIG.main_memory_heap_offset );
+                debug_hex!(KCONFIG.main_memory_heap_offset);
                 debug_println("\r\n");
 
                 return Ok(());
