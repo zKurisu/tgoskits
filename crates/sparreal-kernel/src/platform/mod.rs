@@ -1,5 +1,5 @@
 use alloc::string::String;
-use page_table_generic::{MapConfig, PagingResult};
+use page_table_generic::{MapConfig, PTEGeneric, PagingResult};
 use sparreal_macros::api_trait;
 
 use crate::mem::{PageAllocatorRef, Phys, Virt};
@@ -54,12 +54,15 @@ pub trait Platform {
     fn cpu_id_display() -> String;
 }
 
-
-
-
+#[api_trait]
 pub trait PlatformPageTable {
-    fn set_table(addr: usize);
-    fn get_table() -> usize;
-    fn flush_tlb(addr: Option<*const u8>);    
-    
+    fn set_kernel_table(addr: usize);
+    fn get_kernel_table() -> usize;
+    fn set_user_table(addr: usize);
+    fn get_user_table() -> usize;
+    fn flush_tlb(addr: Option<*const u8>);
+    fn page_size() -> usize;
+    fn table_level() -> usize;
+    fn new_pte(config: PTEGeneric) -> usize;
+    fn read_pte(pte: usize) -> PTEGeneric;
 }

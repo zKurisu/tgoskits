@@ -18,7 +18,7 @@ log = "0.4"
 buddy_system_allocator = "0.11"
 sparreal-macros = { version = "0.0.5", path = "../sparreal-macros" }
 memory_addr = "0.3"
-page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
+page-table-generic = { version = "0.1.0" }
 fdt-parser = "0.3.10"
 lock_api = "0.4"
 driver-interface = { version = "0.0.1", path = "../driver-interface" }

@@ -9,9 +9,12 @@ use core::arch::asm;
 use aarch64_cpu::registers::*;
 use alloc::{format, string::String};
 use mmu::PageTable;
-use page_table_generic::{MapConfig, PageTableFn, PagingResult};
+use page_table_generic::{MapConfig, PTEGeneric, PageTableFn, PagingResult};
 use sparreal_kernel::{
-    driver::device_tree::get_device_tree, mem::*, platform::Platform, print, println,
+    driver::device_tree::get_device_tree,
+    mem::*,
+    platform::{Platform, PlatformPageTable},
+    print, println,
 };
 use sparreal_macros::api_impl;
 
@@ -144,3 +147,4 @@ fn print_board_info() -> Option<()> {
     println!();
     Some(())
 }
+

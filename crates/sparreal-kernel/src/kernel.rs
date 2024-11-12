@@ -56,7 +56,7 @@ pub unsafe fn run() -> ! {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct MemoryRange {
     pub start: Phys<u8>,
     pub size: usize,
@@ -70,6 +70,7 @@ impl MemoryRange {
         }
     }
 }
+
 
 #[repr(C)]
 /// 内核配置

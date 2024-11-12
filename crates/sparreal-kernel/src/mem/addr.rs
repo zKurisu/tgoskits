@@ -184,3 +184,14 @@ impl<T> Display for Virt<T> {
         write!(f, "VA({:p})", self.0)
     }
 }
+
+impl<T> core::fmt::Debug for Phys<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "PA({:p})", self.0)
+    }
+}
+impl<T> core::fmt::Debug for Virt<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "VA({:p})", self.0)
+    }
+}

@@ -18,7 +18,7 @@ log = "0.4"
 sparreal-kernel = { version = "0.0.5", path = "../sparreal-kernel", features = [
     "mmu",
 ] }
-page-table-generic = { version = "0.0.1", path = "../page-table-generic" }
+page-table-generic = { version = "0.1" }
 driver-interface = { version = "0.0.1", path = "../driver-interface" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"
@@ -34,4 +34,4 @@ tock-registers = "0.9"
 arm-pl011-rs = "0.2"
 arm-gic-driver = "0.3"
 arm_pl031 = "0.2.1"
-page-table-arm = { version = "0.0.1", path = "../page-table-arm" }
+page-table-arm = { version = "0.1", path = "../page-table-arm" }

@@ -77,7 +77,6 @@ unsafe impl GlobalAlloc for LockedHeap {
     }
 }
 
-
 pub(crate) trait PhysToVirt<T> {
     fn to_virt(self) -> Virt<T>;
 }
@@ -103,18 +102,12 @@ impl page_table_generic::Access for PageAllocatorRef<'_> {
         va_offset()
     }
 
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<usize> {
-        match self.inner.alloc(layout) {
-            Ok(addr) => Some(addr.as_ptr() as usize - va_offset()),
-            Err(_) => None,
-        }
+    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<NonNull<u8>> {
+        self.inner.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
-        self.inner.dealloc(
-            NonNull::new_unchecked((ptr + va_offset()) as *mut u8),
-            layout,
-        );
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+        self.inner.dealloc(ptr, layout);
     }
 }
 

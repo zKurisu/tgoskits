@@ -1,10 +1,13 @@
 use core::ptr::NonNull;
 
 use super::*;
+use crate::platform::{self, table_level};
 use log::debug;
+use page_table_generic::PageTableRef;
 pub use page_table_generic::*;
+mod table;
 
-use crate::platform;
+use table::{get_kernal_table, PageTableRef};
 
 struct BootInfo {
     va_offset: usize,
@@ -27,7 +30,7 @@ pub(crate) unsafe fn init_table(
 ) -> PagingResult<()> {
     debug!("Initializing page table...");
 
-    let table = platform::table_new(access)?;
+    let table = PageTableRef::create_empty(access)?;
 
     if let Some(memory) = &kconfig.reserved_memory {
         let virt = memory.start.to_virt();
@@ -38,16 +41,18 @@ pub(crate) unsafe fn init_table(
             memory.start.as_usize(),
             size,
         );
-        platform::table_map(
-            table,
-            MapConfig {
-                vaddr: virt.as_mut_ptr(),
-                paddr: memory.start.as_usize(),
-                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-            },
+
+        table.map_region(
+            MapConfig::new(
+                virt.as_mut_ptr(),
+                memory.start.as_usize(),
+                AccessSetting::PrivilegeRead
+                    | AccessSetting::PrivilegeWrite
+                    | AccessSetting::PrivilegeExecute,
+                CacheSetting::Normal,
+            ),
             size,
             true,
-            false,
             access,
         )?;
     }
@@ -60,16 +65,17 @@ pub(crate) unsafe fn init_table(
         kconfig.main_memory.size
     );
 
-    platform::table_map(
-        table,
-        MapConfig {
-            vaddr: virt.as_mut_ptr(),
-            paddr: kconfig.main_memory.start.as_usize(),
-            attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Execute,
-        },
+    table.map_region(
+        MapConfig::new(
+            virt.as_mut_ptr(),
+            kconfig.main_memory.start.as_usize(),
+            AccessSetting::PrivilegeRead
+                | AccessSetting::PrivilegeWrite
+                | AccessSetting::PrivilegeExecute,
+            CacheSetting::Normal,
+        ),
         kconfig.main_memory.size,
         true,
-        false,
         access,
     )?;
 
@@ -81,21 +87,20 @@ pub(crate) unsafe fn init_table(
             debug_reg.start.as_usize(),
             debug_reg.size
         );
-        platform::table_map(
-            table,
-            MapConfig {
-                vaddr: virt.as_mut_ptr(),
-                paddr: debug_reg.start.as_usize(),
-                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
-            },
+        table.map_region(
+            MapConfig::new(
+                virt.as_mut_ptr(),
+                debug_reg.start.as_usize(),
+                AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+                CacheSetting::Device,
+            ),
             debug_reg.size,
             true,
-            false,
             access,
         )?;
     }
 
-    platform::set_kernel_page_table(table);
+    platform::set_kernel_page_table(table.paddr().into());
     platform::set_user_page_table(None);
 
     debug!("Done!");
@@ -104,7 +109,7 @@ pub(crate) unsafe fn init_table(
 
 pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     unsafe {
-        let table = platform::get_kernel_page_table();
+        let table = get_kernal_table();
         let paddr = paddr.align_down(0x1000);
         let vaddr = paddr.to_virt().as_mut_ptr();
         let size = size.max(0x1000);
@@ -112,18 +117,20 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         let heap = HEAP_ALLOCATOR.write();
         let mut heap_mut = PageAllocatorRef::new(heap);
 
-        let _ = platform::table_map(
-            table,
-            MapConfig {
-                vaddr,
-                paddr: paddr.into(),
-                attrs: PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
-            },
-            size,
-            true,
+        table.map_region_with_handle(
+            MapConfig::new(
+                virt.as_mut_ptr(),
+                debug_reg.start.as_usize(),
+                AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+                CacheSetting::Device,
+            ),
+            debug_reg.size,
             true,
             &mut heap_mut,
-        );
+            Some(&|p| {
+                platform::flush_tlb(Some(p.into()));
+            }),
+        )?;
 
         NonNull::new_unchecked(vaddr)
     }
