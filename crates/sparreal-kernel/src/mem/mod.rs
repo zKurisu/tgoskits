@@ -2,7 +2,7 @@ mod addr;
 pub mod mmu;
 
 use core::{
-    alloc::GlobalAlloc,
+    alloc::{GlobalAlloc, Layout},
     ptr::{null_mut, NonNull},
 };
 
@@ -127,17 +127,11 @@ impl page_table_generic::Access for PageAllocator {
         va_offset()
     }
 
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<usize> {
-        match self.0.alloc(layout) {
-            Ok(addr) => Some(addr.as_ptr() as usize - va_offset()),
-            Err(_) => None,
-        }
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
+        self.0.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: usize, layout: core::alloc::Layout) {
-        self.0.dealloc(
-            NonNull::new_unchecked((ptr + va_offset()) as *mut u8),
-            layout,
-        );
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+        self.0.dealloc(ptr, layout);
     }
 }

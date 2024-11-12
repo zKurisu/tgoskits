@@ -13,6 +13,7 @@ pub fn get_kernal_table<'a>() -> PageTableRef<'a> {
     PageTableRef::from_addr(addr, level)
 }
 
+#[derive(Clone, Copy)]
 pub struct PTEImpl;
 
 impl PTEArch for PTEImpl {

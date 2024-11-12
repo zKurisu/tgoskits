@@ -32,20 +32,7 @@ pub trait Platform {
     unsafe fn current_ticks() -> u64;
     unsafe fn tick_hz() -> u64;
     unsafe fn debug_write_char(ch: u8);
-    unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>>;
-    unsafe fn table_map(
-        table: Phys<u8>,
-        config: MapConfig,
-        size: usize,
-        allow_block: bool,
-        flush: bool,
-        access: &mut PageAllocatorRef,
-    ) -> PagingResult<()>;
 
-    unsafe fn set_kernel_page_table(table: Phys<u8>);
-    unsafe fn set_user_page_table(table: Option<Phys<u8>>);
-    unsafe fn get_kernel_page_table() -> Phys<u8>;
-    unsafe fn flush_tlb(addr: Option<Virt<u8>>);
     fn print_system_info();
 
     fn irqs_enable();

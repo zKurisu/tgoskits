@@ -24,14 +24,14 @@ impl MAIRDefault {
     #[cfg(target_arch = "aarch64")]
     pub fn mair_el1_apply() {
         unsafe {
-            MAIR_EL1.write(Self::mair_value());
+            MAIR_EL1.set(Self::mair_value());
         }
     }
 
     #[cfg(target_arch = "aarch64")]
     pub fn mair_el2_apply() {
         unsafe {
-            MAIR_EL2.write(Self::mair_value());
+            MAIR_EL2.set(Self::mair_value());
         }
     }
 }
@@ -71,7 +71,7 @@ impl PTE {
     }
 
     pub fn paddr(&self) -> usize {
-        self.0 as usize & Self::PHYS_ADDR_MASK
+        (self.0 & Self::PHYS_ADDR_MASK) as _
     }
 
     pub fn set_flags(&mut self, flags: PTEFlags) {

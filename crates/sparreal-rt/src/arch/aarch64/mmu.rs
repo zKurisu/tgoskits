@@ -1,9 +1,14 @@
-use core::ptr::NonNull;
+use core::{arch::asm, ptr::NonNull};
 
 use aarch64_cpu::registers::*;
+use mmu::{BootTableConfig, MemoryReservedRange};
 use page_table_arm::{MAIRDefault, MAIRKind, MAIRSetting, PTEFlags, PTE};
 use page_table_generic::*;
-use sparreal_kernel::{kernel::KernelConfig, mem::*, platform::PlatformPageTable};
+use sparreal_kernel::{
+    kernel::{self, KernelConfig},
+    mem::*,
+    platform::PlatformPageTable,
+};
 use sparreal_macros::api_impl;
 
 use crate::{debug_hex, early_debug::debug_print};
@@ -19,115 +24,43 @@ extern "C" {
 pub type PageTable = page_table_generic::PageTableRef<'static, page_table_arm::PTE, 512, 4>;
 
 pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
-    let heap_size =
-        (kconfig.main_memory.size - kconfig.main_memory_heap_offset - kconfig.hart_stack_size) / 2;
-    let heap_start = kconfig.main_memory.start + kconfig.main_memory_heap_offset + heap_size;
+    let mut reserved_memory = [None; 20];
 
-    debug_print("Page Allocator [");
-    debug_hex!(heap_start.as_usize());
-    debug_print(", ");
-    debug_hex!((heap_start.as_usize() + heap_size));
-    debug_print(")\r\n");
-
-    let mut access = PageAllocator::new(
-        NonNull::new_unchecked(heap_start.as_usize() as _),
-        heap_size,
-    );
-
-    let mut table = <PageTable as PageTableFn>::new(&mut access).unwrap();
-
-    debug_print("Table @");
-    debug_hex!(table.paddr());
-    debug_print("\r\n");
-
-    if let Some(memory) = &kconfig.reserved_memory {
-        // sp 范围也需要涵盖
-        let size = memory.size.align_up(BYTES_1G);
-
-        map_boot_region(
-            "Map reserved memory",
-            &mut table,
-            memory.start,
-            size,
-            PageAttribute::Read | PageAttribute::Write | PageAttribute::PrivilegeExecute,
-            &mut access,
-        );
+    if let Some(reg) = kconfig.early_debug_reg {
+        reserved_memory[0] = Some(MemoryReservedRange {
+            start: reg.start,
+            size: reg.size,
+            access: AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+            cache: CacheSetting::Device,
+        });
     }
 
-    map_boot_region(
-        "Map main memory",
-        &mut table,
-        kconfig.main_memory.start,
-        kconfig.main_memory.size,
-        PageAttribute::Read | PageAttribute::Write | PageAttribute::PrivilegeExecute,
-        &mut access,
-    );
+    let table = match sparreal_kernel::mem::mmu::new_boot_table(BootTableConfig {
+        main_memory: kconfig.main_memory,
+        main_memory_heap_offset: kconfig.main_memory_heap_offset,
+        hart_stack_size: kconfig.hart_stack_size,
+        reserved_memory,
+    }) {
+        Ok(t) => t,
+        Err(e) => panic!("MMU init failed {:?}", e),
+    };
 
-    if let Some(debug_reg) = &kconfig.early_debug_reg {
-        map_boot_region(
-            "Map debug reg",
-            &mut table,
-            debug_reg.start,
-            debug_reg.size,
-            PageAttribute::Read | PageAttribute::Write | PageAttribute::Device,
-            &mut access,
-        );
-    }
+    MAIRDefault::mair_el1_apply();
 
-    MAIR_EL1.set(page_table_arm::AttrIndex::mair_value());
-
-    table.paddr() as _
+    table as _
 }
-
-// unsafe fn map_boot_region(
-//     name: &str,
-//     table: &mut PageTable,
-//     paddr: Phys<u8>,
-//     size: usize,
-//     attrs: PageAttribute,
-//     access: &mut impl Access,
-// ) {
-//     let virt = paddr.as_usize() + VA_OFFSET;
-
-//     debug_print("map ");
-//     debug_print(name);
-//     debug_print(" @");
-//     debug_hex!(virt);
-//     debug_print(" -> ");
-//     debug_hex!(paddr.as_usize());
-//     debug_print(" size: ");
-//     debug_hex!(size);
-//     debug_print("\r\n");
-
-//     let _ = table.map_region(
-//         MapConfig {
-//             vaddr: virt as _,
-//             paddr: paddr.into(),
-//             attrs,
-//         },
-//         size,
-//         true,
-//         access,
-//     );
-
-//     let _ = table.map_region(
-//         MapConfig {
-//             vaddr: paddr.as_usize() as _,
-//             paddr: paddr.into(),
-//             attrs,
-//         },
-//         size,
-//         true,
-//         access,
-//     );
-// }
 
 pub struct PageTableImpl;
 
 #[api_impl]
 impl PlatformPageTable for PageTableImpl {
     fn flush_tlb(addr: Option<*const u8>) {
-        todo!()
+        if let Some(vaddr) = addr {
+            asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr.as_usize())
+        } else {
+            // flush the entire TLB
+            asm!("tlbi vmalle1; dsb nsh; isb")
+        };
     }
 
     fn page_size() -> usize {
@@ -246,18 +179,20 @@ impl PlatformPageTable for PageTableImpl {
     }
 
     fn set_kernel_table(addr: usize) {
-        todo!()
+        TTBR1_EL1.set_baddr(addr as _);
+        Self::flush_tlb(None);
     }
 
     fn get_kernel_table() -> usize {
-        todo!()
+        TTBR1_EL1.get_baddr() as _
     }
 
     fn set_user_table(addr: usize) {
-        todo!()
+        TTBR0_EL1.set_baddr(addr as _);
+        Self::flush_tlb(None);
     }
 
     fn get_user_table() -> usize {
-        todo!()
+        TTBR0_EL1.get_baddr() as _
     }
 }

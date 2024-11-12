@@ -47,61 +47,6 @@ impl Platform for PlatformImpl {
         };
     }
 
-    unsafe fn table_new(access: &mut PageAllocatorRef) -> PagingResult<Phys<u8>> {
-        PageTable::new(access).map(|table| table.paddr().into())
-    }
-
-    unsafe fn table_map(
-        table: Phys<u8>,
-        config: MapConfig,
-        size: usize,
-        allow_block: bool,
-        flush: bool,
-        access: &mut PageAllocatorRef,
-    ) -> PagingResult<()> {
-        let mut table = PageTable::from_addr(table.into(), 4);
-        if flush {
-            table.map_region_with_handle(
-                config,
-                size,
-                allow_block,
-                access,
-                Some(&|addr: *const u8| {
-                    PlatformImpl::flush_tlb(Some(addr.into()));
-                }),
-            )
-        } else {
-            table.map_region(config, size, allow_block, access)
-        }
-    }
-
-    unsafe fn set_kernel_page_table(table: Phys<u8>) {
-        TTBR1_EL1.set_baddr(table.as_usize() as _);
-        Self::flush_tlb(None);
-    }
-
-    unsafe fn set_user_page_table(table: Option<Phys<u8>>) {
-        match table {
-            Some(tb) => TTBR0_EL1.set_baddr(tb.as_usize() as _),
-            None => TTBR0_EL1.set_baddr(0),
-        }
-        Self::flush_tlb(None);
-    }
-
-    unsafe fn get_kernel_page_table() -> Phys<u8> {
-        let paddr = TTBR1_EL1.get_baddr();
-        (paddr as usize).into()
-    }
-
-    unsafe fn flush_tlb(addr: Option<Virt<u8>>) {
-        if let Some(vaddr) = addr {
-            asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr.as_usize())
-        } else {
-            // flush the entire TLB
-            asm!("tlbi vmalle1; dsb nsh; isb")
-        };
-    }
-
     fn print_system_info() {
         println!(
             "CPU: {}.{}.{}.{}",
@@ -147,4 +92,3 @@ fn print_board_info() -> Option<()> {
     println!();
     Some(())
 }
-

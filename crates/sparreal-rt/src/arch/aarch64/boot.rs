@@ -235,12 +235,6 @@ unsafe extern "C" fn __switch_to_el1() {
     }
 }
 
-// unsafe fn other_cpu() -> ! {
-//     loop {
-//         asm!("wfe")
-//     }
-// }
-
 unsafe fn config_memory_by_fdt(
     kernel_start: Phys<u8>,
     kernel_size: usize,

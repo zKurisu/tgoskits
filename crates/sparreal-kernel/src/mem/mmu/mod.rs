@@ -1,13 +1,34 @@
 use core::ptr::NonNull;
 
-use super::*;
-use crate::platform::{self, table_level};
+use err::PagingResult;
 use log::debug;
-use page_table_generic::PageTableRef;
-pub use page_table_generic::*;
+
+mod boot;
 mod table;
 
+use super::*;
+use crate::platform;
+pub use boot::*;
+pub use page_table_generic::*;
 use table::{get_kernal_table, PageTableRef};
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MemoryReservedRange {
+    pub start: Phys<u8>,
+    pub size: usize,
+    pub access: AccessSetting,
+    pub cache: CacheSetting,
+}
+
+impl MemoryRange {
+    pub const fn new() -> Self {
+        Self {
+            start: Phys::new(),
+            size: 0,
+        }
+    }
+}
 
 struct BootInfo {
     va_offset: usize,
@@ -30,7 +51,7 @@ pub(crate) unsafe fn init_table(
 ) -> PagingResult<()> {
     debug!("Initializing page table...");
 
-    let table = PageTableRef::create_empty(access)?;
+    let mut table = PageTableRef::create_empty(access)?;
 
     if let Some(memory) = &kconfig.reserved_memory {
         let virt = memory.start.to_virt();
@@ -100,8 +121,8 @@ pub(crate) unsafe fn init_table(
         )?;
     }
 
-    platform::set_kernel_page_table(table.paddr().into());
-    platform::set_user_page_table(None);
+    platform::set_kernel_table(table.paddr());
+    platform::set_user_table(0);
 
     debug!("Done!");
     Ok(())
@@ -109,7 +130,7 @@ pub(crate) unsafe fn init_table(
 
 pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     unsafe {
-        let table = get_kernal_table();
+        let mut table = get_kernal_table();
         let paddr = paddr.align_down(0x1000);
         let vaddr = paddr.to_virt().as_mut_ptr();
         let size = size.max(0x1000);
@@ -117,20 +138,20 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         let heap = HEAP_ALLOCATOR.write();
         let mut heap_mut = PageAllocatorRef::new(heap);
 
-        table.map_region_with_handle(
+        let _ = table.map_region_with_handle(
             MapConfig::new(
-                virt.as_mut_ptr(),
-                debug_reg.start.as_usize(),
+                vaddr,
+                paddr.as_usize(),
                 AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
                 CacheSetting::Device,
             ),
-            debug_reg.size,
+            size,
             true,
             &mut heap_mut,
             Some(&|p| {
-                platform::flush_tlb(Some(p.into()));
+                platform::flush_tlb(Some(p));
             }),
-        )?;
+        );
 
         NonNull::new_unchecked(vaddr)
     }
