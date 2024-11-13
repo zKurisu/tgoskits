@@ -1,6 +1,4 @@
-use core::fmt::{self, Write};
-
-use sparreal_kernel::util::{self, boot::StdoutReg};
+use sparreal_kernel::util::boot::StdoutReg;
 
 static mut OUT_REG: usize = 0;
 
@@ -23,4 +21,3 @@ pub unsafe fn put_debug(char: u8) {
 pub fn init_debug(stdout: StdoutReg) {
     unsafe { OUT_REG = stdout.reg as usize };
 }
-

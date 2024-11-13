@@ -1,7 +1,6 @@
-use core::{
-    fmt::{self, Write},
-    marker::PhantomData,
-};
+use core::
+    fmt::{self, Write}
+;
 
 use sparreal_kernel::{util, Platform};
 

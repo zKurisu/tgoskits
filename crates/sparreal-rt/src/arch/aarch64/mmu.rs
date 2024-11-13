@@ -1,19 +1,11 @@
-use core::{arch::asm, ptr::NonNull};
+use core::arch::asm;
 
 use aarch64_cpu::registers::*;
 use mmu::{BootTableConfig, MemoryReservedRange};
 use page_table_arm::{MAIRDefault, MAIRKind, MAIRSetting, PTEFlags, PTE};
 use page_table_generic::*;
-use sparreal_kernel::{
-    kernel::{self, KernelConfig},
-    mem::*,
-    platform::PlatformPageTable,
-};
+use sparreal_kernel::{kernel::KernelConfig, mem::*, platform::PlatformPageTable};
 use sparreal_macros::api_impl;
-
-use crate::{debug_hex, early_debug::debug_print};
-
-use super::VA_OFFSET;
 
 extern "C" {
     fn _skernel();
@@ -21,10 +13,8 @@ extern "C" {
     fn _ekernel();
 }
 
-pub type PageTable = page_table_generic::PageTableRef<'static, page_table_arm::PTE, 512, 4>;
-
 pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
-    let mut reserved_memory = [None; 20];
+    let mut reserved_memory = [None; 24];
 
     if let Some(reg) = kconfig.early_debug_reg {
         reserved_memory[0] = Some(MemoryReservedRange {
@@ -55,12 +45,14 @@ pub struct PageTableImpl;
 #[api_impl]
 impl PlatformPageTable for PageTableImpl {
     fn flush_tlb(addr: Option<*const u8>) {
-        if let Some(vaddr) = addr {
-            asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr.as_usize())
-        } else {
-            // flush the entire TLB
-            asm!("tlbi vmalle1; dsb nsh; isb")
-        };
+        unsafe {
+            if let Some(vaddr) = addr {
+                asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr as usize)
+            } else {
+                // flush the entire TLB
+                asm!("tlbi vmalle1; dsb nsh; isb")
+            };
+        }
     }
 
     fn page_size() -> usize {
@@ -73,6 +65,7 @@ impl PlatformPageTable for PageTableImpl {
 
     fn new_pte(config: PTEGeneric) -> usize {
         let mut pte = PTE::from_paddr(config.paddr);
+        let mut flags = PTEFlags::empty();
 
         if config.is_valid {
             flags |= PTEFlags::VALID;
@@ -87,8 +80,6 @@ impl PlatformPageTable for PageTableImpl {
             CacheSetting::Device => MAIRKind::Device,
             CacheSetting::NonCache => MAIRKind::NonCache,
         }));
-
-        let mut flags = PTEFlags::empty();
 
         let access = &config.setting.access_setting;
 

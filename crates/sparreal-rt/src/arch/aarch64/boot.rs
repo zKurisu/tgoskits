@@ -6,13 +6,14 @@ use core::{
 use aarch64_cpu::{asm::barrier, registers::*};
 use fdt_parser::Fdt;
 use mem::*;
+use platform::PlatformPageTable;
 use sparreal_kernel::*;
 use tock_registers::interfaces::ReadWriteable;
 
 use crate::{
     arch::{
         debug::{init_debug, mmu_add_offset},
-        PlatformImpl,
+        mmu::PageTableImpl,
     },
     consts::*,
     debug_hex,
@@ -92,7 +93,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         + TCR_EL1::T1SZ.val(16);
     TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
 
-    PlatformImpl::flush_tlb(None);
+    PageTableImpl::flush_tlb(None);
 
     // Set both TTBR0 and TTBR1
     TTBR1_EL1.set_baddr(table);
@@ -105,7 +106,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     debug_print("stack top: ");
     debug_hex!(stack_top);
     debug_print("\r\n");
-
     debug_print("TCR_EL1:");
     debug_hex!(TCR_EL1.get());
     debug_println("\r\n");
@@ -115,7 +115,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     if DTB_ADDR > 0 {
         DTB_ADDR += va_offset;
     }
-    PlatformImpl::flush_tlb(None);
+    PageTableImpl::flush_tlb(None);
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     // PlatformImpl::flush_tlb(None);

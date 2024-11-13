@@ -8,14 +8,7 @@ use core::arch::asm;
 
 use aarch64_cpu::registers::*;
 use alloc::{format, string::String};
-use mmu::PageTable;
-use page_table_generic::{MapConfig, PTEGeneric, PageTableFn, PagingResult};
-use sparreal_kernel::{
-    driver::device_tree::get_device_tree,
-    mem::*,
-    platform::{Platform, PlatformPageTable},
-    print, println,
-};
+use sparreal_kernel::{driver::device_tree::get_device_tree, platform::Platform, print, println};
 use sparreal_macros::api_impl;
 
 static mut VA_OFFSET: usize = 0;

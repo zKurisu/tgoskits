@@ -1,7 +1,7 @@
 use core::ptr::NonNull;
 
-use err::PagingResult;
 use log::debug;
+use page_table_generic::{err::PagingResult, AccessSetting, CacheSetting, MapConfig};
 
 mod boot;
 mod table;
@@ -9,7 +9,6 @@ mod table;
 use super::*;
 use crate::platform;
 pub use boot::*;
-pub use page_table_generic::*;
 use table::{get_kernal_table, PageTableRef};
 
 #[repr(C)]
@@ -19,15 +18,6 @@ pub struct MemoryReservedRange {
     pub size: usize,
     pub access: AccessSetting,
     pub cache: CacheSetting,
-}
-
-impl MemoryRange {
-    pub const fn new() -> Self {
-        Self {
-            start: Phys::new(),
-            size: 0,
-        }
-    }
 }
 
 struct BootInfo {

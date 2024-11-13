@@ -1,8 +1,6 @@
 use alloc::string::String;
-use page_table_generic::{MapConfig, PTEGeneric, PagingResult};
+use page_table_generic::PTEGeneric;
 use sparreal_macros::api_trait;
-
-use crate::mem::{PageAllocatorRef, Phys, Virt};
 
 pub enum PageAttribute {
     Read,

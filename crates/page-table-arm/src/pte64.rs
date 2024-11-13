@@ -1,7 +1,6 @@
 use aarch64_cpu::registers::{Writeable, MAIR_EL1, MAIR_EL2};
 use bitflags::Flags;
 use core::{fmt::Debug, mem::transmute};
-use page_table_generic::{GenericPTE, PTEConfig, PageAttribute};
 
 use crate::{MAIRKind, MAIRSetting};
 

@@ -1,4 +1,4 @@
-use page_table_generic::{PTEArch, PTEGeneric, PageTableRef};
+use page_table_generic::{PTEArch, PTEGeneric};
 
 use crate::{
     platform::{self, new_pte, page_size, read_pte, table_level},
