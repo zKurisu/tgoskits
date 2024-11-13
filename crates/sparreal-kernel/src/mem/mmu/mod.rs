@@ -58,9 +58,9 @@ pub(crate) unsafe fn init_table(
             MapConfig::new(
                 virt.as_mut_ptr(),
                 memory.start.as_usize(),
-                AccessSetting::PrivilegeRead
-                    | AccessSetting::PrivilegeWrite
-                    | AccessSetting::PrivilegeExecute,
+                AccessSetting::Read
+                    | AccessSetting::Write
+                    | AccessSetting::Execute,
                 CacheSetting::Normal,
             ),
             size,
@@ -81,9 +81,9 @@ pub(crate) unsafe fn init_table(
         MapConfig::new(
             virt.as_mut_ptr(),
             kconfig.main_memory.start.as_usize(),
-            AccessSetting::PrivilegeRead
-                | AccessSetting::PrivilegeWrite
-                | AccessSetting::PrivilegeExecute,
+            AccessSetting::Read
+                | AccessSetting::Write
+                | AccessSetting::Execute,
             CacheSetting::Normal,
         ),
         kconfig.main_memory.size,
@@ -103,7 +103,7 @@ pub(crate) unsafe fn init_table(
             MapConfig::new(
                 virt.as_mut_ptr(),
                 debug_reg.start.as_usize(),
-                AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+                AccessSetting::Read | AccessSetting::Write,
                 CacheSetting::Device,
             ),
             debug_reg.size,
@@ -133,7 +133,7 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
             MapConfig::new(
                 vaddr,
                 paddr.as_usize(),
-                AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+                AccessSetting::Read | AccessSetting::Write,
                 CacheSetting::Device,
             ),
             size,

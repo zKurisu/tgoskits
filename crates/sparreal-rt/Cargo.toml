@@ -18,7 +18,7 @@ log = "0.4"
 sparreal-kernel = { version = "0.0.5", path = "../sparreal-kernel", features = [
     "mmu",
 ] }
-page-table-generic = { version = "0.1" }
+page-table-generic = { version = "0.2.2" }
 driver-interface = { version = "0.0.1", path = "../driver-interface" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"

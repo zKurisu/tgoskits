@@ -39,9 +39,9 @@ pub fn new_boot_table(config: BootTableConfig) -> PagingResult<usize> {
             &mut table,
             config.main_memory.start.into(),
             config.main_memory.size,
-            AccessSetting::PrivilegeRead
-                | AccessSetting::PrivilegeWrite
-                | AccessSetting::PrivilegeExecute,
+            AccessSetting::Read
+                | AccessSetting::Write
+                | AccessSetting::Execute,
             CacheSetting::Normal,
             &mut access,
             config.va_offset,

@@ -22,7 +22,7 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
         reserved_memory[0] = Some(MemoryReservedRange {
             start: reg.start,
             size: reg.size,
-            access: AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
+            access: AccessSetting::Read | AccessSetting::Write,
             cache: CacheSetting::Device,
             name: "debug uart",
         });
@@ -85,30 +85,36 @@ impl PlatformPageTable for PageTableImpl {
             CacheSetting::NonCache => MAIRKind::NonCache,
         }));
 
-        let access = &config.setting.access_setting;
+        let privilege = &config.setting.privilege_access;
 
-        if access.contains(AccessSetting::PrivilegeRead) {
+        if !config.setting.is_global {
+            flags |= PTEFlags::NG;
+        }
+
+        if privilege.readable() {
             flags |= PTEFlags::AF;
         }
 
-        if !access.contains(AccessSetting::PrivilegeWrite) {
+        if !privilege.writable() {
             flags |= PTEFlags::AP_RO;
         }
 
-        if !access.contains(AccessSetting::PrivilegeExecute) {
+        if !privilege.executable() {
             flags |= PTEFlags::PXN;
         }
 
-        if access.contains(AccessSetting::UserRead) {
+        let user = &config.setting.user_access;
+
+        if user.readable() {
             flags |= PTEFlags::AP_EL0;
         }
 
-        if access.contains(AccessSetting::UserWrite) {
+        if user.writable() {
             flags |= PTEFlags::AP_EL0;
             flags.remove(PTEFlags::AP_RO);
         }
 
-        if !access.contains(AccessSetting::UserExecute) {
+        if !user.executable() {
             flags |= PTEFlags::UXN;
         }
 
@@ -125,8 +131,10 @@ impl PlatformPageTable for PageTableImpl {
         let flags = pte.get_flags();
         let is_valid = flags.contains(PTEFlags::VALID);
         let is_block = !flags.contains(PTEFlags::NON_BLOCK);
-        let mut access_setting = AccessSetting::empty();
+        let mut privilege_access = AccessSetting::empty();
+        let mut user_access = AccessSetting::empty();
         let mut cache_setting = CacheSetting::Normal;
+        let is_global = !flags.contains(PTEFlags::NG);
 
         if is_valid {
             let mair_idx = pte.get_mair_idx();
@@ -138,27 +146,27 @@ impl PlatformPageTable for PageTableImpl {
             };
 
             if flags.contains(PTEFlags::AF) {
-                access_setting |= AccessSetting::PrivilegeRead;
+                privilege_access |= AccessSetting::Read;
             }
 
             if !flags.contains(PTEFlags::AP_RO) {
-                access_setting |= AccessSetting::PrivilegeWrite;
+                privilege_access |= AccessSetting::Write;
             }
 
             if !flags.contains(PTEFlags::PXN) {
-                access_setting |= AccessSetting::PrivilegeExecute;
+                privilege_access |= AccessSetting::Execute;
             }
 
             if flags.contains(PTEFlags::AP_EL0) {
-                access_setting |= AccessSetting::UserRead;
+                user_access |= AccessSetting::Read;
 
                 if !flags.contains(PTEFlags::AP_RO) {
-                    access_setting |= AccessSetting::UserWrite;
+                    user_access |= AccessSetting::Write;
                 }
+            }
 
-                if !flags.contains(PTEFlags::UXN) {
-                    access_setting |= AccessSetting::UserExecute;
-                }
+            if !flags.contains(PTEFlags::UXN) {
+                user_access |= AccessSetting::Execute;
             }
         }
 
@@ -167,7 +175,9 @@ impl PlatformPageTable for PageTableImpl {
             is_block,
             is_valid,
             setting: PTESetting {
-                access_setting,
+                is_global,
+                privilege_access,
+                user_access,
                 cache_setting,
             },
         }
