@@ -44,73 +44,50 @@ pub(crate) unsafe fn init_table(
 
     let mut table = PageTableRef::create_empty(access)?;
 
-    if let Some(memory) = &kconfig.reserved_memory {
-        let virt = memory.start.to_virt();
-        let size = memory.size.align_up(BYTES_1M * 2);
-        debug!(
-            "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
-            virt.as_usize(),
-            memory.start.as_usize(),
-            size,
-        );
-
-        table.map_region(
-            MapConfig::new(
-                virt.as_mut_ptr(),
+    for rsv in kconfig.boot_info.reserved_memory {
+        if let Some(memory) = rsv {
+            let virt = memory.start.to_virt();
+            let size = memory.size.align_up(BYTES_1M * 2);
+            debug!(
+                "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
+                virt.as_usize(),
                 memory.start.as_usize(),
-                AccessSetting::Read
-                    | AccessSetting::Write
-                    | AccessSetting::Execute,
-                CacheSetting::Normal,
-            ),
-            size,
-            true,
-            access,
-        )?;
+                size,
+            );
+
+            table.map_region(
+                MapConfig::new(
+                    virt.as_mut_ptr(),
+                    memory.start.as_usize(),
+                    memory.access,
+                    memory.cache,
+                ),
+                size,
+                true,
+                access,
+            )?;
+        }
     }
 
-    let virt = kconfig.main_memory.start.to_virt();
+    let virt = kconfig.boot_info.main_memory.start.to_virt();
     debug!(
         "Map memory {:#X} -> {:#X} size {:#X}",
         virt.as_usize(),
-        kconfig.main_memory.start.as_usize(),
-        kconfig.main_memory.size
+        kconfig.boot_info.main_memory.start.as_usize(),
+        kconfig.boot_info.main_memory.size
     );
 
     table.map_region(
         MapConfig::new(
             virt.as_mut_ptr(),
-            kconfig.main_memory.start.as_usize(),
-            AccessSetting::Read
-                | AccessSetting::Write
-                | AccessSetting::Execute,
+            kconfig.boot_info.main_memory.start.as_usize(),
+            AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
             CacheSetting::Normal,
         ),
-        kconfig.main_memory.size,
+        kconfig.boot_info.main_memory.size,
         true,
         access,
     )?;
-
-    if let Some(debug_reg) = &kconfig.early_debug_reg {
-        let virt = debug_reg.start.to_virt();
-        debug!(
-            "Map debug register {:#X} -> {:#X} size {:#X}",
-            virt.as_usize(),
-            debug_reg.start.as_usize(),
-            debug_reg.size
-        );
-        table.map_region(
-            MapConfig::new(
-                virt.as_mut_ptr(),
-                debug_reg.start.as_usize(),
-                AccessSetting::Read | AccessSetting::Write,
-                CacheSetting::Device,
-            ),
-            debug_reg.size,
-            true,
-            access,
-        )?;
-    }
 
     platform::set_kernel_table(table.paddr());
     platform::set_user_table(0);

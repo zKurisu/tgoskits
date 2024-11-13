@@ -6,7 +6,6 @@ extern crate alloc;
 pub mod arch;
 mod consts;
 mod drivers;
-mod memory;
 
 pub use sparreal_kernel::*;
 

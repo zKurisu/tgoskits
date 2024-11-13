@@ -2,6 +2,7 @@ use core::ptr::NonNull;
 
 use driver_interface::Register;
 use log::*;
+use mmu::BootTableConfig;
 use spin_on::spin_on;
 
 use crate::{
@@ -75,35 +76,10 @@ impl MemoryRange {
 /// 内核配置
 #[derive(Clone)]
 pub struct KernelConfig {
-    /// 虚拟地址物理地址偏移
-    pub va_offset: usize,
-    /// 内核代码段内存区域
-    pub reserved_memory: Option<MemoryRange>,
-    /// 主内存
-    pub main_memory: MemoryRange,
-    /// 主内存已使用部分的偏移
-    pub main_memory_heap_offset: usize,
-    /// 每个CPU栈大小
-    pub hart_stack_size: usize,
-    /// 调试日志寄存器地址
-    pub early_debug_reg: Option<MemoryRange>,
+    /// 启动配置
+    pub boot_info: BootTableConfig,
     /// 栈顶
     pub stack_top: Phys<u8>,
     /// 设备树地址
     pub dtb_addr: Option<NonNull<u8>>,
-}
-
-impl KernelConfig {
-    pub const fn new() -> Self {
-        Self {
-            va_offset: 0,
-            reserved_memory: None,
-            hart_stack_size: BYTES_1M * 2,
-            early_debug_reg: None,
-            main_memory: MemoryRange::new(),
-            main_memory_heap_offset: 0,
-            stack_top: Phys::new(),
-            dtb_addr: None,
-        }
-    }
 }

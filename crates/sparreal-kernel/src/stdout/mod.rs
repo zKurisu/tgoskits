@@ -65,34 +65,43 @@ impl Write for EarlyDebugWrite {
 }
 impl StdoutWrite for EarlyDebugWrite {}
 
-pub fn dbg(s: &str) {
+pub fn early_print_str(s: &str) {
     let _ = EarlyDebugWrite {}.write_str(s);
 }
 
-pub fn dbg_endl() {
-    dbg("\r\n");
+#[macro_export]
+macro_rules! dbg {
+    ($v:expr) => {
+        $crate::__export::early_print_str($v)
+    };
 }
 
-pub fn dbgln(s: &str) {
-    dbg(s);
-    dbg_endl();
+#[macro_export]
+macro_rules! dbgln {
+    () => {
+        $crate::dbg!("\r\n")
+    };
+    ($v:expr) => {
+        $crate::dbg!($v);
+        $crate::dbg!("\r\n")
+    };
 }
 
 #[macro_export]
 macro_rules! dbg_hex {
     ($v:expr) => {
-        $crate::stdout::_debug_hex($v as _)
+        $crate::__export::debug_hex($v as _)
     };
 }
 
 #[macro_export]
 macro_rules! dbg_hexln {
     ($v:expr) => {
-        $crate::stdout::_debug_hex($v as _);
-        $crate::stdout::dbg_endl()
+        $crate::__export::debug_hex($v as _);
+        $crate::dbgln!()
     };
 }
 
-pub fn _debug_hex(v: u64) {
+pub fn debug_hex(v: u64) {
     boot_debug_hex(EarlyDebugWrite {}, v);
 }

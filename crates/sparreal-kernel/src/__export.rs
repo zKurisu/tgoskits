@@ -1,1 +1,1 @@
-pub use crate::stdout::print;
+pub use crate::stdout::{debug_hex, early_print_str, print};

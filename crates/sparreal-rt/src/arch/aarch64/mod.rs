@@ -11,7 +11,6 @@ use alloc::{format, string::String};
 use sparreal_kernel::{driver::device_tree::get_device_tree, platform::Platform, print, println};
 use sparreal_macros::api_impl;
 
-static mut VA_OFFSET: usize = 0;
 
 pub struct PlatformImpl;
 

@@ -2,19 +2,21 @@ use core::ptr::NonNull;
 
 use page_table_generic::{err::PagingResult, Access, AccessSetting, CacheSetting, MapConfig};
 
-use crate::{
-    dbg_hex, dbg_hexln,
-    stdout::{dbg, dbgln},
-    MemoryRange,
-};
+use crate::{dbg, dbg_hex, dbg_hexln, dbgln, MemoryRange};
 
 use super::{table::PageTableRef, MemoryReservedRange, PageAllocator};
 
+#[derive(Clone)]
 pub struct BootTableConfig {
+    /// Kernel 所在的内存
     pub main_memory: MemoryRange,
+    /// 已使用的内存
     pub main_memory_heap_offset: usize,
+    /// 每核 Kernel sp 大小
     pub hart_stack_size: usize,
+    /// 需要提前map的内存
     pub reserved_memory: [Option<MemoryReservedRange>; 24],
+    /// 物理内存和虚拟内存的偏移
     pub va_offset: usize,
 }
 
@@ -39,9 +41,7 @@ pub fn new_boot_table(config: BootTableConfig) -> PagingResult<usize> {
             &mut table,
             config.main_memory.start.into(),
             config.main_memory.size,
-            AccessSetting::Read
-                | AccessSetting::Write
-                | AccessSetting::Execute,
+            AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
             CacheSetting::Normal,
             &mut access,
             config.va_offset,
@@ -117,20 +117,20 @@ unsafe fn map_boot_region_once(
     } else {
         0
     };
-    dbg("Map [");
-    dbg(name);
+    dbg!("Map [");
+    dbg!(name);
     for _ in 0..space {
-        dbg(" ");
+        dbg!(" ");
     }
-    dbg("]: [");
+    dbg!("]: [");
     dbg_hex!(vaddr);
-    dbg(", ");
+    dbg!(", ");
     dbg_hex!(vaddr + size);
-    dbg(") -> [");
+    dbg!(") -> [");
     dbg_hex!(paddr);
-    dbg(", ");
+    dbg!(", ");
     dbg_hex!(paddr + size);
-    dbgln(")");
+    dbgln!(")");
 
     table.map_region(
         MapConfig::new(vaddr as _, paddr, access_setting, cache_setting),

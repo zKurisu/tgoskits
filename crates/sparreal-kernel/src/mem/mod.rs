@@ -25,11 +25,13 @@ pub const BYTES_1G: usize = 1024 * BYTES_1M;
 
 pub unsafe fn init(kconfig: &KernelConfig) {
     #[cfg(feature = "mmu")]
-    mmu::set_va_offset(kconfig.va_offset);
+    mmu::set_va_offset(kconfig.boot_info.va_offset);
 
-    let stack_size = kconfig.hart_stack_size * 1;
-    let start = (kconfig.main_memory.start + kconfig.main_memory_heap_offset).to_virt();
-    let size = kconfig.main_memory.size - kconfig.main_memory_heap_offset - stack_size;
+    let stack_size = kconfig.boot_info.hart_stack_size * 1;
+    let start =
+        (kconfig.boot_info.main_memory.start + kconfig.boot_info.main_memory_heap_offset).to_virt();
+    let size =
+        kconfig.boot_info.main_memory.size - kconfig.boot_info.main_memory_heap_offset - stack_size;
     let stack_top = kconfig.stack_top.to_virt();
 
     debug!("Heap: [{}, {})", start, start + size);

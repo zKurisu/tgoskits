@@ -1,13 +1,12 @@
 use core::arch::asm;
 
 use aarch64_cpu::registers::*;
-use mmu::{BootTableConfig, MemoryReservedRange};
 use page_table_arm::{MAIRDefault, MAIRKind, MAIRSetting, PTEFlags, PTE};
 use page_table_generic::*;
-use sparreal_kernel::{kernel::KernelConfig, mem::*, platform::PlatformPageTable};
+use sparreal_kernel::platform::PlatformPageTable;
 use sparreal_macros::api_impl;
 
-use super::VA_OFFSET;
+use super::boot::BOOT_INFO;
 
 extern "C" {
     fn _skernel();
@@ -15,26 +14,8 @@ extern "C" {
     fn _ekernel();
 }
 
-pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
-    let mut reserved_memory = [None; 24];
-
-    if let Some(reg) = kconfig.early_debug_reg {
-        reserved_memory[0] = Some(MemoryReservedRange {
-            start: reg.start,
-            size: reg.size,
-            access: AccessSetting::Read | AccessSetting::Write,
-            cache: CacheSetting::Device,
-            name: "debug uart",
-        });
-    }
-
-    let table = match sparreal_kernel::mem::mmu::new_boot_table(BootTableConfig {
-        main_memory: kconfig.main_memory,
-        main_memory_heap_offset: kconfig.main_memory_heap_offset,
-        hart_stack_size: kconfig.hart_stack_size,
-        reserved_memory,
-        va_offset: VA_OFFSET,
-    }) {
+pub unsafe fn init_boot_table() -> u64 {
+    let table = match sparreal_kernel::mem::mmu::new_boot_table(BOOT_INFO.to_boot_config()) {
         Ok(t) => t,
         Err(e) => panic!("MMU init failed {:?}", e),
     };
