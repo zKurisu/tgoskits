@@ -1,6 +1,6 @@
 [package]
 name = "bare-test"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
@@ -10,5 +10,5 @@ keywords      = ["test", "case", "testing", "testcase", "unittest"]
 categories    = ["development-tools", "development-tools::testing"]
 
 [dependencies]
-sparreal-rt = { version = "0.1.0", path = "../sparreal-rt", no-default-features = true }
+sparreal-rt = { version = "0.1.1", path = "../sparreal-rt", no-default-features = true }
 log = { version = "0.4" }

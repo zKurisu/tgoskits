@@ -12,6 +12,7 @@ mod lang_items;
 pub mod logger;
 pub mod mem;
 pub mod platform;
+pub mod prelude;
 pub mod stdout;
 pub mod sync;
 pub mod time;

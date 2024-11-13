@@ -1,6 +1,6 @@
 [package]
 name = "sparreal-kernel"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["周睿 <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os"
