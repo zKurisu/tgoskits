@@ -740,7 +740,6 @@ dependencies = [
  "bitflags 2.6.0",
  "env_logger",
  "log",
- "page-table-generic",
 ]
 
 [[package]]

@@ -82,7 +82,7 @@ impl PTE {
     }
 
     pub fn set_mair_idx(&mut self, idx: usize) {
-        self.0 |= (idx as u64) << 2;
+        self.0 |= (((idx as u64) & 0b111) << 2);
     }
 
     pub fn get_mair_idx(&self) -> usize {

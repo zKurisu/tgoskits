@@ -4,9 +4,7 @@ mod test {
     use page_table_arm::*;
 
     #[test]
-    fn test_l1() {
-        let pte = PTE::from_paddr(0x40000000);
-    }
+    fn test_l1() {}
     #[test]
     fn test_l2() {}
 

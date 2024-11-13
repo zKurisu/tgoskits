@@ -13,7 +13,6 @@ categories = ["no-std"]
 [dependencies]
 bitflags = "2.6"
 log = "0.4"
-page-table-generic = { version = "0.1.3" }
 aarch64-cpu = "10.0.0"
 
 
