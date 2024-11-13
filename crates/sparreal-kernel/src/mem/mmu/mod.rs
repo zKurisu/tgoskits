@@ -14,6 +14,7 @@ use table::{get_kernal_table, PageTableRef};
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct MemoryReservedRange {
+    pub name: &'static str,
     pub start: Phys<u8>,
     pub size: usize,
     pub access: AccessSetting,

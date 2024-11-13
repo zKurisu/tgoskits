@@ -7,6 +7,7 @@ use crate::{
     driver::{DriverArc, DriverWeak},
     platform,
     sync::RwLock,
+    util::boot::boot_debug_hex,
 };
 
 static STDOUT: RwLock<Option<Box<dyn StdoutWrite>>> = RwLock::new(None);
@@ -63,3 +64,35 @@ impl Write for EarlyDebugWrite {
     }
 }
 impl StdoutWrite for EarlyDebugWrite {}
+
+pub fn dbg(s: &str) {
+    let _ = EarlyDebugWrite {}.write_str(s);
+}
+
+pub fn dbg_endl() {
+    dbg("\r\n");
+}
+
+pub fn dbgln(s: &str) {
+    dbg(s);
+    dbg_endl();
+}
+
+#[macro_export]
+macro_rules! dbg_hex {
+    ($v:expr) => {
+        $crate::stdout::_debug_hex($v as _)
+    };
+}
+
+#[macro_export]
+macro_rules! dbg_hexln {
+    ($v:expr) => {
+        $crate::stdout::_debug_hex($v as _);
+        $crate::stdout::dbg_endl()
+    };
+}
+
+pub fn _debug_hex(v: u64) {
+    boot_debug_hex(EarlyDebugWrite {}, v);
+}

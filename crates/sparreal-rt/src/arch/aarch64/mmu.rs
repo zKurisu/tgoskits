@@ -7,6 +7,8 @@ use page_table_generic::*;
 use sparreal_kernel::{kernel::KernelConfig, mem::*, platform::PlatformPageTable};
 use sparreal_macros::api_impl;
 
+use super::VA_OFFSET;
+
 extern "C" {
     fn _skernel();
     fn _stack_top();
@@ -22,6 +24,7 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
             size: reg.size,
             access: AccessSetting::PrivilegeRead | AccessSetting::PrivilegeWrite,
             cache: CacheSetting::Device,
+            name: "debug uart",
         });
     }
 
@@ -30,6 +33,7 @@ pub unsafe fn init_boot_table(kconfig: &KernelConfig) -> u64 {
         main_memory_heap_offset: kconfig.main_memory_heap_offset,
         hart_stack_size: kconfig.hart_stack_size,
         reserved_memory,
+        va_offset: VA_OFFSET,
     }) {
         Ok(t) => t,
         Err(e) => panic!("MMU init failed {:?}", e),

@@ -744,9 +744,9 @@ dependencies = [
 
 [[package]]
 name = "page-table-generic"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53af49f1dddb3158c7660b8fb7889ca78a2b35bcf3cd4c14957937b0dc026044"
+checksum = "93e46b839012ab49e43ce30f1acc768d6977e8162349c712f74d2dc35794f3f6"
 dependencies = [
  "bitflags 2.6.0",
  "log",

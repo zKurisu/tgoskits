@@ -7,7 +7,6 @@ pub mod arch;
 mod consts;
 mod drivers;
 mod memory;
-mod early_debug;
 
 pub use sparreal_kernel::*;
 
