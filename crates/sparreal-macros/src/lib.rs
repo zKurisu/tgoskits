@@ -11,8 +11,7 @@ mod api_trait;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use syn::{
-    parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments,
-    TraitItem, TraitItemFn, Type, Visibility,
+    parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments, TraitItem, Type, Visibility
 };
 
 /// Attribute to declare the entry point of the program

@@ -1,9 +1,6 @@
 use page_table_generic::{PTEArch, PTEGeneric};
 
-use crate::{
-    platform::{self, new_pte, page_size, read_pte, table_level},
-    Platform,
-};
+use crate::platform::{self, new_pte, page_size, read_pte, table_level};
 
 pub type PageTableRef<'a> = page_table_generic::PageTableRef<'a, PTEImpl>;
 

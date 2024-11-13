@@ -2,7 +2,6 @@ use core::ptr::NonNull;
 
 use driver_interface::Register;
 use log::*;
-use page_table_generic::CacheSetting;
 use spin_on::spin_on;
 
 use crate::{
@@ -71,8 +70,6 @@ impl MemoryRange {
         }
     }
 }
-
-
 
 #[repr(C)]
 /// 内核配置
