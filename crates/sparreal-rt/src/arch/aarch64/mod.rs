@@ -33,9 +33,7 @@ impl Platform for PlatformImpl {
 
     unsafe fn debug_write_char(ch: u8) {
         #[cfg(feature = "early-print")]
-        unsafe {
-            debug::put_debug(ch)
-        };
+        debug::put_debug(ch);
     }
 
     fn print_system_info() {
