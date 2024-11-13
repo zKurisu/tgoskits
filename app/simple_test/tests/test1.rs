@@ -23,14 +23,13 @@ fn it_works1() {
     assert_eq!(1, 1);
 }
 
-
 #[test_case]
-fn test_uart(){
+fn test_uart() {
     // map uart data register for using.
     let uart_data_reg = iomap(0x9000000.into(), 0x1000);
 
     // write to uart, then it will be print to the screen.
-    unsafe{
+    unsafe {
         uart_data_reg.write_volatile(b'A');
         uart_data_reg.write_volatile(b'\n');
     }
