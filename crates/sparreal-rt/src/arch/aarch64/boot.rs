@@ -90,6 +90,7 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         + TCR_EL1::T1SZ.val(16);
     TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
 
+    // 需要先清缓存
     PageTableImpl::flush_tlb(None);
 
     // Set both TTBR0 and TTBR1
@@ -113,7 +114,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
     PageTableImpl::flush_tlb(None);
     // Enable the MMU and turn on I-cache and D-cache
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
-    // PlatformImpl::flush_tlb(None);
     barrier::isb(barrier::SY);
 
     asm!("
