@@ -3,11 +3,11 @@
 
 extern crate alloc;
 
-pub mod kernel;
-
+pub mod __export;
 pub mod driver;
 pub mod executor;
 pub mod irq;
+pub mod kernel;
 mod lang_items;
 pub mod logger;
 pub mod mem;
@@ -27,7 +27,7 @@ pub use sparreal_macros::entry;
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
-        $crate::stdout::print(format_args!($($arg)*));
+        $crate::__export::print(format_args!($($arg)*));
     }};
 }
 
@@ -37,6 +37,6 @@ macro_rules! println {
         $crate::print!("\n")
     };
     ($($arg:tt)*) => {{
-        $crate::stdout::print(format_args!("{}\r\n", format_args!($($arg)*)));
+        $crate::__export::print(format_args!("{}\r\n", format_args!($($arg)*)));
     }};
 }
