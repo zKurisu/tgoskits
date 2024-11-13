@@ -11,7 +11,6 @@ use alloc::{format, string::String};
 use sparreal_kernel::{driver::device_tree::get_device_tree, platform::Platform, print, println};
 use sparreal_macros::api_impl;
 
-
 pub struct PlatformImpl;
 
 #[api_impl]
@@ -33,8 +32,8 @@ impl Platform for PlatformImpl {
     }
 
     unsafe fn debug_write_char(ch: u8) {
+        #[cfg(feature = "early-print")]
         unsafe {
-            #[cfg(feature = "early-print")]
             debug::put_debug(ch)
         };
     }
