@@ -27,7 +27,6 @@ sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
 page-table-arm = { path = "crates/page-table-arm" }
-flat_device_tree = { path = "crates/flat_device_tree" }
 driver-interface = { path = "crates/driver-interface" }
 bare-test = { path = "crates/bare-test" }
 arm-gic-driver = "0.3"
