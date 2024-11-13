@@ -2,7 +2,8 @@ use core::ptr::NonNull;
 
 use driver_interface::Register;
 use log::*;
-use mmu::BootTableConfig;
+
+use page_table_generic::{AccessSetting, CacheSetting};
 use spin_on::spin_on;
 
 use crate::{
@@ -77,9 +78,33 @@ impl MemoryRange {
 #[derive(Clone)]
 pub struct KernelConfig {
     /// 启动配置
-    pub boot_info: BootTableConfig,
+    pub boot_info: BootConfig,
     /// 栈顶
     pub stack_top: Phys<u8>,
     /// 设备树地址
     pub dtb_addr: Option<NonNull<u8>>,
+}
+
+#[derive(Clone)]
+pub struct BootConfig {
+    /// Kernel 所在的内存
+    pub main_memory: MemoryRange,
+    /// 已使用的内存
+    pub main_memory_heap_offset: usize,
+    /// 每核 Kernel sp 大小
+    pub hart_stack_size: usize,
+    /// 需要提前map的内存
+    pub reserved_memory: [Option<MemoryReservedRange>; 24],
+    /// 物理内存和虚拟内存的偏移
+    pub va_offset: usize,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MemoryReservedRange {
+    pub name: &'static str,
+    pub start: Phys<u8>,
+    pub size: usize,
+    pub access: AccessSetting,
+    pub cache: CacheSetting,
 }

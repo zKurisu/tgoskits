@@ -11,7 +11,7 @@ fn main() {
     test_main();
 }
 
-use bare_test::{iomap, println};
+use bare_test::{mem::mmu::iomap, println};
 #[test_case]
 fn it_works2() {
     println!("test2... ");

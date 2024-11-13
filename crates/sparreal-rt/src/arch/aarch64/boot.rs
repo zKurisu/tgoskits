@@ -6,10 +6,8 @@ use core::{
 
 use aarch64_cpu::{asm::barrier, registers::*};
 use fdt_parser::Fdt;
-use mem::{
-    mmu::{BootTableConfig, MemoryReservedRange},
-    *,
-};
+use kernel::{BootConfig, MemoryReservedRange};
+use mem::*;
 use page_table_generic::{AccessSetting, CacheSetting};
 use platform::PlatformPageTable;
 use sparreal_kernel::*;
@@ -292,7 +290,7 @@ impl BootInfoWapper {
         unsafe { &*self.0.get() }
     }
 
-    pub fn to_boot_config(&self) -> BootTableConfig {
+    pub fn to_boot_config(&self) -> BootConfig {
         self.as_ref().to_boot_config()
     }
 }
@@ -320,7 +318,7 @@ impl BootInfo {
         }
     }
 
-    pub fn to_boot_config(&self) -> BootTableConfig {
+    pub fn to_boot_config(&self) -> BootConfig {
         let mut reserved_memory = [None; 24];
 
         if let Some(reg) = self.early_debug_reg {
@@ -332,7 +330,7 @@ impl BootInfo {
                 name: "debug uart",
             });
         }
-        BootTableConfig {
+        BootConfig {
             main_memory: self.main_memory,
             main_memory_heap_offset: self.main_memory_heap_offset,
             hart_stack_size: HART_STACK_SIZE,

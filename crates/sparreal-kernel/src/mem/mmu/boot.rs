@@ -2,25 +2,11 @@ use core::ptr::NonNull;
 
 use page_table_generic::{err::PagingResult, Access, AccessSetting, CacheSetting, MapConfig};
 
-use crate::{dbg, dbg_hex, dbg_hexln, dbgln, MemoryRange};
+use crate::{dbg, dbg_hex, dbg_hexln, dbgln, kernel::BootConfig};
 
-use super::{table::PageTableRef, MemoryReservedRange, PageAllocator};
+use super::{table::PageTableRef, PageAllocator};
 
-#[derive(Clone)]
-pub struct BootTableConfig {
-    /// Kernel 所在的内存
-    pub main_memory: MemoryRange,
-    /// 已使用的内存
-    pub main_memory_heap_offset: usize,
-    /// 每核 Kernel sp 大小
-    pub hart_stack_size: usize,
-    /// 需要提前map的内存
-    pub reserved_memory: [Option<MemoryReservedRange>; 24],
-    /// 物理内存和虚拟内存的偏移
-    pub va_offset: usize,
-}
-
-pub fn new_boot_table(config: BootTableConfig) -> PagingResult<usize> {
+pub fn new_boot_table(config: BootConfig) -> PagingResult<usize> {
     let heap_size =
         (config.main_memory.size - config.main_memory_heap_offset - config.hart_stack_size) / 2;
     let heap_start = config.main_memory.start + config.main_memory_heap_offset + heap_size;

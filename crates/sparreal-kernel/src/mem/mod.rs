@@ -1,4 +1,6 @@
 mod addr;
+
+#[cfg(feature = "mmu")]
 pub mod mmu;
 
 use core::{
@@ -9,7 +11,6 @@ use core::{
 pub use addr::*;
 use buddy_system_allocator::Heap;
 use log::*;
-use mmu::va_offset;
 
 use crate::{
     kernel::KernelConfig,
@@ -86,7 +87,17 @@ pub(crate) trait PhysToVirt<T> {
 impl<T> PhysToVirt<T> for Phys<T> {
     fn to_virt(self) -> Virt<T> {
         let a: usize = self.into();
-        (a + va_offset()).into()
+
+        #[cfg(feature = "mmu")]
+        {
+            use mmu::va_offset;
+            (a + va_offset()).into()
+        }
+
+        #[cfg(not(feature = "mmu"))]
+        {
+            a.into()
+        }
     }
 }
 
@@ -99,9 +110,10 @@ impl<'a> PageAllocatorRef<'a> {
     }
 }
 
+#[cfg(feature = "mmu")]
 impl page_table_generic::Access for PageAllocatorRef<'_> {
     fn va_offset(&self) -> usize {
-        va_offset()
+        mmu::va_offset()
     }
 
     unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<NonNull<u8>> {
@@ -113,6 +125,7 @@ impl page_table_generic::Access for PageAllocatorRef<'_> {
     }
 }
 
+#[allow(unused)]
 pub struct PageAllocator(Heap<32>);
 
 impl PageAllocator {
@@ -126,7 +139,7 @@ impl PageAllocator {
 #[cfg(feature = "mmu")]
 impl page_table_generic::Access for PageAllocator {
     fn va_offset(&self) -> usize {
-        va_offset()
+        mmu::va_offset()
     }
 
     unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {

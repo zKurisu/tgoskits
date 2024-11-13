@@ -3,8 +3,6 @@ use core::ptr::NonNull;
 use alloc::{vec, vec::Vec};
 use driver_interface::ProbeConfig;
 
-use crate::mem::mmu::iomap;
-
 use super::{device_id_by_node_name, irq_by_id};
 
 // #[link_section = ".data.boot"]
@@ -13,7 +11,6 @@ static mut DTB_ADDR: Option<NonNull<u8>> = None;
 pub(crate) unsafe fn set_dtb_addr(addr: Option<NonNull<u8>>) {
     DTB_ADDR = addr;
 }
-
 
 pub fn get_device_tree<'a>() -> Option<fdt_parser::Fdt<'a>> {
     unsafe {
@@ -52,7 +49,13 @@ impl FDTExtend for fdt_parser::Node<'_> {
 
         if let Some(regs) = self.reg() {
             for reg in regs {
-                let reg_base = iomap((reg.address as usize).into(), reg.size.unwrap_or(0x1000));
+                #[cfg(feature = "mmu")]
+                let reg_base = crate::mem::mmu::iomap(
+                    (reg.address as usize).into(),
+                    reg.size.unwrap_or(0x1000),
+                );
+                #[cfg(not(feature = "mmu"))]
+                let reg_base = NonNull::new(reg.address as usize as _).unwrap();
                 config.reg.push(reg_base);
             }
         }
@@ -90,4 +93,3 @@ impl FDTExtend for fdt_parser::Node<'_> {
         }
     }
 }
-

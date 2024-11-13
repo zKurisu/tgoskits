@@ -39,6 +39,7 @@ pub trait Platform {
     fn cpu_id_display() -> String;
 }
 
+#[cfg(feature = "mmu")]
 #[api_trait]
 pub trait PlatformPageTable {
     fn set_kernel_table(addr: usize);
