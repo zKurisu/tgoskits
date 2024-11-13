@@ -101,6 +101,7 @@ impl<T> PhysToVirt<T> for Phys<T> {
     }
 }
 
+#[allow(dead_code)]
 pub struct PageAllocatorRef<'a> {
     inner: RwLockWriteGuard<'a, Heap<32>>,
 }
