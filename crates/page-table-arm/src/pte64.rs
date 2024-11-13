@@ -1,7 +1,4 @@
-use aarch64_cpu::registers::{Writeable, MAIR_EL1, MAIR_EL2};
-use bitflags::Flags;
-use core::{fmt::Debug, mem::transmute};
-
+use aarch64_cpu::registers::*;
 use crate::{MAIRKind, MAIRSetting};
 
 pub struct MAIRDefault;
@@ -82,7 +79,7 @@ impl PTE {
     }
 
     pub fn set_mair_idx(&mut self, idx: usize) {
-        self.0 |= (((idx as u64) & 0b111) << 2);
+        self.0 |= ((idx as u64) & 0b111) << 2;
     }
 
     pub fn get_mair_idx(&self) -> usize {
