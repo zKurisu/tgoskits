@@ -79,4 +79,4 @@ A test framework for testing the bare metal.
     }
     ```
 
-6. run `cargo test`.
+6. run `cargo test --test tests --  --show-output`.
