@@ -1,6 +1,6 @@
 [package]
 name = "sparreal-rt"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os"
@@ -15,7 +15,7 @@ early-print = []
 
 [dependencies]
 log = "0.4"
-sparreal-kernel = { version = "0.1.1", path = "../sparreal-kernel", features = [
+sparreal-kernel = { version = "0.1", path = "../sparreal-kernel", features = [
     "mmu",
 ] }
 page-table-generic = { version = "0.2.2" }

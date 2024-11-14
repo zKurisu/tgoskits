@@ -177,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "bare-test"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "log",
  "sparreal-rt",
@@ -987,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ansi_rgb",
  "buddy_system_allocator",
@@ -1015,7 +1015,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",

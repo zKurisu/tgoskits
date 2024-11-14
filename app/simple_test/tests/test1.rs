@@ -11,7 +11,11 @@ fn main() {
     test_main();
 }
 
-use bare_test::{driver::device_tree::get_device_tree, mem::mmu::iomap, println};
+use bare_test::{
+    driver::device_tree::get_device_tree,
+    mem::{self, mmu::iomap},
+    println,
+};
 #[test_case]
 fn it_works2() {
     println!("test2... ");

@@ -1,5 +1,6 @@
 mod addr;
 
+pub mod dma;
 #[cfg(feature = "mmu")]
 pub mod mmu;
 
@@ -96,6 +97,26 @@ impl<T> PhysToVirt<T> for Phys<T> {
 
         #[cfg(not(feature = "mmu"))]
         {
+            a.into()
+        }
+    }
+}
+
+pub(crate) trait VirtToPhys<T> {
+    fn to_phys(self) -> Phys<T>;
+}
+
+impl<T> VirtToPhys<T> for Virt<T> {
+    fn to_phys(self) -> Phys<T> {
+        #[cfg(feature = "mmu")]
+        {
+            use mmu::va_offset;
+            self.convert_to_phys(va_offset())
+        }
+
+        #[cfg(not(feature = "mmu"))]
+        {
+            let a: usize = self.into();
             a.into()
         }
     }
