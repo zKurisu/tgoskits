@@ -442,9 +442,9 @@ checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
 name = "fdt-parser"
-version = "0.3.10"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a8cc0eef6272699b5eecb36301c1b78d7d505e68df232b5b385fc1489dca9cc"
+checksum = "6a27534f7fdc18315d8bd06db48c64e3c3775b4d208c2f83c1e4cc5c2055c06c"
 
 [[package]]
 name = "funty"
@@ -987,7 +987,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "ansi_rgb",
  "buddy_system_allocator",
@@ -1015,7 +1015,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",

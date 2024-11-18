@@ -31,14 +31,9 @@ impl FDTExtend for fdt_parser::Node<'_> {
             Some(i) => i,
             None => return Vec::new(),
         };
-        let mut elem = Vec::new();
-        for itr in info.interrupts() {
-            elem.push(itr as _);
-
-            if elem.len() == info.cell_size {
-                ret.push(elem.clone());
-                elem = Vec::new();
-            }
+        for itr in info {
+            let elem = itr.map(|o| o as usize).collect::<Vec<_>>();
+            ret.push(elem);
         }
         ret
     }

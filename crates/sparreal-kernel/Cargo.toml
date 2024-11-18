@@ -1,6 +1,6 @@
 [package]
 name = "sparreal-kernel"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["周睿 <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os"
@@ -19,7 +19,7 @@ buddy_system_allocator = "0.11"
 sparreal-macros = { version = "0.0.5", path = "../sparreal-macros" }
 memory_addr = "0.3"
 page-table-generic = { version = "0.2" }
-fdt-parser = "0.3.10"
+fdt-parser = "0.4"
 lock_api = "0.4"
 driver-interface = { version = "0.0.1", path = "../driver-interface" }
 pasts = { version = "0.14", default-features = false }
