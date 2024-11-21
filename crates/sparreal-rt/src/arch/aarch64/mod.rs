@@ -3,6 +3,7 @@ mod debug;
 mod mmu;
 mod psci;
 mod trap;
+mod dma;
 
 use core::arch::asm;
 

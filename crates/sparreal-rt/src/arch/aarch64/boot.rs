@@ -16,6 +16,7 @@ use tock_registers::interfaces::ReadWriteable;
 use crate::{
     arch::{
         debug::{init_debug, mmu_add_offset},
+        dma::dcache_line_size,
         mmu::PageTableImpl,
     },
     consts::*,
@@ -55,6 +56,9 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         dbg!(", size: ");
         dbg_hexln!(addr.len());
         kernel_end = kernel_end + addr.len();
+
+        dbg!("DCache line size: ");
+        dbg_hexln!(dcache_line_size());
     }
 
     dbg!("Kernel @");
