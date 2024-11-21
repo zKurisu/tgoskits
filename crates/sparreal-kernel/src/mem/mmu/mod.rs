@@ -74,7 +74,7 @@ pub(crate) unsafe fn init_table(
             virt.as_mut_ptr(),
             kconfig.boot_info.main_memory.start.as_usize(),
             AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-            CacheSetting::NonCache,
+            CacheSetting::Normal,
         ),
         kconfig.boot_info.main_memory.size,
         true,

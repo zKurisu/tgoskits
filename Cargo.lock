@@ -993,7 +993,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "ansi_rgb",
  "buddy_system_allocator",
