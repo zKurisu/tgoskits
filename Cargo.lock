@@ -177,10 +177,21 @@ dependencies = [
 
 [[package]]
 name = "bare-test"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
+ "bare-test-macros",
  "log",
+ "sparreal-macros",
  "sparreal-rt",
+]
+
+[[package]]
+name = "bare-test-macros"
+version = "0.0.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.77",
 ]
 
 [[package]]
@@ -987,8 +998,8 @@ name = "simple_test"
 version = "0.1.0"
 dependencies = [
  "bare-test",
+ "bare-test-macros",
  "log",
- "sparreal-macros",
 ]
 
 [[package]]

@@ -4,18 +4,9 @@
 #![test_runner(bare_test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-extern crate bare_test;
+bare_test::test_setup!();
 
-#[bare_test::entry]
-fn main() {
-    test_main();
-}
-
-use bare_test::{
-    driver::device_tree::get_device_tree,
-    mem::{self, mmu::iomap},
-    println,
-};
+use bare_test::{driver::device_tree::get_device_tree, mem::mmu::iomap, println};
 #[test_case]
 fn it_works2() {
     println!("test2... ");

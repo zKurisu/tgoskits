@@ -8,4 +8,4 @@ bare-test = { workspace = true }
 log = { workspace = true }
 
 [build-dependencies]
-sparreal-macros = { workspace = true }
+bare-test-macros = { workspace = true }

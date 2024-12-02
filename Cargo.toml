@@ -29,6 +29,7 @@ sparreal-macros = { path = "crates/sparreal-macros" }
 page-table-arm = { path = "crates/page-table-arm" }
 driver-interface = { path = "crates/driver-interface" }
 bare-test = { path = "crates/bare-test" }
+bare-test-macros = { path = "crates/bare-test-macros" }
 arm-gic-driver = "0.3"
 arm-pl011-rs = "0.2"
 
