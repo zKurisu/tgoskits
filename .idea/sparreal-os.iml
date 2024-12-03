@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="CPP_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/app/helloworld/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/arm-gic/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/arm-pl011/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/arm-pl011/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/driver-interface/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/flat_device_tree/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/flat_device_tree/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/page-table-interface/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/page-table/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sparreal-build/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sparreal-kernel/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sparreal-macros/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/sparreal-rt/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/xtask/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/app/simple_test/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/app/simple_test/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/bare-test-macros/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/bare-test/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/page-table-arm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/crates/page-table-arm/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
