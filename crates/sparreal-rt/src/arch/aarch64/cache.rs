@@ -1,30 +1,54 @@
-use core::{arch::global_asm, ptr::NonNull};
+use core::{arch::naked_asm, ptr::NonNull};
 
 use dma_api::Impl;
 use sparreal_kernel::mem::{mmu::va_offset, Virt};
 
-global_asm!(include_str!("cache.S"));
+#[naked]
+unsafe extern "C" fn _dcache_invalidate_range(_addr: usize, _end: usize) {
+    naked_asm!(
+        "mrs	x3, ctr_el0",
+        "ubfx	x3, x3, #16, #4",
+        "mov	x2, #4",
+        "lsl	x2, x2, x3", /* cache line size */
+        /* x2 <- minimal cache line size in cache system */
+        "sub	x3, x2, #1",
+        "bic	x0, x0, x3",
+        "1:	dc	ivac, x0", /* invalidate data or unified cache */
+        "add	x0, x0, x2",
+        "cmp	x0, x1",
+        "b.lo	1b",
+        "dsb	sy",
+        "ret",
+    );
+}
 
 /// Invalidate data cache
 pub fn dcache_invalidate_range(addr: NonNull<u8>, size: usize) {
-    extern "C" {
-        fn __asm_invalidate_dcache_range(start: usize, end: usize);
-    }
+    unsafe { _dcache_invalidate_range(addr.as_ptr() as usize, addr.as_ptr() as usize + size) }
+}
 
-    unsafe {
-        __asm_invalidate_dcache_range(addr.as_ptr() as _, addr.add(size).as_ptr() as _);
-    }
+#[naked]
+unsafe extern "C" fn _dcache_flush_range(_addr: usize, _end: usize) {
+    naked_asm!(
+        "mrs	x3, ctr_el0",
+        "ubfx	x3, x3, #16, #4",
+        "mov	x2, #4",
+        "lsl	x2, x2, x3", /* cache line size */
+        /* x2 <- minimal cache line size in cache system */
+        "sub	x3, x2, #1",
+        "bic	x0, x0, x3",
+        "1:	dc	civac, x0", /* clean & invalidate data or unified cache */
+        "add	x0, x0, x2",
+        "cmp	x0, x1",
+        "b.lo	1b",
+        "dsb	sy",
+        "ret",
+    );
 }
 
 /// Flush data cache
 pub fn dcache_flush_range(addr: NonNull<u8>, size: usize) {
-    extern "C" {
-        fn __asm_flush_dcache_range(start: usize, end: usize);
-    }
-
-    unsafe {
-        __asm_flush_dcache_range(addr.as_ptr() as _, addr.add(size).as_ptr() as _);
-    }
+    unsafe { _dcache_flush_range(addr.as_ptr() as usize, addr.as_ptr() as usize + size) }
 }
 
 struct DMAImpl;
