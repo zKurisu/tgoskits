@@ -1,9 +1,9 @@
 mod boot;
+mod cache;
 mod debug;
 mod mmu;
 mod psci;
 mod trap;
-mod cache;
 
 use core::arch::asm;
 
@@ -32,9 +32,9 @@ impl Platform for PlatformImpl {
         CNTFRQ_EL0.get()
     }
 
-    unsafe fn debug_write_char(ch: u8) {
+    unsafe fn debug_write_byte(_value: u8) {
         #[cfg(feature = "early-print")]
-        debug::put_debug(ch);
+        debug::put_debug(_value);
     }
 
     fn print_system_info() {

@@ -29,7 +29,7 @@ pub trait Platform {
     unsafe fn wait_for_interrupt();
     unsafe fn current_ticks() -> u64;
     unsafe fn tick_hz() -> u64;
-    unsafe fn debug_write_char(ch: u8);
+    unsafe fn debug_write_byte(ch: u8);
 
     fn print_system_info();
 

@@ -55,9 +55,6 @@ unsafe extern "C" fn __rust_main(dtb_addr: usize, va_offset: usize) -> ! {
         dbg!(", size: ");
         dbg_hexln!(addr.len());
         kernel_end = kernel_end + addr.len();
-
-        dbg!("DCache line size: ");
-        dbg_hexln!(dcache_line_size());
     }
 
     dbg!("Kernel @");
