@@ -3,47 +3,48 @@ use core::{arch::asm, ptr::NonNull};
 use dma_api::Impl;
 use sparreal_kernel::mem::{mmu::va_offset, Virt};
 
-pub fn dcache_line_size() -> usize {
+/// Invalidate data cache
+pub fn dcache_invalidate_range(addr: NonNull<u8>, size: usize) {
+    let start = addr.as_ptr() as usize;
+    let end = start + size;
+
     unsafe {
-        let result;
         asm!(
-            "mrs    x8, CTR_EL0",
-            "ubfm x8, x8, #16, #19",	// cache line size encoding
-            "mov		{0}, #4",		// bytes per word
-            "lsl		{0}, {0}, x8",	// actual cache line size""",
-            out(reg) result);
-
-        result
+            "mrs	x3, ctr_el0",
+            "ubfx	x3, x3, #16, #4",
+            "mov	x2, #4",
+            "lsl	x2, x2, x3", /* cache line size */
+            /* x2 <- minimal cache line size in cache system */
+            "sub	x3, x2, #1",
+            "bic	x0, x0, x3",
+            "1:	dc	ivac, x0", /* invalidate data or unified cache */
+            "add	x0, x0, x2",
+            "cmp	x0, x1",
+            "b.lo	1b",
+            "dsb	sy"
+        );
     }
 }
 
-fn dcache_invalidate_range(addr: NonNull<u8>, size: usize) {
-    let addr = addr.as_ptr() as usize;
+/// Flush data cache
+pub fn dcache_flush_range(addr: NonNull<u8>, size: usize) {
+    let start = addr.as_ptr() as usize;
+    let end = start + size;
     unsafe {
-        let line_size = dcache_line_size();
-        let start = addr & !(line_size - 1);
-        let end = (addr + size + line_size - 1) & !(line_size - 1);
-
-        for addr in (start..end).step_by(line_size) {
-            asm!("dc ivac, {0}", in(reg) addr);
-        }
-
-        asm!("dsb sy");
-    }
-}
-
-fn dcache_clean_range(addr: NonNull<u8>, size: usize) {
-    let addr = addr.as_ptr() as usize;
-    unsafe {
-        let line_size = dcache_line_size();
-        let start = addr & !(line_size - 1);
-        let end = (addr + size + line_size - 1) & !(line_size - 1);
-
-        for addr in (start..end).step_by(line_size) {
-            asm!("dc cvac, {0}", in(reg) addr);
-        }
-
-        asm!("dsb sy");
+        asm!(
+            "mrs	x3, ctr_el0",
+            "ubfx	x3, x3, #16, #4",
+            "mov	x2, #4",
+            "lsl	x2, x2, x3", /* cache line size */
+            /* x2 <- minimal cache line size in cache system */
+            "sub	x3, x2, #1",
+            "bic	x0, x0, x3",
+            "1:	dc	civac, x0", /* clean & invalidate data or unified cache */
+            "add	x0, x0, x2",
+            "cmp	x0, x1",
+            "b.lo	1b",
+            "dsb	sy"
+        );
     }
 }
 
@@ -58,7 +59,7 @@ impl Impl for DMAImpl {
     fn unmap(_addr: NonNull<u8>, _size: usize) {}
 
     fn flush(addr: NonNull<u8>, size: usize) {
-        dcache_clean_range(addr, size);
+        dcache_flush_range(addr, size);
     }
 
     fn invalidate(addr: NonNull<u8>, size: usize) {
