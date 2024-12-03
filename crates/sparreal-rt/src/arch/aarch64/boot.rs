@@ -16,7 +16,6 @@ use tock_registers::interfaces::ReadWriteable;
 use crate::{
     arch::{
         debug::{init_debug, mmu_add_offset},
-        dma::dcache_line_size,
         mmu::PageTableImpl,
     },
     consts::*,

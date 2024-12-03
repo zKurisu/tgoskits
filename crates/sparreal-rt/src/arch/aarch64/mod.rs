@@ -3,7 +3,7 @@ mod debug;
 mod mmu;
 mod psci;
 mod trap;
-mod dma;
+mod cache;
 
 use core::arch::asm;
 
