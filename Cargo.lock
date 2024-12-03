@@ -8,7 +8,7 @@ version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a21cd0131c25c438e19cd6a774adf7e3f64f7f4d723022882facc2dee0f8bc9"
 dependencies = [
- "tock-registers 0.9.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -115,15 +115,6 @@ dependencies = [
 
 [[package]]
 name = "arm-gic-driver"
-version = "0.1.1"
-dependencies = [
- "enum_dispatch",
- "log",
- "tock-registers 0.8.1",
-]
-
-[[package]]
-name = "arm-gic-driver"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10b0c0473d2f65788d49adc1d04ced24f9cc1ed81ed1f91c488674db83f48c9a"
@@ -132,17 +123,7 @@ dependencies = [
  "bitflags",
  "enum_dispatch",
  "log",
- "tock-registers 0.9.0",
-]
-
-[[package]]
-name = "arm-pl011-rs"
-version = "0.1.2"
-dependencies = [
- "embedded-io",
- "embedded-io-async",
- "spin_on",
- "tock-registers 0.8.1",
+ "tock-registers",
 ]
 
 [[package]]
@@ -155,7 +136,7 @@ dependencies = [
  "embedded-io",
  "embedded-io-async",
  "spin_on",
- "tock-registers 0.9.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -1054,8 +1035,8 @@ name = "sparreal-rt"
 version = "0.1.6"
 dependencies = [
  "aarch64-cpu",
- "arm-gic-driver 0.3.0",
- "arm-pl011-rs 0.2.0",
+ "arm-gic-driver",
+ "arm-pl011-rs",
  "arm_pl031",
  "bitflags",
  "dma-api",
@@ -1069,7 +1050,7 @@ dependencies = [
  "page-table-generic",
  "sparreal-kernel",
  "sparreal-macros",
- "tock-registers 0.9.0",
+ "tock-registers",
 ]
 
 [[package]]
@@ -1150,12 +1131,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tock-registers"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
 
 [[package]]
 name = "tock-registers"
