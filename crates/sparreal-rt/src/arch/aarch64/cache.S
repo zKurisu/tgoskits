@@ -7,7 +7,9 @@
  * x1: end address
  */
 .pushsection .text.__asm_flush_dcache_range, "ax"
-ENTRY(__asm_flush_dcache_range)
+.global __asm_flush_dcache_range
+.type __asm_flush_dcache_range, @function
+__asm_flush_dcache_range:
 	mrs	x3, ctr_el0
 	ubfx	x3, x3, #16, #4
 	mov	x2, #4
@@ -22,7 +24,6 @@ ENTRY(__asm_flush_dcache_range)
 	b.lo	1b
 	dsb	sy
 	ret
-ENDPROC(__asm_flush_dcache_range)
 .popsection
 
 /*
@@ -34,7 +35,9 @@ ENDPROC(__asm_flush_dcache_range)
  * x1: end address
  */
 .pushsection .text.__asm_invalidate_dcache_range, "ax"
-ENTRY(__asm_invalidate_dcache_range)
+.global __asm_invalidate_dcache_range
+.type __asm_invalidate_dcache_range, @function
+__asm_invalidate_dcache_range:
 	mrs	x3, ctr_el0
 	ubfx	x3, x3, #16, #4
 	mov	x2, #4
@@ -49,6 +52,5 @@ ENTRY(__asm_invalidate_dcache_range)
 	b.lo	1b
 	dsb	sy
 	ret
-ENDPROC(__asm_invalidate_dcache_range)
 .popsection
 

@@ -1,4 +1,4 @@
-use core::{arch::asm, ptr::NonNull};
+use core::{arch::global_asm, ptr::NonNull};
 
 use dma_api::Impl;
 use sparreal_kernel::mem::{mmu::va_offset, Virt};
