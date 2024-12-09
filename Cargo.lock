@@ -1032,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",
