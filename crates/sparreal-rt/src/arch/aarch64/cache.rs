@@ -18,6 +18,7 @@ unsafe extern "C" fn _dcache_invalidate_range(_addr: usize, _end: usize) {
         "cmp	x0, x1",
         "b.lo	1b",
         "dsb	sy",
+        "ret",
     );
 }
 
@@ -41,6 +42,7 @@ unsafe extern "C" fn _dcache_flush_range(_addr: usize, _end: usize) {
         "cmp	x0, x1",
         "b.lo	1b",
         "dsb	sy",
+        "ret",
     );
 }
 
