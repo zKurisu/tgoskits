@@ -3,7 +3,7 @@ use core::arch::asm;
 use aarch64_cpu::registers::*;
 use page_table_arm::{MAIRDefault, MAIRKind, MAIRSetting, PTEFlags, PTE};
 use page_table_generic::*;
-use sparreal_kernel::platform::PlatformPageTable;
+use sparreal_kernel::{dbg, platform::PlatformPageTable};
 use sparreal_macros::api_impl;
 
 use super::boot::BOOT_INFO;
@@ -17,7 +17,17 @@ extern "C" {
 pub unsafe fn init_boot_table() -> u64 {
     let table = match sparreal_kernel::mem::mmu::new_boot_table(BOOT_INFO.to_boot_config()) {
         Ok(t) => t,
-        Err(e) => panic!("MMU init failed {:?}", e),
+        Err(e) => {
+            dbg!("failed to create boot table: ");
+            dbg!(match e {
+                err::PagingError::NoMemory => "NoMemory",
+                err::PagingError::NotAligned => "NotAligned",
+                err::PagingError::NotMapped => "NotMapped",
+                err::PagingError::AlreadyMapped => "AlreadyMapped",
+                err::PagingError::MappedToHugePage => "MappedToHugePage",
+            });
+            panic!("Failed to create boot table");
+        }
     };
 
     MAIRDefault::mair_el1_apply();
