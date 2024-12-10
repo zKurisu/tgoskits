@@ -1,54 +1,74 @@
-use core::{arch::naked_asm, ptr::NonNull};
+use core::{arch::asm, ptr::NonNull};
 
+use aarch64_cpu::registers::DAIF::I;
 use dma_api::Impl;
+use log::debug;
 use sparreal_kernel::mem::{mmu::va_offset, Virt};
 
-#[naked]
-unsafe extern "C" fn _dcache_invalidate_range(_addr: usize, _end: usize) {
-    naked_asm!(
-        "mrs	x3, ctr_el0",
-        "ubfx	x3, x3, #16, #4",
-        "mov	x2, #4",
-        "lsl	x2, x2, x3", /* cache line size */
-        /* x2 <- minimal cache line size in cache system */
-        "sub	x3, x2, #1",
-        "bic	x0, x0, x3",
-        "1:	dc	ivac, x0", /* invalidate data or unified cache */
-        "add	x0, x0, x2",
-        "cmp	x0, x1",
-        "b.lo	1b",
-        "dsb	sy",
-        "ret",
-    );
+#[inline(always)]
+fn cache_line_size() -> usize {
+    unsafe {
+        let mut ctr_el0: u64;
+        asm!("mrs {}, ctr_el0", out(reg) ctr_el0);
+        let log2_cache_line_size = ((ctr_el0 >> 16) & 0xF) as usize;
+        // Calculate the cache line size
+        4 << log2_cache_line_size
+    }
+}
+
+struct DCacheIter {
+    aligned_addr: usize,
+    end: usize,
+    cache_line_size: usize,
+}
+
+impl DCacheIter {
+    fn new(addr: NonNull<u8>, size: usize) -> DCacheIter {
+        let start = addr.as_ptr() as usize;
+        let end = start + size;
+        let cache_line_size = cache_line_size();
+
+        let aligned_addr = addr.as_ptr() as usize & !(cache_line_size - 1);
+        DCacheIter {
+            aligned_addr,
+            end,
+            cache_line_size,
+        }
+    }
+}
+
+impl Iterator for DCacheIter {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.aligned_addr < self.end {
+            let addr = self.aligned_addr;
+            self.aligned_addr += self.cache_line_size;
+            Some(addr)
+        } else {
+            None
+        }
+    }
 }
 
 /// Invalidate data cache
 pub fn dcache_invalidate_range(addr: NonNull<u8>, size: usize) {
-    unsafe { _dcache_invalidate_range(addr.as_ptr() as usize, addr.as_ptr() as usize + size) }
-}
-
-#[naked]
-unsafe extern "C" fn _dcache_flush_range(_addr: usize, _end: usize) {
-    naked_asm!(
-        "mrs	x3, ctr_el0",
-        "ubfx	x3, x3, #16, #4",
-        "mov	x2, #4",
-        "lsl	x2, x2, x3", /* cache line size */
-        /* x2 <- minimal cache line size in cache system */
-        "sub	x3, x2, #1",
-        "bic	x0, x0, x3",
-        "1:	dc	civac, x0", /* clean & invalidate data or unified cache */
-        "add	x0, x0, x2",
-        "cmp	x0, x1",
-        "b.lo	1b",
-        "dsb	sy",
-        "ret",
-    );
+    unsafe {
+        for addr in DCacheIter::new(addr, size) {
+            asm!("dc ivac, {}", in(reg) addr);
+        }
+        asm!("dsb sy");
+    }
 }
 
 /// Flush data cache
 pub fn dcache_flush_range(addr: NonNull<u8>, size: usize) {
-    unsafe { _dcache_flush_range(addr.as_ptr() as usize, addr.as_ptr() as usize + size) }
+    unsafe {
+        for addr in DCacheIter::new(addr, size) {
+            asm!("dc civac, {}", in(reg) addr);
+        }
+        asm!("dsb sy");
+    }
 }
 
 struct DMAImpl;
