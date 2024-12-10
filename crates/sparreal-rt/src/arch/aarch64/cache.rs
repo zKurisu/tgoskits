@@ -1,8 +1,6 @@
 use core::{arch::asm, ptr::NonNull};
 
-use aarch64_cpu::registers::DAIF::I;
 use dma_api::Impl;
-use log::debug;
 use sparreal_kernel::mem::{mmu::va_offset, Virt};
 
 #[inline(always)]
