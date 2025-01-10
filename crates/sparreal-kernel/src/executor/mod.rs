@@ -4,7 +4,6 @@
 
 // use pasts::prelude::*;
 
-
 // pub fn init_exeutor() {
 //     unsafe {
 //         EXECUTOR = Some(Executor::default());
@@ -22,7 +21,6 @@
 // pub fn spawn_boxed(f: impl Future<Output = ()> + 'static) {
 //     executor().spawn_boxed(f)
 // }
-
 
 // static VTABLE: RawWakerVTable = RawWakerVTable::new(
 //     |_| RawWaker::new(ptr::null(), &VTABLE),

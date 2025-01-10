@@ -6,6 +6,7 @@ extern crate alloc;
 pub mod __export;
 pub mod driver;
 pub mod executor;
+pub mod fdt;
 pub mod irq;
 pub mod kernel;
 mod lang_items;
@@ -18,7 +19,6 @@ pub mod sync;
 pub mod time;
 pub mod trap;
 pub mod util;
-pub mod fdt;
 
 pub use kernel::{KernelConfig, MemoryRange};
 pub use mem::PhysAddr;

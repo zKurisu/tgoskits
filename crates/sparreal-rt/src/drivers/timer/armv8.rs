@@ -1,4 +1,3 @@
-
 use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, vec};
 use driver_interface::*;

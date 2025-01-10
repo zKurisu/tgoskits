@@ -11,8 +11,6 @@ use crate::platform;
 pub use boot::*;
 use table::{get_kernal_table, PageTableRef};
 
-
-
 struct BootInfo {
     va_offset: usize,
 }
