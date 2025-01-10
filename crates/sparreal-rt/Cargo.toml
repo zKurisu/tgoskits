@@ -34,5 +34,5 @@ aarch64-cpu = "10.0"
 tock-registers = "0.9"
 arm-pl011-rs = "0.2"
 arm-gic-driver = "0.3"
-arm_pl031 = "0.2.1"
+# arm_pl031 = "0.2.1"
 page-table-arm = { version = "0.1", path = "../page-table-arm" }
