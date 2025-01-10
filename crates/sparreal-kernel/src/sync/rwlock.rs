@@ -28,6 +28,7 @@ pub struct RawRwLock {
 }
 
 unsafe impl lock_api::RawRwLock for RawRwLock {
+    #[allow(clippy::declare_interior_mutable_const)]
     const INIT: RawRwLock = RawRwLock {
         lock: AtomicUsize::new(0),
     };
@@ -45,15 +46,9 @@ unsafe impl lock_api::RawRwLock for RawRwLock {
 
     #[inline]
     fn try_lock_exclusive(&self) -> bool {
-        if self
-            .lock
+        self.lock
             .compare_exchange(0, WRITER, Ordering::Acquire, Ordering::Relaxed)
             .is_ok()
-        {
-            true
-        } else {
-            false
-        }
     }
 
     #[inline]
@@ -110,7 +105,7 @@ impl RawRwLock {
     // Acquire a read lock, returning the new lock value.
     fn acquire_reader(&self) -> Option<usize> {
         // An arbitrary cap that allows us to catch overflows long before they happen
-        const MAX_READERS: usize = core::usize::MAX / READER / 2;
+        const MAX_READERS: usize = usize::MAX / READER / 2;
 
         let value = self.lock.fetch_add(READER, Ordering::Acquire);
 

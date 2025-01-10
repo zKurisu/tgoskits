@@ -33,24 +33,23 @@ pub fn new_boot_table(config: BootConfig) -> PagingResult<usize> {
             config.va_offset,
         )?;
 
-        for rsv in config.reserved_memory {
-            if let Some(rsv) = rsv {
-                map_boot_region(
-                    rsv.name,
-                    &mut table,
-                    rsv.start.into(),
-                    rsv.size,
-                    rsv.access,
-                    rsv.cache,
-                    &mut access,
-                    config.va_offset,
-                )?;
-            }
+        for rsv in config.reserved_memory.into_iter().flatten() {
+            map_boot_region(
+                rsv.name,
+                &mut table,
+                rsv.start.into(),
+                rsv.size,
+                rsv.access,
+                rsv.cache,
+                &mut access,
+                config.va_offset,
+            )?;
         }
     }
     Ok(table.paddr())
 }
 
+#[allow(clippy::too_many_arguments)]
 unsafe fn map_boot_region(
     name: &str,
     table: &mut PageTableRef<'_>,
@@ -86,6 +85,7 @@ unsafe fn map_boot_region(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 unsafe fn map_boot_region_once(
     name: &str,
     table: &mut PageTableRef<'_>,
@@ -97,12 +97,8 @@ unsafe fn map_boot_region_once(
     access: &mut impl Access,
 ) -> PagingResult<()> {
     let name_count = name.chars().count();
-    let name_space = 12;
-    let space = if name_space > name_count {
-        name_space - name_count
-    } else {
-        0
-    };
+    let name_space = 12usize;
+    let space = name_space.saturating_sub(name_count);
     dbg!("Map [");
     dbg!(name);
     for _ in 0..space {

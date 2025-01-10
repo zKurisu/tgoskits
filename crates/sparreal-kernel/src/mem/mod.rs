@@ -29,7 +29,7 @@ pub unsafe fn init(kconfig: &KernelConfig) {
     #[cfg(feature = "mmu")]
     mmu::set_va_offset(kconfig.boot_info.va_offset);
 
-    let stack_size = kconfig.boot_info.hart_stack_size * 1;
+    let stack_size = kconfig.boot_info.hart_stack_size;
     let start =
         (kconfig.boot_info.main_memory.start + kconfig.boot_info.main_memory_heap_offset).to_virt();
     let size =

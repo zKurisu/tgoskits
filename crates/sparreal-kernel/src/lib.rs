@@ -1,5 +1,6 @@
 #![no_std]
 #![feature(trait_upcasting)]
+#![allow(clippy::missing_safety_doc)]
 
 extern crate alloc;
 

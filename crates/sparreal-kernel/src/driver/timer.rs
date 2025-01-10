@@ -15,7 +15,7 @@ struct_driver!(DriverTimer, BoxDriver);
 #[allow(unused)]
 pub fn list() -> Vec<DriverTimer> {
     let g = CONTAINER.timer.read();
-    g.values().map(|one| one.clone()).collect()
+    g.values().cloned().collect()
 }
 
 impl DriverTimer {

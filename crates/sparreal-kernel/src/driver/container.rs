@@ -17,7 +17,7 @@ pub(super) static CONTAINER: Container = Container::new();
 type ContainerKind<T> = RwLock<BTreeMap<DeviceId, T>>;
 
 const fn new_kind<T>() -> ContainerKind<T> {
-    return RwLock::new(BTreeMap::new());
+    RwLock::new(BTreeMap::new())
 }
 
 pub(super) struct Container {

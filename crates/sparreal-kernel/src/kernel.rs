@@ -65,6 +65,7 @@ pub struct MemoryRange {
 }
 
 impl MemoryRange {
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self {
             start: Phys::new(),
