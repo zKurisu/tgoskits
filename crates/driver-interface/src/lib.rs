@@ -92,9 +92,9 @@ pub enum DriverError {
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DeviceId(u64);
 
-impl Into<u64> for DeviceId {
-    fn into(self) -> u64 {
-        self.0
+impl From<DeviceId> for u64 {
+    fn from(val: DeviceId) -> Self {
+        val.0
     }
 }
 
