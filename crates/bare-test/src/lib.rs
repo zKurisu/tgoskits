@@ -16,7 +16,7 @@ pub use sparreal_macros::build_test_setup;
 pub fn test_runner(tests: &[&dyn Fn()]) {
     pub use sparreal_rt::println;
     println!("Running {} tests", tests.len());
-    for (i, test) in tests.into_iter().enumerate() {
+    for (i, test) in tests.iter().enumerate() {
         println!("[test {} start]", i);
         test();
         println!("[test {} passed]", i);

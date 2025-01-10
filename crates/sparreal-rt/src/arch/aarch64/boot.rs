@@ -178,7 +178,7 @@ unsafe fn print_info(dtb_addr: usize, va_offset: usize) {
 }
 
 fn device_tree() -> Option<Fdt<'static>> {
-    return Fdt::from_ptr(NonNull::new(BOOT_INFO.as_ref().fdt_addr as _)?).ok();
+    Fdt::from_ptr(NonNull::new(BOOT_INFO.as_ref().fdt_addr as _)?).ok()
 }
 
 #[no_mangle]
@@ -282,6 +282,7 @@ impl BootInfoWapper {
         Self(UnsafeCell::new(BootInfo::new()))
     }
 
+    #[allow(clippy::mut_from_ref)]
     pub unsafe fn as_mut(&self) -> &mut BootInfo {
         &mut *self.0.get()
     }

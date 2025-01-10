@@ -14,7 +14,7 @@ pub unsafe fn put_debug(char: u8) {
 
     let state = (base + 0x18) as *mut u8;
     let put = (base) as *mut u8;
-    while (state.read_volatile() & (0x20 as u8)) != 0 {}
+    while (state.read_volatile() & 0x20_u8) != 0 {}
     put.write_volatile(char);
 }
 
