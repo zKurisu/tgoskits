@@ -28,29 +28,18 @@ jobs:
     - name: Check code format
       run: cargo fmt --all -- --check
 
-    - name: Clippy
+    - uses: taiki-e/install-action@cargo-hack
+
+    - name: Clippy for workspace
       run: cargo clippy -- -D warnings
-    - name: Clippy for each package
-      run: cargo metadata --format-version 1 --no-deps | jq -r ".packages | .[] | .name" | awk '{cmd="cargo clippy -p " $0 " -- -D warnings"; print cmd; status = system(cmd); if (status != 0) {exit 1;} }'
+    - name: Clippy for each package & each feature
+      run: cargo hack clippy --each-feature -- -Dwarnings
 
-    # - name: Build
-    #   run: cargo build 
-
-    - name: Build sparreal-kernel with mmu features
-      working-directory: crates/sparreal-kernel
-      run: cargo build -F mmu
-
-    - name: Clippy sparreal-kernel with mmu features
-      working-directory: crates/sparreal-kernel
-      run: cargo clippy -F mmu -- -D warnings
-
-    - name: Build sparreal-rt with early-print features
-      working-directory: crates/sparreal-rt
-      run: cargo build -F early-print
-
-    - name: Clippy sparreal-rt with early-print features
-      working-directory: crates/sparreal-rt
-      run: cargo clippy -F early-print -- -D warnings
+    # helloworld doesn't compile: error: linking with `rust-lld` failed: exit status: 1
+    # - name: Build for workspace
+    #   run: cargo build
+    - name: Build for each package & each feature
+      run: cargo hack build --exclude helloworld --each-feature
 
     - name: Test bare-test simple_test
       working-directory: app/simple_test
