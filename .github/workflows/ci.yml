@@ -36,11 +36,11 @@ jobs:
     - name: Clippy for each package & each feature
       run: cargo hack clippy --each-feature -- -Dwarnings
 
-    # helloworld doesn't compile: error: linking with `rust-lld` failed: exit status: 1
-    # - name: Build for workspace
-    #   run: cargo build
+    # FIXME: helloworld doesn't compile: error: linking with `rust-lld` failed: exit status: 1
+    - name: Build for workspace
+      run: cargo build
     - name: Build for each package & each feature
-      run: cargo hack build --exclude helloworld --each-feature
+      run: cargo hack build --each-feature
 
     - name: Test bare-test simple_test
       working-directory: app/simple_test
@@ -54,6 +54,7 @@ jobs:
       working-directory: crates/page-table-arm
       run: cargo test --target x86_64-unknown-linux-gnu
 
+    # FIXME: signal: 6, SIGABRT: process abort signal
     - name: Test sparreal-kernel
       working-directory: crates/sparreal-kernel
       run: cargo test --target x86_64-unknown-linux-gnu
