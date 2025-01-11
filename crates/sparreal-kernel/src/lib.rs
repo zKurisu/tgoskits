@@ -10,6 +10,7 @@ pub mod executor;
 pub mod fdt;
 pub mod irq;
 pub mod kernel;
+#[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
 pub mod logger;
 pub mod mem;
