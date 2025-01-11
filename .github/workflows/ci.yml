@@ -49,10 +49,10 @@ jobs:
       working-directory: crates/sparreal-macros
       run: cargo test
 
-    - name: Test sparreal-kernel
-      working-directory: crates/sparreal-kernel
-      run: cargo test
-
     - name: Test page-table-arm
       working-directory: crates/page-table-arm
       run: cargo test
+
+    - name: Test sparreal-kernel
+      working-directory: crates/sparreal-kernel
+      run: cargo test --target x86_64-unknown-linux-gnu
