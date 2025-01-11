@@ -69,14 +69,14 @@ impl LockedHeap {
 }
 
 unsafe impl GlobalAlloc for LockedHeap {
-    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         match self.write().alloc(layout) {
             Ok(ptr) => ptr.as_ptr(),
             Err(_) => null_mut(),
         }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         self.write().dealloc(NonNull::new_unchecked(ptr), layout);
     }
 }
@@ -138,11 +138,11 @@ impl page_table_generic::Access for PageAllocatorRef<'_> {
         mmu::va_offset()
     }
 
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<NonNull<u8>> {
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
         self.inner.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
         self.inner.dealloc(ptr, layout);
     }
 }
@@ -168,7 +168,7 @@ impl page_table_generic::Access for PageAllocator {
         self.0.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
         self.0.dealloc(ptr, layout);
     }
 }
