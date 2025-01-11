@@ -27,6 +27,7 @@ jobs:
       run: rustc --version --verbose
     - name: Check code format
       run: cargo fmt --all -- --check
+
     - name: Clippy
       run: cargo clippy -- -D warnings
     - name: Clippy for each package
@@ -34,6 +35,22 @@ jobs:
 
     # - name: Build
     #   run: cargo build 
+
+    - name: Build sparreal-kernel with mmu features
+      working-directory: crates/sparreal-kernel
+      run: cargo build -F mmu
+
+    - name: Clippy sparreal-kernel with mmu features
+      working-directory: crates/sparreal-kernel
+      run: cargo clippy -F mmu -- -D warnings
+
+    - name: Build sparreal-rt with early-print features
+      working-directory: crates/sparreal-rt
+      run: cargo build -F early-print
+
+    - name: Clippy sparreal-rt with early-print features
+      working-directory: crates/sparreal-rt
+      run: cargo clippy -F early-print -- -D warnings
 
     - name: Test bare-test simple_test
       working-directory: app/simple_test
