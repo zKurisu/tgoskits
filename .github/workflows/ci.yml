@@ -9,6 +9,7 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     continue-on-error: true
+    if: always()
     steps:
     - uses: actions/checkout@v4
 
