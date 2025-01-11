@@ -29,6 +29,9 @@ jobs:
       run: cargo fmt --all -- --check
     - name: Clippy
       run: cargo clippy -- -D warnings
+    - name: Clippy for each package
+      run: cargo metadata --format-version 1 --no-deps | jq -r ".packages | .[] | .name" | awk '{cmd="cargo clippy -p " $0 " -- -D warnings"; print cmd; status = system(cmd); if (status != 0) {exit 1;} }'
+
     # - name: Build
     #   run: cargo build 
 
