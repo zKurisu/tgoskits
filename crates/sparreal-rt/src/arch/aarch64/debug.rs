@@ -6,6 +6,7 @@ pub unsafe fn mmu_add_offset(va_offset: usize) {
     OUT_REG += va_offset;
 }
 
+#[cfg(feature = "early-print")]
 pub unsafe fn put_debug(char: u8) {
     if OUT_REG == 0 {
         return;
