@@ -2,6 +2,9 @@ name: Check, Build and Test
 
 on: [push, pull_request]
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -22,7 +25,9 @@ jobs:
 # /sparreal-kernel
 
     - name: Install ostool
-      run: cargo install ostool
+      run: |
+        sudo apt install libudev-dev -y # ZR233/ostool requires
+        cargo install ostool
     - name: Test bare-test
       working-directory: app/simple_test
       run: cargo test --test --test1
