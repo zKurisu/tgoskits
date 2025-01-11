@@ -31,9 +31,19 @@ jobs:
       run: cargo clippy -- -D warnings
     # - name: Build
     #   run: cargo build 
-# crates/sparreal-macros
-# crates/page-table-arm
-# /sparreal-kernel
-    - name: Test bare-test
+
+    - name: Test bare-test simple_test
       working-directory: app/simple_test
       run: cargo test --test test1
+
+    - name: Test sparreal-macros
+      working-directory: crates/sparreal-macros
+      run: cargo test
+
+    - name: Test sparreal-kernel
+      working-directory: crates/sparreal-kernel
+      run: cargo test
+
+    - name: Test page-table-arm
+      working-directory: crates/page-table-arm
+      run: cargo test
