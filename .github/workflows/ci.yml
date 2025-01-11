@@ -40,6 +40,7 @@ jobs:
       run: cargo build
     - name: Build for each package & each feature
       if: ${{ always() }}
+      # FIXME: remove --exclude helloworld
       run: cargo hack build --exclude helloworld --each-feature
 
     - name: Test bare-test simple_test
@@ -59,5 +60,6 @@ jobs:
 
     # FIXME: signal: 6, SIGABRT: process abort signal
     - name: Test sparreal-kernel
+      if: ${{ always() }}
       working-directory: crates/sparreal-kernel
       run: cargo test --target x86_64-unknown-linux-gnu
