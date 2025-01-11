@@ -10,6 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    # ZR233/ostool requires
+    - name: Install qemu-system
+      run: sudo apt update && sudo apt install qemu-system -y 
+    - name: Install libudev-dev
+      run: sudo apt update && sudo apt install libudev-dev -y
+    - name: Install cargo-binutils
+      run: cargo install cargo-binutils
+    - name: Install ostool
+      run: cargo install ostool
+
     - name: Install toolchain
       run: rustup show
     - name: Check rust version
@@ -23,15 +34,6 @@ jobs:
 # crates/sparreal-macros
 # crates/page-table-arm
 # /sparreal-kernel
-
-    - name: Install qemu-system
-      run: sudo apt install qemu-system -y # ZR233/ostool requires
-    - name: Install cargo-binutils
-      run: cargo install cargo-binutils
-    - name: Install ostool
-      run: |
-        sudo apt install libudev-dev -y # ZR233/ostool requires
-        cargo install ostool
     - name: Test bare-test
       working-directory: app/simple_test
       run: cargo test --test test1
