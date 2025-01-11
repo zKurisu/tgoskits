@@ -8,8 +8,6 @@ env:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    continue-on-error: true
-    if: always()
     steps:
     - uses: actions/checkout@v4
 
@@ -41,17 +39,21 @@ jobs:
     - name: Build for workspace
       run: cargo build
     - name: Build for each package & each feature
-      run: cargo hack build --each-feature
+      if: ${{ always() }}
+      run: cargo hack build --exclude helloworld --each-feature
 
     - name: Test bare-test simple_test
+      if: ${{ always() }}
       working-directory: app/simple_test
       run: cargo test --test test1
 
     - name: Test sparreal-macros
+      if: ${{ always() }}
       working-directory: crates/sparreal-macros
       run: cargo test
 
     - name: Test page-table-arm
+      if: ${{ always() }}
       working-directory: crates/page-table-arm
       run: cargo test --target x86_64-unknown-linux-gnu
 
