@@ -30,4 +30,4 @@ jobs:
         cargo install ostool
     - name: Test bare-test
       working-directory: app/simple_test
-      run: cargo test --test --test1
+      run: cargo test --test test1
