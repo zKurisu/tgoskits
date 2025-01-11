@@ -24,6 +24,10 @@ jobs:
 # crates/page-table-arm
 # /sparreal-kernel
 
+    - name: Install qemu-system
+      run: sudo apt install qemu-system -y # ZR233/ostool requires
+    - name: Install cargo-binutils
+      run: cargo install cargo-binutils
     - name: Install ostool
       run: |
         sudo apt install libudev-dev -y # ZR233/ostool requires
