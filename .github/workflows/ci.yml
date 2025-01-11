@@ -1,0 +1,26 @@
+name: Check, Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install toolchain
+      run: rustup show
+    - name: Check rust version
+      run: rustc --version --verbose
+    - name: Check code format
+      run: cargo fmt --all -- --check
+    - name: Clippy
+      run: cargo clippy -- -D warnings
+    - name: Build
+      run: cargo build --target ${{ matrix.targets }} ${{ matrix.features }}
+# crates/sparreal-macros
+# crates/page-table-arm
+# /sparreal-kernel
+
+    # - name: Unit test
+    #   if: ${{ matrix.targets == 'x86_64-unknown-linux-gnu' }}
+    #   run: cargo test --target ${{ matrix.targets }} ${{ matrix.features }} -- --nocapture
