@@ -7,10 +7,24 @@
 bare_test::test_setup!();
 
 use bare_test::{driver::device_tree::get_device_tree, mem::mmu::iomap, println};
+
 #[test_case]
 fn it_works2() {
+    // non-panic assert_eq!
+    macro_rules! assert_eq {
+        ($left:expr, $right:expr $(,)?) => {
+            if $left != $right { ::log::error!("{} ≠ {}", $left, $right); }
+        };
+        ($left:expr, $right:expr, $($arg:tt)+) => {
+            if $left != $right {
+                ::log::error!("{} ≠ {}", $left, $right);
+                ::log::error!($($arg)+);
+            }
+        };
+    }
+
     println!("test2... ");
-    assert_eq!(1, 2);
+    assert_eq!(1, 2, "Not eq on purpose.");
 }
 
 #[test_case]
