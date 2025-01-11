@@ -1,6 +1,8 @@
 use alloc::string::String;
-use page_table_generic::PTEGeneric;
 use sparreal_macros::api_trait;
+
+#[cfg(feature = "mmu")]
+use page_table_generic::PTEGeneric;
 
 pub enum PageAttribute {
     Read,
