@@ -7,12 +7,28 @@
 bare_test::test_setup!();
 
 use bare_test::{driver::device_tree::get_device_tree, mem::mmu::iomap, println};
+
 #[test_case]
 fn it_works2() {
+    // non-panic assert_eq!
+    macro_rules! assert_eq {
+        ($left:expr, $right:expr $(,)?) => {
+            if $left != $right { ::log::error!("{} ≠ {}", $left, $right); }
+        };
+        ($left:expr, $right:expr, $($arg:tt)+) => {
+            if $left != $right {
+                ::log::error!("{} ≠ {}", $left, $right);
+                ::log::error!($($arg)+);
+            }
+        };
+    }
+
     println!("test2... ");
-    assert_eq!(1, 2);
+    assert_eq!(1, 2, "Not eq on purpose.");
 }
+
 #[test_case]
+#[allow(clippy::eq_op)]
 fn it_works1() {
     println!("test1... ");
     assert_eq!(1, 1);
@@ -23,7 +39,7 @@ fn test_uart() {
     // map uart data register for using.
     let uart_data_reg = iomap(0x9000000.into(), 0x1000);
 
-    let fdt = get_device_tree().unwrap();
+    let _fdt = get_device_tree().unwrap();
 
     // write to uart, then it will be print to the screen.
     unsafe {

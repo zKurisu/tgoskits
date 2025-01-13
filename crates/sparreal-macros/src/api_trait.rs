@@ -3,8 +3,6 @@ mod tests {
 
     use syn::TraitItem;
 
-    use super::*;
-
     #[test]
     fn it_works() {
         let f = syn::parse_str::<syn::ItemTrait>(
@@ -37,7 +35,5 @@ mod tests {
         .unwrap();
 
         println!("{:?}", f);
-
-       
     }
 }

@@ -48,7 +48,7 @@ impl Vector {
         self.0
             .get(&cpu_id)
             .and_then(|map| map.0.get(&irq_num))
-            .map(|map| map.0.iter().map(|(_, h)| h.clone()).collect::<Vec<_>>())
+            .map(|map| map.0.values().cloned().collect::<Vec<_>>())
             .unwrap_or_default()
     }
 }

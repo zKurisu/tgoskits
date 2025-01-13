@@ -11,8 +11,6 @@ use crate::platform;
 pub use boot::*;
 use table::{get_kernal_table, PageTableRef};
 
-
-
 struct BootInfo {
     va_offset: usize,
 }
@@ -36,29 +34,27 @@ pub(crate) unsafe fn init_table(
 
     let mut table = PageTableRef::create_empty(access)?;
 
-    for rsv in kconfig.boot_info.reserved_memory {
-        if let Some(memory) = rsv {
-            let virt = memory.start.to_virt();
-            let size = memory.size.align_up(BYTES_1M * 2);
-            debug!(
-                "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
-                virt.as_usize(),
-                memory.start.as_usize(),
-                size,
-            );
+    for memory in kconfig.boot_info.reserved_memory.into_iter().flatten() {
+        let virt = memory.start.to_virt();
+        let size = memory.size.align_up(BYTES_1M * 2);
+        debug!(
+            "Map reserved memory region {:#X} -> {:#X}  size: {:#X}",
+            virt.as_usize(),
+            memory.start.as_usize(),
+            size,
+        );
 
-            table.map_region(
-                MapConfig::new(
-                    virt.as_mut_ptr(),
-                    memory.start.as_usize(),
-                    memory.access,
-                    memory.cache,
-                ),
-                size,
-                true,
-                access,
-            )?;
-        }
+        table.map_region(
+            MapConfig::new(
+                virt.as_mut_ptr(),
+                memory.start.as_usize(),
+                memory.access,
+                memory.cache,
+            ),
+            size,
+            true,
+            access,
+        )?;
     }
 
     let virt = kconfig.boot_info.main_memory.start.to_virt();

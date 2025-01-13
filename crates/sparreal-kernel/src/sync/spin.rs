@@ -11,6 +11,7 @@ pub struct RawSpinlock(AtomicBool);
 
 // 2. Implement RawMutex for this type
 unsafe impl RawMutex for RawSpinlock {
+    #[allow(clippy::declare_interior_mutable_const)]
     const INIT: RawSpinlock = RawSpinlock(AtomicBool::new(false));
 
     // A spinlock guard can be sent to another thread and unlocked there

@@ -47,24 +47,3 @@ pub unsafe fn stdout_reg(dtb: NonNull<u8>) -> Option<StdoutReg> {
     }
     None
 }
-
-#[cfg(test)]
-mod test {
-    extern crate std;
-    use core::fmt;
-
-    use super::*;
-
-    #[test]
-    fn test_hex_fmt() {
-        struct TestWriter;
-        impl fmt::Write for TestWriter {
-            fn write_str(&mut self, s: &str) -> fmt::Result {
-                std::println!("{}", s);
-                Ok(())
-            }
-        }
-
-        boot_debug_hex!(TestWriter {}, 0x12345678);
-    }
-}

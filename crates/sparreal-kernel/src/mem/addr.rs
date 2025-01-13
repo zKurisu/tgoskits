@@ -11,7 +11,7 @@ unsafe impl<T> Sync for Virt<T> {}
 
 impl<T> From<*const T> for Virt<T> {
     fn from(value: *const T) -> Self {
-        Self(value as *const T)
+        Self(value)
     }
 }
 impl<T> From<*mut T> for Virt<T> {
@@ -21,13 +21,14 @@ impl<T> From<*mut T> for Virt<T> {
 }
 impl<T> From<Virt<T>> for *const T {
     fn from(value: Virt<T>) -> Self {
-        value.0 as *const T
+        value.0
     }
 }
 
 pub type VirtAddr<T = u8> = Virt<T>;
 
 impl<T> Virt<T> {
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self(0 as *const T)
     }
@@ -66,7 +67,7 @@ pub struct Phys<T>(*const T);
 
 impl<T> PartialEq for Phys<T> {
     fn eq(&self, other: &Self) -> bool {
-        (self.0 as *const u8 as usize) == (other.0 as *const u8 as usize)
+        core::ptr::eq(self.0, other.0)
     }
 }
 
@@ -86,6 +87,7 @@ impl<T> From<*const T> for Phys<T> {
     }
 }
 impl<T> Phys<T> {
+    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
         Self(0 as *const T)
     }

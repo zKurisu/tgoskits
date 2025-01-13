@@ -1,4 +1,5 @@
 use crate::{MAIRKind, MAIRSetting};
+#[cfg(target_arch = "aarch64")]
 use aarch64_cpu::registers::*;
 
 pub struct MAIRDefault;

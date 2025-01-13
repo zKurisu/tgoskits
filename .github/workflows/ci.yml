@@ -1,0 +1,70 @@
+name: Check, Build and Test
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    # ZR233/ostool requires
+    - name: Install qemu-system
+      run: sudo apt update && sudo apt install qemu-system -y 
+    - name: Install libudev-dev
+      run: sudo apt update && sudo apt install libudev-dev -y
+    - name: Install cargo-binutils
+      run: cargo install cargo-binutils
+    - name: Install ostool
+      run: cargo install ostool
+
+    - name: Install toolchain
+      run: rustup show
+    - name: Check rust version
+      run: rustc --version --verbose
+    - name: Check code format
+      run: cargo fmt --all -- --check
+
+    - uses: taiki-e/install-action@cargo-hack
+
+    - name: Clippy for workspace
+      run: cargo clippy -- -D warnings
+    - name: Clippy for each package & each feature
+      run: cargo hack clippy --each-feature -- -Dwarnings
+
+    - name: Add config
+      run: |
+        echo "[compile]" > .project.toml
+        echo 'target = "aarch64-unknown-none"' >> .project.toml
+        echo "[compile.cargo]" >> .project.toml
+        echo 'package = "helloworld"' >> .project.toml
+        echo 'log_level = "Debug"' >> .project.toml
+        echo 'rust_flags = "-C link-arg=-Tlink.x -C link-arg=-no-pie -C link-arg=-znostart-stop-gc"' >> .project.toml
+        echo 'features = []' >> .project.toml
+        echo "[compile.cargo.env]" >> .project.toml
+        echo "[qemu]" >> .project.toml
+        echo 'machine = "virt"' >> .project.toml
+        echo 'cpu = "cortex-a53"' >> .project.toml
+        echo 'graphic = false' >> .project.toml
+        echo 'args = ""' >> .project.toml       
+
+    - name: Build test
+      run: ostool build
+
+    - name: Test bare-test simple_test
+      if: ${{ always() }}
+      working-directory: app/simple_test
+      run: cargo test --test test1
+
+    - name: Test sparreal-macros
+      if: ${{ always() }}
+      working-directory: crates/sparreal-macros
+      run: cargo test
+
+    - name: Test page-table-arm
+      if: ${{ always() }}
+      working-directory: crates/page-table-arm
+      run: cargo test --target x86_64-unknown-linux-gnu

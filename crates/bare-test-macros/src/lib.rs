@@ -3,7 +3,6 @@ extern crate proc_macro;
 extern crate quote;
 extern crate core;
 extern crate proc_macro2;
-#[macro_use]
 extern crate syn;
 
 use proc_macro::TokenStream;
@@ -29,8 +28,7 @@ pub fn test_setup(_input: TokenStream) -> TokenStream {
         test_main();
     }
 
-
-        }
+    }
     .into()
 }
 

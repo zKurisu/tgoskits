@@ -39,8 +39,10 @@ impl FDTExtend for fdt_parser::Node<'_> {
     }
 
     fn probe_config(&self) -> ProbeConfig {
-        let mut config = ProbeConfig::default();
-        config.id = device_id_by_node_name(self.name);
+        let mut config = ProbeConfig {
+            id: device_id_by_node_name(self.name),
+            ..Default::default()
+        };
 
         if let Some(regs) = self.reg() {
             for reg in regs {

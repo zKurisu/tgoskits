@@ -29,7 +29,7 @@ pub unsafe fn init(kconfig: &KernelConfig) {
     #[cfg(feature = "mmu")]
     mmu::set_va_offset(kconfig.boot_info.va_offset);
 
-    let stack_size = kconfig.boot_info.hart_stack_size * 1;
+    let stack_size = kconfig.boot_info.hart_stack_size;
     let start =
         (kconfig.boot_info.main_memory.start + kconfig.boot_info.main_memory_heap_offset).to_virt();
     let size =
@@ -69,14 +69,14 @@ impl LockedHeap {
 }
 
 unsafe impl GlobalAlloc for LockedHeap {
-    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         match self.write().alloc(layout) {
             Ok(ptr) => ptr.as_ptr(),
             Err(_) => null_mut(),
         }
     }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         self.write().dealloc(NonNull::new_unchecked(ptr), layout);
     }
 }
@@ -138,11 +138,11 @@ impl page_table_generic::Access for PageAllocatorRef<'_> {
         mmu::va_offset()
     }
 
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> Option<NonNull<u8>> {
+    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
         self.inner.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
         self.inner.dealloc(ptr, layout);
     }
 }
@@ -168,7 +168,7 @@ impl page_table_generic::Access for PageAllocator {
         self.0.alloc(layout).ok()
     }
 
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: core::alloc::Layout) {
+    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
         self.0.dealloc(ptr, layout);
     }
 }

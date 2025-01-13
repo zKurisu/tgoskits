@@ -4,6 +4,3 @@ runner = "ostool cargo-test"
 [build]
 target = "aarch64-unknown-none"
 
-
-[alias]
-xtask = "run   --package xtask --"
