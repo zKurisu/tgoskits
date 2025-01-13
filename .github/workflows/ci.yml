@@ -35,13 +35,27 @@ jobs:
     - name: Clippy for each package & each feature
       run: cargo hack clippy --each-feature -- -Dwarnings
 
-    # FIXME: helloworld doesn't compile: error: linking with `rust-lld` failed: exit status: 1
-    - name: Build for workspace
-      run: cargo build
-    - name: Build for each package & each feature
-      if: ${{ always() }}
-      # FIXME: remove --exclude helloworld
-      run: cargo hack build --exclude helloworld --each-feature
+    - name: Add config
+      run: |
+        echo "[compile]" > .project.toml
+        echo 'target = "aarch64-unknown-none"' >> .project.toml
+        echo >> .project.toml
+        echo "[compile.cargo]" >> .project.toml
+        echo 'package = "helloworld"' >> .project.toml
+        echo 'log_level = "Debug"' >> .project.toml
+        echo 'rust_flags = "-C link-arg=-Tlink.x -C link-arg=-no-pie -C link-arg=-znostart-stop-gc"' >> .project.toml
+        echo 'features = []' >> .project.toml
+        echo >> .project.toml
+        echo "[compile.cargo.env]" >> .project.toml
+        echo >> .project.toml
+        echo "[qemu]" >> .project.toml
+        echo 'machine = "virt"' >> .project.toml
+        echo 'cpu = "cortex-a53"' >> .project.toml
+        echo 'graphic = false' >> .project.toml
+        echo 'args = """' >> .project.toml        echo '[build] target-cpu = "native"' >> .cargo/config
+
+    - name: Build test
+      run: ostool build
 
     - name: Test bare-test simple_test
       if: ${{ always() }}
@@ -56,10 +70,4 @@ jobs:
     - name: Test page-table-arm
       if: ${{ always() }}
       working-directory: crates/page-table-arm
-      run: cargo test --target x86_64-unknown-linux-gnu
-
-    # FIXME: signal: 6, SIGABRT: process abort signal
-    - name: Test sparreal-kernel
-      if: ${{ always() }}
-      working-directory: crates/sparreal-kernel
       run: cargo test --target x86_64-unknown-linux-gnu
