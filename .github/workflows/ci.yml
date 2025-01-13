@@ -39,20 +39,17 @@ jobs:
       run: |
         echo "[compile]" > .project.toml
         echo 'target = "aarch64-unknown-none"' >> .project.toml
-        echo >> .project.toml
         echo "[compile.cargo]" >> .project.toml
         echo 'package = "helloworld"' >> .project.toml
         echo 'log_level = "Debug"' >> .project.toml
         echo 'rust_flags = "-C link-arg=-Tlink.x -C link-arg=-no-pie -C link-arg=-znostart-stop-gc"' >> .project.toml
         echo 'features = []' >> .project.toml
-        echo >> .project.toml
         echo "[compile.cargo.env]" >> .project.toml
-        echo >> .project.toml
         echo "[qemu]" >> .project.toml
         echo 'machine = "virt"' >> .project.toml
         echo 'cpu = "cortex-a53"' >> .project.toml
         echo 'graphic = false' >> .project.toml
-        echo 'args = """' >> .project.toml        echo '[build] target-cpu = "native"' >> .cargo/config
+        echo 'args = ""' >> .project.toml       
 
     - name: Build test
       run: ostool build
