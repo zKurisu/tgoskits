@@ -3,4 +3,4 @@ pub enum DriverError {
     NotSupported,
 }
 
-pub type DruverResult<T> = core::result::Result<T, DriverError>;
+pub type DriverResult<T> = core::result::Result<T, DriverError>;

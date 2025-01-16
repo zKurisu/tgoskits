@@ -13,7 +13,7 @@ mod register;
 pub use register::*;
 pub(crate) mod err;
 pub use err::DriverError;
-pub use err::DruverResult;
+pub use err::DriverResult;
 
 pub trait DriverGeneric: Send {
     fn name(&self) -> String;

@@ -1,56 +1,55 @@
 use core::{cell::UnsafeCell, ptr::NonNull};
 
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
-use arm_gic_driver::{GicGeneric, IntId, Trigger};
+use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        self, DriverGeneric, DruverResult, ProbeFn, RegAddress,
+        self, DriverGeneric, DriverResult, ProbeFn, RegAddress,
         interrupt_controller::{self, CpuId, InterruptControllerPerCpu},
     },
     mem::iomap,
 };
 use sparreal_macros::module_driver;
 
+use super::*;
+
 module_driver!(
-    name: "GICv2",
-    compatibles: "arm,cortex-a15-gic\n",
-    probe: ProbeFn::InterruptController(probe_gic_v2),
+    name: "GICv3",
+    compatibles: "arm,gic-v3\n",
+    probe: ProbeFn::InterruptController(probe_gic),
 );
 
-struct GicV2 {
+struct Gic {
     gicd: NonNull<u8>,
-    gicc: NonNull<u8>,
-    gic: Arc<UnsafeCell<Option<arm_gic_driver::GicV2>>>,
+    gicr: NonNull<u8>,
+    gic: Arc<UnsafeCell<Option<GicV3>>>,
 }
 
-unsafe impl Send for GicV2 {}
+unsafe impl Send for Gic {}
 
-impl GicV2 {
-    #[allow(clippy::arc_with_non_send_sync)]
-    fn new(gicd: NonNull<u8>, gicc: NonNull<u8>) -> Self {
+impl Gic {
+    fn new(gicd: NonNull<u8>, gicr: NonNull<u8>) -> Self {
         Self {
             gic: Arc::new(UnsafeCell::new(None)),
             gicd,
-            gicc,
+            gicr,
         }
     }
 }
 
-struct GicV2PerCpu(Arc<UnsafeCell<Option<arm_gic_driver::GicV2>>>);
+struct GicPerCpu(Arc<UnsafeCell<Option<GicV3>>>);
 
-unsafe impl Send for GicV2PerCpu {}
+unsafe impl Send for GicPerCpu {}
 
-impl GicV2PerCpu {
-    fn get_mut(&self) -> &mut arm_gic_driver::GicV2 {
+impl GicPerCpu {
+    fn get_mut(&self) -> &mut GicV3 {
         unsafe { &mut *self.0.get() }.as_mut().unwrap()
     }
 }
 
-impl InterruptControllerPerCpu for GicV2PerCpu {
+impl InterruptControllerPerCpu for GicPerCpu {
     fn get_and_acknowledge_interrupt(&self) -> Option<interrupt_controller::IrqId> {
-        unsafe { &mut *self.0.get() }
-            .as_mut()
-            .unwrap()
+        self.get_mut()
             .get_and_acknowledge_interrupt()
             .map(|id| (id.to_u32() as usize).into())
     }
@@ -93,52 +92,44 @@ impl InterruptControllerPerCpu for GicV2PerCpu {
             .collect::<Vec<_>>();
 
         self.get_mut().set_bind_cpu(convert_id(irq), &id_list);
-
-        todo!()
     }
 }
 
-fn convert_id(irq: interrupt_controller::IrqId) -> IntId {
-    let id: usize = irq.into();
-    unsafe { IntId::raw(id as u32) }
-}
-
-impl DriverGeneric for GicV2 {
+impl DriverGeneric for Gic {
     fn name(&self) -> alloc::string::String {
-        "GICv2".to_string()
+        "GICv3".to_string()
     }
 
     fn open(&mut self) -> Result<(), alloc::string::String> {
-        let gic =
-            arm_gic_driver::GicV2::new(self.gicd, self.gicc).map_err(|e| format!("{:?}", e))?;
+        let gic = GicV3::new(self.gicd, self.gicr).map_err(|e| format!("{:?}", e))?;
         unsafe { &mut *self.gic.get() }.replace(gic);
 
         Ok(())
     }
 }
 
-impl interrupt_controller::InterruptController for GicV2 {
+impl interrupt_controller::InterruptController for Gic {
     fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterruptControllerPerCpu> {
         unsafe { &mut *self.gic.get() }
             .as_mut()
             .unwrap()
             .current_cpu_setup();
-        Box::new(GicV2PerCpu(self.gic.clone()))
+        Box::new(GicPerCpu(self.gic.clone()))
     }
 
     fn parse_fdt_config(
         &self,
         prop_interupt: &[usize],
-    ) -> DruverResult<driver_interface::IrqConfig> {
-        todo!()
+    ) -> DriverResult<driver_interface::IrqConfig> {
+        Ok(fdt_itr_to_config(&prop_interupt))
     }
 }
 
-fn probe_gic_v2(regs: Vec<RegAddress>) -> interrupt_controller::BoxedDriver {
+fn probe_gic(regs: Vec<RegAddress>) -> interrupt_controller::BoxedDriver {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));
-    let gicc = iomap(gicc_reg.addr.into(), gicc_reg.size.unwrap_or(0x1000));
+    let gicr = iomap(gicc_reg.addr.into(), gicc_reg.size.unwrap_or(0x1000));
 
-    Box::new(GicV2::new(gicd, gicc))
+    Box::new(Gic::new(gicd, gicr))
 }

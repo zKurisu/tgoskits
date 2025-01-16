@@ -22,7 +22,7 @@ pub trait InterruptControllerPerCpu: Send {
 
 pub trait InterruptController: DriverGeneric {
     fn current_cpu_setup(&self) -> Box<dyn InterruptControllerPerCpu>;
-    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> DruverResult<IrqConfig>;
+    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> DriverResult<IrqConfig>;
 }
 
 /// The trigger configuration for an interrupt.

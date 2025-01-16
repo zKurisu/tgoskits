@@ -17,6 +17,7 @@ unsafe impl Sync for DriverRegister {}
 #[derive(Clone)]
 pub enum ProbeFn {
     InterruptController(interrupt_controller::ProbeFn),
+    Uart,
 }
 
 #[repr(C)]

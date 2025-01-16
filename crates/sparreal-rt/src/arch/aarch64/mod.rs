@@ -7,8 +7,7 @@ use sparreal_macros::api_impl;
 use crate::mem::driver_registers;
 
 mod boot;
-pub mod gic_v2;
-pub mod gic_v3;
+mod gic;
 pub(crate) mod mmu;
 mod psci;
 mod trap;

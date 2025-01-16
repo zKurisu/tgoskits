@@ -36,13 +36,11 @@ pub struct IrqInfo {
 }
 
 fn chip(id: usize) -> &'static Box<dyn InterruptControllerPerCpu> {
-    unsafe {
-        globals::cpu_global_mut()
-            .irq_chips
-            .0
-            .get(&id)
-            .expect(format!("irq chip {:#x} not found", id).as_str())
-    }
+    globals::cpu_global()
+        .irq_chips
+        .0
+        .get(&id)
+        .expect(format!("irq chip {:#x} not found", id).as_str())
 }
 
 pub struct IrqRegister {
