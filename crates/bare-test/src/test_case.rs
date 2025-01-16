@@ -16,13 +16,6 @@ impl ListRef {
         }
     }
 
-    pub fn new(data: &'static [TestCase]) -> Self {
-        Self {
-            data: data.as_ptr() as _,
-            len: data.len() * size_of::<TestCase>(),
-        }
-    }
-
     pub fn iter(&self) -> Iter<'static> {
         Iter::new(unsafe { core::slice::from_raw_parts(self.data, self.len) })
     }
