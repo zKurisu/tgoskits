@@ -33,13 +33,6 @@ impl DriverRegisterListRef {
         }
     }
 
-    pub fn new(data: &'static [DriverRegister]) -> Self {
-        Self {
-            data: data.as_ptr() as _,
-            len: data.len() * size_of::<DriverRegister>(),
-        }
-    }
-
     pub fn iter(&self) -> RegisterIter<'static> {
         RegisterIter::new(unsafe { core::slice::from_raw_parts(self.data, self.len) })
     }

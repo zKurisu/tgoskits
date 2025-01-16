@@ -26,6 +26,7 @@ struct GicV2 {
 unsafe impl Send for GicV2 {}
 
 impl GicV2 {
+    #[allow(clippy::arc_with_non_send_sync)]
     fn new(gicd: NonNull<u8>, gicc: NonNull<u8>) -> Self {
         Self {
             gic: Arc::new(UnsafeCell::new(None)),
@@ -47,7 +48,9 @@ impl GicV2PerCpu {
 
 impl InterruptControllerPerCpu for GicV2PerCpu {
     fn get_and_acknowledge_interrupt(&self) -> Option<interrupt_controller::IrqId> {
-        self.get_mut()
+        unsafe { &mut *self.0.get() }
+            .as_mut()
+            .unwrap()
             .get_and_acknowledge_interrupt()
             .map(|id| (id.to_u32() as usize).into())
     }

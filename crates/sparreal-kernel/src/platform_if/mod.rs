@@ -26,7 +26,11 @@ pub trait MMU {
     fn get_kernel_table() -> usize;
     fn set_user_table(addr: usize);
     fn get_user_table() -> usize;
-    fn flush_tlb(addr: *const u8);
+
+    /// flush tlb
+    /// # Safety
+    /// addr must be page aligned
+    unsafe fn flush_tlb(addr: *const u8);
     fn flush_tlb_all();
     fn page_size() -> usize;
     fn table_level() -> usize;

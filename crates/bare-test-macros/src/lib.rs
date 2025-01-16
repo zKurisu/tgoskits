@@ -6,10 +6,7 @@ extern crate proc_macro2;
 extern crate syn;
 
 use proc_macro::TokenStream;
-use syn::{
-    parse, parse_macro_input, spanned::Spanned, FnArg, Item, ItemFn, ItemMod, PathArguments, Type,
-    Visibility,
-};
+use syn::{parse, spanned::Spanned, Item, ItemMod};
 
 #[proc_macro]
 pub fn build_test_setup(_input: TokenStream) -> TokenStream {

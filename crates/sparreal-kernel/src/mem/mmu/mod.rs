@@ -167,8 +167,8 @@ pub fn set_user_table(addr: usize) {
 pub fn get_user_table() -> usize {
     MMUImpl::get_user_table()
 }
-pub fn flush_tlb(addr: *const u8) {
-    MMUImpl::flush_tlb(addr);
+pub(crate) fn flush_tlb(addr: *const u8) {
+    unsafe { MMUImpl::flush_tlb(addr) };
 }
 pub fn flush_tlb_all() {
     MMUImpl::flush_tlb_all();

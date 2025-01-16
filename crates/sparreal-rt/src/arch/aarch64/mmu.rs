@@ -14,7 +14,7 @@ pub struct PageTableImpl;
 
 #[api_impl]
 impl MMU for PageTableImpl {
-    fn flush_tlb(addr: *const u8) {
+    unsafe fn flush_tlb(addr: *const u8) {
         unsafe { asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) addr as usize) };
     }
 

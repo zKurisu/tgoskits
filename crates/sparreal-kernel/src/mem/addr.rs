@@ -107,6 +107,12 @@ impl<T> Virt<T> {
     }
 }
 
+impl<T> Default for Virt<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> From<usize> for Virt<T> {
     fn from(value: usize) -> Self {
         Self(value, PhantomData)
@@ -126,7 +132,7 @@ impl<T> From<PhysAddr> for Virt<T> {
 
 impl From<PhysAddr> for usize {
     fn from(value: PhysAddr) -> Self {
-        value.0 as usize
+        value.0
     }
 }
 
