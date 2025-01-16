@@ -1,0 +1,17 @@
+[package]
+name = "simple_test"
+version.workspace = true
+edition.workspace = true
+
+[dev-dependencies]
+bare-test = { workspace = true }
+log = { workspace = true }
+sparreal-rt = { workspace = true }
+
+[build-dependencies]
+bare-test-macros = { workspace = true }
+
+
+[[test]]
+name = "test1"
+harness = false

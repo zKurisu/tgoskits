@@ -1,14 +1,11 @@
-use core::{
-    cell::UnsafeCell,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use core::sync::atomic::{AtomicU64, Ordering};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
 use driver_interface::{
     IrqConfig,
     interrupt_controller::{self, InterruptControllerPerCpu},
 };
-use log::{debug, info};
+use log::debug;
 
 use crate::{driver_manager, globals, platform};
 

@@ -1,0 +1,21 @@
+[package]
+name = "bare-test"
+version = "0.2.0"
+authors = ["Zhourui <zrufo747@outlook.com>"]
+edition = "2021"
+repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
+license = "MPL-2.0"
+description = "A test framework for bare metal."
+keywords = ["test", "case", "testing", "testcase", "unittest"]
+categories = ["development-tools", "development-tools::testing"]
+
+[features]
+default = ["rt"]
+rt = ["dep:sparreal-rt"]
+
+[dependencies]
+sparreal-rt = { version = "0.3", path = "../sparreal-rt", optional = true }
+sparreal-kernel = { version = "0.2", path = "../sparreal-kernel" }
+sparreal-macros = { version = "0.1", path = "../sparreal-macros" }
+bare-test-macros = { version = "0.0.1", path = "../bare-test-macros" }
+log = { version = "0.4" }

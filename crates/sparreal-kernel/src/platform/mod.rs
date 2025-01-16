@@ -101,7 +101,7 @@ pub fn platform_name() -> String {
 }
 
 pub fn shutdown() -> ! {
-    PlatformImpl::shutdown();
+    PlatformImpl::shutdown()
 }
 
 pub fn wait_for_interrupt() {

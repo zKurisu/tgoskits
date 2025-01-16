@@ -11,4 +11,6 @@ sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
 page-table-arm = { path = "crates/page-table-arm" }
 driver-interface = { path = "crates/driver-interface" }
+bare-test = { path = "crates/bare-test" }
+bare-test-macros = { path = "crates/bare-test-macros" }
 log = "0.4"

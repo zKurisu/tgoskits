@@ -8,7 +8,7 @@ use crate::{
     irq,
     logger::KLogger,
     mem::{self, VirtAddr, region, va_offset},
-    platform::{self, app_main, cpu_list, module_registers, platform_name, shutdown},
+    platform::{self, app_main, module_registers, platform_name, shutdown},
     platform_if::*,
     println,
 };
