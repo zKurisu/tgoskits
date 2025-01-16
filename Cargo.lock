@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "bare-test-macros"
-version = "0.0.1"
+version = "0.2.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -529,7 +529,6 @@ dependencies = [
  "bare-test",
  "bare-test-macros",
  "log",
- "sparreal-rt",
 ]
 
 [[package]]

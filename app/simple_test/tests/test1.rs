@@ -4,7 +4,6 @@
 
 #[bare_test::tests]
 mod tests {
-    use bare_test::TestCase;
 
     #[test]
     fn it_works() {

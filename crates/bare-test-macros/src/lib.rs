@@ -69,7 +69,7 @@ fn tests_impl(args: TokenStream, input: TokenStream) -> Result<TokenStream, pars
 
                         #[used(linker)]
                         #[unsafe(link_section = ".test_case")]
-                        static #static_name: TestCase = TestCase {
+                        static #static_name: #krate::TestCase = #krate::TestCase {
                             name: #f_name_str,
                             test_fn: #_f_name,
                         };
