@@ -83,6 +83,14 @@ impl InterruptControllerPerCpu for GicV2PerCpu {
     }
 
     fn set_bind_cpu(&self, irq: interrupt_controller::IrqId, cpu_list: &[CpuId]) {
+        let id_list = cpu_list
+            .iter()
+            .map(|v| arm_gic_driver::MPID::from(Into::<usize>::into(*v)))
+            .map(|v| v.into())
+            .collect::<Vec<_>>();
+
+        self.get_mut().set_bind_cpu(convert_id(irq), &id_list);
+
         todo!()
     }
 }

@@ -7,10 +7,16 @@ use sparreal_macros::api_impl;
 use crate::mem::driver_registers;
 
 mod boot;
-pub mod gic;
+pub mod gic_v2;
+pub mod gic_v3;
 pub(crate) mod mmu;
 mod psci;
 mod trap;
+
+pub(crate) fn cpu_id() -> usize {
+    const CPU_ID_MASK: u64 = 0xFF_FFFF + (0xFFFF_FFFF << 32);
+    (aarch64_cpu::registers::MPIDR_EL1.get() & CPU_ID_MASK) as usize
+}
 
 struct PlatformImpl;
 
@@ -25,8 +31,7 @@ impl Platform for PlatformImpl {
     }
 
     fn cpu_id() -> usize {
-        const CPU_ID_MASK: u64 = 0xFF_FFFF + (0xFFFF_FFFF << 32);
-        (aarch64_cpu::registers::MPIDR_EL1.get() & CPU_ID_MASK) as usize
+        cpu_id()
     }
 
     fn wait_for_interrupt() {

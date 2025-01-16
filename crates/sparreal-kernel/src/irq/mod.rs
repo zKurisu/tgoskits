@@ -3,7 +3,7 @@ use core::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
 use driver_interface::{
     IrqConfig,
     interrupt_controller::{self, InterruptControllerPerCpu},
@@ -39,7 +39,13 @@ pub struct IrqInfo {
 }
 
 fn chip(id: usize) -> &'static Box<dyn InterruptControllerPerCpu> {
-    unsafe { globals::cpu_global_mut().irq_chips.0.get(&id).unwrap() }
+    unsafe {
+        globals::cpu_global_mut()
+            .irq_chips
+            .0
+            .get(&id)
+            .expect(format!("irq chip {:#x} not found", id).as_str())
+    }
 }
 
 pub struct IrqRegister {
@@ -67,6 +73,8 @@ impl IrqRegister {
         let id = IrqHandleId::new();
         if let Some(p) = self.priority {
             c.set_priority(irq, p);
+        } else {
+            c.set_priority(irq, 0);
         }
 
         if !self.cpu_list.is_empty() {
