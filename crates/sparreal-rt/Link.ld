@@ -2,15 +2,7 @@ OUTPUT_ARCH(%ARCH%)
 
 ENTRY(_start)
 
-/* Define the program headers we want so the bootloader gives us the right */
-/* MMU permissions; this also allows us to exert more control over the linking */
-/* process. */
-PHDRS
-{
-    text    PT_LOAD;
-    rodata  PT_LOAD;
-    data    PT_LOAD;
-}
+
 
 SECTIONS
 {
@@ -19,14 +11,14 @@ SECTIONS
 
     .text : ALIGN(4K) {
         _stext = .;
-        KEEP(*(.head.text))
+        KEEP(*(.text.head))
         KEEP(*(.text.boot.start))
         KEEP(*(.text.boot .text.boot.*))
         . = ALIGN(4);
         *(.text .text.*);
         . = ALIGN(4K);
         _etext = .;
-    } :text
+    } 
 
     .rodata : ALIGN(4K) {
         _srodata = .;
@@ -35,8 +27,14 @@ SECTIONS
         *(.sdata2 .sdata2.*)
         . = ALIGN(4K);
         _erodata = .;
-    } :rodata
+    } 
 
+    .driver.register : ALIGN(4K) {
+        _sdriver = .;
+        *(.driver.register .driver.register.*)
+        _edriver = .;
+        . = ALIGN(4K);
+    }
    
     .data : ALIGN(4K) {
         _sdata = .;
@@ -45,20 +43,20 @@ SECTIONS
         *(.data .data.*)
         *(.sdata .sdata.*)
         *(.got .got.*)
-    } :data
+    } 
 
     .tdata : ALIGN(0x10) {
         _stdata = .;
         *(.tdata .tdata.*)
         _etdata = .;
-    } :data
+    } 
 
     .tbss : ALIGN(0x10) {
         _stbss = .;
         *(.tbss .tbss.*)
         *(.tcommon)
         _etbss = .;
-    } :data
+    } 
 
     . = ALIGN(4K);
     _edata = .;
@@ -70,14 +68,14 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4K);
         _ebss = .;
-    } :data
+    } 
 
     _ekernel = .;
+    _kernel_size = _ekernel - _skernel;
 
     . = ALIGN(4K);
+    _stack_bottom = .;
     _stack_top = . + %STACK_SIZE%;
-    _cpu_stack_size = %CPU_STACK_SIZE%;
-    _kernel_size = _stack_top - _skernel;
 	/DISCARD/ : {
         *(.comment) *(.gnu*) *(.note*) *(.eh_frame*)
     }

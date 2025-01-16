@@ -1,38 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["app/helloworld", "app/simple_test", "crates/*"]
+members = ["app/*", "crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
 
 [workspace.dependencies]
-embedded-hal = "1.0"
-nb = "1.1"
-embedded-hal-nb = "1.0"
-embedded-hal-async = "1.0"
-embedded-io = "0.6.1"
-log = { version = "0.4" }
-colored = "2.1"
-clap = { version = "4.5" }
-ansi_rgb = { version = "0.2" }
-rgb = "0.8.47"
-memory_addr = "0.3"
-toml = "0.8"
-serde = { default-features = false, version = "1", features = [
-    "alloc",
-    "derive",
-] }
-tock-registers = "0.9"
-goblin = "0.9"
-lock_api = "0.4"
-futures = { version = "0.3", default-features = false }
-sparreal-kernel = { path = "crates/sparreal-kernel" }
 sparreal-rt = { path = "crates/sparreal-rt" }
 sparreal-macros = { path = "crates/sparreal-macros" }
 page-table-arm = { path = "crates/page-table-arm" }
 driver-interface = { path = "crates/driver-interface" }
-bare-test = { path = "crates/bare-test" }
-bare-test-macros = { path = "crates/bare-test-macros" }
-arm-gic-driver = "0.3"
-arm-pl011-rs = "0.2"
-
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
+log = "0.4"

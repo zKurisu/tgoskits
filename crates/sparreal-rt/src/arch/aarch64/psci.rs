@@ -2,8 +2,26 @@
 
 #![allow(dead_code)]
 
+use fdt_parser::Fdt;
 use log::{error, info};
-use sparreal_kernel::{driver::device_tree::get_device_tree, Platform};
+use sparreal_kernel::platform::wait_for_interrupt;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Method {
+    Smc,
+    Hvc,
+}
+
+static mut METHOD: Method = Method::Smc;
+fn set_method(method: Method) {
+    unsafe {
+        METHOD = method;
+    }
+}
+
+fn method() -> Method {
+    unsafe { METHOD }
+}
 
 pub const PSCI_0_2_FN_BASE: u32 = 0x84000000;
 pub const PSCI_0_2_64BIT: u32 = 0x40000000;
@@ -50,6 +68,23 @@ impl From<i32> for PsciError {
     }
 }
 
+pub(crate) fn setup_method_by_fdt(fdt: Fdt<'_>) -> Result<(), &'static str> {
+    let node = fdt
+        .find_compatible(&["arm,psci", "arm,psci-1.0"])
+        .next()
+        .ok_or("PSCI node not found")?;
+    let prop = node
+        .find_property("method")
+        .ok_or("FDT PSCI method property not found")?;
+    match prop.str() {
+        "smc" => set_method(Method::Smc),
+        "hvc" => set_method(Method::Hvc),
+        _ => return Err("Unknown PSCI method"),
+    }
+
+    Ok(())
+}
+
 /// arm,psci method: smc
 /// when SMCCC_CONDUIT_SMC = 1
 fn arm_smccc_smc(func: u32, arg0: usize, arg1: usize, arg2: usize) -> usize {
@@ -82,17 +117,9 @@ fn psci_hvc_call(func: u32, arg0: usize, arg1: usize, arg2: usize) -> usize {
 }
 
 fn psci_call(func: u32, arg0: usize, arg1: usize, arg2: usize) -> Result<(), PsciError> {
-    let dtb = get_device_tree().ok_or(PsciError::NotSupported)?;
-    let node = dtb
-        .find_compatible(&["arm,psci"])
-        .next()
-        .ok_or(PsciError::NotSupported)?;
-    let method = node.find_property("method").unwrap().str();
-
-    let ret = match method {
-        "smc" => arm_smccc_smc(func, arg0, arg1, arg2),
-        "hvc" => psci_hvc_call(func, arg0, arg1, arg2),
-        _ => panic!("Unknown PSCI method: {}", method),
+    let ret = match method() {
+        Method::Smc => arm_smccc_smc(func, arg0, arg1, arg2),
+        Method::Hvc => psci_hvc_call(func, arg0, arg1, arg2),
     };
     if ret == 0 {
         Ok(())
@@ -105,9 +132,7 @@ fn psci_call(func: u32, arg0: usize, arg1: usize, arg2: usize) -> Result<(), Psc
 pub fn system_off() -> ! {
     psci_call(PSCI_0_2_FN_SYSTEM_OFF, 0, 0, 0).ok();
     loop {
-        unsafe {
-            super::PlatformImpl::wait_for_interrupt();
-        }
+        wait_for_interrupt();
     }
 }
 
@@ -120,10 +145,10 @@ pub fn system_off() -> ! {
 /// `entry_point` is the physical address of the secondary CPU's entry point.
 /// `arg` will be passed to the `X0` register of the secondary CPU.
 pub fn cpu_on(target_cpu: usize, entry_point: usize, arg: usize) {
-    info!("Starting CPU {:x} ON ...", target_cpu);
+    info!("Starting CPU {:#x} ON ...", target_cpu);
     let res = psci_call(PSCI_0_2_FN64_CPU_ON, target_cpu, entry_point, arg);
     if let Err(e) = res {
-        error!("failed to boot CPU {:x} ({:?})", target_cpu, e);
+        error!("failed to boot CPU {:#x} ({:?})", target_cpu, e);
     }
 }
 

@@ -2,9 +2,8 @@ use core::fmt;
 
 use aarch64_cpu::registers::*;
 use log::*;
-use memory_addr::VirtAddr;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
     let esr = ESR_EL1.extract();
     let iss = esr.read(ESR_EL1::ISS);
@@ -35,13 +34,13 @@ unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_irq() {
     debug!("IRQ!");
-    sparreal_kernel::irq::handle_irq();
+    // sparreal_kernel::irq::handle_irq();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_serror(tf: &TrapFrame) {
     error!("SError exception:");
     let esr = ESR_EL1.extract();
@@ -57,26 +56,26 @@ unsafe extern "C" fn __handle_serror(tf: &TrapFrame) {
     );
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_frq() {
     panic!("frq")
 }
 fn handle_data_abort(iss: u64, _is_user: bool) {
     let wnr = (iss & (1 << 6)) != 0; // WnR: Write not Read
     let cm = (iss & (1 << 8)) != 0; // CM: Cache maintenance
-    let reason = if wnr & !cm {
+    let _reason = if wnr & !cm {
         PageFaultReason::Write
     } else {
         PageFaultReason::Read
     };
-    let vaddr = VirtAddr::from(FAR_EL1.get() as usize);
+    // let vaddr = VirtAddr::from(FAR_EL1.get() as usize);
 
-    handle_page_fault(vaddr, reason);
+    // handle_page_fault(vaddr, reason);
 }
 
-pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
-    panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
-}
+// pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
+//     // panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
+// }
 
 #[derive(Debug)]
 pub enum PageFaultReason {

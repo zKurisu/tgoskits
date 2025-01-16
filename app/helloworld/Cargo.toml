@@ -1,8 +1,8 @@
 [package]
 name = "helloworld"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
-sparreal-rt = { workspace = true, features = ["early-print"]}
+sparreal-rt = { workspace = true, features = ["early-print"] }
 log = { workspace = true }
