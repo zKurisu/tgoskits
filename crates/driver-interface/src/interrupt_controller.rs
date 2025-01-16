@@ -1,24 +1,28 @@
-use crate::{DriverGeneric, RegAddress};
-use alloc::boxed::Box;
-use alloc::vec::Vec;
+use core::fmt::Debug;
 
-pub type IrqId = usize;
+use crate::{custom_type, err::*, DriverGeneric, RegAddress};
+use alloc::{boxed::Box, vec::Vec};
+
+custom_type!(IrqId, usize);
+custom_type!(CpuId, usize);
 
 pub type BoxedDriver = Box<dyn InterruptController>;
 
 pub type ProbeFn = fn(regs: Vec<RegAddress>) -> BoxedDriver;
 
-pub trait InterruptController: DriverGeneric {
-    fn current_cpu_setup(&self);
+pub trait InterruptControllerPerCpu: Send {
     fn get_and_acknowledge_interrupt(&self) -> Option<IrqId>;
     fn end_interrupt(&self, irq: IrqId);
-    fn irq_max_size(&self) -> usize;
-    fn irq_enable(&mut self, irq: IrqId);
-    fn irq_disable(&mut self, irq: IrqId);
-    fn set_priority(&mut self, irq: IrqId, priority: usize);
-    fn set_trigger(&mut self, irq: IrqId, triger: Trigger);
-    fn set_bind_cpu(&mut self, irq: IrqId, cpu_list: &[u64]);
-    fn fdt_parse_config(&self, prop_interupt: &[usize]) -> ProbeIrqConfig;
+    fn irq_enable(&self, irq: IrqId);
+    fn irq_disable(&self, irq: IrqId);
+    fn set_priority(&self, irq: IrqId, priority: usize);
+    fn set_trigger(&self, irq: IrqId, triger: Trigger);
+    fn set_bind_cpu(&self, irq: IrqId, cpu_list: &[CpuId]);
+}
+
+pub trait InterruptController: DriverGeneric {
+    fn current_cpu_setup(&self) -> Box<dyn InterruptControllerPerCpu>;
+    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> DruverResult<IrqConfig>;
 }
 
 /// The trigger configuration for an interrupt.
@@ -32,7 +36,7 @@ pub enum Trigger {
 }
 
 #[derive(Clone)]
-pub struct ProbeIrqConfig {
+pub struct IrqConfig {
     pub irq: IrqId,
     pub trigger: Trigger,
 }

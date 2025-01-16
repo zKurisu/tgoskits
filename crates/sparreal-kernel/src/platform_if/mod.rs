@@ -8,6 +8,7 @@ use crate::mem::KernelRegions;
 pub trait Platform {
     fn kernel_regions() -> KernelRegions;
     fn kstack_size() -> usize;
+    fn cpu_id() -> usize;
 
     fn wait_for_interrupt();
     fn on_boot_success() {}

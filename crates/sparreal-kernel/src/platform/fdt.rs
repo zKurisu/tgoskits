@@ -9,7 +9,7 @@ use crate::globals::{self, global_val};
 use crate::mem::{Align, VirtAddr};
 use crate::{io::print::*, mem::PhysAddr};
 
-use super::SerialPort;
+use super::{CPUInfo, SerialPort};
 
 pub struct Fdt(PhysAddr);
 
@@ -25,6 +25,19 @@ impl Fdt {
         let model = node.find_property("model")?;
 
         Some(model.str().to_string())
+    }
+
+    pub fn cpus(&self) -> Vec<CPUInfo> {
+        let fdt = self.get();
+
+        fdt.find_nodes("/cpus/cpu")
+            .map(|cpu| {
+                let reg = cpu.reg().unwrap().next().unwrap();
+                CPUInfo {
+                    cpu_id: reg.address as _,
+                }
+            })
+            .collect()
     }
 
     pub fn setup(&mut self) -> Result<(), &'static str> {

@@ -84,6 +84,16 @@ impl PlatformInfoKind {
     }
 }
 
+pub fn cpu_list() -> Vec<CPUInfo> {
+    match &global_val().platform_info {
+        PlatformInfoKind::DeviceTree(fdt) => fdt.cpus(),
+    }
+}
+
+pub fn cpu_id() -> usize {
+    PlatformImpl::cpu_id()
+}
+
 pub fn platform_name() -> String {
     match &global_val().platform_info {
         PlatformInfoKind::DeviceTree(fdt) => fdt.model_name().unwrap_or_default(),
@@ -107,6 +117,11 @@ pub fn app_main() {
         fn __sparreal_rt_main();
     }
     unsafe { __sparreal_rt_main() }
+}
+
+#[derive(Debug)]
+pub struct CPUInfo {
+    pub cpu_id: usize,
 }
 
 #[derive(Debug, Clone, Copy)]

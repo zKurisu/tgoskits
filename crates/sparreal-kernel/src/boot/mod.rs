@@ -3,11 +3,12 @@ use log::LevelFilter;
 
 use crate::{
     driver_manager,
-    globals::global_val,
+    globals::{self, global_val},
     io::{self, print::*},
+    irq,
     logger::KLogger,
     mem::{self, VirtAddr, region, va_offset},
-    platform::{app_main, module_registers, platform_name, shutdown},
+    platform::{self, app_main, cpu_list, module_registers, platform_name, shutdown},
     platform_if::*,
     println,
 };
@@ -37,6 +38,8 @@ fn __start() -> ! {
 
     mem::init_page_and_memory();
 
+    unsafe { globals::setup_percpu() };
+
     driver_manager::init();
 
     driver_manager::register_drivers(&module_registers());
@@ -46,6 +49,8 @@ fn __start() -> ! {
             driver_manager::init_interrupt_controller_by_fdt(fdt.get_addr()).unwrap();
         }
     }
+
+    irq::init_current_cpu();
 
     app_main();
 
@@ -85,6 +90,8 @@ fn print_start_msg() {
         "{}",
         VirtAddr::from(global_val().kstack_top)
     );
+
+    print_pair!("Start CPU", "{:#x}", platform::cpu_id());
 
     if let Some(debug) = global_val().platform_info.debugcon() {
         if let Some(c) = debug.compatibles().next() {

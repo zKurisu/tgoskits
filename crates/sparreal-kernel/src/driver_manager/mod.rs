@@ -1,5 +1,6 @@
 use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 use core::ptr::NonNull;
+use driver::BorrowGuard;
 use log::info;
 
 use driver_interface::RegAddress;
@@ -43,6 +44,24 @@ fn set_interrupt_controller(dev: driver::interrupt_controller::Device) {
         .insert(dev.id as _, dev);
 }
 
+pub fn interrupt_controllers() -> Vec<(
+    usize,
+    BorrowGuard<driver_interface::interrupt_controller::BoxedDriver>,
+)> {
+    MANAGER
+        .lock()
+        .as_mut()
+        .unwrap()
+        .irq_chip
+        .iter()
+        .map(|v| (v.0, v.1.driver.get()))
+        .filter_map(|(id, d)| match d {
+            Ok(v) => Some((*id, v)),
+            Err(_) => None,
+        })
+        .collect()
+}
+
 pub fn init_interrupt_controller_by_fdt(fdt_addr: NonNull<u8>) -> Result<(), String> {
     let fdt = Fdt::from_ptr(fdt_addr).map_err(|e| format!("{e:?}"))?;
     for r in registers() {
@@ -62,10 +81,18 @@ pub fn init_interrupt_controller_by_fdt(fdt_addr: NonNull<u8>) -> Result<(), Str
                     })
                     .collect();
 
-                let irq = probe(reg);
-                info!("Driver add interrupt controller [{}].", r.name);
+                let mut irq = probe(reg);
 
-                set_interrupt_controller(irq.into());
+                irq.open()?;
+
+                let mut dev: driver::interrupt_controller::Device = irq.into();
+                dev.id = node.phandle().unwrap().as_usize() as _;
+
+                info!(
+                    "Driver add interrupt controller [{:#x}] [{}].",
+                    dev.id, r.name
+                );
+                set_interrupt_controller(dev);
             }
         }
     }

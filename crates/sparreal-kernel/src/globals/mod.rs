@@ -1,12 +1,21 @@
 use core::{cell::UnsafeCell, ops::Range};
 
-use crate::mem::PhysAddr;
+use alloc::collections::btree_map::BTreeMap;
+use percpu::PerCPU;
+
 pub use crate::platform::PlatformInfoKind;
+use crate::{
+    mem::PhysAddr,
+    platform::{self, cpu_list},
+};
+
+mod percpu;
 
 pub struct GlobalVal {
     pub platform_info: PlatformInfoKind,
     pub kstack_top: PhysAddr,
     pub main_memory: Range<PhysAddr>,
+    percpu: BTreeMap<usize, percpu::PerCPU>,
 }
 
 struct LazyGlobal(UnsafeCell<Option<GlobalVal>>);
@@ -48,6 +57,7 @@ pub(crate) unsafe fn setup(platform_info: PlatformInfoKind) -> Result<(), &'stat
         platform_info,
         kstack_top: main_memory.end,
         main_memory,
+        percpu: Default::default(),
     };
 
     unsafe {
@@ -60,4 +70,25 @@ pub(crate) unsafe fn setup(platform_info: PlatformInfoKind) -> Result<(), &'stat
         }
     }
     Ok(())
+}
+
+/// #Safty
+/// 需要在内存初始化完成之后调用
+pub(crate) unsafe fn setup_percpu() {
+    let cpus = cpu_list();
+    let g = unsafe { get_mut() };
+    for cpu in cpus {
+        let percpu = PerCPU::default();
+        g.percpu.insert(cpu.cpu_id, percpu);
+    }
+}
+
+pub(crate) fn cpu_global() -> &'static PerCPU {
+    let g = unsafe { get_mut() };
+    g.percpu.get(&platform::cpu_id()).unwrap()
+}
+
+pub(crate) unsafe fn cpu_global_mut() -> &'static mut PerCPU {
+    let g = unsafe { get_mut() };
+    g.percpu.get_mut(&platform::cpu_id()).unwrap()
 }

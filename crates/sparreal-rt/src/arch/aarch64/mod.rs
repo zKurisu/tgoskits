@@ -24,6 +24,11 @@ impl Platform for PlatformImpl {
         crate::mem::kernel_regions()
     }
 
+    fn cpu_id() -> usize {
+        const CPU_ID_MASK: u64 = 0xFF_FFFF + (0xFFFF_FFFF << 32);
+        (aarch64_cpu::registers::MPIDR_EL1.get() & CPU_ID_MASK) as usize
+    }
+
     fn wait_for_interrupt() {
         aarch64_cpu::asm::wfi();
     }

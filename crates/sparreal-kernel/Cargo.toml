@@ -28,3 +28,4 @@ rgb = "0.8.47"
 spin = "0.9"
 anyhow = { version = "1.0", default-features = false }
 byte-unit = { version = "5.1", features = ["byte"], default-features = false }
+lazy_static = { version = "1.5", features = ["spin_no_std"] }

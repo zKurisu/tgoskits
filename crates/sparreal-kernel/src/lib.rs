@@ -10,6 +10,7 @@ mod driver_manager;
 pub mod globals;
 pub mod io;
 
+pub mod irq;
 mod lang_items;
 mod logger;
 pub mod mem;

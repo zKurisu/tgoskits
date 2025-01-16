@@ -5,11 +5,15 @@ extern crate alloc;
 use core::fmt::Display;
 
 use alloc::string::String;
-pub use interrupt_controller::ProbeIrqConfig;
+pub use interrupt_controller::IrqConfig;
 
+pub(crate) mod _macro;
 pub mod interrupt_controller;
 mod register;
 pub use register::*;
+pub(crate) mod err;
+pub use err::DriverError;
+pub use err::DruverResult;
 
 pub trait DriverGeneric: Send {
     fn name(&self) -> String;
