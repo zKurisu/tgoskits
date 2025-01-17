@@ -8,6 +8,7 @@ use core::{
 };
 
 mod descriptor;
+pub mod irq;
 
 pub use descriptor::*;
 use spin::Mutex;
@@ -41,7 +42,7 @@ impl<T> Device<T> {
             descriptor,
             data: Arc::new(Mutex::new(BorrowInfo {
                 who: String::new(),
-                data: None,
+                data: Some(data),
             })),
         }
     }

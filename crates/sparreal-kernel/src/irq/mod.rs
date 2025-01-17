@@ -16,7 +16,7 @@ use crate::{
 pub struct CpuIrqChips(BTreeMap<DriverId, interrupt_controller::PerCPU>);
 
 pub(crate) fn init_current_cpu() {
-    let chip = driver_manager::use_interrupt_controllers_by("Kernel IRQ init");
+    let chip = driver_manager::use_irq_chips_by("Kernel IRQ init");
     let g = unsafe { globals::cpu_global_mut() };
 
     for c in chip {

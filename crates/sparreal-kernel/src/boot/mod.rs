@@ -1,5 +1,5 @@
 use ansi_rgb::{Foreground, orange};
-use log::LevelFilter;
+use log::{LevelFilter, error};
 
 use crate::{
     driver_manager,
@@ -40,13 +40,13 @@ fn __start() -> ! {
 
     unsafe { globals::setup_percpu() };
 
-    driver_manager::init();
-
     driver_manager::register_drivers(&module_registers());
 
     match &global_val().platform_info {
         crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
-            driver_manager::init_interrupt_controller_by_fdt(fdt.get_addr()).unwrap();
+            if let Err(e) = driver_manager::init_irq_chips_by_fdt(fdt.get_addr()) {
+                error!("{}", e);
+            }
         }
     }
 
