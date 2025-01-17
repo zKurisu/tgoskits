@@ -1,5 +1,6 @@
 use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, string::ToString, vec::Vec};
+use log::debug;
 use sparreal_kernel::driver_interface::{
     DriverGeneric, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
 };
@@ -21,10 +22,6 @@ impl Interface for ArmV8Timer {
         Box::new(self.clone())
     }
 
-    fn irq(&self) -> IrqConfig {
-        self.irq.clone()
-    }
-
     fn name(&self) -> alloc::string::String {
         "ARMv8 Timer".to_string()
     }
@@ -32,18 +29,20 @@ impl Interface for ArmV8Timer {
 
 impl InterfacePerCPU for ArmV8Timer {
     fn set_interval(&mut self, ticks: u64) {
+        debug!("set interval: {ticks}");
         CNTP_TVAL_EL0.set(ticks);
     }
 
     fn current_ticks(&self) -> u64 {
-        CNTFRQ_EL0.get()
-    }
-
-    fn tick_hz(&self) -> u64 {
         CNTPCT_EL0.get()
     }
 
+    fn tick_hz(&self) -> u64 {
+        CNTFRQ_EL0.get()
+    }
+
     fn set_irq_enable(&mut self, enable: bool) {
+        debug!("set irq enable: {enable}");
         CNTP_CTL_EL0.modify(if enable {
             CNTP_CTL_EL0::IMASK::CLEAR
         } else {
@@ -53,6 +52,10 @@ impl InterfacePerCPU for ArmV8Timer {
 
     fn read_irq_status(&self) -> bool {
         CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::ISTATUS)
+    }
+
+    fn irq(&self) -> IrqConfig {
+        self.irq.clone()
     }
 }
 

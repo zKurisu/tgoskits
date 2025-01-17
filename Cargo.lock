@@ -221,6 +221,7 @@ version = "0.1.0"
 dependencies = [
  "embedded-io",
  "futures",
+ "log",
 ]
 
 [[package]]
@@ -345,6 +346,7 @@ name = "helloworld"
 version = "0.1.0"
 dependencies = [
  "log",
+ "sparreal-kernel",
  "sparreal-rt",
 ]
 

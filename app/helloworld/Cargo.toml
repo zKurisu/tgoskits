@@ -5,4 +5,5 @@ edition.workspace = true
 
 [dependencies]
 sparreal-rt = { workspace = true, features = ["early-print"] }
+sparreal-kernel = { workspace = true }
 log = { workspace = true }

@@ -103,6 +103,16 @@ impl IrqRegister {
         c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
     }
+
+    pub fn priority(mut self, priority: usize) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    pub fn cpu_list(mut self, cpu_list: Vec<CpuId>) -> Self {
+        self.cpu_list = cpu_list;
+        self
+    }
 }
 
 impl Chip {

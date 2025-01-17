@@ -2,8 +2,6 @@
 
 extern crate alloc;
 
-use core::fmt::Display;
-
 use alloc::string::String;
 
 pub(crate) mod _macro;
@@ -27,4 +25,3 @@ pub struct RegAddress {
     pub addr: usize,
     pub size: Option<usize>,
 }
-

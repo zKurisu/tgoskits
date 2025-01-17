@@ -12,3 +12,4 @@ categories = ["embedded", "no-std"]
 [dependencies]
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"
+log = "0.4"

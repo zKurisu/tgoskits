@@ -22,14 +22,14 @@ impl Container {
         self.data = Some(device);
     }
 
-    pub fn get_cpu_timer(&self) -> Option<Device<PerCPU>> {
+    pub fn get_cpu_timer(&self) -> Option<Device<Timer>> {
         if let Some(device) = self.data.as_ref() {
             loop {
                 if let Ok(mut d) = device.try_use_by("cpu") {
                     let p = d.get_current_cpu();
                     let mut desc = d.descriptor.clone();
                     desc.device_id = Default::default();
-                    return Some(Device::new(desc, p));
+                    return Some(Device::new(desc, Timer::new(p)));
                 }
             }
         }
