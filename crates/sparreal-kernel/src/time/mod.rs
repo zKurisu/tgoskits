@@ -1,12 +1,12 @@
 use core::{cell::UnsafeCell, time::Duration};
 
 use crate::{
-    driver_manager::{device::Device, manager},
-    globals::{cpu_global, cpu_global_mut},
+    driver_manager::{self, device::Device, manager},
+    globals::{cpu_global, cpu_global_mut, global_val},
     platform_if::*,
 };
 use driver_interface::timer::*;
-use log::debug;
+use log::{debug, error};
 
 #[derive(Default)]
 pub(crate) struct Timer {
@@ -17,6 +17,18 @@ pub fn since_boot() -> Duration {
     let current_tick = PlatformImpl::current_ticks();
     let freq = PlatformImpl::tick_hz();
     Duration::from_nanos(current_tick * 1_000_000_000 / freq)
+}
+
+pub(crate) fn main_cpu_init() {
+    match &global_val().platform_info {
+        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
+            if let Err(e) = driver_manager::init_timer_by_fdt(fdt.get_addr()) {
+                error!("{}", e);
+            }
+        }
+    }
+
+    init_current_cpu();
 }
 
 pub(crate) fn init_current_cpu() {

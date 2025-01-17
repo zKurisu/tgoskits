@@ -52,15 +52,7 @@ fn __start() -> ! {
 
     irq::init_current_cpu();
 
-    match &global_val().platform_info {
-        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
-            if let Err(e) = driver_manager::init_timer_by_fdt(fdt.get_addr()) {
-                error!("{}", e);
-            }
-        }
-    }
-
-    time::init_current_cpu();
+    time::main_cpu_init();
 
     irq::enable_all();
 
