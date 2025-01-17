@@ -1,4 +1,4 @@
-use core::{cell::UnsafeCell, ptr::NonNull};
+use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
@@ -93,6 +93,10 @@ impl InterruptControllerPerCpu for GicPerCpu {
 
         self.get_mut().set_bind_cpu(convert_id(irq), &id_list);
     }
+
+    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
+        fdt_parse_irq_config(prop_interupt)
+    }
 }
 
 impl DriverGeneric for Gic {
@@ -115,13 +119,6 @@ impl interrupt_controller::InterruptController for Gic {
             .unwrap()
             .current_cpu_setup();
         Box::new(GicPerCpu(self.gic.clone()))
-    }
-
-    fn parse_fdt_config(
-        &self,
-        prop_interupt: &[usize],
-    ) -> DriverResult<driver_interface::IrqConfig> {
-        Ok(fdt_itr_to_config(&prop_interupt))
     }
 }
 

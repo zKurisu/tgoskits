@@ -1,5 +1,7 @@
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use core::fmt::Debug;
+
+use super::irq::IrqInfo;
 
 custom_id!(DeviceId, u64);
 custom_id!(DriverId, u64);
@@ -9,6 +11,7 @@ pub struct Descriptor {
     pub device_id: DeviceId,
     pub driver_id: DriverId,
     pub name: String,
+    pub irq_configs: Vec<IrqInfo>,
 }
 
 macro_rules! impl_driver_id_for {

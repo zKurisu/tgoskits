@@ -1,6 +1,6 @@
-use core::fmt::Debug;
+use core::{error::Error, fmt::Debug};
 
-use crate::{custom_type, err::*, DriverGeneric, RegAddress};
+use crate::{custom_type, DriverGeneric, RegAddress};
 use alloc::{boxed::Box, vec::Vec};
 
 custom_type!(IrqId, usize);
@@ -18,11 +18,11 @@ pub trait InterruptControllerPerCpu: Send {
     fn set_priority(&self, irq: IrqId, priority: usize);
     fn set_trigger(&self, irq: IrqId, triger: Trigger);
     fn set_bind_cpu(&self, irq: IrqId, cpu_list: &[CpuId]);
+    fn parse_fdt_config(&self, prop_interrupts: &[usize]) -> Result<IrqConfig, Box<dyn Error>>;
 }
 
 pub trait InterruptController: DriverGeneric {
     fn current_cpu_setup(&self) -> PerCPU;
-    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> DriverResult<IrqConfig>;
 }
 
 /// The trigger configuration for an interrupt.
@@ -35,7 +35,7 @@ pub enum Trigger {
     LevelLow,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct IrqConfig {
     pub irq: IrqId,
     pub trigger: Trigger,

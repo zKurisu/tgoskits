@@ -4,8 +4,12 @@ use core::{
     ops::Range,
     ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut},
 };
+use fdt_parser::Node;
+use log::error;
 
+use crate::driver_manager::device::DriverId;
 use crate::globals::{self, global_val};
+use crate::irq::IrqInfo;
 use crate::mem::{Align, VirtAddr};
 use crate::{io::print::*, mem::PhysAddr};
 
@@ -113,5 +117,36 @@ impl Fdt {
             reg.size,
             compatible,
         ))
+    }
+}
+
+pub trait GetIrqConfig {
+    fn irq_info(&self) -> Vec<IrqInfo>;
+}
+
+impl GetIrqConfig for Node<'_> {
+    fn irq_info(&self) -> Vec<IrqInfo> {
+        let mut out = Vec::new();
+        let irq_chip_node = match self.interrupt_parent() {
+            Some(irq_chip) => irq_chip,
+            None => return out,
+        };
+
+        let irq_chip_id = DriverId::from(match irq_chip_node.node.phandle() {
+            Some(p) => p.as_usize(),
+            None => return out,
+        });
+
+        if let Some(irqs) = self.interrupts() {
+            for irq in irqs {
+                let raw = irq.map(|o| o as usize).collect::<Vec<_>>();
+                match crate::irq::fdt_parse_config(irq_chip_id, &raw) {
+                    Ok(cfg) => out.push(IrqInfo { irq_chip_id, cfg }),
+                    Err(e) => error!("{:?}", e),
+                }
+            }
+        }
+
+        out
     }
 }

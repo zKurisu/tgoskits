@@ -7,7 +7,7 @@ use alloc::{
     vec::Vec,
 };
 pub use driver_interface::interrupt_controller::Driver;
-use driver_interface::{DriverRegister, ProbeFn, RegAddress};
+use driver_interface::{DriverRegister, IrqConfig, ProbeFn, RegAddress};
 use fdt_parser::Fdt;
 
 use super::{super::device::Descriptor, Device, DriverId};
@@ -59,17 +59,23 @@ impl Container {
         Self(BTreeMap::new())
     }
 
-    pub fn set(&mut self, dev: Device<Driver>) {
+    pub(crate) fn set(&mut self, dev: Device<Driver>) {
         self.0.insert(dev.descriptor.driver_id, dev);
     }
 
-    pub fn set_list(&mut self, dev_list: Vec<Device<Driver>>) {
+    pub(crate) fn set_list(&mut self, dev_list: Vec<Device<Driver>>) {
         for dev in dev_list {
             self.set(dev);
         }
     }
 
-    pub fn irq_chip_list(&self) -> Vec<&Device<Driver>> {
+    pub fn list(&self) -> Vec<&Device<Driver>> {
         self.0.values().collect()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct IrqInfo {
+    pub irq_chip_id: DriverId,
+    pub cfg: IrqConfig,
 }

@@ -1,4 +1,8 @@
-use core::sync::atomic::{AtomicU64, Ordering};
+use core::{
+    error::Error,
+    sync::atomic::{AtomicU64, Ordering},
+    usize,
+};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
 use driver_interface::{
@@ -11,6 +15,7 @@ use crate::{
     driver_manager::{self, device::DriverId},
     globals, platform,
 };
+pub use driver_manager::device::irq::IrqInfo;
 
 #[derive(Default)]
 pub struct CpuIrqChips(BTreeMap<DriverId, interrupt_controller::PerCPU>);
@@ -32,18 +37,19 @@ pub enum IrqHandle {
     None,
 }
 
-#[derive(Clone)]
-pub struct IrqInfo {
-    pub irq_chip_id: DriverId,
-    pub cfg: IrqConfig,
-}
-
 fn chip(id: DriverId) -> &'static Box<dyn InterruptControllerPerCpu> {
     globals::cpu_global()
         .irq_chips
         .0
         .get(&id)
         .expect(format!("irq chip {:?} not found", id).as_str())
+}
+
+pub fn fdt_parse_config(
+    irq_parent: DriverId,
+    prop_interrupts: &[usize],
+) -> Result<IrqConfig, Box<dyn Error>> {
+    chip(irq_parent).parse_fdt_config(prop_interrupts)
 }
 
 pub struct IrqRegister {

@@ -1,3 +1,6 @@
+use core::error::Error;
+
+use alloc::{boxed::Box, vec::Vec};
 use arm_gic_driver::IntId;
 use sparreal_kernel::driver_interface::{
     IrqConfig,
@@ -27,7 +30,8 @@ bitflags! {
         const LEVEL_LOW = 8;
     }
 }
-fn fdt_itr_to_config(itr: &[usize]) -> IrqConfig {
+
+fn fdt_parse_irq_config(itr: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
     const SPI: usize = 0;
     const PPI: usize = 1;
 
@@ -56,8 +60,8 @@ fn fdt_itr_to_config(itr: &[usize]) -> IrqConfig {
         panic!("Invalid irq type {}", itr[2])
     };
 
-    IrqConfig {
+    Ok(IrqConfig {
         irq: (irq_id as usize).into(),
         trigger,
-    }
+    })
 }

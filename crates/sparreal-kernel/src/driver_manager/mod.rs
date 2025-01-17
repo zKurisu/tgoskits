@@ -45,18 +45,17 @@ pub fn manager() -> MutexGuard<'static, DeviceManager> {
 }
 
 pub fn register_drivers(drivers: &[DriverRegister]) {
-    MANAGER.lock().registers.extend(drivers.iter().cloned());
+    manager().registers.extend(drivers.iter().cloned());
 }
 
 fn registers() -> Vec<DriverRegister> {
-    MANAGER.lock().registers.clone()
+    manager().registers.clone()
 }
 
 pub fn use_irq_chips_by(who: &str) -> Vec<BorrowGuard<interrupt_controller::Driver>> {
-    MANAGER
-        .lock()
+    manager()
         .irq_chip
-        .irq_chip_list()
+        .list()
         .into_iter()
         .map(|v| v.try_use_by(who))
         .filter_map(|d| match d {

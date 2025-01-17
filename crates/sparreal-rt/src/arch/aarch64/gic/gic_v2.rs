@@ -1,10 +1,10 @@
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
-use core::{cell::UnsafeCell, ptr::NonNull};
+use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 
 use arm_gic_driver::{GicGeneric, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        self, DriverGeneric, DriverResult, ProbeFn, RegAddress,
+        DriverGeneric, ProbeFn, RegAddress,
         interrupt_controller::{self, CpuId, InterruptControllerPerCpu},
     },
     mem::iomap,
@@ -96,6 +96,10 @@ impl InterruptControllerPerCpu for GicV2PerCpu {
 
         self.get_mut().set_bind_cpu(convert_id(irq), &id_list);
     }
+
+    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
+        fdt_parse_irq_config(prop_interupt)
+    }
 }
 
 impl DriverGeneric for GicV2 {
@@ -119,13 +123,6 @@ impl interrupt_controller::InterruptController for GicV2 {
             .unwrap()
             .current_cpu_setup();
         Box::new(GicV2PerCpu(self.gic.clone()))
-    }
-
-    fn parse_fdt_config(
-        &self,
-        prop_interupt: &[usize],
-    ) -> DriverResult<driver_interface::IrqConfig> {
-        Ok(fdt_itr_to_config(&prop_interupt))
     }
 }
 
