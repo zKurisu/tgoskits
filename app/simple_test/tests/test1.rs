@@ -4,13 +4,12 @@
 
 #[bare_test::tests]
 mod tests {
-    use bare_test::*;
-    use log::info;
+    use core::hint::spin_loop;
 
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4)
-    }
+    use bare_test::*;
+    use globals::{PlatformInfoKind, global_val};
+    use irq::IrqHandleResult;
+    use log::{debug, info};
 
     #[test]
     fn test2() {
@@ -18,10 +17,17 @@ mod tests {
             PlatformInfoKind::DeviceTree(fdt) => fdt.get(),
         };
 
-        let node = fdt.chosen().unwrap().stdout().unwrap();
-        let info = node.node.irq_info();
+        for node in fdt.all_nodes() {
+            for irq_info in node.irq_info() {
+                irq_info
+                    .builder(|irq| {
+                        debug!("irq: {:?}", irq);
 
-        info!("irq: {:?}", info);
+                        IrqHandleResult::Handled
+                    })
+                    .register();
+            }
+        }
 
         assert_eq!(2 + 2, 4)
     }

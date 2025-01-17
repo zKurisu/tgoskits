@@ -9,9 +9,8 @@ extern crate sparreal_rt;
 use core::ptr::slice_from_raw_parts;
 
 pub use bare_test_macros::tests;
-pub use sparreal_kernel::globals::global_val;
-pub use sparreal_kernel::platform::PlatformInfoKind;
 pub use sparreal_kernel::prelude::*;
+pub use sparreal_kernel::*;
 
 mod test_case;
 

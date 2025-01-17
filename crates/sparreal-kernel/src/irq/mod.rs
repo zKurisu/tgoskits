@@ -30,6 +30,10 @@ pub struct Chip {
 unsafe impl Send for Chip {}
 unsafe impl Sync for Chip {}
 
+pub fn enable_all() {
+    PlatformImpl::irq_all_enable();
+}
+
 pub(crate) fn init_current_cpu() {
     let chip = driver_manager::use_irq_chips_by("Kernel IRQ init");
     let g = unsafe { globals::cpu_global_mut() };
@@ -141,7 +145,7 @@ impl NoIrqGuard {
 impl Drop for NoIrqGuard {
     fn drop(&mut self) {
         if self.is_enabled {
-            PlatformImpl::irq_all_enable();
+            enable_all();
         }
     }
 }
@@ -149,5 +153,20 @@ impl Drop for NoIrqGuard {
 pub fn handle_irq() {
     for chip in cpu_global().irq_chips.0.values() {
         chip.handle_irq();
+    }
+}
+
+pub trait ToIrqRegister {
+    fn builder(&self, handler: impl Fn(IrqId) -> IrqHandleResult + 'static) -> IrqRegister;
+}
+
+impl ToIrqRegister for IrqInfo {
+    fn builder(&self, handler: impl Fn(IrqId) -> IrqHandleResult + 'static) -> IrqRegister {
+        IrqRegister {
+            info: self.clone(),
+            handler: Box::new(handler),
+            priority: None,
+            cpu_list: Vec::new(),
+        }
     }
 }

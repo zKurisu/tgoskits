@@ -52,6 +52,8 @@ fn __start() -> ! {
 
     irq::init_current_cpu();
 
+    irq::enable_all();
+
     app_main();
 
     shutdown()
