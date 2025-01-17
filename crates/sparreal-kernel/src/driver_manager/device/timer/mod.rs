@@ -50,7 +50,7 @@ pub fn init_by_fdt(
                 .filter_map(|e| if e.is_empty() { None } else { Some(e) })
                 .collect::<Vec<_>>();
             for node in fdt.find_compatible(&compa) {
-                let timer = probe();
+                let timer = probe(node.irq_info().iter().map(|i| i.cfg.clone()).collect());
                 let dev = Device::new(
                     Descriptor {
                         name: timer.name(),

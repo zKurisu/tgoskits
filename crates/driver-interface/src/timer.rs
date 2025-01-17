@@ -1,14 +1,15 @@
 use core::{error::Error, fmt::Debug};
 
-use crate::DriverGeneric;
+use crate::{interrupt_controller::IrqConfig, DriverGeneric};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
 pub type Driver = Box<dyn Interface>;
-pub type ProbeFn = fn() -> Driver;
+pub type ProbeFn = fn(Vec<IrqConfig>) -> Driver;
 pub type PerCPU = Box<dyn InterfacePerCPU>;
 
 pub trait Interface: Send {
     fn get_current_cpu(&mut self) -> Box<dyn InterfacePerCPU>;
+    fn irq(&self) -> IrqConfig;
     fn name(&self) -> String;
 }
 
