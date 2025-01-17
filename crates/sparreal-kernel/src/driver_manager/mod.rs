@@ -3,6 +3,7 @@ use core::ptr::NonNull;
 use device::{
     BorrowGuard,
     irq::{self},
+    timer,
 };
 use log::warn;
 
@@ -23,6 +24,7 @@ static MANAGER: Mutex<DeviceManager> = Mutex::new(DeviceManager::new());
 pub struct DeviceManager {
     registers: Vec<DriverRegister>,
     pub irq_chip: device::irq::Container,
+    pub timer: device::timer::Container,
 }
 
 impl DeviceManager {
@@ -30,6 +32,7 @@ impl DeviceManager {
         Self {
             registers: Vec::new(),
             irq_chip: device::irq::Container::new(),
+            timer: device::timer::Container::new(),
         }
     }
 }
@@ -37,6 +40,12 @@ impl DeviceManager {
 pub fn init_irq_chips_by_fdt(fdt_addr: NonNull<u8>) -> Result<(), String> {
     let dev_list = irq::init_by_fdt(&registers(), fdt_addr)?;
     manager().irq_chip.set_list(dev_list);
+    Ok(())
+}
+
+pub fn init_timer_by_fdt(fdt_addr: NonNull<u8>) -> Result<(), String> {
+    let timer = timer::init_by_fdt(&registers(), fdt_addr)?;
+    manager().timer.set(timer);
     Ok(())
 }
 

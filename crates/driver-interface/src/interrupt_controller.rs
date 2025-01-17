@@ -6,11 +6,11 @@ use alloc::{boxed::Box, vec::Vec};
 custom_type!(IrqId, usize, "{:#x}");
 custom_type!(CpuId, usize, "{:#x}");
 
-pub type Driver = Box<dyn InterruptController>;
+pub type Driver = Box<dyn Interface>;
 pub type ProbeFn = fn(regs: Vec<RegAddress>) -> Driver;
-pub type PerCPU = Box<dyn InterruptControllerPerCpu>;
+pub type PerCPU = Box<dyn InterfacePerCPU>;
 
-pub trait InterruptControllerPerCpu: Send {
+pub trait InterfacePerCPU: Send {
     fn get_and_acknowledge_interrupt(&self) -> Option<IrqId>;
     fn end_interrupt(&self, irq: IrqId);
     fn irq_enable(&self, irq: IrqId);
@@ -21,7 +21,7 @@ pub trait InterruptControllerPerCpu: Send {
     fn parse_fdt_config(&self, prop_interrupts: &[u32]) -> Result<IrqConfig, Box<dyn Error>>;
 }
 
-pub trait InterruptController: DriverGeneric {
+pub trait Interface: DriverGeneric {
     fn current_cpu_setup(&self) -> PerCPU;
 }
 

@@ -4,8 +4,8 @@ use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        DriverGeneric, ProbeFn, RegAddress,
-        interrupt_controller::{self, CpuId, InterruptControllerPerCpu},
+        DriverGeneric, ProbeFnKind, RegAddress,
+        interrupt_controller::{self, CpuId, InterfacePerCPU},
     },
     mem::iomap,
 };
@@ -16,7 +16,7 @@ use super::*;
 module_driver!(
     name: "GICv3",
     compatibles: "arm,gic-v3\n",
-    probe: ProbeFn::InterruptController(probe_gic),
+    probe: ProbeFnKind::InterruptController(probe_gic),
 );
 
 struct Gic {
@@ -47,7 +47,7 @@ impl GicPerCpu {
     }
 }
 
-impl InterruptControllerPerCpu for GicPerCpu {
+impl InterfacePerCPU for GicPerCpu {
     fn get_and_acknowledge_interrupt(&self) -> Option<interrupt_controller::IrqId> {
         self.get_mut()
             .get_and_acknowledge_interrupt()
@@ -110,10 +110,14 @@ impl DriverGeneric for Gic {
 
         Ok(())
     }
+
+    fn close(&mut self) -> Result<(), alloc::string::String> {
+        Ok(())
+    }
 }
 
-impl interrupt_controller::InterruptController for Gic {
-    fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterruptControllerPerCpu> {
+impl interrupt_controller::Interface for Gic {
+    fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterfacePerCPU> {
         unsafe { &mut *self.gic.get() }
             .as_mut()
             .unwrap()

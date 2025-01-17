@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use alloc::{collections::btree_map::BTreeMap, format, string::String, vec::Vec};
 pub use driver_interface::interrupt_controller::Driver;
-use driver_interface::{DriverRegister, ProbeFn, RegAddress, interrupt_controller::IrqConfig};
+use driver_interface::{DriverRegister, ProbeFnKind, RegAddress, interrupt_controller::IrqConfig};
 use fdt_parser::Fdt;
 
 use super::{super::device::Descriptor, Device, DriverId};
@@ -14,7 +14,7 @@ pub fn init_by_fdt(
     let fdt = Fdt::from_ptr(fdt_addr).map_err(|e| format!("{e:?}"))?;
     let mut out = Vec::with_capacity(registers.len());
     for r in registers {
-        if let ProbeFn::InterruptController(probe) = r.probe {
+        if let ProbeFnKind::InterruptController(probe) = r.probe {
             let compa = r
                 .compatibles
                 .split("\n")

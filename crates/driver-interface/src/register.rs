@@ -1,6 +1,6 @@
 use core::ptr::slice_from_raw_parts;
 
-use crate::interrupt_controller;
+use crate::{interrupt_controller, timer};
 
 #[repr(C)]
 #[derive(Clone)]
@@ -8,16 +8,16 @@ pub struct DriverRegister {
     pub name: &'static str,
     /// split by `\n`
     pub compatibles: &'static str,
-    pub probe: ProbeFn,
+    pub probe: ProbeFnKind,
 }
 
 unsafe impl Send for DriverRegister {}
 unsafe impl Sync for DriverRegister {}
 
 #[derive(Clone)]
-pub enum ProbeFn {
+pub enum ProbeFnKind {
     InterruptController(interrupt_controller::ProbeFn),
-    Uart,
+    Timer(timer::ProbeFn),
 }
 
 #[repr(C)]

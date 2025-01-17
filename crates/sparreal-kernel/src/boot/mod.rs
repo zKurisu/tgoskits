@@ -10,7 +10,7 @@ use crate::{
     mem::{self, VirtAddr, region, va_offset},
     platform::{self, app_main, module_registers, platform_name, shutdown},
     platform_if::*,
-    println,
+    println, time,
 };
 
 pub mod debug;
@@ -51,6 +51,16 @@ fn __start() -> ! {
     }
 
     irq::init_current_cpu();
+
+    match &global_val().platform_info {
+        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
+            if let Err(e) = driver_manager::init_timer_by_fdt(fdt.get_addr()) {
+                error!("{}", e);
+            }
+        }
+    }
+
+    time::init_current_cpu();
 
     irq::enable_all();
 

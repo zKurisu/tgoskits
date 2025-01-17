@@ -3,12 +3,14 @@ use alloc::{
     sync::Arc,
 };
 use core::{
+    cell::UnsafeCell,
     fmt::Debug,
     ops::{Deref, DerefMut},
 };
 
 mod descriptor;
 pub mod irq;
+pub mod timer;
 
 pub use descriptor::*;
 use spin::Mutex;
@@ -18,8 +20,11 @@ use super::DriverError;
 #[derive(Clone)]
 pub struct Device<T> {
     pub descriptor: Descriptor,
-    data: Arc<Mutex<BorrowInfo<T>>>,
+    lock: Arc<Mutex<Lock>>,
+    data: Arc<UnsafeCell<T>>,
 }
+
+unsafe impl<T> Send for Device<T> {}
 
 impl<T> Debug for Device<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -27,69 +32,71 @@ impl<T> Debug for Device<T> {
             .field("device_id", &self.descriptor.device_id)
             .field("driver_id", &self.descriptor.driver_id)
             .field("name", &self.descriptor.name)
-            .field("irq_configs", &self.descriptor.irq_configs)
+            .field("irq_configs", &self.descriptor.irqs)
             .finish()
     }
 }
 
-struct BorrowInfo<T> {
-    who: String,
-    data: Option<T>,
+struct Lock {
+    who_using: Option<String>,
 }
 
 impl<T> Device<T> {
     pub fn new(descriptor: Descriptor, data: T) -> Self {
         Device {
             descriptor,
-            data: Arc::new(Mutex::new(BorrowInfo {
-                who: String::new(),
-                data: Some(data),
-            })),
+            data: Arc::new(UnsafeCell::new(data)),
+            lock: Arc::new(Mutex::new(Lock { who_using: None })),
         }
     }
 
     pub fn try_use_by(&self, who: impl ToString) -> Result<BorrowGuard<T>, DriverError> {
         let descriptor = self.descriptor.clone();
-        let lock = self.data.clone();
-        let mut g = self.data.lock();
-
-        let driver = g
-            .data
-            .take()
-            .ok_or(DriverError::UsedByOthers(g.who.clone()))?;
-        g.who = who.to_string();
-
+        let lock = self.lock.clone();
+        let mut g = self.lock.lock();
+        if let Some(ref who) = g.who_using {
+            return Err(DriverError::UsedByOthers(who.to_string()));
+        }
+        g.who_using = Some(who.to_string());
+        let data = self.data.clone();
         Ok(BorrowGuard {
-            data: Some(driver),
             lock,
             descriptor,
+            data,
         })
+    }
+
+    /// 强制获取设备
+    /// #Safety
+    /// 一般用于中断处理中
+    pub unsafe fn force_use(&self) -> *mut T {
+        unsafe { self.data.get() }
     }
 }
 
 pub struct BorrowGuard<T> {
     pub descriptor: Descriptor,
-    data: Option<T>,
-    lock: Arc<Mutex<BorrowInfo<T>>>,
+    lock: Arc<Mutex<Lock>>,
+    data: Arc<UnsafeCell<T>>,
 }
 
 impl<T> Deref for BorrowGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.data.as_ref().unwrap()
+        unsafe { &*self.data.get() }
     }
 }
 
 impl<T> DerefMut for BorrowGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.data.as_mut().unwrap()
+        unsafe { &mut *self.data.get() }
     }
 }
 
 impl<T> Drop for BorrowGuard<T> {
     fn drop(&mut self) {
         let mut g = self.lock.lock();
-        g.data = Some(self.data.take().unwrap());
+        g.who_using = None;
     }
 }

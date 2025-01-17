@@ -1,12 +1,9 @@
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 
-use arm_gic_driver::{GicGeneric, Trigger};
+use arm_gic_driver::GicGeneric;
 use sparreal_kernel::{
-    driver_interface::{
-        DriverGeneric, ProbeFn, RegAddress,
-        interrupt_controller::{self, CpuId, InterruptControllerPerCpu},
-    },
+    driver_interface::{DriverGeneric, ProbeFnKind, RegAddress, interrupt_controller::*},
     mem::iomap,
 };
 use sparreal_macros::module_driver;
@@ -16,7 +13,7 @@ use super::*;
 module_driver!(
     name: "GICv2",
     compatibles: "arm,cortex-a15-gic\n",
-    probe: ProbeFn::InterruptController(probe_gic_v2),
+    probe: ProbeFnKind::InterruptController(probe_gic_v2),
 );
 
 struct GicV2 {
@@ -48,8 +45,8 @@ impl GicV2PerCpu {
     }
 }
 
-impl InterruptControllerPerCpu for GicV2PerCpu {
-    fn get_and_acknowledge_interrupt(&self) -> Option<interrupt_controller::IrqId> {
+impl InterfacePerCPU for GicV2PerCpu {
+    fn get_and_acknowledge_interrupt(&self) -> Option<IrqId> {
         unsafe { &mut *self.0.get() }
             .as_mut()
             .unwrap()
@@ -57,37 +54,33 @@ impl InterruptControllerPerCpu for GicV2PerCpu {
             .map(|id| (id.to_u32() as usize).into())
     }
 
-    fn end_interrupt(&self, irq: interrupt_controller::IrqId) {
+    fn end_interrupt(&self, irq: IrqId) {
         self.get_mut().end_interrupt(convert_id(irq));
     }
 
-    fn irq_enable(&self, irq: interrupt_controller::IrqId) {
+    fn irq_enable(&self, irq: IrqId) {
         self.get_mut().irq_enable(convert_id(irq));
     }
 
-    fn irq_disable(&self, irq: interrupt_controller::IrqId) {
+    fn irq_disable(&self, irq: IrqId) {
         self.get_mut().irq_disable(convert_id(irq));
     }
 
-    fn set_priority(&self, irq: interrupt_controller::IrqId, priority: usize) {
+    fn set_priority(&self, irq: IrqId, priority: usize) {
         self.get_mut().set_priority(convert_id(irq), priority);
     }
 
-    fn set_trigger(
-        &self,
-        irq: interrupt_controller::IrqId,
-        trigger: interrupt_controller::Trigger,
-    ) {
+    fn set_trigger(&self, irq: IrqId, trigger: Trigger) {
         self.get_mut().set_trigger(convert_id(irq), match trigger {
-            interrupt_controller::Trigger::EdgeBoth => Trigger::Edge,
-            interrupt_controller::Trigger::EdgeRising => Trigger::Edge,
-            interrupt_controller::Trigger::EdgeFailling => Trigger::Edge,
-            interrupt_controller::Trigger::LevelHigh => Trigger::Level,
-            interrupt_controller::Trigger::LevelLow => Trigger::Level,
+            Trigger::EdgeBoth => arm_gic_driver::Trigger::Edge,
+            Trigger::EdgeRising => arm_gic_driver::Trigger::Edge,
+            Trigger::EdgeFailling => arm_gic_driver::Trigger::Edge,
+            Trigger::LevelHigh => arm_gic_driver::Trigger::Level,
+            Trigger::LevelLow => arm_gic_driver::Trigger::Level,
         });
     }
 
-    fn set_bind_cpu(&self, irq: interrupt_controller::IrqId, cpu_list: &[CpuId]) {
+    fn set_bind_cpu(&self, irq: IrqId, cpu_list: &[CpuId]) {
         let id_list = cpu_list
             .iter()
             .map(|v| arm_gic_driver::MPID::from(Into::<usize>::into(*v)))
@@ -114,10 +107,14 @@ impl DriverGeneric for GicV2 {
 
         Ok(())
     }
+
+    fn close(&mut self) -> Result<(), alloc::string::String> {
+        Ok(())
+    }
 }
 
-impl interrupt_controller::InterruptController for GicV2 {
-    fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterruptControllerPerCpu> {
+impl Interface for GicV2 {
+    fn current_cpu_setup(&self) -> Box<dyn InterfacePerCPU> {
         unsafe { &mut *self.gic.get() }
             .as_mut()
             .unwrap()
@@ -126,7 +123,7 @@ impl interrupt_controller::InterruptController for GicV2 {
     }
 }
 
-fn probe_gic_v2(regs: Vec<RegAddress>) -> interrupt_controller::Driver {
+fn probe_gic_v2(regs: Vec<RegAddress>) -> Driver {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));
