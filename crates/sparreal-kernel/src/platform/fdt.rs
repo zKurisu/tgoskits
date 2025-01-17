@@ -139,7 +139,7 @@ impl GetIrqConfig for Node<'_> {
 
         if let Some(irqs) = self.interrupts() {
             for irq in irqs {
-                let raw = irq.map(|o| o as usize).collect::<Vec<_>>();
+                let raw = irq.collect::<Vec<_>>();
                 match crate::irq::fdt_parse_config(irq_chip_id, &raw) {
                     Ok(cfg) => out.push(IrqInfo { irq_chip_id, cfg }),
                     Err(e) => error!("{:?}", e),

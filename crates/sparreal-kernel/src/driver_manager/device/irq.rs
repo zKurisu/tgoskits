@@ -1,11 +1,6 @@
 use core::ptr::NonNull;
 
-use alloc::{
-    collections::btree_map::BTreeMap,
-    format,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{collections::btree_map::BTreeMap, format, string::String, vec::Vec};
 pub use driver_interface::interrupt_controller::Driver;
 use driver_interface::{DriverRegister, IrqConfig, ProbeFn, RegAddress};
 use fdt_parser::Fdt;

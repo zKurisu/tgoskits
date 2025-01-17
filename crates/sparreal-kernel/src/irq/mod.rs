@@ -70,7 +70,7 @@ fn chip(id: DriverId) -> &'static Chip {
 
 pub fn fdt_parse_config(
     irq_parent: DriverId,
-    prop_interrupts: &[usize],
+    prop_interrupts: &[u32],
 ) -> Result<IrqConfig, Box<dyn Error>> {
     chip(irq_parent).device.parse_fdt_config(prop_interrupts)
 }

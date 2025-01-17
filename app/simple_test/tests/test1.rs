@@ -29,12 +29,6 @@ mod tests {
             }
         }
 
-        bare_test::time::enable();
-
-        loop {
-            spin_loop();
-        }
-
         assert_eq!(2 + 2, 4)
     }
 }

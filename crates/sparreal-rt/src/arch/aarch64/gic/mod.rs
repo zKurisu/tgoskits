@@ -31,11 +31,11 @@ bitflags! {
     }
 }
 
-fn fdt_parse_irq_config(itr: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
-    const SPI: usize = 0;
-    const PPI: usize = 1;
+fn fdt_parse_irq_config(itr: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
+    const SPI: u32 = 0;
+    const PPI: u32 = 1;
 
-    let num = itr[1] as u32;
+    let num = itr[1];
 
     let irq_id: u32 = match itr[0] {
         SPI => IntId::spi(num),
@@ -44,7 +44,7 @@ fn fdt_parse_irq_config(itr: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
     }
     .into();
 
-    let flag = TriggerFlag::from_bits_truncate(itr[2]);
+    let flag = TriggerFlag::from_bits_truncate(itr[2] as _);
 
     let trigger = if flag.contains(TriggerFlag::EDGE_BOTH) {
         Trigger::EdgeBoth

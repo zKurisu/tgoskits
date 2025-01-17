@@ -97,11 +97,9 @@ impl InterruptControllerPerCpu for GicV2PerCpu {
         self.get_mut().set_bind_cpu(convert_id(irq), &id_list);
     }
 
-    fn parse_fdt_config(&self, prop_interupt: &[usize]) -> Result<IrqConfig, Box<dyn Error>> {
+    fn parse_fdt_config(&self, prop_interupt: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         fdt_parse_irq_config(prop_interupt)
     }
-
-
 }
 
 impl DriverGeneric for GicV2 {
