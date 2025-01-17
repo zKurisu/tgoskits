@@ -14,6 +14,7 @@ pub use register::*;
 pub(crate) mod err;
 pub use err::DriverError;
 pub use err::DriverResult;
+pub use interrupt_controller::IrqConfig;
 
 pub trait DriverGeneric: Send {
     fn name(&self) -> String;
@@ -26,3 +27,4 @@ pub struct RegAddress {
     pub addr: usize,
     pub size: Option<usize>,
 }
+

@@ -178,11 +178,10 @@ pub fn module_driver(input: TokenStream) -> TokenStream {
             }
         }
     }
-    // println!("i: {:?}", name);
 
-    let static_name = format_ident!("DRIVER_{}", name.unwrap_or_default().to_uppercase());
+    let st_name = name.unwrap_or_default().replace("-", "_").replace(" ", "_");
 
-    // println!("static name: {}", static_name);
+    let static_name = format_ident!("DRIVER_{}", st_name.to_uppercase());
 
     quote! {
         #[unsafe(link_section = ".driver.register")]
@@ -194,18 +193,3 @@ pub fn module_driver(input: TokenStream) -> TokenStream {
     }
     .into()
 }
-
-// module_driver!{
-//     name: "abc",
-//     compatibles: "abc\n",
-//     probe: ProbeFn::InterruptController(probe_gic_v2)
-// }
-
-// #[unsafe(link_section = ".registers")]
-// #[unsafe(no_mangle)]
-// #[used(linker)]
-// pub static DRIVER_GIC_V2: DriverRegister = DriverRegister {
-//     name: "GICv2",
-//     compatibles: "arm,cortex-a15-gic\n",
-//     probe: ProbeFn::InterruptController(probe_gic_v2),
-// };

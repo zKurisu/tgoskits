@@ -121,32 +121,26 @@ impl Fdt {
 }
 
 pub trait GetIrqConfig {
-    fn irq_info(&self) -> Vec<IrqInfo>;
+    fn irq_info(&self) -> Option<IrqInfo>;
 }
 
 impl GetIrqConfig for Node<'_> {
-    fn irq_info(&self) -> Vec<IrqInfo> {
-        let mut out = Vec::new();
-        let irq_chip_node = match self.interrupt_parent() {
-            Some(irq_chip) => irq_chip,
-            None => return out,
-        };
+    fn irq_info(&self) -> Option<IrqInfo> {
+        let irq_chip_node = self.interrupt_parent()?;
 
-        let irq_chip_id = DriverId::from(match irq_chip_node.node.phandle() {
-            Some(p) => p.as_usize(),
-            None => return out,
-        });
+        let irq_parent = DriverId::from(irq_chip_node.node.phandle()?.as_usize());
 
+        let mut cfgs = Vec::new();
         if let Some(irqs) = self.interrupts() {
             for irq in irqs {
                 let raw = irq.collect::<Vec<_>>();
-                match crate::irq::fdt_parse_config(irq_chip_id, &raw) {
-                    Ok(cfg) => out.push(IrqInfo { irq_chip_id, cfg }),
+                match crate::irq::fdt_parse_config(irq_parent, &raw) {
+                    Ok(cfg) => cfgs.push(cfg),
                     Err(e) => error!("{:?}", e),
                 }
             }
         }
 
-        out
+        Some(IrqInfo { irq_parent, cfgs })
     }
 }

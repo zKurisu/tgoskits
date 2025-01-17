@@ -11,7 +11,7 @@ pub struct Descriptor {
     pub device_id: DeviceId,
     pub driver_id: DriverId,
     pub name: String,
-    pub irqs: Vec<IrqInfo>,
+    pub irq: Option<IrqInfo>,
 }
 
 macro_rules! impl_driver_id_for {

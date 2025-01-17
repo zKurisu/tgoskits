@@ -69,8 +69,8 @@ impl Container {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct IrqInfo {
-    pub irq_chip_id: DriverId,
-    pub cfg: IrqConfig,
+    pub irq_parent: DriverId,
+    pub cfgs: Vec<IrqConfig>,
 }

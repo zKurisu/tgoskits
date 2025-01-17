@@ -73,7 +73,7 @@ pub fn fdt_parse_config(
 }
 
 pub struct IrqRegister {
-    pub info: IrqInfo,
+    pub param: IrqParam,
     pub handler: Box<IrqHandler>,
     pub priority: Option<usize>,
     pub cpu_list: Vec<CpuId>,
@@ -81,10 +81,11 @@ pub struct IrqRegister {
 
 impl IrqRegister {
     pub fn register(self) {
-        let irq = self.info.cfg.irq;
-        debug!("Enable irq {:?} on chip {:?}", irq, self.info.irq_chip_id);
+        let irq = self.param.cfg.irq;
+        let irq_parent = self.param.irq_chip;
+        debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);
 
-        let chip = chip(self.info.irq_chip_id);
+        let chip = chip(irq_parent);
         chip.register_handle(irq, self.handler);
 
         let c = &chip.device;
@@ -98,7 +99,7 @@ impl IrqRegister {
             c.set_bind_cpu(irq, &self.cpu_list);
         }
 
-        c.set_trigger(irq, self.info.cfg.trigger);
+        c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
     }
 }
@@ -157,14 +158,19 @@ pub fn handle_irq() {
     }
 }
 
-pub trait ToIrqRegister {
-    fn builder(&self, handler: impl Fn(IrqId) -> IrqHandleResult + 'static) -> IrqRegister;
+#[derive(Debug, Clone)]
+pub struct IrqParam {
+    pub irq_chip: DriverId,
+    pub cfg: IrqConfig,
 }
 
-impl ToIrqRegister for IrqInfo {
-    fn builder(&self, handler: impl Fn(IrqId) -> IrqHandleResult + 'static) -> IrqRegister {
+impl IrqParam {
+    pub fn register_builder(
+        &self,
+        handler: impl Fn(IrqId) -> IrqHandleResult + 'static,
+    ) -> IrqRegister {
         IrqRegister {
-            info: self.clone(),
+            param: self.clone(),
             handler: Box::new(handler),
             priority: None,
             cpu_list: Vec::new(),

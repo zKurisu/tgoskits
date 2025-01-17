@@ -12,6 +12,7 @@ mod boot;
 mod gic;
 pub(crate) mod mmu;
 mod psci;
+mod timer;
 mod trap;
 
 pub(crate) fn cpu_id() -> usize {
