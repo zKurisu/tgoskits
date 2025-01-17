@@ -5,10 +5,11 @@ use driver_interface::interrupt_controller::*;
 use log::debug;
 use spin::Mutex;
 
+use crate::platform::cpu_id;
 use crate::{
     driver_manager::{self, device::DriverId},
     globals::{self, cpu_global},
-    platform::{self, cpu_id},
+    platform::{self},
     platform_if::PlatformImpl,
 };
 pub use driver_manager::device::irq::IrqInfo;

@@ -1,12 +1,15 @@
-use core::{cell::UnsafeCell, time::Duration};
+use core::time::Duration;
 
 use crate::{
-    driver_manager::{self, device::Device, manager},
+    driver_manager::{
+        self,
+        device::{BorrowGuard, Device},
+        manager,
+    },
     globals::{cpu_global, cpu_global_mut, global_val},
     platform_if::*,
 };
 use driver_interface::timer::*;
-use log::{debug, error};
 
 #[derive(Default)]
 pub(crate) struct Timer {
@@ -34,6 +37,10 @@ pub(crate) fn main_cpu_init() {
 pub(crate) fn init_current_cpu() {
     let timer = manager().timer.get_cpu_timer();
     unsafe { cpu_global_mut().timer.timer = timer };
+}
+
+fn timer_write() -> Option<BorrowGuard<PerCPU>> {
+    Some(cpu_global().timer.timer.as_ref()?.spin_use("Kernel"))
 }
 
 pub fn enable() {

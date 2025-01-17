@@ -3,10 +3,11 @@ use core::ptr::NonNull;
 use alloc::{format, string::String, vec::Vec};
 use driver_interface::{DriverRegister, ProbeFnKind, timer::*};
 use fdt_parser::Fdt;
+use log::debug;
 
 use crate::prelude::GetIrqConfig;
 
-use super::{Descriptor, Device, DeviceId};
+use super::{Descriptor, Device};
 
 pub struct Container {
     data: Option<Device<Driver>>,
@@ -56,6 +57,7 @@ pub fn init_by_fdt(
                 };
 
                 let timer = probe(irq.cfgs.clone());
+                debug!("[{}] ok", timer.name());
                 let dev = Device::new(
                     Descriptor {
                         name: timer.name(),

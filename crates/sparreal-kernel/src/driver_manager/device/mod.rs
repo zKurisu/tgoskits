@@ -66,11 +66,27 @@ impl<T> Device<T> {
         })
     }
 
+    pub fn spin_use(&self, who: impl ToString) -> BorrowGuard<T> {
+        loop {
+            if let Ok(g) = self.try_use_by(who.to_string()) {
+                return g;
+            }
+        }
+    }
+
     /// 强制获取设备
     /// #Safety
     /// 一般用于中断处理中
     pub unsafe fn force_use(&self) -> *mut T {
-        unsafe { self.data.get() }
+        self.data.get()
+    }
+}
+
+impl<T: Sync> Deref for Device<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*self.data.get() }
     }
 }
 
