@@ -1,7 +1,7 @@
 #[macro_export]
 macro_rules! custom_type {
     ($name:ident, $target:ty) => {
-        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
         #[repr(transparent)]
         pub struct $name($target);
 

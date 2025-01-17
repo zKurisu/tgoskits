@@ -4,7 +4,7 @@ use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        self, DriverGeneric, DriverResult, ProbeFn, RegAddress,
+        DriverGeneric, ProbeFn, RegAddress,
         interrupt_controller::{self, CpuId, InterruptControllerPerCpu},
     },
     mem::iomap,

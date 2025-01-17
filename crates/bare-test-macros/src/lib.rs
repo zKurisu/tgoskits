@@ -26,7 +26,7 @@ pub fn tests(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-fn tests_impl(args: TokenStream, input: TokenStream) -> Result<TokenStream, parse::Error> {
+fn tests_impl(_args: TokenStream, input: TokenStream) -> Result<TokenStream, parse::Error> {
     let krate = format_ident!("bare_test");
     let module: ItemMod = syn::parse(input)?;
 

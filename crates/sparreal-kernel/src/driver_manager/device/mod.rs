@@ -27,6 +27,7 @@ impl<T> Debug for Device<T> {
             .field("device_id", &self.descriptor.device_id)
             .field("driver_id", &self.descriptor.driver_id)
             .field("name", &self.descriptor.name)
+            .field("irq_configs", &self.descriptor.irq_configs)
             .finish()
     }
 }

@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use aarch64_cpu::registers::*;
 use sparreal_kernel::{
     globals::global_val, mem::KernelRegions, platform::PlatformInfoKind, platform_if::*, println,
@@ -51,6 +53,17 @@ impl Platform for PlatformImpl {
 
     fn tick_hz() -> u64 {
         CNTFRQ_EL0.get()
+    }
+
+    fn irq_all_enable() {
+        unsafe { asm!("msr daifclr, #2") };
+    }
+    fn irq_all_disable() {
+        unsafe { asm!("msr daifset, #2") };
+    }
+    fn irq_all_is_enabled() -> bool {
+        let c = DAIF.read(DAIF::I);
+        c > 0
     }
 
     fn on_boot_success() {

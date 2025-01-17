@@ -1,6 +1,6 @@
 use core::error::Error;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use arm_gic_driver::IntId;
 use sparreal_kernel::driver_interface::{
     IrqConfig,

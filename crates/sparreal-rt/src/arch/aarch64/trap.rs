@@ -37,7 +37,7 @@ unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_irq() {
     debug!("IRQ!");
-    // sparreal_kernel::irq::handle_irq();
+    sparreal_kernel::irq::handle_irq();
 }
 
 #[unsafe(no_mangle)]

@@ -11,6 +11,11 @@ pub trait Platform {
     fn cpu_id() -> usize;
 
     fn wait_for_interrupt();
+
+    fn irq_all_enable();
+    fn irq_all_disable();
+    fn irq_all_is_enabled() -> bool;
+
     fn on_boot_success() {}
     fn shutdown() -> !;
     fn debug_put(b: u8);
