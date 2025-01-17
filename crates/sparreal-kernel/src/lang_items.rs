@@ -1,9 +1,11 @@
-use core::hint::spin_loop;
 use core::panic::PanicInfo;
 
+use log::error;
+
+use crate::platform::shutdown;
+
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {
-        spin_loop();
-    }
+fn panic(info: &PanicInfo) -> ! {
+    error!("kernel panic: {:?}", info);
+    shutdown()
 }

@@ -7,19 +7,22 @@ use driver_interface::{
 };
 use log::debug;
 
-use crate::{driver_manager, globals, platform};
+use crate::{
+    driver_manager::{self, device::DriverId},
+    globals, platform,
+};
 
 #[derive(Default)]
-pub struct CpuIrqChips(BTreeMap<usize, Box<dyn interrupt_controller::InterruptControllerPerCpu>>);
+pub struct CpuIrqChips(BTreeMap<DriverId, interrupt_controller::PerCPU>);
 
 pub(crate) fn init_current_cpu() {
-    let chip = driver_manager::interrupt_controllers();
+    let chip = driver_manager::use_interrupt_controllers_by("Kernel IRQ init");
     let g = unsafe { globals::cpu_global_mut() };
 
-    for (id, c) in chip {
+    for c in chip {
+        let id = c.descriptor.driver_id;
         let per = c.current_cpu_setup();
-
-        debug!("cpu {:#x} init irq", platform::cpu_id());
+        debug!("cpu {:#x} init irq {id:?}", platform::cpu_id());
         g.irq_chips.0.insert(id, per);
     }
 }
@@ -31,16 +34,16 @@ pub enum IrqHandle {
 
 #[derive(Clone)]
 pub struct IrqInfo {
-    pub irq_chip_id: usize,
+    pub irq_chip_id: DriverId,
     pub cfg: IrqConfig,
 }
 
-fn chip(id: usize) -> &'static Box<dyn InterruptControllerPerCpu> {
+fn chip(id: DriverId) -> &'static Box<dyn InterruptControllerPerCpu> {
     globals::cpu_global()
         .irq_chips
         .0
         .get(&id)
-        .expect(format!("irq chip {:#x} not found", id).as_str())
+        .expect(format!("irq chip {:?} not found", id).as_str())
 }
 
 pub struct IrqRegister {
@@ -64,7 +67,7 @@ impl IrqRegister {
     pub fn register(self) -> IrqHandleId {
         let c = chip(self.info.irq_chip_id);
         let irq = self.info.cfg.irq;
-        debug!("Enable irq {:?} on chip {:#x}", irq, self.info.irq_chip_id);
+        debug!("Enable irq {:?} on chip {:?}", irq, self.info.irq_chip_id);
         let id = IrqHandleId::new();
         if let Some(p) = self.priority {
             c.set_priority(irq, p);

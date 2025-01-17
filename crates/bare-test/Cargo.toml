@@ -11,6 +11,7 @@ categories = ["development-tools", "development-tools::testing"]
 
 [features]
 default = ["rt"]
+# 使用 `sparreal-rt` 作为运行时
 rt = ["dep:sparreal-rt"]
 
 [dependencies]

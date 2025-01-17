@@ -10,7 +10,6 @@ use core::ptr::slice_from_raw_parts;
 
 pub use bare_test_macros::tests;
 pub use sparreal_kernel::prelude::*;
-use sparreal_kernel::println;
 
 mod test_case;
 

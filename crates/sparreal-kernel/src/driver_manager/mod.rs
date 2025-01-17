@@ -1,21 +1,32 @@
-use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
+use alloc::{
+    collections::BTreeMap,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use core::ptr::NonNull;
-use driver::BorrowGuard;
+use device::{BorrowGuard, Descriptor, Device, DriverId};
 use log::info;
 
-use driver_interface::RegAddress;
 pub use driver_interface::{DriverRegister, ProbeFn};
+use driver_interface::{RegAddress, interrupt_controller};
 use fdt_parser::Fdt;
 use spin::Mutex;
 
-pub mod driver;
+#[macro_use]
+mod id;
+
+pub mod device;
+mod err;
+
+pub use err::*;
 
 static MANAGER: Mutex<Option<DeviceManager>> = Mutex::new(None);
 
 #[derive(Default)]
 struct DeviceManager {
     registers: Vec<DriverRegister>,
-    irq_chip: BTreeMap<usize, driver::interrupt_controller::Device>,
+    irq_chip: BTreeMap<DriverId, Device<interrupt_controller::Driver>>,
 }
 
 pub fn init() {
@@ -35,28 +46,25 @@ fn registers() -> Vec<DriverRegister> {
     MANAGER.lock().as_ref().unwrap().registers.clone()
 }
 
-fn set_interrupt_controller(dev: driver::interrupt_controller::Device) {
+fn set_interrupt_controller(dev: Device<interrupt_controller::Driver>) {
     MANAGER
         .lock()
         .as_mut()
         .unwrap()
         .irq_chip
-        .insert(dev.id as _, dev);
+        .insert(dev.descriptor.driver_id, dev);
 }
 
-pub fn interrupt_controllers() -> Vec<(
-    usize,
-    BorrowGuard<driver_interface::interrupt_controller::BoxedDriver>,
-)> {
+pub fn use_interrupt_controllers_by(who: &str) -> Vec<BorrowGuard<interrupt_controller::Driver>> {
     MANAGER
         .lock()
         .as_mut()
         .unwrap()
         .irq_chip
-        .iter()
-        .map(|v| (v.0, v.1.driver.get()))
-        .filter_map(|(id, d)| match d {
-            Ok(v) => Some((*id, v)),
+        .values()
+        .map(|v| v.try_use_by(who))
+        .filter_map(|d| match d {
+            Ok(v) => Some(v),
             Err(_) => None,
         })
         .collect()
@@ -85,13 +93,16 @@ pub fn init_interrupt_controller_by_fdt(fdt_addr: NonNull<u8>) -> Result<(), Str
 
                 irq.open()?;
 
-                let mut dev: driver::interrupt_controller::Device = irq.into();
-                dev.id = node.phandle().unwrap().as_usize() as _;
-
-                info!(
-                    "Driver add interrupt controller [{:#x}] [{}].",
-                    dev.id, r.name
+                let mut dev = Device::new(
+                    Descriptor {
+                        driver_id: node.phandle().unwrap().as_usize().into(),
+                        name: node.name.to_string(),
+                        ..Default::default()
+                    },
+                    irq,
                 );
+
+                info!("Driver add interrupt controller {:?}", dev);
                 set_interrupt_controller(dev);
             }
         }

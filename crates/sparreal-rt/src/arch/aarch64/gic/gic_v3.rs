@@ -125,7 +125,7 @@ impl interrupt_controller::InterruptController for Gic {
     }
 }
 
-fn probe_gic(regs: Vec<RegAddress>) -> interrupt_controller::BoxedDriver {
+fn probe_gic(regs: Vec<RegAddress>) -> interrupt_controller::Driver {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));
