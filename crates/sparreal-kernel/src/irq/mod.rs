@@ -1,10 +1,7 @@
 use core::{cell::UnsafeCell, error::Error};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
-use driver_interface::{
-    IrqConfig,
-    interrupt_controller::{self, CpuId, IrqId},
-};
+use driver_interface::interrupt_controller::*;
 use log::debug;
 use spin::Mutex;
 
@@ -22,7 +19,7 @@ pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
 pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
 pub struct Chip {
-    device: interrupt_controller::PerCPU,
+    device: PerCPU,
     mutex: Mutex<()>,
     handlers: UnsafeCell<BTreeMap<IrqId, Box<IrqHandler>>>,
 }

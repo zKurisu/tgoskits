@@ -2,7 +2,7 @@ use core::ptr::NonNull;
 
 use alloc::{collections::btree_map::BTreeMap, format, string::String, vec::Vec};
 pub use driver_interface::interrupt_controller::Driver;
-use driver_interface::{DriverRegister, IrqConfig, ProbeFn, RegAddress};
+use driver_interface::{DriverRegister, ProbeFn, RegAddress, interrupt_controller::IrqConfig};
 use fdt_parser::Fdt;
 
 use super::{super::device::Descriptor, Device, DriverId};

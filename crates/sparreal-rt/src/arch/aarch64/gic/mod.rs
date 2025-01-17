@@ -2,10 +2,7 @@ use core::error::Error;
 
 use alloc::boxed::Box;
 use arm_gic_driver::IntId;
-use sparreal_kernel::driver_interface::{
-    IrqConfig,
-    interrupt_controller::{self, Trigger},
-};
+use sparreal_kernel::driver_interface::interrupt_controller::{self, IrqConfig, Trigger};
 
 mod gic_v2;
 mod gic_v3;
