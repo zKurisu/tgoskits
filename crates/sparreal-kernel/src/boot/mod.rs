@@ -93,7 +93,7 @@ fn print_start_msg() {
         VirtAddr::from(global_val().kstack_top)
     );
 
-    print_pair!("Start CPU", "{:#x}", platform::cpu_id());
+    print_pair!("Start CPU", "{:?}", platform::cpu_id());
 
     if let Some(debug) = global_val().platform_info.debugcon() {
         if let Some(c) = debug.compatibles().next() {

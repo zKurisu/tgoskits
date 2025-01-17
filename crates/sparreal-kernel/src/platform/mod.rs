@@ -4,6 +4,7 @@ use core::ffi::CStr;
 use core::ops::Range;
 use core::ptr::NonNull;
 use driver_interface::DriverRegister;
+use driver_interface::interrupt_controller::CpuId;
 
 use crate::globals::global_val;
 use crate::mem::PhysAddr;
@@ -90,8 +91,8 @@ pub fn cpu_list() -> Vec<CPUInfo> {
     }
 }
 
-pub fn cpu_id() -> usize {
-    PlatformImpl::cpu_id()
+pub fn cpu_id() -> CpuId {
+    PlatformImpl::cpu_id().into()
 }
 
 pub fn platform_name() -> String {
@@ -121,7 +122,7 @@ pub fn app_main() {
 
 #[derive(Debug)]
 pub struct CPUInfo {
-    pub cpu_id: usize,
+    pub cpu_id: CpuId,
 }
 
 #[derive(Debug, Clone, Copy)]

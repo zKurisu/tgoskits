@@ -39,7 +39,7 @@ pub fn init_by_fdt(
                 let dev = Device::new(
                     Descriptor {
                         driver_id: node.phandle().unwrap().as_usize().into(),
-                        name: node.name.to_string(),
+                        name: irq.name(),
                         ..Default::default()
                     },
                     irq,

@@ -17,7 +17,7 @@ mod tests {
             PlatformInfoKind::DeviceTree(fdt) => fdt.get(),
         };
 
-        for node in fdt.all_nodes() {
+        for node in fdt.find_nodes("/timer") {
             for irq_info in node.irq_info() {
                 irq_info
                     .builder(|irq| {
@@ -27,6 +27,12 @@ mod tests {
                     })
                     .register();
             }
+        }
+
+        bare_test::time::enable();
+
+        loop {
+            spin_loop();
         }
 
         assert_eq!(2 + 2, 4)

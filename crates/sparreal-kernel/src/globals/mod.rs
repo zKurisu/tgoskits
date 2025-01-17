@@ -1,6 +1,7 @@
 use core::{cell::UnsafeCell, ops::Range};
 
 use alloc::collections::btree_map::BTreeMap;
+use driver_interface::interrupt_controller::CpuId;
 use percpu::PerCPU;
 
 pub use crate::platform::PlatformInfoKind;
@@ -15,7 +16,7 @@ pub struct GlobalVal {
     pub platform_info: PlatformInfoKind,
     pub kstack_top: PhysAddr,
     pub main_memory: Range<PhysAddr>,
-    percpu: BTreeMap<usize, percpu::PerCPU>,
+    percpu: BTreeMap<CpuId, percpu::PerCPU>,
 }
 
 struct LazyGlobal(UnsafeCell<Option<GlobalVal>>);

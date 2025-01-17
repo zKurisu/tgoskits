@@ -3,7 +3,7 @@ use core::{cell::UnsafeCell, error::Error};
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
 use driver_interface::{
     IrqConfig,
-    interrupt_controller::{self, IrqId},
+    interrupt_controller::{self, CpuId, IrqId},
 };
 use log::debug;
 use spin::Mutex;
@@ -11,7 +11,7 @@ use spin::Mutex;
 use crate::{
     driver_manager::{self, device::DriverId},
     globals::{self, cpu_global},
-    platform,
+    platform::{self, cpu_id},
     platform_if::PlatformImpl,
 };
 pub use driver_manager::device::irq::IrqInfo;
@@ -41,7 +41,11 @@ pub(crate) fn init_current_cpu() {
     for c in chip {
         let id = c.descriptor.driver_id;
         let device = c.current_cpu_setup();
-        debug!("cpu {:#x} init irq {id:?}", platform::cpu_id());
+        debug!(
+            "[{}]({id:?}) Init cpu: {:?}",
+            c.descriptor.name,
+            platform::cpu_id(),
+        );
 
         g.irq_chips.0.insert(id, Chip {
             device,
@@ -75,7 +79,7 @@ pub struct IrqRegister {
     pub info: IrqInfo,
     pub handler: Box<IrqHandler>,
     pub priority: Option<usize>,
-    pub cpu_list: Vec<usize>,
+    pub cpu_list: Vec<CpuId>,
 }
 
 impl IrqRegister {
@@ -94,7 +98,7 @@ impl IrqRegister {
         }
 
         if !self.cpu_list.is_empty() {
-            // c.set_bind_cpu(irq, &self.cpu_list);
+            c.set_bind_cpu(irq, &self.cpu_list);
         }
 
         c.set_trigger(irq, self.info.cfg.trigger);
