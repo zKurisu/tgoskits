@@ -64,7 +64,7 @@ impl DriverGeneric for ArmV8Timer {
     }
 }
 
-fn probe_timer(irqs: Vec<IrqConfig>) -> Driver {
+fn probe_timer(irqs: Vec<IrqConfig>) -> Hardware {
     Box::new(ArmV8Timer {
         irq: irqs[1].clone(),
     })

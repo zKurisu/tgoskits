@@ -6,9 +6,9 @@ use alloc::{boxed::Box, vec::Vec};
 custom_type!(IrqId, usize, "{:#x}");
 custom_type!(CpuId, usize, "{:#x}");
 
-pub type Driver = Box<dyn Interface>;
-pub type ProbeFn = fn(regs: Vec<RegAddress>) -> Driver;
-pub type DriverCPU = Box<dyn InterfaceCPU>;
+pub type Hardware = Box<dyn Interface>;
+pub type ProbeFn = fn(regs: Vec<RegAddress>) -> Hardware;
+pub type HardwareCPU = Box<dyn InterfaceCPU>;
 
 pub trait InterfaceCPU: Send {
     fn get_and_acknowledge_interrupt(&self) -> Option<IrqId>;
@@ -22,7 +22,7 @@ pub trait InterfaceCPU: Send {
 }
 
 pub trait Interface: DriverGeneric {
-    fn current_cpu_setup(&self) -> DriverCPU;
+    fn current_cpu_setup(&self) -> HardwareCPU;
 }
 
 /// The trigger configuration for an interrupt.

@@ -120,7 +120,7 @@ impl Interface for GicV2 {
     }
 }
 
-fn probe_gic_v2(regs: Vec<RegAddress>) -> Driver {
+fn probe_gic_v2(regs: Vec<RegAddress>) -> Hardware {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));

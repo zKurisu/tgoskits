@@ -14,7 +14,7 @@ use crate::prelude::GetIrqConfig;
 use super::{Descriptor, Device};
 
 pub struct Container {
-    data: Option<Device<Driver>>,
+    data: Option<Device<Hardware>>,
 }
 
 impl Container {
@@ -22,7 +22,7 @@ impl Container {
         Self { data: None }
     }
 
-    pub fn set(&mut self, device: Device<Driver>) {
+    pub fn set(&mut self, device: Device<Hardware>) {
         self.data = Some(device);
     }
 
@@ -45,7 +45,7 @@ impl Container {
 pub fn init_by_fdt(
     registers: &[DriverRegister],
     fdt_addr: NonNull<u8>,
-) -> Result<Device<Driver>, String> {
+) -> Result<Device<Hardware>, String> {
     let fdt = Fdt::from_ptr(fdt_addr).map_err(|e| format!("{e:?}"))?;
     for r in registers {
         if let ProbeFnKind::Timer(probe) = r.probe {

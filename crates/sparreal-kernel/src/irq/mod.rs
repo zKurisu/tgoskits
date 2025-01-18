@@ -19,7 +19,7 @@ pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
 pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
 pub struct Chip {
-    device: DriverCPU,
+    device: HardwareCPU,
     mutex: Mutex<()>,
     handlers: UnsafeCell<BTreeMap<IrqId, Box<IrqHandler>>>,
 }

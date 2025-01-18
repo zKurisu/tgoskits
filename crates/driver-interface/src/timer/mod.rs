@@ -5,9 +5,9 @@ use alloc::{boxed::Box, vec::Vec};
 
 mod queue;
 
-pub type Driver = Box<dyn Interface>;
-pub type ProbeFn = fn(Vec<IrqConfig>) -> Driver;
-pub type DriverCPU = Box<dyn InterfaceCPU>;
+pub type Hardware = Box<dyn Interface>;
+pub type ProbeFn = fn(Vec<IrqConfig>) -> Hardware;
+pub type HardwareCPU = Box<dyn InterfaceCPU>;
 const NANO_PER_SEC: u128 = 1_000_000_000;
 
 pub trait Interface: Send {
@@ -24,14 +24,14 @@ pub trait InterfaceCPU: DriverGeneric + Sync {
 }
 
 pub struct Timer {
-    timer: DriverCPU,
+    timer: HardwareCPU,
     q: queue::Queue,
 }
 
 unsafe impl Sync for Timer {}
 
 impl Timer {
-    pub fn new(timer: DriverCPU) -> Self {
+    pub fn new(timer: HardwareCPU) -> Self {
         Self {
             timer,
             q: queue::Queue::new(),

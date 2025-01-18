@@ -61,7 +61,7 @@ fn registers() -> Vec<DriverRegister> {
     manager().registers.clone()
 }
 
-pub fn use_irq_chips_by(who: &str) -> Vec<BorrowGuard<interrupt_controller::Driver>> {
+pub fn use_irq_chips_by(who: &str) -> Vec<BorrowGuard<interrupt_controller::Hardware>> {
     manager()
         .irq_chip
         .list()
