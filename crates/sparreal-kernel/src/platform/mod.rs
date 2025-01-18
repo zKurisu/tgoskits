@@ -173,5 +173,5 @@ impl SerialPort {
 }
 
 pub fn module_registers() -> Vec<DriverRegister> {
-    PlatformImpl::driver_registers().iter().collect()
+    PlatformImpl::driver_registers().as_slice().to_vec()
 }

@@ -8,9 +8,9 @@ custom_type!(CpuId, usize, "{:#x}");
 
 pub type Driver = Box<dyn Interface>;
 pub type ProbeFn = fn(regs: Vec<RegAddress>) -> Driver;
-pub type PerCPU = Box<dyn InterfacePerCPU>;
+pub type DriverCPU = Box<dyn InterfaceCPU>;
 
-pub trait InterfacePerCPU: Send {
+pub trait InterfaceCPU: Send {
     fn get_and_acknowledge_interrupt(&self) -> Option<IrqId>;
     fn end_interrupt(&self, irq: IrqId);
     fn irq_enable(&self, irq: IrqId);
@@ -22,7 +22,7 @@ pub trait InterfacePerCPU: Send {
 }
 
 pub trait Interface: DriverGeneric {
-    fn current_cpu_setup(&self) -> PerCPU;
+    fn current_cpu_setup(&self) -> DriverCPU;
 }
 
 /// The trigger configuration for an interrupt.

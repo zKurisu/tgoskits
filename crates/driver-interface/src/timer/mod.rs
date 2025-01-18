@@ -1,21 +1,21 @@
 use core::time::Duration;
 
 use crate::{interrupt_controller::IrqConfig, DriverGeneric};
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, vec::Vec};
 
 mod queue;
 
 pub type Driver = Box<dyn Interface>;
 pub type ProbeFn = fn(Vec<IrqConfig>) -> Driver;
-pub type PerCPU = Box<dyn InterfacePerCPU>;
+pub type DriverCPU = Box<dyn InterfaceCPU>;
+const NANO_PER_SEC: u128 = 1_000_000_000;
 
 pub trait Interface: Send {
-    fn get_current_cpu(&mut self) -> Box<dyn InterfacePerCPU>;
-    fn name(&self) -> String;
+    fn get_current_cpu(&mut self) -> Box<dyn InterfaceCPU>;
 }
 
-pub trait InterfacePerCPU: DriverGeneric + Sync {
-    fn set_interval(&mut self, ticks: u64);
+pub trait InterfaceCPU: DriverGeneric + Sync {
+    fn set_timeval(&mut self, ticks: u64);
     fn current_ticks(&self) -> u64;
     fn tick_hz(&self) -> u64;
     fn set_irq_enable(&mut self, enable: bool);
@@ -24,12 +24,14 @@ pub trait InterfacePerCPU: DriverGeneric + Sync {
 }
 
 pub struct Timer {
-    timer: PerCPU,
+    timer: DriverCPU,
     q: queue::Queue,
 }
 
+unsafe impl Sync for Timer {}
+
 impl Timer {
-    pub fn new(timer: PerCPU) -> Self {
+    pub fn new(timer: DriverCPU) -> Self {
         Self {
             timer,
             q: queue::Queue::new(),
@@ -37,7 +39,11 @@ impl Timer {
     }
 
     pub fn enable(&mut self) {
-       let _= self.timer.open();
+        let _ = self.timer.open();
+    }
+
+    pub fn since_boot(&self) -> Duration {
+        self.tick_to_duration(self.timer.current_ticks())
     }
 
     pub fn after(&mut self, duration: Duration, callback: impl Fn() + 'static) {
@@ -71,7 +77,7 @@ impl Timer {
 
         let next_tick = self.q.add_and_next_tick(event);
 
-        self.timer.set_interval(next_tick);
+        self.timer.set_timeval(next_tick);
 
         self.timer.set_irq_enable(true);
     }
@@ -83,7 +89,7 @@ impl Timer {
 
         match self.q.next_tick() {
             Some(next_tick) => {
-                self.timer.set_interval(next_tick);
+                self.timer.set_timeval(next_tick);
             }
             None => {
                 self.timer.set_irq_enable(false);
@@ -96,11 +102,11 @@ impl Timer {
     }
 
     fn tick_to_duration(&self, tick: u64) -> Duration {
-        Duration::from_nanos((tick as u128 * 1_000_000_000 / self.timer.tick_hz() as u128) as _)
+        Duration::from_nanos((tick as u128 * NANO_PER_SEC / self.timer.tick_hz() as u128) as _)
     }
 
     fn duration_to_tick(&self, duration: Duration) -> u64 {
-        (duration.as_nanos() * self.timer.tick_hz() as u128 / 1_000_000_000) as _
+        (duration.as_nanos() * self.timer.tick_hz() as u128 / NANO_PER_SEC) as _
     }
 
     pub fn irq(&self) -> IrqConfig {

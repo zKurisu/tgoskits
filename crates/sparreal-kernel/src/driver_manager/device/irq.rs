@@ -1,6 +1,11 @@
 use core::ptr::NonNull;
 
-use alloc::{collections::btree_map::BTreeMap, format, string::String, vec::Vec};
+use alloc::{
+    collections::btree_map::BTreeMap,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 pub use driver_interface::interrupt_controller::Driver;
 use driver_interface::{DriverRegister, ProbeFnKind, RegAddress, interrupt_controller::IrqConfig};
 use fdt_parser::Fdt;
@@ -17,8 +22,8 @@ pub fn init_by_fdt(
         if let ProbeFnKind::InterruptController(probe) = r.probe {
             let compa = r
                 .compatibles
-                .split("\n")
-                .filter_map(|e| if e.is_empty() { None } else { Some(e) })
+                .iter()
+                .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
                 .collect::<Vec<_>>();
             for node in fdt.find_compatible(&compa) {
                 let reg = node
@@ -34,7 +39,7 @@ pub fn init_by_fdt(
                 let dev = Device::new(
                     Descriptor {
                         driver_id: node.phandle().unwrap().as_usize().into(),
-                        name: irq.name(),
+                        name: r.name.to_string(),
                         ..Default::default()
                     },
                     irq,

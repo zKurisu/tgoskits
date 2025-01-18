@@ -2,13 +2,12 @@ use core::{cell::UnsafeCell, error::Error};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
 use driver_interface::interrupt_controller::*;
-use log::debug;
+use log::{debug, error};
 use spin::Mutex;
 
-use crate::platform::cpu_id;
 use crate::{
     driver_manager::{self, device::DriverId},
-    globals::{self, cpu_global},
+    globals::{self, cpu_global, global_val},
     platform::{self},
     platform_if::PlatformImpl,
 };
@@ -20,7 +19,7 @@ pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
 pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
 pub struct Chip {
-    device: PerCPU,
+    device: DriverCPU,
     mutex: Mutex<()>,
     handlers: UnsafeCell<BTreeMap<IrqId, Box<IrqHandler>>>,
 }
@@ -30,6 +29,18 @@ unsafe impl Sync for Chip {}
 
 pub fn enable_all() {
     PlatformImpl::irq_all_enable();
+}
+
+pub(crate) fn init_main_cpu() {
+    match &global_val().platform_info {
+        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
+            if let Err(e) = driver_manager::init_irq_chips_by_fdt(fdt.get_addr()) {
+                error!("{}", e);
+            }
+        }
+    }
+
+    init_current_cpu();
 }
 
 pub(crate) fn init_current_cpu() {
@@ -152,6 +163,12 @@ impl NoIrqGuard {
         let is_enabled = PlatformImpl::irq_all_is_enabled();
         PlatformImpl::irq_all_disable();
         Self { is_enabled }
+    }
+}
+
+impl Default for NoIrqGuard {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

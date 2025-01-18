@@ -6,10 +6,10 @@ use crate::{
         device::{BorrowGuard, Device},
         manager,
     },
-    globals::{cpu_global, cpu_global_mut, global_val},
+    globals::{cpu_global, cpu_global_meybeuninit, cpu_global_mut, global_val},
     irq::{IrqHandleResult, IrqParam},
-    platform_if::*,
 };
+
 use driver_interface::{interrupt_controller::IrqId, timer::*};
 use log::error;
 
@@ -19,19 +19,14 @@ pub(crate) struct TimerData {
 }
 
 pub fn since_boot() -> Duration {
-    let tick = PlatformImpl::current_ticks();
-    tick_to_duration(tick)
+    _since_boot().unwrap_or_default()
 }
 
-fn tick_to_duration(tick: u64) -> Duration {
-    Duration::from_nanos((tick as u128 * 1_000_000_000 / PlatformImpl::tick_hz() as u128) as _)
+fn _since_boot() -> Option<Duration> {
+    Some(cpu_global_meybeuninit()?.timer.timer.as_ref()?.since_boot())
 }
 
-fn duration_to_tick(duration: Duration) -> u64 {
-    (duration.as_nanos() * PlatformImpl::tick_hz() as u128 / 1_000_000_000) as _
-}
-
-pub(crate) fn main_cpu_init() {
+pub(crate) fn init_main_cpu() {
     match &global_val().platform_info {
         crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
             if let Err(e) = driver_manager::init_timer_by_fdt(fdt.get_addr()) {
@@ -65,7 +60,7 @@ pub(crate) fn init_current_cpu() -> Option<()> {
 }
 
 fn timer_write() -> Option<BorrowGuard<Timer>> {
-    Some(timer_data().timer.as_ref()?.spin_use("Kernel"))
+    Some(timer_data().timer.as_ref()?.spin_try_use("Kernel"))
 }
 fn irq_handle(_irq: IrqId) -> IrqHandleResult {
     let t = unsafe { &mut *timer_data().timer.as_ref().unwrap().force_use() };
@@ -74,7 +69,7 @@ fn irq_handle(_irq: IrqId) -> IrqHandleResult {
 }
 
 fn timer_data() -> &'static TimerData {
-    unsafe { &cpu_global().timer }
+    &cpu_global().timer
 }
 
 pub fn after(duration: Duration, call: impl Fn() + 'static) {

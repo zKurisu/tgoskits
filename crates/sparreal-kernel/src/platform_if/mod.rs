@@ -19,11 +19,6 @@ pub trait Platform {
     fn on_boot_success() {}
     fn shutdown() -> !;
     fn debug_put(b: u8);
-    fn current_ticks() -> u64;
-    fn tick_hz() -> u64;
-    fn timer_set_interval(ticks: u64);
-    fn timer_set_irq(enable: bool);
-    fn timer_set_enable(enable: bool);
 
     fn driver_registers() -> DriverRegisterListRef;
 }

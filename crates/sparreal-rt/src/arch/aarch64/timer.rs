@@ -1,6 +1,5 @@
 use aarch64_cpu::registers::*;
-use alloc::{boxed::Box, string::ToString, vec::Vec};
-use log::debug;
+use alloc::{boxed::Box, vec::Vec};
 use sparreal_kernel::driver_interface::{
     DriverGeneric, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
 };
@@ -8,7 +7,7 @@ use sparreal_macros::module_driver;
 
 module_driver!(
     name: "ARMv8 Timer",
-    compatibles: "arm,armv8-timer\n",
+    compatibles: &["arm,armv8-timer"],
     probe: ProbeFnKind::Timer(probe_timer),
 );
 
@@ -18,18 +17,13 @@ struct ArmV8Timer {
 }
 
 impl Interface for ArmV8Timer {
-    fn get_current_cpu(&mut self) -> Box<dyn InterfacePerCPU> {
+    fn get_current_cpu(&mut self) -> Box<dyn InterfaceCPU> {
         Box::new(self.clone())
-    }
-
-    fn name(&self) -> alloc::string::String {
-        "ARMv8 Timer".to_string()
     }
 }
 
-impl InterfacePerCPU for ArmV8Timer {
-    fn set_interval(&mut self, ticks: u64) {
-        debug!("set interval: {ticks}");
+impl InterfaceCPU for ArmV8Timer {
+    fn set_timeval(&mut self, ticks: u64) {
         CNTP_TVAL_EL0.set(ticks);
     }
 
@@ -42,7 +36,6 @@ impl InterfacePerCPU for ArmV8Timer {
     }
 
     fn set_irq_enable(&mut self, enable: bool) {
-        debug!("set irq enable: {enable}");
         CNTP_CTL_EL0.modify(if enable {
             CNTP_CTL_EL0::IMASK::CLEAR
         } else {
@@ -60,10 +53,6 @@ impl InterfacePerCPU for ArmV8Timer {
 }
 
 impl DriverGeneric for ArmV8Timer {
-    fn name(&self) -> alloc::string::String {
-        "ARMv8 Timer".to_string()
-    }
-
     fn open(&mut self) -> Result<(), alloc::string::String> {
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET);
         Ok(())

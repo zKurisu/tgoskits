@@ -1,6 +1,10 @@
 use core::ptr::NonNull;
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use driver_interface::{DriverRegister, ProbeFnKind, timer::*};
 use fdt_parser::Fdt;
 use log::debug;
@@ -47,8 +51,8 @@ pub fn init_by_fdt(
         if let ProbeFnKind::Timer(probe) = r.probe {
             let compa = r
                 .compatibles
-                .split("\n")
-                .filter_map(|e| if e.is_empty() { None } else { Some(e) })
+                .iter()
+                .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
                 .collect::<Vec<_>>();
             for node in fdt.find_compatible(&compa) {
                 let irq = match node.irq_info() {
@@ -57,10 +61,10 @@ pub fn init_by_fdt(
                 };
 
                 let timer = probe(irq.cfgs.clone());
-                debug!("[{}] ok", timer.name());
+                debug!("[{}] ok", r.name);
                 let dev = Device::new(
                     Descriptor {
-                        name: timer.name(),
+                        name: r.name.to_string(),
                         irq: Some(irq),
                         ..Default::default()
                     },

@@ -1,6 +1,5 @@
 use alloc::{boxed::Box, vec::Vec};
-use core::{cmp::Eq, fmt::Debug};
-use log::debug;
+use core::fmt::Debug;
 
 #[derive(Debug)]
 pub struct Queue {

@@ -66,7 +66,7 @@ impl<T> Device<T> {
         })
     }
 
-    pub fn spin_use(&self, who: impl ToString) -> BorrowGuard<T> {
+    pub fn spin_try_use(&self, who: impl ToString) -> BorrowGuard<T> {
         loop {
             if let Ok(g) = self.try_use_by(who.to_string()) {
                 return g;
@@ -75,7 +75,8 @@ impl<T> Device<T> {
     }
 
     /// 强制获取设备
-    /// #Safety
+    /// 
+    /// # Safety
     /// 一般用于中断处理中
     pub unsafe fn force_use(&self) -> *mut T {
         self.data.get()

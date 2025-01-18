@@ -1,4 +1,4 @@
-use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 
 use arm_gic_driver::GicGeneric;
@@ -12,7 +12,7 @@ use super::*;
 
 module_driver!(
     name: "GICv2",
-    compatibles: "arm,cortex-a15-gic\n",
+    compatibles: &["arm,cortex-a15-gic"],
     probe: ProbeFnKind::InterruptController(probe_gic_v2),
 );
 
@@ -40,12 +40,13 @@ struct GicV2PerCpu(Arc<UnsafeCell<Option<arm_gic_driver::GicV2>>>);
 unsafe impl Send for GicV2PerCpu {}
 
 impl GicV2PerCpu {
+    #[allow(clippy::mut_from_ref)]
     fn get_mut(&self) -> &mut arm_gic_driver::GicV2 {
         unsafe { &mut *self.0.get() }.as_mut().unwrap()
     }
 }
 
-impl InterfacePerCPU for GicV2PerCpu {
+impl InterfaceCPU for GicV2PerCpu {
     fn get_and_acknowledge_interrupt(&self) -> Option<IrqId> {
         unsafe { &mut *self.0.get() }
             .as_mut()
@@ -96,10 +97,6 @@ impl InterfacePerCPU for GicV2PerCpu {
 }
 
 impl DriverGeneric for GicV2 {
-    fn name(&self) -> alloc::string::String {
-        "GICv2".to_string()
-    }
-
     fn open(&mut self) -> Result<(), alloc::string::String> {
         let gic =
             arm_gic_driver::GicV2::new(self.gicd, self.gicc).map_err(|e| format!("{:?}", e))?;
@@ -114,7 +111,7 @@ impl DriverGeneric for GicV2 {
 }
 
 impl Interface for GicV2 {
-    fn current_cpu_setup(&self) -> Box<dyn InterfacePerCPU> {
+    fn current_cpu_setup(&self) -> Box<dyn InterfaceCPU> {
         unsafe { &mut *self.gic.get() }
             .as_mut()
             .unwrap()

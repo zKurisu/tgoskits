@@ -1,11 +1,11 @@
 use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 
-use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
         DriverGeneric, ProbeFnKind, RegAddress,
-        interrupt_controller::{self, CpuId, InterfacePerCPU},
+        interrupt_controller::{self, CpuId, InterfaceCPU},
     },
     mem::iomap,
 };
@@ -15,7 +15,7 @@ use super::*;
 
 module_driver!(
     name: "GICv3",
-    compatibles: "arm,gic-v3\n",
+    compatibles: &["arm,gic-v3"],
     probe: ProbeFnKind::InterruptController(probe_gic),
 );
 
@@ -42,12 +42,13 @@ struct GicPerCpu(Arc<UnsafeCell<Option<GicV3>>>);
 unsafe impl Send for GicPerCpu {}
 
 impl GicPerCpu {
+    #[allow(clippy::mut_from_ref)]
     fn get_mut(&self) -> &mut GicV3 {
         unsafe { &mut *self.0.get() }.as_mut().unwrap()
     }
 }
 
-impl InterfacePerCPU for GicPerCpu {
+impl InterfaceCPU for GicPerCpu {
     fn get_and_acknowledge_interrupt(&self) -> Option<interrupt_controller::IrqId> {
         self.get_mut()
             .get_and_acknowledge_interrupt()
@@ -100,10 +101,6 @@ impl InterfacePerCPU for GicPerCpu {
 }
 
 impl DriverGeneric for Gic {
-    fn name(&self) -> alloc::string::String {
-        "GICv3".to_string()
-    }
-
     fn open(&mut self) -> Result<(), alloc::string::String> {
         let gic = GicV3::new(self.gicd, self.gicr).map_err(|e| format!("{:?}", e))?;
         unsafe { &mut *self.gic.get() }.replace(gic);
@@ -117,7 +114,7 @@ impl DriverGeneric for Gic {
 }
 
 impl interrupt_controller::Interface for Gic {
-    fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterfacePerCPU> {
+    fn current_cpu_setup(&self) -> Box<dyn interrupt_controller::InterfaceCPU> {
         unsafe { &mut *self.gic.get() }
             .as_mut()
             .unwrap()

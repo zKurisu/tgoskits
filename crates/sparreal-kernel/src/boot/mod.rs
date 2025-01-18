@@ -1,5 +1,5 @@
 use ansi_rgb::{Foreground, orange};
-use log::{LevelFilter, error};
+use log::LevelFilter;
 
 use crate::{
     driver_manager,
@@ -42,17 +42,9 @@ fn __start() -> ! {
 
     driver_manager::register_drivers(&module_registers());
 
-    match &global_val().platform_info {
-        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
-            if let Err(e) = driver_manager::init_irq_chips_by_fdt(fdt.get_addr()) {
-                error!("{}", e);
-            }
-        }
-    }
+    irq::init_main_cpu();
 
-    irq::init_current_cpu();
-
-    time::main_cpu_init();
+    time::init_main_cpu();
 
     irq::enable_all();
 
@@ -104,7 +96,7 @@ fn print_start_msg() {
     }
 }
 
-static LOGO: &'static str = r#"
+static LOGO: &str = r#"
      _____                                         __
     / ___/ ____   ____ _ _____ _____ ___   ____ _ / /
     \__ \ / __ \ / __ `// ___// ___// _ \ / __ `// / 
