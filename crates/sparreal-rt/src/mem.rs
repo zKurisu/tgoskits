@@ -51,10 +51,5 @@ pub fn driver_registers() -> &'static [u8] {
         fn _edriver();
     }
 
-    unsafe {
-        &*slice_from_raw_parts(
-            _sdriver as *const u8,
-            _edriver as usize - _sdriver as usize,
-        )
-    }
+    unsafe { &*slice_from_raw_parts(_sdriver as *const u8, _edriver as usize - _sdriver as usize) }
 }

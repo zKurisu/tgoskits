@@ -75,7 +75,7 @@ impl<T> Device<T> {
     }
 
     /// 强制获取设备
-    /// 
+    ///
     /// # Safety
     /// 一般用于中断处理中
     pub unsafe fn force_use(&self) -> *mut T {
