@@ -25,6 +25,8 @@ jobs:
       run: rustup show
     - name: Check rust version
       run: rustc --version --verbose
+    - name: Add Target
+      run: rustup target add aarch64-unknown-none
     - name: Check code format
       run: cargo fmt --all -- --check
 
