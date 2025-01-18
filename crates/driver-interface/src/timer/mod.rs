@@ -19,7 +19,7 @@ pub trait InterfaceCPU: DriverGeneric + Sync {
     fn current_ticks(&self) -> u64;
     fn tick_hz(&self) -> u64;
     fn set_irq_enable(&mut self, enable: bool);
-    fn read_irq_status(&self) -> bool;
+    fn get_irq_status(&self) -> bool;
     fn irq(&self) -> IrqConfig;
 }
 

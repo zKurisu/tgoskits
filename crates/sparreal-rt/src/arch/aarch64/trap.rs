@@ -1,7 +1,9 @@
-use core::fmt;
+use core::{arch::global_asm, fmt};
 
 use aarch64_cpu::registers::*;
 use log::*;
+
+global_asm!(include_str!("vectors.s"),);
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
@@ -35,8 +37,7 @@ unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn __handle_irq() {
-    debug!("IRQ!");
+unsafe extern "C" fn __handle_irq(_ctx: &Context) {
     sparreal_kernel::irq::handle_irq();
 }
 
@@ -149,4 +150,13 @@ impl fmt::Display for TrapFrame {
         )?;
         writeln!(f, "  x29: {:#x} x30: {:#x} ", self.x29, self.x30)
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub x: [usize; 31],
+    pub spsr: usize,
+    pub elr: usize,
+    pub sp: usize,
 }

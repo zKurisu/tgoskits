@@ -8,7 +8,7 @@ use aarch64_cpu::registers::*;
 use sparreal_kernel::{io::print::*, platform::PlatformInfoKind};
 
 global_asm!(include_str!("boot.s"));
-global_asm!(include_str!("vectors.s"));
+
 
 #[unsafe(no_mangle)]
 extern "C" fn __rust_boot(va_offset: usize, fdt_addr: usize) {

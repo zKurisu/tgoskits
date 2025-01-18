@@ -64,6 +64,7 @@
 
 // Typical exception vector table code.
 .balign 0x800
+.global vector_table_el1
 vector_table_el1:
     curr_el_sp0_sync: // The exception handler for the synchronous
     B .

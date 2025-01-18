@@ -43,7 +43,7 @@ impl InterfaceCPU for ArmV8Timer {
         });
     }
 
-    fn read_irq_status(&self) -> bool {
+    fn get_irq_status(&self) -> bool {
         CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::ISTATUS)
     }
 

@@ -37,17 +37,14 @@ impl Log for KLogger {
             let path = record.target();
             let args = record.args();
 
-            let l = if matches!(level, Level::Warn | Level::Info) {
-                path.split("::").next().unwrap_or_default().to_string()
-            } else {
-                format!("{path}:{line}")
-            };
-
             let duration = crate::time::since_boot();
             crate::__export::print(format_args!(
                 "{}",
-                format_args!("{} {duration:<10.3?} [{l}] {args}\r\n", level_icon(level),)
-                    .fg(level_to_rgb(level))
+                format_args!(
+                    "{} {duration:<10.3?} [{path}:{line}] {args}\r\n",
+                    level_icon(level),
+                )
+                .fg(level_to_rgb(level))
             ));
         }
     }
