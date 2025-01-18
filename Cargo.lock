@@ -276,9 +276,9 @@ dependencies = [
 
 [[package]]
 name = "fdt-parser"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af777551bc8cfc676397b9a5805987cb7b0388ae323259264446ab3d6c53e508"
+checksum = "0deb230715aa771c49f2eda04e5532a34acccbf31335885d9bd4e3cebee8dac0"
 
 [[package]]
 name = "futures"
