@@ -1,4 +1,3 @@
-use alloc::{format, string::ToString};
 use ansi_rgb::{Foreground, red, yellow};
 use log::{Level, Log};
 use rgb::{RGB8, Rgb};
