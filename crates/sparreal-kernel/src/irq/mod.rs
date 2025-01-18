@@ -1,6 +1,6 @@
 use core::{cell::UnsafeCell, error::Error};
 
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, format, vec::Vec};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 use driver_interface::interrupt_controller::*;
 use log::{debug, error};
 use spin::Mutex;
@@ -74,7 +74,7 @@ fn chip(id: DriverId) -> &'static Chip {
         .irq_chips
         .0
         .get(&id)
-        .expect(format!("irq chip {:?} not found", id).as_str())
+        .unwrap_or_else(|| panic!("irq chip {:?} not found", id))
 }
 
 pub fn fdt_parse_config(
@@ -203,5 +203,11 @@ impl IrqParam {
             priority: None,
             cpu_list: Vec::new(),
         }
+    }
+}
+
+pub fn unregister_irq(irq: IrqId) {
+    for chip in cpu_global().irq_chips.0.values() {
+        chip.unregister_handle(irq);
     }
 }

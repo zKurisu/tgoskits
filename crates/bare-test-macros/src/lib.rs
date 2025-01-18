@@ -34,7 +34,7 @@ fn tests_impl(_args: TokenStream, input: TokenStream) -> Result<TokenStream, par
 
     let mut untouched_tokens = vec![];
     let mut test_functions = vec![];
-    let span = module.span().clone();
+    let span = module.span();
 
     let items = &module
         .content

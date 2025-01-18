@@ -162,19 +162,16 @@ pub fn module_driver(input: TokenStream) -> TokenStream {
     {
         let mut it = input.clone().into_iter();
         while let Some(t) = it.next() {
-            match t {
-                proc_macro2::TokenTree::Ident(i) => {
-                    if i.to_string() == "name" {
-                        it.next();
-                        if let Some(proc_macro2::TokenTree::Literal(l)) = it.next() {
-                            let l = l.to_string();
-                            let l = l.trim_matches('"');
-                            name = Some(l.to_string());
-                            break;
-                        }
+            if let proc_macro2::TokenTree::Ident(i) = t {
+                if i == "name" {
+                    it.next();
+                    if let Some(proc_macro2::TokenTree::Literal(l)) = it.next() {
+                        let l = l.to_string();
+                        let l = l.trim_matches('"');
+                        name = Some(l.to_string());
+                        break;
                     }
                 }
-                _ => {}
             }
         }
     }

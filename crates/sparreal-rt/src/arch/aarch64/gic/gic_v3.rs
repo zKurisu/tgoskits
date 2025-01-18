@@ -28,6 +28,7 @@ struct Gic {
 unsafe impl Send for Gic {}
 
 impl Gic {
+    #[allow(clippy::arc_with_non_send_sync)]
     fn new(gicd: NonNull<u8>, gicr: NonNull<u8>) -> Self {
         Self {
             gic: Arc::new(UnsafeCell::new(None)),

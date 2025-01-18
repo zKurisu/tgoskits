@@ -21,8 +21,7 @@ pub fn print(args: fmt::Arguments<'_>) {
 
 pub fn early_dbg(s: &str) {
     for c in s.bytes() {
-        let b = c as u8;
-        PlatformImpl::debug_put(b);
+        PlatformImpl::debug_put(c);
     }
 }
 

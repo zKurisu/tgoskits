@@ -5,7 +5,7 @@ extern crate alloc;
 use core::{hint::spin_loop, time::Duration};
 
 use log::info;
-use sparreal_kernel::time;
+use sparreal_kernel::{platform::shutdown, time};
 use sparreal_rt::prelude::*;
 
 #[entry]
@@ -14,6 +14,7 @@ fn main() {
 
     time::after(Duration::from_secs(1), || {
         info!("Timer callback");
+        shutdown();
     });
 
     loop {
