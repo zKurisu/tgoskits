@@ -85,7 +85,8 @@ vector_table_el1:
     B SynchronousHandler
     .balign 0x80
     curr_el_spx_irq: 
-    B IRQHandler
+    # B IRQHandler
+	B {irq_handler}
     .balign 0x80
     curr_el_spx_frq: 
     B FIQInterruptHandler

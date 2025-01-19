@@ -1,9 +1,15 @@
-use core::{arch::global_asm, fmt};
+use core::{
+    arch::{global_asm, naked_asm},
+    fmt::{self, Debug},
+};
 
 use aarch64_cpu::registers::*;
 use log::*;
 
-global_asm!(include_str!("vectors.s"),);
+global_asm!(
+    include_str!("vectors.s"),
+    irq_handler = sym handle_irq
+);
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
@@ -38,6 +44,11 @@ unsafe extern "C" fn __handle_sync(tf: &TrapFrame) {
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_irq(_ctx: &Context) {
+    debug!("{:?}", _ctx);
+    debug!("cpsr {:#x}", SPSR_EL1.get());
+    debug!("elr {:#x}", ELR_EL1.get());
+    debug!("x0: {:p}", _ctx);
+
     sparreal_kernel::irq::handle_irq();
 }
 
@@ -123,6 +134,7 @@ impl fmt::Display for TrapFrame {
         writeln!(f, "  sp: {:#x}", self.sp)?;
         writeln!(f, "  cpacr: {:#x}", self.cpacr)?;
         writeln!(f, "  elr: {:#x}", self.elr)?;
+
         writeln!(
             f,
             "  x00: {:#x} x01: {:#x} x02: {:#x} x03: {:#x}",
@@ -152,11 +164,103 @@ impl fmt::Display for TrapFrame {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Clone)]
+#[repr(C, align(0x10))]
+#[derive(Clone)]
 pub struct Context {
-    pub x: [usize; 31],
-    pub spsr: usize,
-    pub elr: usize,
-    pub sp: usize,
+    pub sp: u64,
+    pub pc: u64,
+    pub spsr: u64,
+    pub x: [u64; 31],
+}
+
+impl Debug for Context {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Context:")?;
+
+        const NUM_CHUNKS: usize = 4;
+
+        for (r, chunk) in self.x.chunks(NUM_CHUNKS).enumerate() {
+            let row_start = r * NUM_CHUNKS;
+
+            for (i, v) in chunk.iter().enumerate() {
+                let i = row_start + i;
+                write!(f, "  x{:<3}: {:#18x}", i, v)?;
+            }
+            writeln!(f)?;
+        }
+        writeln!(f, "  spsr: {:#18x}", self.spsr)?;
+        writeln!(f, "  pc  : {:#18x}", self.pc)?;
+        writeln!(f, "  sp  : {:#18x}", self.sp)
+    }
+}
+
+macro_rules! save_ctx_base {
+    () => {
+        "
+	stp X29,X30, [sp,#-0x10]!
+	stp X27,X28, [sp,#-0x10]!
+    stp X25,X26, [sp,#-0x10]!
+	stp X23,X24, [sp,#-0x10]!
+    stp X21,X22, [sp,#-0x10]!
+	stp X19,X20, [sp,#-0x10]!
+	stp	X17,X18, [sp,#-0x10]!
+	stp	X15,X16, [sp,#-0x10]!
+	stp	X13,X14, [sp,#-0x10]!
+	stp	X11,X12, [sp,#-0x10]!
+	stp	X9,X10,   [sp,#-0x10]!
+	stp	X7,X8,   [sp,#-0x10]!
+	stp	X5,X6,   [sp,#-0x10]!
+	stp	X3,X4,   [sp,#-0x10]!
+    stp	X1,X2,   [sp,#-0x10]!
+    mrs	x9, SPSR_EL1
+    mrs x10, ELR_EL1
+	stp x9, x0, [sp,#-0x10]!
+    mov x0, sp
+    sub x0, x0,   #0x10
+	stp x0, x10,  [sp,#-0x10]!
+"
+    };
+}
+
+macro_rules! restore_ctx_base {
+    () => {
+        "
+    mov sp, x0
+    ldp X0,X1,   [sp], #0x10
+    msr	ELR_EL1, X1
+    ldp X0,X30,   [sp], #0x10
+    msr	SPSR_EL1, X0
+
+    ldp X29,X30, [sp], #0x10
+	ldp X18,X19, [sp], #0x10
+	ldp	X16,X17, [sp], #0x10
+	ldp	X14,X15, [sp], #0x10
+	ldp	X12,X13, [sp], #0x10
+	ldp	X10,X11, [sp], #0x10
+	ldp	X8,X9,   [sp], #0x10
+	ldp	X6,X7,   [sp], #0x10
+	ldp	X4,X5,   [sp], #0x10
+	ldp	X2,X3,   [sp], #0x10
+	ldp	X0,X1,   [sp], #0x10
+        "
+    };
+}
+
+#[naked]
+extern "C" fn handle_irq(ctx: Context) {
+    unsafe {
+        naked_asm!(
+            save_ctx_base!(),
+            "mov    x0, sp",
+            "BL 	{handle}",
+            "ldr    X2,       [sp], #0x10",
+            "ldp	X0, X1,   [sp], #0x10",
+            "msr	SPSR_EL1, X0",
+            "msr	ELR_EL1, X1",
+            "mov	sp, X2",
+            restore_ctx_base!(),
+            "eret",
+            handle = sym __handle_irq,
+        )
+    }
 }
