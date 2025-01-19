@@ -1,4 +1,4 @@
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use tcb::{TaskControlBlock, set_current};
 
 use crate::platform::wait_for_interrupt;
@@ -18,6 +18,16 @@ pub struct TaskConfig {
     pub stack_size: usize,
 }
 
+impl TaskConfig {
+    pub fn new(name: impl ToString) -> Self {
+        Self {
+            name: name.to_string(),
+            priority: 0,
+            stack_size: 2 * 1024 * 1024,
+        }
+    }
+}
+
 pub fn spawn_with_config<F>(f: F, config: TaskConfig) -> Result<(), TaskError>
 where
     F: FnOnce() + Send + 'static,
@@ -31,7 +41,7 @@ where
 
 pub fn init() {
     let task = TaskControlBlock::new(|| {}, TaskConfig {
-        name: "Main".into(),
+        name: "Task0".into(),
         priority: 0,
         stack_size: 0,
     })

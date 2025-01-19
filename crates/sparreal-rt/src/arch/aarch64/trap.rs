@@ -327,6 +327,7 @@ global_asm!(
 unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
     unsafe {
         naked_asm!(
+            //x0
             "
         add x0, x0,   {size}
         stp X29,X30, [x0,#-0x10]!
@@ -365,6 +366,7 @@ unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Co
         mov x9, sp
         stp x9, lr,    [x0,#-0x10]!
             ",
+            //x1
             "
         add x1, x1,   {size}
         ldp X29,X30, [x1,#-0x10]!
@@ -374,8 +376,8 @@ unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Co
         ldp X21,X22, [x1,#-0x10]!
         ldp X19,X20, [x1,#-0x10]!
         sub x1, x1,  #0x90
-        mrs	x9, SPSR_EL1
-        ldp x9, x0,  [x1,#-0x10]!
+        ldp x9, x10,  [x1,#-0x10]!
+        msr	SPSR_EL1, x9
                 ",
                 #[cfg(hard_float)]
                         "
@@ -395,13 +397,13 @@ unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Co
             ldp q4,  q5,   [x1,#-0x20]!
             ldp q2,  q3,   [x1,#-0x20]!
             ldp q0,  q1,   [x1,#-0x20]!
-            mrs     x9,  fpcr
-            mrs     x10, fpsr
             ldp x9,  x10,  [x1,#-0x10]!
-                    ",
-                        "
-            mov x9, sp
-            ldp x9, lr,  [x1,#-0x10]!
+            msr      fpcr, x9
+            msr     fpsr, x10
+            ",
+            "
+            ldp x9, lr,    [x1,#-0x10]!
+            mov sp, x9
             ret",
             size = const size_of::<Context>()
         )

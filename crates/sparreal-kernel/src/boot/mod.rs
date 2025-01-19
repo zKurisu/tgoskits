@@ -10,7 +10,9 @@ use crate::{
     mem::{self, VirtAddr, region, va_offset},
     platform::{self, app_main, module_registers, platform_name, shutdown},
     platform_if::*,
-    println, time,
+    println,
+    task::{self, TaskConfig},
+    time,
 };
 
 pub mod debug;
@@ -47,6 +49,8 @@ fn __start() -> ! {
     time::init_main_cpu();
 
     irq::enable_all();
+
+    task::init();
 
     app_main();
 

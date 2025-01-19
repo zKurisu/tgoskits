@@ -123,7 +123,7 @@ impl TaskControlBlock {
 
     pub(super) fn switch_to(&self, next: &TaskControlBlock) {
         debug!("switch {} -> {}", self.info().name, next.info().name);
-        set_current(&next);
+        set_current(next);
         match self.info().state {
             TaskState::Stopped => finished_push(*self),
             _ => idle_push(*self),
