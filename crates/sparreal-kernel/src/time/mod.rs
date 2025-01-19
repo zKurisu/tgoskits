@@ -77,3 +77,14 @@ pub fn after(duration: Duration, call: impl Fn() + 'static) {
         t.after(duration, call);
     }
 }
+
+pub fn spin_delay(duration: Duration) {
+    let now = since_boot();
+    let at = now + duration;
+
+    loop {
+        if since_boot() >= at {
+            break;
+        }
+    }
+}
