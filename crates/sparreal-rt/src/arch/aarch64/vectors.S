@@ -82,17 +82,16 @@ vector_table_el1:
     B .
     .balign 0x80
     curr_el_spx_sync:
-    B SynchronousHandler
+    B {sync_handler}
     .balign 0x80
     curr_el_spx_irq: 
-    # B IRQHandler
 	B {irq_handler}
     .balign 0x80
     curr_el_spx_frq: 
-    B FIQInterruptHandler
+    B {fiq_handler}
     .balign 0x80
     curr_el_spx_serror: // The exception handler for the system error 
-    B SErrorInterruptHandler
+    B {serror_handler}
     // exception from the current EL using the
     // current SP.
     .balign 0x80
@@ -123,78 +122,6 @@ vector_table_el1:
     // exception from a lower EL(AArch32).
 
 // ------------------------------------------------------------
-
-SynchronousHandler:
-	SaveRegister
-	mrs 	x0, CPACR_EL1
-	mrs 	x1, ELR_EL1
-	mrs		x2, SPSR_EL1
-	stp	  x0, x1, [sp,#-0x10]!
-	mov		x21, sp 	
-	add		x21, x21, #704 /*EXCEPTION_FRAME_SIZE 704 = 22*8 + 32*16 + 2*8, except sp and spsr in FExcFrame */
-	stp		x2,x21, [sp,#-0x10]!
-	mov 	x0, sp
-
-	bl		__handle_sync
-
-	eret
-
-IRQHandler:
-  SaveRegister
-	/* Save the status of SPSR, ELR and CPTR to stack */
-	mrs 	x0, CPACR_EL1
-	mrs 	x1, ELR_EL1
-	mrs		x2, SPSR_EL1
-
-	stp	x0, x1, [sp,#-0x10]!
-	str	x2, [sp,#-0x10]!
-
-	bl	__handle_irq
-
-	/* Restore the status of SPSR, ELR and CPTR from stack */
-	ldr	x2,[sp],0x10
-	ldp	x0, x1, [sp],0x10
-
-	msr	CPACR_EL1, x0
-	msr	ELR_EL1, x1
-	msr	SPSR_EL1, x2
-
-	RestoreRegister
-	eret
-
-
-
-FIQInterruptHandler:
-
-	SaveRegister
-
-	bl	__handle_frq
-
-	RestoreRegister
-
-	eret
-
-
-SErrorInterruptHandler:
-
-	SaveRegister
-	/* Save the status of SPSR, ELR and CPTR to stack */
-	mrs 	x0, CPACR_EL1
-	mrs 	x1, ELR_EL1
-	mrs		x2, SPSR_EL1
-	stp	    x0, x1, [sp,#-0x10]!
-	mov		x21, sp 	
-	add		x21, x21, #704 /*EXCEPTION_FRAME_SIZE 704 = 22*8 + 32*16 + 2*8, except sp and spsr in FExcFrame */
-	stp		x21,x21, [sp,#-0x10]!
-	mov 	x0, sp
-
-	mov 	x0, sp
-	bl    __handle_serror
-
-	RestoreRegister
-
-	eret
-
 
 .align 8
 

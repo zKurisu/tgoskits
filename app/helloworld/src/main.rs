@@ -2,10 +2,13 @@
 #![no_main]
 extern crate alloc;
 
-use core::{hint::spin_loop, time::Duration};
+use core::time::Duration;
 
 use log::info;
-use sparreal_kernel::{platform::shutdown, time::{self, spin_delay}};
+use sparreal_kernel::{
+    platform::shutdown,
+    time::{self, spin_delay},
+};
 use sparreal_rt::prelude::*;
 
 #[entry]
