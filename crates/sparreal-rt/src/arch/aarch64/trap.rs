@@ -252,6 +252,7 @@ macro_rules! restore_x_spsr {
     };
 }
 
+#[cfg(hard_float)]
 // `handler`返回时，从 `x0` 取出 `sp`，作为栈顶地址
 macro_rules! handler {
     ($name:ident, $handler:expr) => {
@@ -260,14 +261,34 @@ macro_rules! handler {
         unsafe {
         naked_asm!(
             save_x_spsr!(),
-            #[cfg(hard_float)]
             save_q!(),
             save_pc_sp!(),
             "mov    x0, sp",
             "BL 	{handle}",
             restore_pc_sp!(),
-            #[cfg(hard_float)]
             restore_q!(),
+            restore_x_spsr!(),
+            "eret",
+            handle = sym $handler,
+                )
+            }
+        }
+    };
+}
+
+#[cfg(not(hard_float))]
+// `handler`返回时，从 `x0` 取出 `sp`，作为栈顶地址
+macro_rules! handler {
+    ($name:ident, $handler:expr) => {
+        #[naked]
+        extern "C" fn $name(ctx: &Context) {
+        unsafe {
+        naked_asm!(
+            save_x_spsr!(),
+            save_pc_sp!(),
+            "mov    x0, sp",
+            "BL 	{handle}",
+            restore_pc_sp!(),
             restore_x_spsr!(),
             "eret",
             handle = sym $handler,
