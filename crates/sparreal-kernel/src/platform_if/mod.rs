@@ -20,6 +20,8 @@ pub trait Platform {
     fn shutdown() -> !;
     fn debug_put(b: u8);
 
+    fn dcache_range(op: CacheOp, addr: usize, size: usize);
+
     fn driver_registers() -> DriverRegisterListRef;
 }
 
@@ -41,4 +43,15 @@ pub trait MMU {
     fn new_pte(config: PTEGeneric) -> usize;
     fn read_pte(pte: usize) -> PTEGeneric;
     fn enable_mmu(stack_top: usize, jump_to: usize) -> !;
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub enum CacheOp {
+    /// Write back to memory
+    Clean,
+    /// Invalidate cache
+    Invalidate,
+    /// Clean and invalidate
+    CleanAndInvalidate,
 }

@@ -9,6 +9,7 @@ use sparreal_macros::api_impl;
 use crate::mem::driver_registers;
 
 mod boot;
+mod cache;
 mod gic;
 pub(crate) mod mmu;
 mod psci;
@@ -67,6 +68,10 @@ impl Platform for PlatformImpl {
                 }
             }
         }
+    }
+
+    fn dcache_range(op: CacheOp, addr: usize, size: usize) {
+        cache::dcache_range(op, addr, size);
     }
 
     fn driver_registers() -> DriverRegisterListRef {

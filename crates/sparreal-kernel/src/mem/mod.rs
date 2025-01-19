@@ -10,9 +10,11 @@ use spin::Mutex;
 use crate::{globals::global_val, platform::kstack_size, println};
 
 mod addr;
+mod cache;
 #[cfg(feature = "mmu")]
 pub mod mmu;
 pub mod region;
+
 pub use addr::*;
 
 #[global_allocator]

@@ -541,6 +541,7 @@ dependencies = [
  "anyhow",
  "buddy_system_allocator",
  "byte-unit",
+ "dma-api",
  "driver-interface",
  "fdt-parser",
  "lazy_static",
