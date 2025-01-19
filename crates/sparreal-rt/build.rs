@@ -14,6 +14,11 @@ fn main() {
     println!("cargo:rustc-link-search={}", config.out_dir.display());
     println!("cargo:rerun-if-changed=link.ld");
     println!("cargo:rerun-if-changed=build.rs");
+
+    println!("cargo::rustc-check-cfg=cfg(hard_float)");
+    if std::env::var("TARGET").unwrap() == "aarch64-unknown-none" {
+        println!("cargo::rustc-cfg=hard_float");
+    }
 }
 #[derive(Debug)]
 pub enum Arch {
