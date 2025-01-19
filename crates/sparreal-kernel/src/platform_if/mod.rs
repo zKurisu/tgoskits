@@ -1,3 +1,5 @@
+use core::ffi::c_void;
+
 pub use driver_interface::DriverRegisterListRef;
 use page_table_generic::PTEGeneric;
 use sparreal_macros::api_trait;
@@ -9,6 +11,32 @@ pub trait Platform {
     fn kernel_regions() -> KernelRegions;
     fn kstack_size() -> usize;
     fn cpu_id() -> usize;
+    fn cpu_context_size() -> usize;
+
+    /// # Safety
+    ///
+    ///
+    unsafe fn get_current_tcb_addr() -> *const u8;
+
+    /// # Safety
+    ///
+    ///
+    unsafe fn set_current_tcb_addr(addr: *const u8);
+
+    /// # Safety
+    ///
+    ///
+    unsafe fn cpu_context_init(ctx_ptr: *mut u8, pc: *const c_void, stack_top: *const u8);
+
+    /// # Safety
+    ///
+    /// `ctx_ptr` 是有效的上下文指针
+    unsafe fn cpu_context_sp(ctx_ptr: *const u8) -> usize;
+
+    /// # Safety
+    ///
+    ///
+    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8);
 
     fn wait_for_interrupt();
 

@@ -1,4 +1,4 @@
-use core::arch::asm;
+use core::{arch::asm, ffi::c_void};
 
 use aarch64_cpu::registers::*;
 use sparreal_kernel::{
@@ -35,6 +35,38 @@ impl Platform for PlatformImpl {
 
     fn cpu_id() -> usize {
         cpu_id()
+    }
+
+    fn cpu_context_size() -> usize {
+        size_of::<trap::Context>()
+    }
+
+    unsafe fn cpu_context_sp(ctx_ptr: *const u8) -> usize {
+        let ctx = unsafe { &*(ctx_ptr as *const trap::Context) };
+        ctx.sp
+    }
+
+    unsafe fn get_current_tcb_addr() -> *const u8 {
+        SP_EL0.get() as usize as _
+    }
+
+    unsafe fn set_current_tcb_addr(addr: *const u8) {
+        SP_EL0.set(addr as usize as _);
+    }
+
+    unsafe fn cpu_context_init(ctx_ptr: *mut u8, pc: *const c_void, stack_top: *const u8) {
+        unsafe {
+            let ctx = &mut *(ctx_ptr as *mut trap::Context);
+            ctx.pc = pc as usize;
+            ctx.sp = stack_top as usize;
+        }
+    }
+    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8) {
+        unsafe {
+            let prev = &mut *(prev as *mut trap::Context);
+            let next = &mut *(next as *mut trap::Context);
+            prev.switch_to(next);
+        }
     }
 
     fn wait_for_interrupt() {
