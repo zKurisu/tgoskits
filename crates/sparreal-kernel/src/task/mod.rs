@@ -1,10 +1,10 @@
 use alloc::string::{String, ToString};
 use tcb::{TaskControlBlock, set_current};
 
-use crate::platform::wait_for_interrupt;
-
 mod schedule;
 mod tcb;
+
+pub use schedule::suspend;
 
 #[derive(Debug, Clone)]
 pub enum TaskError {

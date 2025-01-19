@@ -10,9 +10,7 @@ use crate::{
     mem::{self, VirtAddr, region, va_offset},
     platform::{self, app_main, module_registers, platform_name, shutdown},
     platform_if::*,
-    println,
-    task::{self, TaskConfig},
-    time,
+    println, task, time,
 };
 
 pub mod debug;

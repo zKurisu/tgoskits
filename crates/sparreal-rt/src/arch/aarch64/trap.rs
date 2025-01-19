@@ -1,6 +1,5 @@
 use core::{
     arch::{asm, global_asm, naked_asm},
-    ffi::c_void,
     fmt::{self, Debug},
 };
 

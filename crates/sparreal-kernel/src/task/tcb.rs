@@ -5,7 +5,7 @@ use core::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String};
 use log::debug;
 
 use crate::{platform_if::PlatformImpl, task::schedule::*};
@@ -96,16 +96,13 @@ impl TaskControlBlock {
         unsafe { core::slice::from_raw_parts_mut(self.0.add(size_of::<TaskInfo>()), stack_size) }
     }
 
-    unsafe fn drop(self) {
+    pub(super) unsafe fn drop(self) {
         let info = self.info();
 
         let size = Self::tcb_size(info.stack_size);
 
         unsafe {
-            alloc::alloc::dealloc(
-                self.0 as *mut u8,
-                Layout::from_size_align_unchecked(size, TCB_ALIGN),
-            )
+            alloc::alloc::dealloc(self.0, Layout::from_size_align_unchecked(size, TCB_ALIGN))
         };
     }
 
@@ -152,16 +149,6 @@ pub struct TaskInfo {
     pub stack_size: usize,
     pub entry: Option<Box<dyn FnOnce()>>,
     pub state: TaskState,
-}
-
-#[derive(Clone)]
-#[repr(transparent)]
-pub struct CPUContext(Vec<u8>);
-
-impl CPUContext {
-    pub fn new() -> Self {
-        Self(alloc::vec![0; PlatformImpl::cpu_context_size()])
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
