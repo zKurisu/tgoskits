@@ -7,6 +7,7 @@ extern crate proc_macro2;
 extern crate syn;
 
 mod api_trait;
+mod arch;
 
 use proc_macro::TokenStream;
 use proc_macro2::Span;

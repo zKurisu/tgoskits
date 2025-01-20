@@ -1,4 +1,5 @@
 use alloc::collections::vec_deque::VecDeque;
+use log::debug;
 use spin::Mutex;
 
 use crate::platform_if::PlatformImpl;
@@ -19,6 +20,7 @@ pub fn schedule() {
 
         cu.switch_to(&idle);
     } else {
+        debug!("No task idle");
         loop {
             PlatformImpl::wait_for_interrupt();
         }

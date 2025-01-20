@@ -1,9 +1,8 @@
+use aarch64_cpu::registers::*;
 use core::{
     arch::{asm, global_asm, naked_asm},
     fmt::{self, Debug},
 };
-
-use aarch64_cpu::registers::*;
 use log::*;
 
 #[unsafe(no_mangle)]
@@ -425,7 +424,6 @@ macro_rules! restore_task_lr {
             ret"
     };
 }
-
 #[cfg(hard_float)]
 #[naked]
 unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
@@ -459,90 +457,3 @@ unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Co
           )
     }
 }
-
-// #[naked]
-// unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
-//     unsafe {
-//         naked_asm!(
-//             //x0
-//             "
-//         add x0, x0,   {size}
-//         stp X29,X30, [x0,#-0x10]!
-//         stp X27,X28, [x0,#-0x10]!
-//         stp X25,X26, [x0,#-0x10]!
-//         stp X23,X24, [x0,#-0x10]!
-//         stp X21,X22, [x0,#-0x10]!
-//         stp X19,X20, [x0,#-0x10]!
-//         sub x0, x0,  #0x90
-//         mrs	x9, SPSR_EL1
-//         stp x9, x10,  [x0,#-0x10]!
-//                 ",
-//         #[cfg(hard_float)]
-//                         "
-//             stp q30, q31,  [x0,#-0x20]!
-//             stp q28, q29,  [x0,#-0x20]!
-//             stp q26, q27,  [x0,#-0x20]!
-//             stp q24, q25,  [x0,#-0x20]!
-//             stp q22, q23,  [x0,#-0x20]!
-//             stp q20, q21,  [x0,#-0x20]!
-//             stp q18, q19,  [x0,#-0x20]!
-//             stp q16, q17,  [x0,#-0x20]!
-//             stp q14, q15,  [x0,#-0x20]!
-//             stp q12, q13,  [x0,#-0x20]!
-//             stp q10, q11,  [x0,#-0x20]!
-//             stp q8,  q9,   [x0,#-0x20]!
-//             stp q6,  q7,   [x0,#-0x20]!
-//             stp q4,  q5,   [x0,#-0x20]!
-//             stp q2,  q3,   [x0,#-0x20]!
-//             stp q0,  q1,   [x0,#-0x20]!
-//             mrs     x9,  fpcr
-//             mrs     x10, fpsr
-//             stp x9,  x10,  [x0,#-0x10]!
-//                     ",
-//             "
-//         mov x9, sp
-//         stp x9, lr,    [x0,#-0x10]!
-//             ",
-//             //x1
-//             "
-//         add x1, x1,   {size}
-//         ldp X29,X30, [x1,#-0x10]!
-//         ldp X27,X28, [x1,#-0x10]!
-//         ldp X25,X26, [x1,#-0x10]!
-//         ldp X23,X24, [x1,#-0x10]!
-//         ldp X21,X22, [x1,#-0x10]!
-//         ldp X19,X20, [x1,#-0x10]!
-//         sub x1, x1,  #0x90
-//         ldp x9, x10,  [x1,#-0x10]!
-//         msr	SPSR_EL1, x9
-//                 ",
-//                 #[cfg(hard_float)]
-//                         "
-//             ldp q30, q31,  [x1,#-0x20]!
-//             ldp q28, q29,  [x1,#-0x20]!
-//             ldp q26, q27,  [x1,#-0x20]!
-//             ldp q24, q25,  [x1,#-0x20]!
-//             ldp q22, q23,  [x1,#-0x20]!
-//             ldp q20, q21,  [x1,#-0x20]!
-//             ldp q18, q19,  [x1,#-0x20]!
-//             ldp q16, q17,  [x1,#-0x20]!
-//             ldp q14, q15,  [x1,#-0x20]!
-//             ldp q12, q13,  [x1,#-0x20]!
-//             ldp q10, q11,  [x1,#-0x20]!
-//             ldp q8,  q9,   [x1,#-0x20]!
-//             ldp q6,  q7,   [x1,#-0x20]!
-//             ldp q4,  q5,   [x1,#-0x20]!
-//             ldp q2,  q3,   [x1,#-0x20]!
-//             ldp q0,  q1,   [x1,#-0x20]!
-//             ldp x9,  x10,  [x1,#-0x10]!
-//             msr      fpcr, x9
-//             msr     fpsr, x10
-//             ",
-//             "
-//             ldp x9, lr,    [x1,#-0x10]!
-//             mov sp, x9
-//             ret",
-//             size = const size_of::<Context>()
-//         )
-//     }
-// }

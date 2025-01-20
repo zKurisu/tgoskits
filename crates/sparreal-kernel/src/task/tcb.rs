@@ -31,6 +31,12 @@ impl Pid {
     }
 }
 
+impl Default for Pid {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Debug for Pid {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         writeln!(f, "{:?}", self.0)

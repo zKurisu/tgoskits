@@ -5,6 +5,7 @@ mod schedule;
 mod tcb;
 
 pub use schedule::suspend;
+pub use tcb::current;
 
 #[derive(Debug, Clone)]
 pub enum TaskError {
