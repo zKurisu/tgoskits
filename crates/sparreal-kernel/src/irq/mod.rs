@@ -6,7 +6,10 @@ use log::{debug, error, warn};
 use spin::Mutex;
 
 use crate::{
-    driver_manager::{self, device::DriverId},
+    driver_manager::{
+        self,
+        device::{Device, DriverId},
+    },
     globals::{self, cpu_global, global_val},
     platform::{self},
     platform_if::PlatformImpl,
@@ -19,7 +22,7 @@ pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
 pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
 pub struct Chip {
-    device: HardwareCPU,
+    device: Device<HardwareCPU>,
     mutex: Mutex<()>,
     handlers: UnsafeCell<BTreeMap<IrqId, Box<IrqHandler>>>,
 }
@@ -56,6 +59,8 @@ pub(crate) fn init_current_cpu() {
             platform::cpu_id(),
         );
 
+        let device = Device::new(c.descriptor.clone(), device);
+
         g.irq_chips.0.insert(id, Chip {
             device,
             mutex: Mutex::new(()),
@@ -81,7 +86,7 @@ pub fn fdt_parse_config(
     irq_parent: DriverId,
     prop_interrupts: &[u32],
 ) -> Result<IrqConfig, Box<dyn Error>> {
-    chip(irq_parent).device.parse_fdt_config(prop_interrupts)
+    unsafe { &*chip(irq_parent).device.force_use() }.parse_fdt_config(prop_interrupts)
 }
 
 pub struct IrqRegister {
@@ -100,7 +105,7 @@ impl IrqRegister {
         let chip = chip(irq_parent);
         chip.register_handle(irq, self.handler);
 
-        let c = &chip.device;
+        let mut c = chip.device.spin_try_use("register irq");
         if let Some(p) = self.priority {
             c.set_priority(irq, p);
         } else {
@@ -144,7 +149,9 @@ impl Chip {
     }
 
     fn handle_irq(&self) -> Option<()> {
-        let irq = self.device.get_and_acknowledge_interrupt()?;
+        let chip = unsafe { &mut *self.device.force_use() };
+
+        let irq = chip.get_and_acknowledge_interrupt()?;
 
         if let Some(handler) = unsafe { &mut *self.handlers.get() }.get(&irq) {
             let res = (handler)(irq);
@@ -154,8 +161,13 @@ impl Chip {
         } else {
             warn!("IRQ {:?} no handler", irq);
         }
-        self.device.end_interrupt(irq);
+        chip.end_interrupt(irq);
         Some(())
+    }
+
+    fn pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
+        let chip = unsafe { &*self.device.force_use() };
+        chip.irq_pin_to_id(pin)
     }
 }
 
@@ -202,6 +214,18 @@ pub struct IrqParam {
 }
 
 impl IrqParam {
+    pub fn new_pin(pin: usize, irq_chip: DriverId) -> Result<Self, Box<dyn Error>> {
+        let chip = chip(irq_chip);
+        let irq_id = chip.pin_to_id(pin)?;
+        Ok(Self {
+            irq_chip,
+            cfg: IrqConfig {
+                irq: irq_id,
+                trigger: Trigger::LevelLow,
+            },
+        })
+    }
+
     pub fn register_builder(
         &self,
         handler: impl Fn(IrqId) -> IrqHandleResult + 'static,

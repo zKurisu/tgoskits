@@ -1,5 +1,5 @@
 use alloc::string::{String, ToString};
-use tcb::{TaskControlBlock, set_current};
+use tcb::{Pid, TaskControlBlock, set_current};
 
 mod schedule;
 mod tcb;
@@ -49,3 +49,5 @@ pub fn init() {
     .unwrap();
     set_current(&task);
 }
+
+pub fn wake_up_in_irq(_pid: Pid) {}

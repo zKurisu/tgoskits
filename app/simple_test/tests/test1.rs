@@ -4,7 +4,6 @@
 
 #[bare_test::tests]
 mod tests {
-    use core::hint::spin_loop;
 
     use bare_test::*;
     use globals::{PlatformInfoKind, global_val};
