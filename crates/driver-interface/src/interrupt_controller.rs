@@ -19,7 +19,7 @@ pub trait InterfaceCPU: Send {
     fn set_trigger(&mut self, irq: IrqId, triger: Trigger);
     fn set_bind_cpu(&mut self, irq: IrqId, cpu_list: &[CpuId]);
     fn parse_fdt_config(&self, prop_interrupts: &[u32]) -> Result<IrqConfig, Box<dyn Error>>;
-    fn irq_pin_to_id(&self, pin: usize)->Result<IrqId, Box<dyn Error>>;
+    fn irq_pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>>;
 }
 
 pub trait Interface: DriverGeneric {
