@@ -185,10 +185,14 @@ impl Drop for NoIrqGuard {
     }
 }
 
-pub fn handle_irq() {
+pub fn handle_irq() -> usize {
     for chip in cpu_global().irq_chips.0.values() {
         chip.handle_irq();
     }
+
+    let cu = crate::task::current();
+
+    cu.sp()
 }
 
 #[derive(Debug, Clone)]

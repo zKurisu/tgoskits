@@ -364,11 +364,23 @@ macro_rules! save_task_q {
     };
 }
 
-macro_rules! save_task_lr {
+// macro_rules! save_task_lr {
+//     () => {
+//         "
+//         mov x9, sp
+//         stp x9, lr,    [x0,#-0x10]!
+//             "
+//     };
+// }
+
+macro_rules! save_task_pc_sp {
     () => {
         "
-        mov x9, sp
-        stp x9, lr,    [x0,#-0x10]!
+        
+    mov x10, lr
+    mov x0, sp
+    sub x0, x0,   #0x10
+	stp x0, x10,  [sp,#-0x10]!
             "
     };
 }
@@ -424,15 +436,51 @@ macro_rules! restore_task_lr {
             ret"
     };
 }
+// #[cfg(hard_float)]
+// #[naked]
+// unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
+//     unsafe {
+//         naked_asm!(
+//               //x0
+//         save_task_x!(),
+//         save_task_q!(),
+//         save_task_lr!(),
+//               //x1
+//         restore_task_x!(),
+//         restore_task_q!(),
+//         restore_task_lr!(),
+//               size = const size_of::<Context>()
+//           )
+//     }
+// }
+
+// #[cfg(not(hard_float))]
+// #[naked]
+// unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
+//     unsafe {
+//         naked_asm!(
+//               //x0
+//         save_task_x!(),
+//         save_task_lr!(),
+//               //x1
+//         restore_task_x!(),
+//         restore_task_lr!(),
+//               size = const size_of::<Context>()
+//           )
+//     }
+// }
+
 #[cfg(hard_float)]
 #[naked]
 unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
     unsafe {
         naked_asm!(
               //x0
-        save_task_x!(),
-        save_task_q!(),
-        save_task_lr!(),
+            save_x_spsr!(),
+            save_q!(),
+            save_task_pc_sp!(),
+            "",
+
               //x1
         restore_task_x!(),
         restore_task_q!(),
@@ -442,18 +490,18 @@ unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Co
     }
 }
 
-#[cfg(not(hard_float))]
-#[naked]
-unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
-    unsafe {
-        naked_asm!(
-              //x0
-        save_task_x!(),
-        save_task_lr!(),
-              //x1
-        restore_task_x!(),
-        restore_task_lr!(),
-              size = const size_of::<Context>()
-          )
-    }
-}
+// #[cfg(not(hard_float))]
+// #[naked]
+// unsafe extern "C" fn context_switch(_current_task: &mut Context, _next_task: &Context) {
+//     unsafe {
+//         naked_asm!(
+//               //x0
+//         save_task_x!(),
+//         save_task_lr!(),
+//               //x1
+//         restore_task_x!(),
+//         restore_task_lr!(),
+//               size = const size_of::<Context>()
+//           )
+//     }
+// }
