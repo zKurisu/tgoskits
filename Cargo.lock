@@ -217,7 +217,7 @@ checksum = "13029088ff130c8eb6a35ff20410ebed5f6750507681bf3d90f74ba97032a407"
 
 [[package]]
 name = "driver-interface"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "embedded-io",
  "futures",
