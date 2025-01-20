@@ -22,6 +22,8 @@ jobs:
       run: rustc --version --verbose
 
     - uses: Swatinem/rust-cache@v2
+      with:
+          workspaces: "."
 
     - name: Install cargo-binutils
       run: cargo install cargo-binutils
@@ -66,7 +68,7 @@ jobs:
     - name: Test sparreal-macros
       if: ${{ always() }}
       working-directory: crates/sparreal-macros
-      run: cargo test
+      run: cargo test --target x86_64-unknown-linux-gnu
 
     - name: Test page-table-arm
       if: ${{ always() }}
