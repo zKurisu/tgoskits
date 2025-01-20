@@ -27,6 +27,10 @@ A test framework for testing the bare metal.
 
     [build-dependencies]
     bare-test-macros = "0.2"
+
+    [[test]]
+    name = "test"
+    harness = false
     ```
 
 4. setup `build.rs`.
@@ -37,7 +41,7 @@ A test framework for testing the bare metal.
     }
     ```
 
-5. new `tests` dir and add `tests.rs`.
+5. new `tests` dir and add `test.rs`.
 
     ```rust
     #![no_std]
@@ -59,7 +63,7 @@ A test framework for testing the bare metal.
     }
     ```
 
-6. run `cargo test --test tests --  --show-output`.
+6. run `cargo test --test test --  --show-output`.
 
 7. for uboot board test:
 
