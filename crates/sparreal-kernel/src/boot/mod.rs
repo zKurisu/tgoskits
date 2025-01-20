@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use ansi_rgb::{Foreground, orange};
 use log::LevelFilter;
 
@@ -22,7 +24,7 @@ mod mmu;
 pub use mmu::start;
 
 #[repr(align(0x10))]
-fn __start() -> ! {
+pub extern "C" fn __start() -> ! {
     early_dbgln("Relocate success.");
 
     io::print::stdout_use_debug();

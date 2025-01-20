@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use core::{
     alloc::GlobalAlloc,
     ptr::{NonNull, null_mut, slice_from_raw_parts_mut},
@@ -146,10 +148,14 @@ pub struct KernelRegions {
     pub bss: CMemRange,
 }
 
-pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
-    if cfg!(feature = "mmu") {
-        mmu::iomap(paddr, size)
-    } else {
-        unsafe { NonNull::new_unchecked(paddr.as_usize() as *mut u8) }
+pub fn iomap(paddr: PhysAddr, _size: usize) -> NonNull<u8> {
+    #[cfg(feature = "mmu")]
+    {
+        mmu::iomap(paddr, _size)
+    }
+
+    #[cfg(not(feature = "mmu"))]
+    unsafe {
+        NonNull::new_unchecked(paddr.as_usize() as *mut u8)
     }
 }

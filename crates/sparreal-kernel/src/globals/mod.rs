@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use core::{
     cell::UnsafeCell,
     ops::Range,

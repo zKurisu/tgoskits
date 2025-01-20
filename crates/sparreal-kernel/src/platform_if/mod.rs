@@ -1,7 +1,6 @@
 use core::ffi::c_void;
 
 pub use driver_interface::DriverRegisterListRef;
-use page_table_generic::PTEGeneric;
 use sparreal_macros::api_trait;
 
 use crate::mem::KernelRegions;
@@ -68,8 +67,8 @@ pub trait MMU {
     fn flush_tlb_all();
     fn page_size() -> usize;
     fn table_level() -> usize;
-    fn new_pte(config: PTEGeneric) -> usize;
-    fn read_pte(pte: usize) -> PTEGeneric;
+    fn new_pte(config: page_table_generic::PTEGeneric) -> usize;
+    fn read_pte(pte: usize) -> page_table_generic::PTEGeneric;
     fn enable_mmu(stack_top: usize, jump_to: usize) -> !;
 }
 
