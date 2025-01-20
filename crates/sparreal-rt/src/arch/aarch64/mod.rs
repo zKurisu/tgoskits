@@ -57,6 +57,7 @@ impl Platform for PlatformImpl {
     unsafe fn cpu_context_init(ctx_ptr: *mut u8, pc: *const c_void, stack_top: *const u8) {
         unsafe {
             let ctx = &mut *(ctx_ptr as *mut trap::Context);
+            ctx.spsr = SPSR_EL1.get();
             ctx.pc = pc as usize;
             ctx.sp = stack_top as usize;
         }

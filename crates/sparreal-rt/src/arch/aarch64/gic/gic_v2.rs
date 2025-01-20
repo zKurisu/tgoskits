@@ -12,7 +12,7 @@ use super::*;
 
 module_driver!(
     name: "GICv2",
-    compatibles: &["arm,cortex-a15-gic"],
+    compatibles: &["arm,cortex-a15-gic", "arm,gic-400"],
     probe: ProbeFnKind::InterruptController(probe_gic_v2),
 );
 

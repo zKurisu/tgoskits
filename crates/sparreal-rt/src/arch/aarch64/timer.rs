@@ -1,5 +1,6 @@
 use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, vec::Vec};
+use log::debug;
 use sparreal_kernel::driver_interface::{
     DriverGeneric, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
 };

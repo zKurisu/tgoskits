@@ -70,6 +70,14 @@ impl TaskControlBlock {
         let task = Self(buffer.as_ptr());
 
         unsafe {
+            let stack_top = task.stack().as_ptr().add(config.stack_size);
+
+            debug!(
+                "New task [{:?}], stack_top: {:p}",
+                task.info().name,
+                stack_top
+            );
+
             PlatformImpl::cpu_context_init(
                 task.cpu_context_ptr(),
                 pc,

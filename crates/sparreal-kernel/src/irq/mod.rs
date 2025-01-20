@@ -2,7 +2,7 @@ use core::{cell::UnsafeCell, error::Error};
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
 use driver_interface::interrupt_controller::*;
-use log::{debug, error};
+use log::{debug, error, warn};
 use spin::Mutex;
 
 use crate::{
@@ -147,7 +147,12 @@ impl Chip {
         let irq = self.device.get_and_acknowledge_interrupt()?;
 
         if let Some(handler) = unsafe { &mut *self.handlers.get() }.get(&irq) {
-            (handler)(irq);
+            let res = (handler)(irq);
+            if let IrqHandleResult::None = res {
+                return Some(());
+            }
+        } else {
+            warn!("IRQ {:?} no handler", irq);
         }
         self.device.end_interrupt(irq);
         Some(())

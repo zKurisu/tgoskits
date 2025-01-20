@@ -1,4 +1,7 @@
-use core::time::Duration;
+use core::{
+    sync::atomic::{fence, Ordering},
+    time::Duration,
+};
 
 use crate::{interrupt_controller::IrqConfig, DriverGeneric};
 use alloc::{boxed::Box, vec::Vec};
@@ -74,11 +77,13 @@ impl Timer {
 
     fn add_event(&mut self, event: queue::Event) {
         self.timer.set_irq_enable(false);
+        fence(Ordering::SeqCst);
 
         let next_tick = self.q.add_and_next_tick(event);
+        let v = next_tick - self.timer.current_ticks();
+        self.timer.set_timeval(v);
 
-        self.timer.set_timeval(next_tick);
-
+        fence(Ordering::SeqCst);
         self.timer.set_irq_enable(true);
     }
 
