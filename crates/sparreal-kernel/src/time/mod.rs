@@ -8,7 +8,6 @@ use crate::{
     },
     globals::{cpu_global, cpu_global_meybeuninit, cpu_global_mut, global_val},
     irq::{IrqHandleResult, IrqParam},
-    task,
 };
 
 use driver_interface::{interrupt_controller::IrqId, timer::*};
@@ -90,4 +89,10 @@ pub fn spin_delay(duration: Duration) {
     }
 }
 
-pub fn sleep(duration: Duration) {}
+pub fn sleep(duration: Duration) {
+    let pid = crate::task::current().info().pid;
+    after(duration, move || {
+        crate::task::wake_up_in_irq(pid);
+    });
+    crate::task::suspend();
+}
