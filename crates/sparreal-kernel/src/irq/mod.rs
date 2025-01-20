@@ -166,7 +166,7 @@ impl Chip {
     }
 
     fn pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
-        let chip = unsafe { &mut *self.device.force_use() };
+        let chip = unsafe { &*self.device.force_use() };
         chip.irq_pin_to_id(pin)
     }
 }
