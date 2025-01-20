@@ -21,17 +21,17 @@ fn main() {
         // shutdown();
     });
 
-    // task::spawn_with_config(
-    //     || {
-    //         info!("task2");
-    //     },
-    //     TaskConfig {
-    //         name: "task2".to_string(),
-    //         priority: 0,
-    //         stack_size: 0x1000 * 4,
-    //     },
-    // )
-    // .unwrap();
+    task::spawn_with_config(
+        || {
+            info!("task2");
+        },
+        TaskConfig {
+            name: "task2".to_string(),
+            priority: 0,
+            stack_size: 0x1000 * 4,
+        },
+    )
+    .unwrap();
 
     loop {
         spin_delay(Duration::from_secs(1));

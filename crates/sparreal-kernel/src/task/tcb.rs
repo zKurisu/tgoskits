@@ -139,12 +139,7 @@ impl TaskControlBlock {
         }
     }
 
-    fn exit(self) {
-        unsafe {
-            self.drop();
-        }
-    }
-
+    #[allow(unused)]
     pub fn sp(&self) -> usize {
         unsafe { PlatformImpl::cpu_context_sp(self.cpu_context_ptr()) }
     }
