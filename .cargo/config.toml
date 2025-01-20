@@ -3,4 +3,3 @@ runner = "ostool cargo-test"
 
 [build]
 target = "aarch64-unknown-none"
-

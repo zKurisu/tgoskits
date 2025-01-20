@@ -1,22 +1,40 @@
 #![no_std]
 #![no_main]
+extern crate alloc;
+
+use core::time::Duration;
 
 use alloc::string::ToString;
 use log::info;
+use sparreal_kernel::{
+    task::{self, TaskConfig},
+    time::{self, spin_delay},
+};
+use sparreal_rt::prelude::*;
 
-extern crate alloc;
-extern crate sparreal_rt;
-
-#[sparreal_rt::entry]
+#[entry]
 fn main() {
-    info!("hello world");
-    let s = "hello world".to_string();
-    let st = s.as_str();
+    info!("Hello, world!");
 
-    // unsafe {
-    // let a = *(0xffff_ffff_ffff_ffff as *const u8);
-    // sparreal_rt::println!("{:x}", a);
-    // }
+    time::after(Duration::from_secs(1), || {
+        info!("Timer callback");
+        // shutdown();
+    });
 
-    assert_eq!(st, "hello world");
+    task::spawn_with_config(
+        || {
+            info!("task2");
+        },
+        TaskConfig {
+            name: "task2".to_string(),
+            priority: 0,
+            stack_size: 0x1000 * 4,
+        },
+    )
+    .unwrap();
+
+    loop {
+        spin_delay(Duration::from_secs(1));
+        info!("123");
+    }
 }

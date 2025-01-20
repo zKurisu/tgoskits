@@ -1,7 +1,10 @@
-use core::{arch::asm, ptr::NonNull};
+#![allow(unused)]
 
-use dma_api::Impl;
-use sparreal_kernel::mem::{mmu::va_offset, Virt};
+use core::arch::asm;
+
+use aarch64_cpu::{asm::barrier::*, registers::*};
+
+use super::CacheOp;
 
 #[inline(always)]
 fn cache_line_size() -> usize {
@@ -14,78 +17,91 @@ fn cache_line_size() -> usize {
     }
 }
 
-struct DCacheIter {
-    aligned_addr: usize,
-    end: usize,
-    cache_line_size: usize,
-}
+/// Performs a cache operation on all memory.
+pub fn dcache_all(op: CacheOp) {
+    let clidr = CLIDR_EL1.get();
 
-impl DCacheIter {
-    fn new(addr: NonNull<u8>, size: usize) -> DCacheIter {
-        let start = addr.as_ptr() as usize;
-        let end = start + size;
-        let cache_line_size = cache_line_size();
-
-        let aligned_addr = addr.as_ptr() as usize & !(cache_line_size - 1);
-        DCacheIter {
-            aligned_addr,
-            end,
-            cache_line_size,
+    for level in 0..8 {
+        let ty = (clidr >> (level * 3)) & 0b111;
+        if ty == 0 {
+            return;
         }
+
+        dcache_level(op, level);
     }
+    dsb(SY);
+    isb(SY);
 }
 
-impl Iterator for DCacheIter {
-    type Item = usize;
+/// Performs a cache operation on a range of memory.
+#[inline]
+pub fn dcache_range(op: CacheOp, addr: usize, size: usize) {
+    let start = addr;
+    let end = start + size;
+    let cache_line_size = cache_line_size();
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.aligned_addr < self.end {
-            let addr = self.aligned_addr;
-            self.aligned_addr += self.cache_line_size;
-            Some(addr)
-        } else {
-            None
-        }
+    let mut aligned_addr = addr & !(cache_line_size - 1);
+
+    while aligned_addr < end {
+        _dcache_line(op, aligned_addr);
+        aligned_addr += cache_line_size;
     }
+
+    dsb(SY);
+    isb(SY);
 }
 
-/// Invalidate data cache
-pub fn dcache_invalidate_range(addr: NonNull<u8>, size: usize) {
+/// Performs a cache operation on a cache line.
+#[inline]
+fn _dcache_line(op: CacheOp, addr: usize) {
     unsafe {
-        for addr in DCacheIter::new(addr, size) {
-            asm!("dc ivac, {}", in(reg) addr);
+        match op {
+            CacheOp::Invalidate => asm!("dc ivac, {0}", in(reg) addr),
+            CacheOp::Clean => asm!("dc cvac, {0}", in(reg) addr),
+            CacheOp::CleanAndInvalidate => asm!("dc civac, {0}", in(reg) addr),
         }
-        asm!("dsb sy");
     }
 }
 
-/// Flush data cache
-pub fn dcache_flush_range(addr: NonNull<u8>, size: usize) {
-    unsafe {
-        for addr in DCacheIter::new(addr, size) {
-            asm!("dc civac, {}", in(reg) addr);
+/// Performs a cache operation on a cache line.
+#[inline]
+pub fn dcache_line(op: CacheOp, addr: usize) {
+    _dcache_line(op, addr);
+    dsb(SY);
+    isb(SY);
+}
+
+/// Performs a cache operation on a cache level.
+/// https://developer.arm.com/documentation/ddi0601/2024-12/AArch64-Instructions/DC-CISW--Data-or-unified-Cache-line-Clean-and-Invalidate-by-Set-Way
+#[inline]
+fn dcache_level(op: CacheOp, level: u64) {
+    assert!(level < 8, "armv8 level range is 0-7");
+
+    isb(SY);
+    CSSELR_EL1.write(CSSELR_EL1::InD::Data + CSSELR_EL1::Level.val(level));
+    isb(SY);
+    let lines = CCSIDR_EL1.read(CCSIDR_EL1::LineSize) as u32;
+    let ways = CCSIDR_EL1.read(CCSIDR_EL1::AssociativityWithCCIDX) as u32;
+    let sets = CCSIDR_EL1.read(CCSIDR_EL1::NumSetsWithCCIDX) as u32;
+
+    let l = lines + 4;
+
+    // Calculate bit position of number of ways
+    let way_adjust = ways.leading_zeros();
+
+    // Loop over sets and ways
+    for set in 0..sets {
+        for way in 0..ways {
+            let set_way = (way << way_adjust) | (set << l);
+
+            let cisw = (level << 1) | set_way as u64;
+            unsafe {
+                match op {
+                    CacheOp::Invalidate => asm!("dc isw, {0}", in(reg) cisw),
+                    CacheOp::Clean => asm!("dc csw, {0}", in(reg) cisw),
+                    CacheOp::CleanAndInvalidate => asm!("dc cisw, {0}", in(reg) cisw),
+                }
+            }
         }
-        asm!("dsb sy");
     }
 }
-
-struct DMAImpl;
-
-impl Impl for DMAImpl {
-    fn map(addr: NonNull<u8>, _size: usize, _direction: dma_api::Direction) -> u64 {
-        let p: Virt<u8> = Virt::from(addr.as_ptr());
-        p.convert_to_phys(va_offset()).as_usize() as _
-    }
-
-    fn unmap(_addr: NonNull<u8>, _size: usize) {}
-
-    fn flush(addr: NonNull<u8>, size: usize) {
-        dcache_flush_range(addr, size);
-    }
-
-    fn invalidate(addr: NonNull<u8>, size: usize) {
-        dcache_invalidate_range(addr, size);
-    }
-}
-
-dma_api::set_impl!(DMAImpl);

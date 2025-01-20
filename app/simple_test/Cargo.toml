@@ -9,3 +9,8 @@ log = { workspace = true }
 
 [build-dependencies]
 bare-test-macros = { workspace = true }
+
+
+[[test]]
+name = "test1"
+harness = false

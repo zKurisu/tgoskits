@@ -1,53 +1,25 @@
 use core::arch::asm;
 
-use aarch64_cpu::registers::*;
-use page_table_arm::{MAIRDefault, MAIRKind, MAIRSetting, PTEFlags, PTE};
+use aarch64_cpu::{asm::barrier::*, registers::*};
+use page_table_arm::*;
 use page_table_generic::*;
-use sparreal_kernel::{dbg, platform::PlatformPageTable};
+use sparreal_kernel::{
+    io::print::{early_dbg, early_dbg_hexln},
+    mem::va_offset,
+    platform_if::*,
+};
 use sparreal_macros::api_impl;
-
-use super::boot::BOOT_INFO;
-
-extern "C" {
-    fn _skernel();
-    fn _stack_top();
-    fn _ekernel();
-}
-
-pub unsafe fn init_boot_table() -> u64 {
-    let table = match sparreal_kernel::mem::mmu::new_boot_table(BOOT_INFO.to_boot_config()) {
-        Ok(t) => t,
-        Err(e) => {
-            dbg!("failed to create boot table: ");
-            dbg!(match e {
-                err::PagingError::NoMemory => "NoMemory",
-                err::PagingError::NotAligned => "NotAligned",
-                err::PagingError::NotMapped => "NotMapped",
-                err::PagingError::AlreadyMapped => "AlreadyMapped",
-                err::PagingError::MappedToHugePage => "MappedToHugePage",
-            });
-            panic!("Failed to create boot table");
-        }
-    };
-
-    MAIRDefault::mair_el1_apply();
-
-    table as _
-}
 
 pub struct PageTableImpl;
 
 #[api_impl]
-impl PlatformPageTable for PageTableImpl {
-    fn flush_tlb(addr: Option<*const u8>) {
-        unsafe {
-            if let Some(vaddr) = addr {
-                asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) vaddr as usize)
-            } else {
-                // flush the entire TLB
-                asm!("tlbi vmalle1; dsb nsh; isb")
-            };
-        }
+impl MMU for PageTableImpl {
+    unsafe fn flush_tlb(addr: *const u8) {
+        unsafe { asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) addr as usize) };
+    }
+
+    fn flush_tlb_all() {
+        unsafe { asm!("tlbi vmalle1is; dsb nsh; isb") };
     }
 
     fn page_size() -> usize {
@@ -74,6 +46,8 @@ impl PlatformPageTable for PageTableImpl {
             CacheSetting::Normal => MAIRKind::Normal,
             CacheSetting::Device => MAIRKind::Device,
             CacheSetting::NonCache => MAIRKind::NonCache,
+            CacheSetting::ToDevice => MAIRKind::Device,
+            CacheSetting::FromDevice => MAIRKind::Device,
         }));
 
         let privilege = &config.setting.privilege_access;
@@ -176,7 +150,7 @@ impl PlatformPageTable for PageTableImpl {
 
     fn set_kernel_table(addr: usize) {
         TTBR1_EL1.set_baddr(addr as _);
-        Self::flush_tlb(None);
+        Self::flush_tlb_all();
     }
 
     fn get_kernel_table() -> usize {
@@ -185,10 +159,53 @@ impl PlatformPageTable for PageTableImpl {
 
     fn set_user_table(addr: usize) {
         TTBR0_EL1.set_baddr(addr as _);
-        Self::flush_tlb(None);
+        Self::flush_tlb_all();
     }
 
     fn get_user_table() -> usize {
         TTBR0_EL1.get_baddr() as _
+    }
+
+    fn enable_mmu(stack_top: usize, jump_to: usize) -> ! {
+        MAIRDefault::mair_el1_apply();
+
+        // Enable TTBR0 and TTBR1 walks, page size = 4K, vaddr size = 48 bits, paddr size = 40 bits.
+        let tcr_flags0 = TCR_EL1::EPD0::EnableTTBR0Walks
+            + TCR_EL1::TG0::KiB_4
+            + TCR_EL1::SH0::Inner
+            + TCR_EL1::ORGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::IRGN0::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::T0SZ.val(16);
+        let tcr_flags1 = TCR_EL1::EPD1::EnableTTBR1Walks
+            + TCR_EL1::TG1::KiB_4
+            + TCR_EL1::SH1::Inner
+            + TCR_EL1::ORGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::IRGN1::WriteBack_ReadAlloc_WriteAlloc_Cacheable
+            + TCR_EL1::T1SZ.val(16);
+        TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
+
+        early_dbg("TCR_EL1: ");
+        early_dbg_hexln(TCR_EL1.get());
+        unsafe {
+            crate::debug::mmu_add_offset(va_offset());
+
+            asm!("tlbi vmalle1");
+            isb(SY);
+            dsb(NSH);
+            // Enable the MMU and turn on I-cache and D-cache
+            SCTLR_EL1
+                .modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+            isb(SY);
+
+            asm!(
+                "MOV      sp,  {stack}",
+                "MOV      x8,  {entry}",
+                "BLR      x8",
+                "B       .",
+                stack = in(reg) stack_top,
+                entry = in(reg) jump_to,
+                options(nomem, nostack,noreturn)
+            )
+        }
     }
 }

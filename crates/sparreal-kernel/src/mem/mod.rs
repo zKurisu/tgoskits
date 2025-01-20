@@ -1,174 +1,161 @@
-mod addr;
-
-pub mod dma;
-#[cfg(feature = "mmu")]
-pub mod mmu;
+#![allow(unused)]
 
 use core::{
-    alloc::{GlobalAlloc, Layout},
-    ptr::{null_mut, NonNull},
+    alloc::GlobalAlloc,
+    ptr::{NonNull, null_mut, slice_from_raw_parts_mut},
 };
+
+use buddy_system_allocator::Heap;
+use log::debug;
+use spin::Mutex;
+
+use crate::{globals::global_val, platform::kstack_size, println};
+
+mod addr;
+mod cache;
+#[cfg(feature = "mmu")]
+pub mod mmu;
+pub mod region;
 
 pub use addr::*;
-use buddy_system_allocator::Heap;
-use log::*;
-
-use crate::{
-    kernel::KernelConfig,
-    sync::{RwLock, RwLockWriteGuard},
-};
 
 #[global_allocator]
-static HEAP_ALLOCATOR: LockedHeap = LockedHeap::new();
+static ALLOCATOR: KAllocator = KAllocator {
+    inner: Mutex::new(Heap::empty()),
+};
 
-pub const BYTES_1K: usize = 1024;
-pub const BYTES_1M: usize = 1024 * BYTES_1K;
-pub const BYTES_1G: usize = 1024 * BYTES_1M;
+pub struct KAllocator {
+    pub(crate) inner: Mutex<Heap<32>>,
+}
 
-pub unsafe fn init(kconfig: &KernelConfig) {
+impl KAllocator {
+    pub fn reset(&self, memory: &mut [u8]) {
+        let mut g = self.inner.lock();
+
+        let mut h = Heap::empty();
+
+        unsafe { h.init(memory.as_mut_ptr() as usize, memory.len()) };
+
+        *g = h;
+    }
+
+    pub fn add_to_heap(&self, memory: &mut [u8]) {
+        let mut g = self.inner.lock();
+        let range = memory.as_mut_ptr_range();
+
+        unsafe { g.add_to_heap(range.start as usize, range.end as usize) };
+    }
+}
+
+unsafe impl GlobalAlloc for KAllocator {
+    unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
+        if let Ok(p) = self.inner.lock().alloc(layout) {
+            p.as_ptr()
+        } else {
+            null_mut()
+        }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
+        self.inner
+            .lock()
+            .dealloc(unsafe { NonNull::new_unchecked(ptr) }, layout);
+    }
+}
+
+static mut VA_OFFSET: usize = 0;
+static mut VA_OFFSET_NOW: usize = 0;
+
+pub(crate) fn set_va_offset(offset: usize) {
+    unsafe { VA_OFFSET = offset };
+}
+
+pub fn va_offset() -> usize {
+    unsafe { VA_OFFSET }
+}
+
+pub(crate) unsafe fn set_va_offset_now(va: usize) {
+    unsafe { VA_OFFSET_NOW = va };
+}
+
+fn va_offset_now() -> usize {
+    unsafe { VA_OFFSET_NOW }
+}
+
+pub(crate) fn init_heap() {
+    let main = global_val().main_memory.clone();
+    let mut start = VirtAddr::from(main.start);
+    let mut end = VirtAddr::from(main.end);
+
+    let bss_end = crate::mem::region::bss().as_ptr_range().end.into();
+
+    if (start..end).contains(&bss_end) {
+        start = bss_end;
+    }
+
+    let stack_top = VirtAddr::from(global_val().kstack_top);
+    let stack_bottom = stack_top - kstack_size();
+
+    if (start..end).contains(&stack_bottom) {
+        end = stack_bottom;
+    }
+
+    println!("heap add memory [{}, {})", start, end);
+    ALLOCATOR
+        .add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.as_mut_ptr(), end - start) });
+
+    println!("heap initialized");
+}
+
+pub(crate) fn init_page_and_memory() {
     #[cfg(feature = "mmu")]
-    mmu::set_va_offset(kconfig.boot_info.va_offset);
+    mmu::init_table();
 
-    let stack_size = kconfig.boot_info.hart_stack_size;
-    let start =
-        (kconfig.boot_info.main_memory.start + kconfig.boot_info.main_memory_heap_offset).to_virt();
-    let size =
-        kconfig.boot_info.main_memory.size - kconfig.boot_info.main_memory_heap_offset - stack_size;
-    let stack_top = kconfig.stack_top.to_virt();
+    let main = global_val().main_memory.clone();
 
-    debug!("Heap: [{}, {})", start, start + size);
-    debug!("Stack: [{}, {})", stack_top - stack_size, stack_top);
+    for memory in global_val().platform_info.memorys() {
+        if memory.contains(&main.start) {
+            continue;
+        }
+        let start = VirtAddr::from(memory.start);
+        let end = VirtAddr::from(memory.end);
+        let len = memory.end - memory.start;
 
-    let mut heap = HEAP_ALLOCATOR.write();
-    heap.init(start.as_usize(), size);
+        debug!("Heap add memory [{}, {})", start, end);
+        ALLOCATOR.add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.as_mut_ptr(), len) });
+    }
+}
 
-    debug!("Heap initialized.");
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct CMemRange {
+    pub start: usize,
+    pub end: usize,
+}
 
+impl CMemRange {
+    pub fn as_slice(&self) -> &'static [u8] {
+        unsafe { core::slice::from_raw_parts(self.start as *const u8, self.end - self.start) }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct KernelRegions {
+    pub text: CMemRange,
+    pub rodata: CMemRange,
+    pub data: CMemRange,
+    pub bss: CMemRange,
+}
+
+pub fn iomap(paddr: PhysAddr, _size: usize) -> NonNull<u8> {
     #[cfg(feature = "mmu")]
     {
-        let mut heap_mut = PageAllocatorRef::new(heap);
-        if let Err(e) = mmu::init_table(kconfig, &mut heap_mut) {
-            error!("Failed to initialize page table: {:?}", e);
-        }
-    }
-}
-
-struct LockedHeap(RwLock<Heap<32>>);
-
-unsafe impl Sync for LockedHeap {}
-unsafe impl Send for LockedHeap {}
-
-impl LockedHeap {
-    const fn new() -> Self {
-        Self(RwLock::new(Heap::new()))
+        mmu::iomap(paddr, _size)
     }
 
-    fn write(&self) -> RwLockWriteGuard<'_, Heap<32>> {
-        self.0.write()
-    }
-}
-
-unsafe impl GlobalAlloc for LockedHeap {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        match self.write().alloc(layout) {
-            Ok(ptr) => ptr.as_ptr(),
-            Err(_) => null_mut(),
-        }
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.write().dealloc(NonNull::new_unchecked(ptr), layout);
-    }
-}
-
-pub(crate) trait PhysToVirt<T> {
-    fn to_virt(self) -> Virt<T>;
-}
-
-impl<T> PhysToVirt<T> for Phys<T> {
-    fn to_virt(self) -> Virt<T> {
-        let a: usize = self.into();
-
-        #[cfg(feature = "mmu")]
-        {
-            use mmu::va_offset;
-            (a + va_offset()).into()
-        }
-
-        #[cfg(not(feature = "mmu"))]
-        {
-            a.into()
-        }
-    }
-}
-
-pub(crate) trait VirtToPhys<T> {
-    fn to_phys(self) -> Phys<T>;
-}
-
-impl<T> VirtToPhys<T> for Virt<T> {
-    fn to_phys(self) -> Phys<T> {
-        #[cfg(feature = "mmu")]
-        {
-            use mmu::va_offset;
-            self.convert_to_phys(va_offset())
-        }
-
-        #[cfg(not(feature = "mmu"))]
-        {
-            let a: usize = self.into();
-            a.into()
-        }
-    }
-}
-
-#[allow(dead_code)]
-pub struct PageAllocatorRef<'a> {
-    inner: RwLockWriteGuard<'a, Heap<32>>,
-}
-impl<'a> PageAllocatorRef<'a> {
-    pub fn new(inner: RwLockWriteGuard<'a, Heap<32>>) -> Self {
-        Self { inner }
-    }
-}
-
-#[cfg(feature = "mmu")]
-impl page_table_generic::Access for PageAllocatorRef<'_> {
-    fn va_offset(&self) -> usize {
-        mmu::va_offset()
-    }
-
-    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
-        self.inner.alloc(layout).ok()
-    }
-
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        self.inner.dealloc(ptr, layout);
-    }
-}
-
-#[allow(unused)]
-pub struct PageAllocator(Heap<32>);
-
-impl PageAllocator {
-    pub unsafe fn new(start: NonNull<u8>, size: usize) -> Self {
-        let mut heap = Heap::new();
-        heap.init(start.as_ptr() as usize, size);
-        Self(heap)
-    }
-}
-
-#[cfg(feature = "mmu")]
-impl page_table_generic::Access for PageAllocator {
-    fn va_offset(&self) -> usize {
-        mmu::va_offset()
-    }
-
-    unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
-        self.0.alloc(layout).ok()
-    }
-
-    unsafe fn dealloc(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        self.0.dealloc(ptr, layout);
+    #[cfg(not(feature = "mmu"))]
+    unsafe {
+        NonNull::new_unchecked(paddr.as_usize() as *mut u8)
     }
 }

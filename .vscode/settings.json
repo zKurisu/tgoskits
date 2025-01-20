@@ -1,6 +1,6 @@
 {
     "rust-analyzer.cargo.allTargets": false,
-    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.checkOnSave": true,
     "rust-analyzer.check.command": "clippy",
     "lldb.displayFormat": "auto",
     "lldb.dereferencePointers": true,

@@ -1,26 +1,51 @@
 #![no_std]
 
 extern crate alloc;
-#[cfg(not(feature = "build"))]
+extern crate sparreal_kernel;
+
+#[cfg(feature = "rt")]
 extern crate sparreal_rt;
 
-#[cfg(not(feature = "build"))]
-pub use sparreal_rt::*;
+use core::ptr::slice_from_raw_parts;
 
-pub use bare_test_macros::test_setup;
+pub use bare_test_macros::tests;
+pub use sparreal_kernel::prelude::*;
+pub use sparreal_kernel::*;
 
-#[cfg(feature = "build")]
-pub use sparreal_macros::build_test_setup;
+mod test_case;
 
-#[cfg(not(feature = "build"))]
-pub fn test_runner(tests: &[&dyn Fn()]) {
-    pub use sparreal_rt::println;
-    println!("Running {} tests", tests.len());
-    for (i, test) in tests.iter().enumerate() {
-        println!("[test {} start]", i);
-        test();
-        println!("[test {} passed]", i);
+#[sparreal_macros::entry]
+fn main() -> ! {
+    println!("begin test");
+
+    for test in test_case_list() {
+        println!("Run test: {}", test.name);
+
+        (test.test_fn)();
+
+        println!("test {} passed", test.name);
     }
+
     println!("All tests passed");
-    shutdown()
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct TestCase {
+    pub name: &'static str,
+    pub test_fn: fn(),
+}
+
+fn test_case_list() -> test_case::Iter<'static> {
+    unsafe extern "C" {
+        fn _stest_case();
+        fn _etest_case();
+    }
+
+    let data = _stest_case as usize as *const u8;
+    let len = _etest_case as usize - _stest_case as usize;
+
+    let list = test_case::ListRef::from_raw(unsafe { &*slice_from_raw_parts(data, len) });
+
+    list.iter()
 }

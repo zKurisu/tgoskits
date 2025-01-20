@@ -23,60 +23,50 @@ A test framework for testing the bare metal.
 
     ```toml
     [dev-dependencies]
-    bare-test = "0.0.1"
+    bare-test = "0.2"
 
     [build-dependencies]
-    sparreal-macros = "0.0.1"
+    bare-test-macros = "0.2"
+
+    [[test]]
+    name = "test"
+    harness = false
     ```
 
 4. setup `build.rs`.
 
     ```rust
     fn main() {
-        sparreal_macros::build_test_setup!();
+        bare_test_macros::build_test_setup!();
     }
     ```
 
-5. new `tests` dir and add `tests.rs`.
+5. new `tests` dir and add `test.rs`.
 
     ```rust
     #![no_std]
     #![no_main]
-    #![feature(custom_test_frameworks)]
-    #![test_runner(bare_test::test_runner)]
-    #![reexport_test_harness_main = "test_main"]
+    #![feature(used_with_arg)]
 
-    extern crate bare_test;
+    #[bare_test::tests]
+    mod tests {
 
-    #[bare_test::entry]
-    fn main() {
-        test_main();
-    }
-
-    use bare_test::println;
-    #[test_case]
-    fn it_not_works() {
-        println!("test2... ");
-        assert_eq!(1, 2);
-    }
-    #[test_case]
-    fn it_works1() {
-        println!("test1... ");
-        assert_eq!(1, 1);
-    }
-    #[test_case]
-    fn test_uart(){
-        // map uart data register for using.
-        let uart_data_reg = iomap(0x9000000.into(), 0x1000);
-
-        // write to uart, then it will be print to the screen.
-        unsafe{
-            uart_data_reg.write_volatile(b'A');
-            uart_data_reg.write_volatile(b'\n');
+        #[test]
+        fn it_works() {
+            assert_eq!(2 + 2, 4)
         }
 
-        println!("uart test passed!");
+        #[test]
+        fn test2() {
+            assert_eq!(2 + 2, 4)
+        }
     }
     ```
 
-6. run `cargo test --test tests --  --show-output`.
+6. run `cargo test --test test --  --show-output`.
+
+7. for uboot board test:
+
+```sh
+cargo test --test tests --  --show-output --uboot
+```

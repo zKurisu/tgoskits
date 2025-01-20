@@ -1,45 +1,25 @@
 #![no_std]
-#![feature(trait_upcasting)]
-#![allow(clippy::missing_safety_doc)]
+#![feature(linkage)]
+#![feature(fn_align)]
 
 extern crate alloc;
 
 pub mod __export;
-pub mod driver;
-pub mod executor;
-pub mod fdt;
+pub mod boot;
+mod driver_manager;
+pub mod globals;
+pub mod io;
+
+pub mod async_std;
 pub mod irq;
-pub mod kernel;
-#[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
-pub mod logger;
+mod logger;
 pub mod mem;
 pub mod platform;
+pub mod platform_if;
 pub mod prelude;
-pub mod stdout;
-pub mod sync;
+pub mod task;
 pub mod time;
-pub mod trap;
-pub mod util;
 
-pub use kernel::{KernelConfig, MemoryRange};
-pub use mem::PhysAddr;
-pub use platform::Platform;
-pub use sparreal_macros::entry;
-
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => {{
-        $crate::__export::print(format_args!($($arg)*));
-    }};
-}
-
-#[macro_export]
-macro_rules! println {
-    () => {
-        $crate::print!("\n")
-    };
-    ($($arg:tt)*) => {{
-        $crate::__export::print(format_args!("{}\r\n", format_args!($($arg)*)));
-    }};
-}
+pub use driver_interface;
+pub use mem::Address;

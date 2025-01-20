@@ -12,8 +12,13 @@ fn main() {
     println!("cargo::rustc-link-arg=-znostart-stop-gc");
 
     println!("cargo:rustc-link-search={}", config.out_dir.display());
-    println!("cargo:rerun-if-changed=Link.ld");
-    // println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=link.ld");
+    println!("cargo:rerun-if-changed=build.rs");
+
+    println!("cargo::rustc-check-cfg=cfg(hard_float)");
+    if std::env::var("TARGET").unwrap() == "aarch64-unknown-none" {
+        println!("cargo::rustc-cfg=hard_float");
+    }
 }
 #[derive(Debug)]
 pub enum Arch {
@@ -32,23 +37,25 @@ impl Default for Arch {
         }
     }
 }
+
 struct Config {
-    // smp: usize,
-    hart_stack_size: usize,
+    stack_size: usize,
     out_dir: PathBuf,
     arch: Arch,
 }
 
 // 8MiB stack size per hart
-const DEFAULT_HART_STACK_SIZE: usize = 8 * 1024 * 1024;
+const DEFAULT_KERNEL_STACK_SIZE: usize = 8 * 1024 * 1024;
 const KERNEL_VADDR: u64 = 0xffff_ff00_0008_0000;
+// const KERNEL_VADDR: u64 = 0x40080000;
+// const KERNEL_VADDR: u64 = 0x1000000;
 
 impl Config {
     fn new() -> Self {
         let arch = Arch::default();
 
         Self {
-            hart_stack_size: DEFAULT_HART_STACK_SIZE,
+            stack_size: DEFAULT_KERNEL_STACK_SIZE,
             out_dir: PathBuf::from(std::env::var("OUT_DIR").unwrap()),
             arch,
         }
@@ -63,24 +70,19 @@ impl Config {
             format!("{:?}", self.arch)
         };
 
-        let ld_content = std::fs::read_to_string("Link.ld").unwrap();
+        let ld_content = std::fs::read_to_string("link.ld").unwrap();
         let ld_content = ld_content.replace("%ARCH%", &output_arch);
         let ld_content = ld_content.replace("%KERNEL_VADDR%", &format!("{:#x}", KERNEL_VADDR));
-        let ld_content =
-            ld_content.replace("%STACK_SIZE%", &format!("{:#x}", self.hart_stack_size));
-        let ld_content =
-            ld_content.replace("%CPU_STACK_SIZE%", &format!("{:#x}", self.hart_stack_size));
+
+        let ld_content = ld_content.replace("%STACK_SIZE%", &format!("{:#x}", self.stack_size));
         std::fs::write(self.out_dir.join("link.x"), ld_content).expect("link.x write failed");
     }
 
     fn gen_const(&self) {
         let const_content = format!(
-            r#"
-
-            pub const SMP: usize = {:#x};
-            pub const HART_STACK_SIZE: usize = {:#x};
+            r#"pub const KERNEL_STACK_SIZE: usize = {:#x};
             "#,
-            1, self.hart_stack_size
+            self.stack_size
         );
 
         std::fs::write(self.out_dir.join("constant.rs"), const_content)

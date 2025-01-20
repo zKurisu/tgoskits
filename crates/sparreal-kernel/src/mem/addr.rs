@@ -1,40 +1,101 @@
-use core::{
-    fmt::Display,
-    ops::{Add, Sub},
-};
+use core::fmt::Display;
+use core::marker::PhantomData;
+use core::ops::{Add, Sub};
+use core::ptr::NonNull;
 
-#[derive(Clone, Copy)]
+use super::va_offset_now;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Address {
+    pub cpu: usize,
+    pub virt: Option<usize>,
+    pub bus: Option<u64>,
+}
+
+impl Address {
+    pub fn new(cpu: usize, virt: Option<*mut u8>, bus: Option<u64>) -> Self {
+        Self {
+            cpu,
+            virt: virt.map(|s| s as usize),
+            bus,
+        }
+    }
+
+    pub fn as_ptr(&self) -> *const u8 {
+        match self.virt {
+            Some(virt) => virt as *const u8,
+            None => self.cpu as *const u8,
+        }
+    }
+
+    pub fn bus(&self) -> u64 {
+        match self.bus {
+            Some(bus) => bus,
+            None => self.cpu as _,
+        }
+    }
+
+    pub fn physical(&self) -> usize {
+        self.cpu
+    }
+}
+
+impl Add<usize> for Address {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        Self {
+            cpu: self.cpu + rhs,
+            virt: self.virt.map(|s| s + rhs),
+            bus: self.bus.map(|s| s + rhs as u64),
+        }
+    }
+}
+
+impl Sub<usize> for Address {
+    type Output = Self;
+
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self {
+            cpu: self.cpu - rhs,
+            virt: self.virt.map(|s| s - rhs),
+            bus: self.bus.map(|s| s - rhs as u64),
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Virt<T>(*const T);
+pub struct Virt<T>(usize, PhantomData<T>);
 unsafe impl<T> Send for Virt<T> {}
-unsafe impl<T> Sync for Virt<T> {}
 
 impl<T> From<*const T> for Virt<T> {
     fn from(value: *const T) -> Self {
-        Self(value)
+        Self(value as _, PhantomData)
     }
 }
 impl<T> From<*mut T> for Virt<T> {
     fn from(value: *mut T) -> Self {
-        Self(value as *const T)
+        Self(value as _, PhantomData)
     }
 }
+impl<T> From<NonNull<T>> for Virt<T> {
+    fn from(value: NonNull<T>) -> Self {
+        Self(value.as_ptr() as _, PhantomData)
+    }
+}
+
 impl<T> From<Virt<T>> for *const T {
     fn from(value: Virt<T>) -> Self {
-        value.0
+        value.0 as *const T
     }
 }
 
-pub type VirtAddr<T = u8> = Virt<T>;
+pub type VirtAddr = Virt<u8>;
 
 impl<T> Virt<T> {
-    #[allow(clippy::new_without_default)]
     pub const fn new() -> Self {
-        Self(0 as *const T)
-    }
-
-    pub fn convert_to_phys(self, va_offset: usize) -> Phys<T> {
-        Phys::from(self.0 as usize - va_offset)
+        Self(0, PhantomData)
     }
 
     pub fn as_mut_ptr(self) -> *mut T {
@@ -42,65 +103,71 @@ impl<T> Virt<T> {
     }
 
     pub fn as_usize(self) -> usize {
-        self.0 as usize
+        self.0
+    }
+}
+
+impl<T> Default for Virt<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl<T> From<usize> for Virt<T> {
     fn from(value: usize) -> Self {
-        Self(value as *const T)
+        Self(value, PhantomData)
     }
 }
 impl<T> From<Virt<T>> for usize {
     fn from(value: Virt<T>) -> Self {
-        value.0 as usize
+        value.0
     }
 }
-impl<T> From<Phys<T>> for usize {
-    fn from(value: Phys<T>) -> Self {
-        value.0 as usize
+
+impl<T> From<PhysAddr> for Virt<T> {
+    fn from(value: PhysAddr) -> Self {
+        Self((value.0 + va_offset_now()) as _, PhantomData)
     }
 }
-#[derive(Clone, Copy)]
+
+impl From<PhysAddr> for usize {
+    fn from(value: PhysAddr) -> Self {
+        value.0
+    }
+}
+
+impl<T> From<Virt<T>> for PhysAddr {
+    fn from(value: Virt<T>) -> Self {
+        Self(value.as_usize() - va_offset_now())
+    }
+}
+
+#[derive(Default, Clone, Copy, PartialEq, PartialOrd)]
 #[repr(transparent)]
-pub struct Phys<T>(*const T);
+pub struct PhysAddr(usize);
 
-impl<T> PartialEq for Phys<T> {
-    fn eq(&self, other: &Self) -> bool {
-        core::ptr::eq(self.0, other.0)
-    }
-}
+unsafe impl Send for PhysAddr {}
 
-unsafe impl<T> Send for Phys<T> {}
-unsafe impl<T> Sync for Phys<T> {}
-
-pub type PhysAddr<T = u8> = Phys<T>;
-
-impl<T> From<usize> for Phys<T> {
+impl From<usize> for PhysAddr {
     fn from(value: usize) -> Self {
         Self(value as _)
     }
 }
-impl<T> From<*const T> for Phys<T> {
-    fn from(value: *const T) -> Self {
-        Self(value as _)
-    }
-}
-impl<T> Phys<T> {
-    #[allow(clippy::new_without_default)]
+
+impl PhysAddr {
     pub const fn new() -> Self {
-        Self(0 as *const T)
+        Self(0)
     }
 
     pub fn as_usize(&self) -> usize {
-        self.0 as usize
+        self.0
     }
 }
 
-impl<T> Sub<Phys<T>> for Phys<T> {
+impl Sub<PhysAddr> for PhysAddr {
     type Output = usize;
 
-    fn sub(self, rhs: Phys<T>) -> Self::Output {
+    fn sub(self, rhs: PhysAddr) -> Self::Output {
         self.as_usize() - rhs.as_usize()
     }
 }
@@ -160,7 +227,7 @@ pub const fn align_up(addr: usize, align: usize) -> usize {
     (addr + align - 1) & !(align - 1)
 }
 
-impl<T> Add<usize> for Phys<T> {
+impl Add<usize> for PhysAddr {
     type Output = Self;
 
     fn add(self, rhs: usize) -> Self::Output {
@@ -176,24 +243,32 @@ impl<T> Sub<usize> for Virt<T> {
     }
 }
 
-impl<T> Display for Phys<T> {
+impl<T> Sub<Virt<T>> for Virt<T> {
+    type Output = usize;
+
+    fn sub(self, rhs: Virt<T>) -> Self::Output {
+        self.as_usize() - rhs.as_usize()
+    }
+}
+
+impl Display for PhysAddr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "PA({:p})", self.0)
+        write!(f, "{:#x}", self.0)
     }
 }
 impl<T> Display for Virt<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "VA({:p})", self.0)
+        write!(f, "{:#x}", self.0)
     }
 }
 
-impl<T> core::fmt::Debug for Phys<T> {
+impl core::fmt::Debug for PhysAddr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "PA({:p})", self.0)
+        write!(f, "{:#x}", self.0)
     }
 }
 impl<T> core::fmt::Debug for Virt<T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "VA({:p})", self.0)
+        write!(f, "{:#x}", self.0)
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "driver-interface"
-version = "0.0.1"
+version = "0.2.0"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition = "2021"
 repository = "https://github.com/qclic/sparreal-os"
@@ -12,3 +12,4 @@ categories = ["embedded", "no-std"]
 [dependencies]
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 embedded-io = "0.6"
+log = "0.4"

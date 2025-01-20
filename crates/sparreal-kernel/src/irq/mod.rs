@@ -1,148 +1,242 @@
-use alloc::{collections::btree_map::BTreeMap, sync::Arc, vec::Vec};
-use driver_interface::{irq::Trigger, DeviceId};
-use log::{debug, info, warn};
+use core::{cell::UnsafeCell, error::Error};
+
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use driver_interface::interrupt_controller::*;
+use log::{debug, error, warn};
+use spin::Mutex;
 
 use crate::{
-    driver::{irq_chip_by_id_or_first, irq_chip_list, DriverIrqChip},
-    platform,
-    sync::RwLock,
+    driver_manager::{
+        self,
+        device::{Device, DriverId},
+    },
+    globals::{self, cpu_global, global_val},
+    platform::{self},
+    platform_if::PlatformImpl,
 };
+pub use driver_manager::device::irq::IrqInfo;
 
-type Handler = Arc<dyn Fn(usize) -> IrqHandle>;
+#[derive(Default)]
+pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
 
-static IRQ_VECTOR: RwLock<Vector> = RwLock::new(Vector::new());
+pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
-struct VectorPerIrq(BTreeMap<DeviceId, Handler>);
-struct VectorPerCpu(BTreeMap<usize, VectorPerIrq>);
-struct Vector(BTreeMap<usize, VectorPerCpu>);
+pub struct Chip {
+    device: Device<HardwareCPU>,
+    mutex: Mutex<()>,
+    handlers: UnsafeCell<BTreeMap<IrqId, Box<IrqHandler>>>,
+}
 
-unsafe impl Send for Vector {}
-unsafe impl Sync for Vector {}
+unsafe impl Send for Chip {}
+unsafe impl Sync for Chip {}
 
-#[allow(unused)]
-impl Vector {
-    const fn new() -> Self {
-        Self(BTreeMap::new())
+pub fn enable_all() {
+    PlatformImpl::irq_all_enable();
+}
+
+pub(crate) fn init_main_cpu() {
+    match &global_val().platform_info {
+        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
+            if let Err(e) = driver_manager::init_irq_chips_by_fdt(fdt.get_addr()) {
+                error!("{}", e);
+            }
+        }
     }
 
-    fn insert(&mut self, cpu_id: usize, irq_num: usize, dev_id: DeviceId, handler: Handler) {
-        self.0
-            .entry(cpu_id)
-            .or_insert(VectorPerCpu(BTreeMap::new()))
-            .0
-            .entry(irq_num)
-            .or_insert(VectorPerIrq(BTreeMap::new()))
-            .0
-            .insert(dev_id, handler);
-    }
+    init_current_cpu();
+}
 
-    fn remove(&mut self, cpu_id: usize, irq_num: usize, dev_id: DeviceId) {
-        self.0
-            .get_mut(&cpu_id)
-            .and_then(|one| one.0.get_mut(&irq_num))
-            .and_then(|one| one.0.remove(&dev_id));
-    }
+pub(crate) fn init_current_cpu() {
+    let chip = driver_manager::use_irq_chips_by("Kernel IRQ init");
+    let g = unsafe { globals::cpu_global_mut() };
 
-    fn get_handle_stack(&self, irq_num: usize) -> Vec<Handler> {
-        let cpu_id = unsafe { platform::cpu_id() } as usize;
-        self.0
-            .get(&cpu_id)
-            .and_then(|map| map.0.get(&irq_num))
-            .map(|map| map.0.values().cloned().collect::<Vec<_>>())
-            .unwrap_or_default()
+    for c in chip {
+        let id = c.descriptor.driver_id;
+        let device = c.current_cpu_setup();
+        debug!(
+            "[{}]({id:?}) Init cpu: {:?}",
+            c.descriptor.name,
+            platform::cpu_id(),
+        );
+
+        let device = Device::new(c.descriptor.clone(), device);
+
+        g.irq_chips.0.insert(id, Chip {
+            device,
+            mutex: Mutex::new(()),
+            handlers: UnsafeCell::new(Default::default()),
+        });
     }
 }
 
-fn vector_cpu_set_handle(cpu_id: usize, irq_num: usize, dev_id: DeviceId, handler: Handler) {
-    IRQ_VECTOR.write().insert(cpu_id, irq_num, dev_id, handler);
-}
-pub fn irq_set_handle(
-    irq_num: usize,
-    dev_id: DeviceId,
-    handler: impl Fn(usize) -> IrqHandle + 'static,
-) {
-    let handler = Arc::new(handler);
-    vector_cpu_set_handle(unsafe { platform::cpu_id() } as _, irq_num, dev_id, handler);
-}
-
-pub enum IrqHandle {
+pub enum IrqHandleResult {
     Handled,
     None,
 }
 
-#[derive(Debug, Clone)]
-pub struct IrqConfig {
-    pub irq: usize,
-    pub trigger: Trigger,
-    pub priority: usize,
-    pub cpu_list: Vec<u64>,
+fn chip(id: DriverId) -> &'static Chip {
+    globals::cpu_global()
+        .irq_chips
+        .0
+        .get(&id)
+        .unwrap_or_else(|| panic!("irq chip {:?} not found", id))
 }
-pub fn irq_setup(irq: usize, dev_id: DeviceId, trigger: Trigger) {
-    //TODO
-    let controller_id = DeviceId::default();
 
-    if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
-        info!(
-            "[{}]Enable irq {} on chip: {} ",
-            dev_id, irq, chip.desc.name
-        );
-        let mut c = chip.spec.write();
+pub fn fdt_parse_config(
+    irq_parent: DriverId,
+    prop_interrupts: &[u32],
+) -> Result<IrqConfig, Box<dyn Error>> {
+    unsafe { &*chip(irq_parent).device.force_use() }.parse_fdt_config(prop_interrupts)
+}
+
+pub struct IrqRegister {
+    pub param: IrqParam,
+    pub handler: Box<IrqHandler>,
+    pub priority: Option<usize>,
+    pub cpu_list: Vec<CpuId>,
+}
+
+impl IrqRegister {
+    pub fn register(self) {
+        let irq = self.param.cfg.irq;
+        let irq_parent = self.param.irq_chip;
+        debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);
+
+        let chip = chip(irq_parent);
+        chip.register_handle(irq, self.handler);
+
+        let mut c = chip.device.spin_try_use("register irq");
+        if let Some(p) = self.priority {
+            c.set_priority(irq, p);
+        } else {
+            c.set_priority(irq, 0);
+        }
+
+        if !self.cpu_list.is_empty() {
+            c.set_bind_cpu(irq, &self.cpu_list);
+        }
+
+        c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
-        c.set_priority(irq, 0);
-        c.set_trigger(irq, trigger);
+    }
+
+    pub fn priority(mut self, priority: usize) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    pub fn cpu_list(mut self, cpu_list: Vec<CpuId>) -> Self {
+        self.cpu_list = cpu_list;
+        self
     }
 }
 
-pub fn register_irq(
-    cfg: IrqConfig,
-    dev_id: DeviceId,
-    handler: impl Fn(usize) -> IrqHandle + 'static,
-) {
-    irq_set_handle(cfg.irq, dev_id, handler);
+impl Chip {
+    fn register_handle(&self, irq: IrqId, handle: Box<IrqHandler>) {
+        let g = NoIrqGuard::new();
+        let gm = self.mutex.lock();
+        unsafe { &mut *self.handlers.get() }.insert(irq, handle);
+        drop(gm);
+        drop(g);
+    }
 
-    //TODO
-    let controller_id = DeviceId::default();
+    fn unregister_handle(&self, irq: IrqId) {
+        let g = NoIrqGuard::new();
+        let gm = self.mutex.lock();
+        unsafe { &mut *self.handlers.get() }.remove(&irq);
+        drop(gm);
+        drop(g);
+    }
 
-    if let Some(chip) = irq_chip_by_id_or_first(controller_id) {
-        info!(
-            "[{}]Enable irq {} on chip: {} ",
-            dev_id, cfg.irq, chip.desc.name
-        );
-        let mut c = chip.spec.write();
-        c.irq_enable(cfg.irq);
-        c.set_priority(cfg.irq, cfg.priority);
-        c.set_trigger(cfg.irq, cfg.trigger);
+    fn handle_irq(&self) -> Option<()> {
+        let chip = unsafe { &mut *self.device.force_use() };
+
+        let irq = chip.get_and_acknowledge_interrupt()?;
+
+        if let Some(handler) = unsafe { &mut *self.handlers.get() }.get(&irq) {
+            let res = (handler)(irq);
+            if let IrqHandleResult::None = res {
+                return Some(());
+            }
+        } else {
+            warn!("IRQ {:?} no handler", irq);
+        }
+        chip.end_interrupt(irq);
+        Some(())
+    }
+
+    fn pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
+        let chip = unsafe { &*self.device.force_use() };
+        chip.irq_pin_to_id(pin)
     }
 }
 
-fn get_chip() -> Option<DriverIrqChip> {
-    irq_chip_list().first().cloned()
+pub struct NoIrqGuard {
+    is_enabled: bool,
+}
+
+impl NoIrqGuard {
+    pub fn new() -> Self {
+        let is_enabled = PlatformImpl::irq_all_is_enabled();
+        PlatformImpl::irq_all_disable();
+        Self { is_enabled }
+    }
+}
+
+impl Default for NoIrqGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Drop for NoIrqGuard {
+    fn drop(&mut self) {
+        if self.is_enabled {
+            enable_all();
+        }
+    }
 }
 
 pub fn handle_irq() {
-    if let Some(chip) = get_chip() {
-        let c = chip.spec.read();
+    for chip in cpu_global().irq_chips.0.values() {
+        chip.handle_irq();
+    }
+}
 
-        let irq_id = c.get_and_acknowledge_interrupt();
-        if let Some(irq_id) = irq_id {
-            handle_irq_by_id(irq_id);
-            c.end_interrupt(irq_id);
+#[derive(Debug, Clone)]
+pub struct IrqParam {
+    pub irq_chip: DriverId,
+    pub cfg: IrqConfig,
+}
+
+impl IrqParam {
+    pub fn new_pin(pin: usize, irq_chip: DriverId) -> Result<Self, Box<dyn Error>> {
+        let chip = chip(irq_chip);
+        let irq_id = chip.pin_to_id(pin)?;
+        Ok(Self {
+            irq_chip,
+            cfg: IrqConfig {
+                irq: irq_id,
+                trigger: Trigger::LevelLow,
+            },
+        })
+    }
+
+    pub fn register_builder(
+        &self,
+        handler: impl Fn(IrqId) -> IrqHandleResult + 'static,
+    ) -> IrqRegister {
+        IrqRegister {
+            param: self.clone(),
+            handler: Box::new(handler),
+            priority: None,
+            cpu_list: Vec::new(),
         }
     }
 }
 
-fn handle_irq_by_id(irq_id: usize) {
-    debug!("irq {}", irq_id);
-    let stack = { IRQ_VECTOR.read().get_handle_stack(irq_id) };
-
-    for handler in stack {
-        match handler(irq_id) {
-            IrqHandle::Handled => {
-                return;
-            }
-            IrqHandle::None => {}
-        }
+pub fn unregister_irq(irq: IrqId) {
+    for chip in cpu_global().irq_chips.0.values() {
+        chip.unregister_handle(irq);
     }
-
-    warn!("Irq {} not handled", irq_id);
 }

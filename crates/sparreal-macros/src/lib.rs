@@ -7,13 +7,11 @@ extern crate proc_macro2;
 extern crate syn;
 
 mod api_trait;
+mod arch;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Span};
-use syn::{
-    parse, spanned::Spanned, FnArg, ImplItem, ItemFn, ItemImpl, ItemTrait, Pat, PathArguments,
-    TraitItem, Type, Visibility,
-};
+use proc_macro2::Span;
+use syn::{FnArg, ItemFn, PathArguments, Type, Visibility, parse, spanned::Spanned};
 
 /// Attribute to declare the entry point of the program
 ///
@@ -113,7 +111,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 
     quote!(
         #[allow(non_snake_case)]
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         #(#attrs)*
         pub #unsafety extern "C" fn __sparreal_rt_main(#args) {
             #(#stmts)*
@@ -135,101 +133,16 @@ fn is_simple_type(ty: &Type, name: &str) -> bool {
     false
 }
 
-fn func_ident(trait_ident: &Ident, func_ident: &Ident) -> Ident {
-    let trait_ident = trait_ident.to_string().to_ascii_lowercase();
-    format_ident!("__sparreal_api_{}_{}", trait_ident, func_ident)
+const NAMESPACE: &str = "sparreal_os";
+
+#[proc_macro_attribute]
+pub fn api_trait(_args: TokenStream, item: TokenStream) -> TokenStream {
+    abi_singleton::api_trait(item, NAMESPACE)
 }
 
 #[proc_macro_attribute]
-pub fn api_trait(_args: TokenStream, input: TokenStream) -> TokenStream {
-    let f = parse_macro_input!(input as ItemTrait);
-
-    let mut funcs = Vec::new();
-
-    for item in &f.items {
-        if let TraitItem::Fn(func) = item {
-            let ident = func.sig.ident.clone();
-            let inputs = func.sig.inputs.clone();
-            let output = func.sig.output.clone();
-
-            let api_name = func_ident(&f.ident, &ident);
-
-            let mut args = Vec::new();
-
-            for arg in &inputs {
-                if let FnArg::Typed(t) = arg {
-                    if let Pat::Ident(i) = t.pat.as_ref() {
-                        let ident = &i.ident;
-                        args.push(quote! { #ident , });
-                    }
-                }
-            }
-            funcs.push(quote! {
-
-                pub unsafe fn #ident (#inputs) #output{
-                    extern "Rust" {
-                        fn #api_name ( #inputs ) #output;
-                    }
-
-                    #api_name ( #(#args)* )
-                }
-            });
-        }
-    }
-
-    quote! {
-        #f
-        #(#funcs)*
-
-    }
-    .into()
-}
-
-#[proc_macro_attribute]
-pub fn api_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
-    let f = parse_macro_input!(input as ItemImpl);
-
-    let mut funcs = Vec::new();
-
-    let ty = f.self_ty.clone();
-
-    for item in &f.items {
-        if let ImplItem::Fn(func) = item {
-            let ident = func.sig.ident.clone();
-            let inputs = func.sig.inputs.clone();
-            let output = func.sig.output.clone();
-
-            let api_name = func_ident(
-                f.trait_.clone().unwrap().1.get_ident().unwrap(),
-                &func.sig.ident,
-            );
-
-            let mut args = Vec::new();
-
-            for arg in &inputs {
-                if let FnArg::Typed(t) = arg {
-                    if let Pat::Ident(i) = t.pat.as_ref() {
-                        let ident = &i.ident;
-                        args.push(quote! { #ident , });
-                    }
-                }
-            }
-
-            funcs.push(quote! {
-                #[no_mangle]
-                unsafe fn #api_name (#inputs) #output{
-                    #ty:: #ident ( #(#args)* )
-                }
-            });
-        }
-    }
-
-    quote! {
-        #f
-        #(#funcs)*
-
-    }
-    .into()
+pub fn api_impl(_args: TokenStream, item: TokenStream) -> TokenStream {
+    abi_singleton::api_impl(item, NAMESPACE)
 }
 
 #[proc_macro]
@@ -238,6 +151,43 @@ pub fn build_test_setup(_input: TokenStream) -> TokenStream {
     println!("cargo::rustc-link-arg-tests=-Tlink.x");
     println!("cargo::rustc-link-arg-tests=-no-pie");
     println!("cargo::rustc-link-arg-tests=-znostart-stop-gc");
+    }
+    .into()
+}
+
+#[proc_macro]
+pub fn module_driver(input: TokenStream) -> TokenStream {
+    let input = proc_macro2::TokenStream::from(input);
+    let mut name = None;
+
+    {
+        let mut it = input.clone().into_iter();
+        while let Some(t) = it.next() {
+            if let proc_macro2::TokenTree::Ident(i) = t {
+                if i == "name" {
+                    it.next();
+                    if let Some(proc_macro2::TokenTree::Literal(l)) = it.next() {
+                        let l = l.to_string();
+                        let l = l.trim_matches('"');
+                        name = Some(l.to_string());
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let st_name = name.unwrap_or_default().replace("-", "_").replace(" ", "_");
+
+    let static_name = format_ident!("DRIVER_{}", st_name.to_uppercase());
+
+    quote! {
+        #[unsafe(link_section = ".driver.register")]
+        #[unsafe(no_mangle)]
+        #[used(linker)]
+        pub static #static_name: sparreal_kernel::driver_interface::DriverRegister = sparreal_kernel::driver_interface::DriverRegister{
+            #input
+        };
     }
     .into()
 }
