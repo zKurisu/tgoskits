@@ -217,7 +217,7 @@ impl IrqParam {
             irq_chip,
             cfg: IrqConfig {
                 irq: irq_id,
-                trigger: Trigger::EdgeBoth,
+                trigger: Trigger::LevelLow,
             },
         })
     }
