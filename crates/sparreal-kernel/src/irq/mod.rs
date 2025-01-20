@@ -204,7 +204,7 @@ pub fn handle_irq() -> usize {
 
     let cu = crate::task::current();
 
-    cu.sp()
+    cu.sp
 }
 
 #[derive(Debug, Clone)]

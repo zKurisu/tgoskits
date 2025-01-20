@@ -13,10 +13,10 @@ pub fn schedule() {
     let idle = idle_pop();
     if let Some(mut idle) = idle {
         let mut cu = current();
-        if matches!(cu.info().state, TaskState::Running) {
-            cu.info_mut().state = TaskState::Suspend;
+        if matches!(cu.state, TaskState::Running) {
+            cu.state = TaskState::Suspend;
         }
-        idle.info_mut().state = TaskState::Running;
+        idle.state = TaskState::Running;
 
         cu.switch_to(&idle);
     } else {
@@ -34,7 +34,7 @@ pub fn idle_push(tcb: TaskControlBlock) {
 pub fn idle_pop() -> Option<TaskControlBlock> {
     let mut g = IDLE.lock();
     while let Some(one) = g.pop_front() {
-        if matches!(one.info().state, TaskState::Stopped) {
+        if matches!(one.state, TaskState::Stopped) {
             unsafe { one.drop() };
             continue;
         }
@@ -49,6 +49,6 @@ pub fn finished_push(tcb: TaskControlBlock) {
 
 pub fn suspend() {
     let mut current = current();
-    current.info_mut().state = TaskState::Suspend;
+    current.state = TaskState::Suspend;
     schedule();
 }

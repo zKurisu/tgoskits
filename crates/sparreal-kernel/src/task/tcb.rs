@@ -1,6 +1,7 @@
 use core::{
     alloc::Layout,
     fmt::Debug,
+    ops::{Deref, DerefMut},
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
@@ -8,7 +9,7 @@ use core::{
 use alloc::{boxed::Box, string::String};
 use log::debug;
 
-use crate::{platform_if::PlatformImpl, task::schedule::*};
+use crate::{globals::global_val, mem::VirtAddr, platform_if::PlatformImpl, task::schedule::*};
 
 use super::{TaskConfig, TaskError};
 
@@ -19,6 +20,12 @@ const TCB_ALIGN: usize = 16;
 pub struct TaskControlBlock(*mut u8);
 
 unsafe impl Send for TaskControlBlock {}
+
+impl From<*mut u8> for TaskControlBlock {
+    fn from(value: *mut u8) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -59,73 +66,76 @@ impl TaskControlBlock {
 
         let pid = Pid::new();
 
-        let pc;
-
         unsafe {
-            let task_info = &mut *(buffer.as_ptr() as *mut TaskInfo);
-            task_info.pid = pid;
-            task_info.stack_size = config.stack_size;
-            task_info.priority = config.priority;
-            task_info.name = config.name;
-            task_info.state = TaskState::Idle;
-            task_info.entry = Some(entry_box);
-
-            pc = task_entry as usize as _;
+            let task_data = &mut *(buffer.as_ptr() as *mut TaskControlBlockData);
+            task_data.pid = pid;
+            task_data.stack_size = config.stack_size;
+            task_data.priority = config.priority;
+            task_data.name = config.name;
+            task_data.state = TaskState::Idle;
+            task_data.entry = Some(entry_box);
         }
 
-        let task = Self(buffer.as_ptr());
+        let mut task = Self(buffer.as_ptr());
+        task.sp = task.stack_top() as usize;
 
         unsafe {
-            let stack_top = task.stack().as_ptr().add(config.stack_size);
+            task.sp -= PlatformImpl::cpu_context_size();
+            let ctx_ptr = task.sp as *mut u8;
 
-            debug!(
-                "New task [{:?}], stack_top: {:p}",
-                task.info().name,
-                stack_top
-            );
-
-            PlatformImpl::cpu_context_init(
-                task.cpu_context_ptr(),
-                pc,
-                task.stack().as_ptr().add(config.stack_size),
-            );
+            PlatformImpl::cpu_context_set_sp(ctx_ptr, task.sp);
+            PlatformImpl::cpu_context_set_pc(ctx_ptr, task_entry as _);
         }
         Ok(task)
     }
 
+    pub(super) fn new_main() -> Self {
+        let entry_box = Box::new(|| {});
+
+        let buffer = NonNull::new(unsafe {
+            alloc::alloc::alloc_zeroed(
+                Layout::from_size_align(Self::tcb_size(0), TCB_ALIGN).unwrap(),
+            )
+        })
+        .ok_or(TaskError::NoMemory)
+        .expect("main task no memory");
+
+        let pid = Pid::new();
+
+        unsafe {
+            let task_data = &mut *(buffer.as_ptr() as *mut TaskControlBlockData);
+            task_data.pid = pid;
+            task_data.stack_size = 0;
+            task_data.priority = 0;
+            task_data.name = "Main".into();
+            task_data.state = TaskState::Running;
+            task_data.entry = Some(entry_box);
+        }
+        Self(buffer.as_ptr())
+    }
+
     fn tcb_size(stack_size: usize) -> usize {
-        size_of::<TaskInfo>() + stack_size + PlatformImpl::cpu_context_size()
+        size_of::<TaskControlBlockData>() + stack_size
     }
 
-    pub fn info(&self) -> &TaskInfo {
-        unsafe { &*(self.0 as *mut TaskInfo) }
+    fn stack_bottom(&self) -> *mut u8 {
+        unsafe { self.0.add(size_of::<TaskControlBlockData>()) }
     }
 
-    pub(super) fn info_mut(&mut self) -> &mut TaskInfo {
-        unsafe { &mut *(self.0 as *mut TaskInfo) }
+    fn stack_top(&self) -> *mut u8 {
+        unsafe { self.stack_bottom().add(self.stack_size) }
     }
 
     pub(super) fn stack(&self) -> &[u8] {
-        let stack_size = self.info().stack_size;
-        unsafe { core::slice::from_raw_parts_mut(self.0.add(size_of::<TaskInfo>()), stack_size) }
+        unsafe { core::slice::from_raw_parts_mut(self.stack_bottom(), self.stack_size) }
     }
 
     pub(super) unsafe fn drop(self) {
-        let info = self.info();
-
-        let size = Self::tcb_size(info.stack_size);
+        let size = Self::tcb_size(self.stack_size);
 
         unsafe {
             alloc::alloc::dealloc(self.0, Layout::from_size_align_unchecked(size, TCB_ALIGN))
         };
-    }
-
-    fn cpu_context_ptr(&self) -> *mut u8 {
-        unsafe {
-            self.0
-                .add(size_of::<TaskInfo>())
-                .add(self.info().stack_size)
-        }
     }
 
     fn addr(&self) -> *mut u8 {
@@ -133,31 +143,41 @@ impl TaskControlBlock {
     }
 
     pub(super) fn switch_to(&self, next: &TaskControlBlock) {
-        debug!("switch {} -> {}", self.info().name, next.info().name);
+        debug!("switch {} -> {}", self.name, next.name);
         set_current(next);
-        match self.info().state {
+        match self.state {
             TaskState::Stopped => finished_push(*self),
             _ => idle_push(*self),
         }
 
         unsafe {
-            PlatformImpl::cpu_context_switch(self.cpu_context_ptr(), next.cpu_context_ptr());
+            PlatformImpl::cpu_context_switch(self.addr(), next.addr());
         }
-    }
-
-    #[allow(unused)]
-    pub fn sp(&self) -> usize {
-        unsafe { PlatformImpl::cpu_context_sp(self.cpu_context_ptr()) }
     }
 }
 
-pub struct TaskInfo {
+impl Deref for TaskControlBlock {
+    type Target = TaskControlBlockData;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(self.0 as *mut TaskControlBlockData) }
+    }
+}
+
+impl DerefMut for TaskControlBlock {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(self.0 as *mut TaskControlBlockData) }
+    }
+}
+
+pub struct TaskControlBlockData {
     pub pid: Pid,
     pub name: String,
     pub priority: usize,
     pub stack_size: usize,
     pub entry: Option<Box<dyn FnOnce()>>,
     pub state: TaskState,
+    pub sp: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -170,10 +190,10 @@ pub enum TaskState {
 
 extern "C" fn task_entry() -> ! {
     let mut task = current();
-    let task_mut = task.info_mut();
-    if let Some(entry) = task_mut.entry.take() {
+
+    if let Some(entry) = task.entry.take() {
         entry();
-        task_mut.state = TaskState::Stopped;
+        task.state = TaskState::Stopped;
     }
     schedule();
     unreachable!("task exited!");
@@ -182,7 +202,7 @@ extern "C" fn task_entry() -> ! {
 pub fn current() -> TaskControlBlock {
     unsafe {
         let ptr = PlatformImpl::get_current_tcb_addr();
-        TaskControlBlock(ptr as _)
+        TaskControlBlock::from(ptr)
     }
 }
 

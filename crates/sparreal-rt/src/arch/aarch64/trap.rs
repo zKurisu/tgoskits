@@ -4,6 +4,9 @@ use core::{
     fmt::{self, Debug},
 };
 use log::*;
+use sparreal_kernel::mem::VirtAddr;
+
+use super::context::Context;
 
 #[unsafe(no_mangle)]
 unsafe extern "C" fn __handle_sync(ctx: &Context) {
@@ -56,7 +59,7 @@ unsafe extern "C" fn __handle_serror(ctx: &Context) {
     let elr = ELR_EL1.get();
     error!("{:?}", ctx);
     panic!(
-        "Unhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+        "Unhandled serror @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
         elr,
         esr.get(),
         esr.read(ESR_EL1::EC),
@@ -71,72 +74,24 @@ unsafe extern "C" fn __handle_fiq() {
 fn handle_data_abort(iss: u64, _is_user: bool) {
     let wnr = (iss & (1 << 6)) != 0; // WnR: Write not Read
     let cm = (iss & (1 << 8)) != 0; // CM: Cache maintenance
-    let _reason = if wnr & !cm {
+    let reason = if wnr & !cm {
         PageFaultReason::Write
     } else {
         PageFaultReason::Read
     };
-    // let vaddr = VirtAddr::from(FAR_EL1.get() as usize);
+    let vaddr = VirtAddr::from(FAR_EL1.get() as usize);
 
-    // handle_page_fault(vaddr, reason);
+    handle_page_fault(vaddr, reason);
 }
 
+#[derive(Debug)]
 pub enum PageFaultReason {
     Read,
     Write,
 }
 
-// pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
-//     // panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
-// }
-
-#[repr(C, align(0x10))]
-#[derive(Clone)]
-pub struct Context {
-    pub sp: usize,
-    pub pc: usize,
-    #[cfg(hard_float)]
-    /// Floating-point Control Register (FPCR)
-    pub fpcr: usize,
-    #[cfg(hard_float)]
-    /// Floating-point Status Register (FPSR)
-    pub fpsr: usize,
-    #[cfg(hard_float)]
-    pub q: [u128; 32],
-    pub spsr: u64,
-    pub x: [usize; 31],
-}
-
-impl Debug for Context {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Context:")?;
-
-        const NUM_CHUNKS: usize = 4;
-
-        for (r, chunk) in self.x.chunks(NUM_CHUNKS).enumerate() {
-            let row_start = r * NUM_CHUNKS;
-
-            for (i, v) in chunk.iter().enumerate() {
-                let i = row_start + i;
-                write!(f, "  x{:<3}: {:#18x}", i, v)?;
-            }
-            writeln!(f)?;
-        }
-        writeln!(f, "  spsr: {:#18x}", self.spsr)?;
-        writeln!(f, "  pc  : {:#18x}", self.pc)?;
-        writeln!(f, "  sp  : {:#18x}", self.sp)
-    }
-}
-
-impl Context {
-    /// Switches to another task.
-    ///
-    /// It first saves the current task's context from CPU to this place, and then
-    /// restores the next task's context from `next_ctx` to CPU.
-    pub fn switch_to(&mut self, next_ctx: &Self) {
-        debug!("switch_to {:?}", next_ctx);
-        unsafe { context_switch(self, next_ctx) }
-    }
+pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
+    panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
 }
 
 #[cfg(hard_float)]

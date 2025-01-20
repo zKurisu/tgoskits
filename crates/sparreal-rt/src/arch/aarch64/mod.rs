@@ -1,8 +1,11 @@
 use core::{arch::asm, ffi::c_void};
 
 use aarch64_cpu::registers::*;
+use context::{Context, tcb_switch};
+use log::debug;
 use sparreal_kernel::{
     globals::global_val, mem::KernelRegions, platform::PlatformInfoKind, platform_if::*, println,
+    task::TaskControlBlock,
 };
 use sparreal_macros::api_impl;
 
@@ -10,6 +13,7 @@ use crate::mem::driver_registers;
 
 mod boot;
 mod cache;
+mod context;
 mod gic;
 pub(crate) mod mmu;
 mod psci;
@@ -38,36 +42,52 @@ impl Platform for PlatformImpl {
     }
 
     fn cpu_context_size() -> usize {
-        size_of::<trap::Context>()
+        size_of::<Context>()
     }
 
     unsafe fn cpu_context_sp(ctx_ptr: *const u8) -> usize {
-        let ctx = unsafe { &*(ctx_ptr as *const trap::Context) };
+        let ctx: &Context = unsafe { &*(ctx_ptr as *const Context) };
         ctx.sp
     }
 
-    unsafe fn get_current_tcb_addr() -> *const u8 {
+    unsafe fn get_current_tcb_addr() -> *mut u8 {
         SP_EL0.get() as usize as _
     }
 
-    unsafe fn set_current_tcb_addr(addr: *const u8) {
+    unsafe fn set_current_tcb_addr(addr: *mut u8) {
         SP_EL0.set(addr as usize as _);
     }
 
-    unsafe fn cpu_context_init(ctx_ptr: *mut u8, pc: *const c_void, stack_top: *const u8) {
+    /// # Safety
+    ///
+    /// `ctx_ptr` 是有效的上下文指针
+    unsafe fn cpu_context_set_sp(ctx_ptr: *const u8, sp: usize) {
         unsafe {
-            let ctx = &mut *(ctx_ptr as *mut trap::Context);
-            ctx.spsr = SPSR_EL1.get();
-            ctx.pc = pc as usize;
-            ctx.sp = stack_top as usize;
+            let ctx = &mut *(ctx_ptr as *mut Context);
+            ctx.sp = sp;
         }
     }
-    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8) {
+
+    /// # Safety
+    ///
+    /// `ctx_ptr` 是有效的上下文指针
+    unsafe fn cpu_context_set_pc(ctx_ptr: *const u8, pc: usize) {
         unsafe {
-            let prev = &mut *(prev as *mut trap::Context);
-            let next = &mut *(next as *mut trap::Context);
-            prev.switch_to(next);
+            let ctx = &mut *(ctx_ptr as *mut Context);
+            ctx.pc = pc;
+            ctx.x[30] = pc;
         }
+    }
+
+    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8) {
+        let mut prev = TaskControlBlock::from(prev);
+        let mut next = TaskControlBlock::from(next);
+
+        let next_ctx = unsafe { &*(next.sp as *const Context) };
+
+        debug!("next: {:?}", next_ctx);
+
+        tcb_switch(&mut prev, &mut next);
     }
 
     fn wait_for_interrupt() {

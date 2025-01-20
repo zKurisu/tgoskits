@@ -15,17 +15,12 @@ pub trait Platform {
     /// # Safety
     ///
     ///
-    unsafe fn get_current_tcb_addr() -> *const u8;
+    unsafe fn get_current_tcb_addr() -> *mut u8;
 
     /// # Safety
     ///
     ///
-    unsafe fn set_current_tcb_addr(addr: *const u8);
-
-    /// # Safety
-    ///
-    ///
-    unsafe fn cpu_context_init(ctx_ptr: *mut u8, pc: *const c_void, stack_top: *const u8);
+    unsafe fn set_current_tcb_addr(addr: *mut u8);
 
     /// # Safety
     ///
@@ -34,8 +29,18 @@ pub trait Platform {
 
     /// # Safety
     ///
+    /// `ctx_ptr` 是有效的上下文指针
+    unsafe fn cpu_context_set_sp(ctx_ptr: *const u8, sp: usize);
+
+    /// # Safety
     ///
-    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8);
+    /// `ctx_ptr` 是有效的上下文指针
+    unsafe fn cpu_context_set_pc(ctx_ptr: *const u8, pc: usize);
+
+    /// # Safety
+    ///
+    ///
+    unsafe fn cpu_context_switch(prev_tcb: *mut u8, next_tcb: *mut u8);
 
     fn wait_for_interrupt();
 
