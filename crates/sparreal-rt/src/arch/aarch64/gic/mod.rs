@@ -2,12 +2,12 @@ use core::error::Error;
 
 use alloc::boxed::Box;
 use arm_gic_driver::IntId;
-use sparreal_kernel::driver_interface::interrupt_controller::{self, IrqConfig, Trigger};
+use sparreal_kernel::driver_interface::interrupt_controller::{IrqConfig, IrqId, Trigger};
 
 mod gic_v2;
 mod gic_v3;
 
-fn convert_id(irq: interrupt_controller::IrqId) -> IntId {
+fn convert_id(irq: IrqId) -> IntId {
     let id: usize = irq.into();
     unsafe { IntId::raw(id as u32) }
 }
@@ -61,4 +61,9 @@ fn fdt_parse_irq_config(itr: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         irq: (irq_id as usize).into(),
         trigger,
     })
+}
+
+fn irq_pin_to_id(pin: usize) -> Result<IrqId, Box<dyn Error>> {
+    let irq_id = arm_gic_driver::IntId::spi(pin as _);
+    Ok((irq_id.to_u32() as usize).into())
 }

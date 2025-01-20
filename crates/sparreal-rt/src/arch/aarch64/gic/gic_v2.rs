@@ -40,38 +40,35 @@ struct GicV2PerCpu(Arc<UnsafeCell<Option<arm_gic_driver::GicV2>>>);
 unsafe impl Send for GicV2PerCpu {}
 
 impl GicV2PerCpu {
-    #[allow(clippy::mut_from_ref)]
-    fn get_mut(&self) -> &mut arm_gic_driver::GicV2 {
+    fn get_mut(&mut self) -> &mut arm_gic_driver::GicV2 {
         unsafe { &mut *self.0.get() }.as_mut().unwrap()
     }
 }
 
 impl InterfaceCPU for GicV2PerCpu {
-    fn get_and_acknowledge_interrupt(&self) -> Option<IrqId> {
-        unsafe { &mut *self.0.get() }
-            .as_mut()
-            .unwrap()
+    fn get_and_acknowledge_interrupt(&mut self) -> Option<IrqId> {
+        self.get_mut()
             .get_and_acknowledge_interrupt()
             .map(|id| (id.to_u32() as usize).into())
     }
 
-    fn end_interrupt(&self, irq: IrqId) {
+    fn end_interrupt(&mut self, irq: IrqId) {
         self.get_mut().end_interrupt(convert_id(irq));
     }
 
-    fn irq_enable(&self, irq: IrqId) {
+    fn irq_enable(&mut self, irq: IrqId) {
         self.get_mut().irq_enable(convert_id(irq));
     }
 
-    fn irq_disable(&self, irq: IrqId) {
+    fn irq_disable(&mut self, irq: IrqId) {
         self.get_mut().irq_disable(convert_id(irq));
     }
 
-    fn set_priority(&self, irq: IrqId, priority: usize) {
+    fn set_priority(&mut self, irq: IrqId, priority: usize) {
         self.get_mut().set_priority(convert_id(irq), priority);
     }
 
-    fn set_trigger(&self, irq: IrqId, trigger: Trigger) {
+    fn set_trigger(&mut self, irq: IrqId, trigger: Trigger) {
         self.get_mut().set_trigger(convert_id(irq), match trigger {
             Trigger::EdgeBoth => arm_gic_driver::Trigger::Edge,
             Trigger::EdgeRising => arm_gic_driver::Trigger::Edge,
@@ -81,7 +78,7 @@ impl InterfaceCPU for GicV2PerCpu {
         });
     }
 
-    fn set_bind_cpu(&self, irq: IrqId, cpu_list: &[CpuId]) {
+    fn set_bind_cpu(&mut self, irq: IrqId, cpu_list: &[CpuId]) {
         let id_list = cpu_list
             .iter()
             .map(|v| arm_gic_driver::MPID::from(Into::<usize>::into(*v)))
@@ -93,6 +90,10 @@ impl InterfaceCPU for GicV2PerCpu {
 
     fn parse_fdt_config(&self, prop_interupt: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         fdt_parse_irq_config(prop_interupt)
+    }
+
+    fn irq_pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
+        super::irq_pin_to_id(pin)
     }
 }
 
