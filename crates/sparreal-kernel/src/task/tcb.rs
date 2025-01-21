@@ -9,7 +9,13 @@ use core::{
 use alloc::{boxed::Box, string::String};
 use log::debug;
 
-use crate::{globals::global_val, mem::VirtAddr, platform_if::PlatformImpl, task::schedule::*};
+use crate::{
+    globals::{STACK_SIZE, global_val},
+    mem::VirtAddr,
+    platform,
+    platform_if::PlatformImpl,
+    task::schedule::*,
+};
 
 use super::{TaskConfig, TaskError};
 
@@ -59,7 +65,8 @@ impl TaskControlBlock {
 
         let buffer = NonNull::new(unsafe {
             alloc::alloc::alloc_zeroed(
-                Layout::from_size_align(Self::tcb_size(config.stack_size), TCB_ALIGN).unwrap(),
+                Layout::from_size_align(Self::tcb_size(config.stack_size), platform::page_size())
+                    .unwrap(),
             )
         })
         .ok_or(TaskError::NoMemory)?;
@@ -94,7 +101,7 @@ impl TaskControlBlock {
 
         let buffer = NonNull::new(unsafe {
             alloc::alloc::alloc_zeroed(
-                Layout::from_size_align(Self::tcb_size(0), TCB_ALIGN).unwrap(),
+                Layout::from_size_align(Self::tcb_size(0), platform::page_size()).unwrap(),
             )
         })
         .ok_or(TaskError::NoMemory)
@@ -126,15 +133,14 @@ impl TaskControlBlock {
         unsafe { self.stack_bottom().add(self.stack_size) }
     }
 
-    pub(super) fn stack(&self) -> &[u8] {
-        unsafe { core::slice::from_raw_parts_mut(self.stack_bottom(), self.stack_size) }
-    }
-
     pub(super) unsafe fn drop(self) {
         let size = Self::tcb_size(self.stack_size);
 
         unsafe {
-            alloc::alloc::dealloc(self.0, Layout::from_size_align_unchecked(size, TCB_ALIGN))
+            alloc::alloc::dealloc(
+                self.0,
+                Layout::from_size_align_unchecked(size, platform::page_size()),
+            )
         };
     }
 

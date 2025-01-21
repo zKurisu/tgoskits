@@ -16,6 +16,8 @@ use crate::{
     platform::{self, cpu_list},
 };
 
+pub const STACK_SIZE: usize = 32 * 1024 * 1024;
+
 mod percpu;
 
 pub struct GlobalVal {
