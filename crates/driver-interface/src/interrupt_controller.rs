@@ -1,6 +1,6 @@
 use core::{error::Error, fmt::Debug};
 
-use crate::{custom_type, DriverGeneric, RegAddress};
+use crate::{DriverGeneric, RegAddress, custom_type};
 use alloc::{boxed::Box, vec::Vec};
 
 custom_type!(IrqId, usize, "{:#x}");

@@ -1,5 +1,5 @@
 [workspace]
-resolver = "3"
+resolver = "2"
 members = ["app/*", "crates/*"]
 
 [workspace.package]

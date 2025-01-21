@@ -1,9 +1,9 @@
 use core::{
-    sync::atomic::{fence, Ordering},
+    sync::atomic::{Ordering, fence},
     time::Duration,
 };
 
-use crate::{interrupt_controller::IrqConfig, DriverGeneric};
+use crate::{DriverGeneric, interrupt_controller::IrqConfig};
 use alloc::{boxed::Box, vec::Vec};
 
 mod queue;

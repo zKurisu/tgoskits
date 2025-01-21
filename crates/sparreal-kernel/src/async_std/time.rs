@@ -1,3 +1,4 @@
+use core::future::Future;
 use core::time::Duration;
 
 use crate::time::since_boot;

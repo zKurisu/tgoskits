@@ -1,7 +1,7 @@
 [package]
 name = "bare-test-macros"
 version = "0.2.0"
-edition = "2021"
+edition.workspace = true
 license = "MIT"
 description = "macros for bare-test"
 authors = ["周睿 <zrufo747@outlook.com>"]
