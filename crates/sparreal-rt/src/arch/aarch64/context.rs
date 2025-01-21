@@ -1,5 +1,5 @@
 use core::{
-    arch::asm,
+    arch::{asm, naked_asm},
     fmt::{self, Debug},
 };
 
@@ -9,8 +9,8 @@ use sparreal_kernel::task::TaskControlBlock;
 #[repr(C, align(0x10))]
 #[derive(Clone)]
 pub struct Context {
-    pub sp: usize,
-    pub pc: usize,
+    pub sp: *const u8,
+    pub pc: *const u8,
     #[cfg(hard_float)]
     /// Floating-point Control Register (FPCR)
     pub fpcr: usize,
@@ -20,8 +20,11 @@ pub struct Context {
     #[cfg(hard_float)]
     pub q: [u128; 32],
     pub spsr: u64,
-    pub x: [usize; 31],
+    pub x: [usize; 30],
+    pub lr: *const u8,
 }
+
+unsafe impl Send for Context {}
 
 impl Debug for Context {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,15 +41,17 @@ impl Debug for Context {
             }
             writeln!(f)?;
         }
+        writeln!(f, "  lr  : {:p}", self.lr)?;
         writeln!(f, "  spsr: {:#18x}", self.spsr)?;
-        writeln!(f, "  pc  : {:#18x}", self.pc)?;
-        writeln!(f, "  sp  : {:#18x}", self.sp)
+        writeln!(f, "  pc  : {:p}", self.pc)?;
+        writeln!(f, "  sp  : {:p}", self.sp)
     }
 }
 
-pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
+#[naked]
+extern "C" fn __store_context() {
     unsafe {
-        asm!( 
+        naked_asm!(
             "
 	stp X29,X30, [sp,#-0x10]!
 	stp X27,X28, [sp,#-0x10]!
@@ -63,7 +68,7 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
 	stp	X5,X6,   [sp,#-0x10]!
 	stp	X3,X4,   [sp,#-0x10]!
     stp	X1,X2,   [sp,#-0x10]!
-    mrs	x9, SPSR_EL1
+    mrs	x9,     SPSR_EL1
     stp x9, x0, [sp,#-0x10]!
 
     stp q30, q31,  [sp,#-0x20]!
@@ -90,15 +95,62 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
     mov x9, sp
     sub x9, x9,   #0x10
 	stp x9, x10,  [sp,#-0x10]!",
-            options(nostack, nomem)
-        );
+        )
+    }
+}
 
-        asm!("mov {0}, x9",
-            out(reg) prev.sp,
-            options(nostack, nomem)
-        );
+#[inline(never)]
+pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
+    unsafe {
+        asm!(
+            "
+	stp X29,X30, [sp,#-0x10]!
+	stp X27,X28, [sp,#-0x10]!
+    stp X25,X26, [sp,#-0x10]!
+	stp X23,X24, [sp,#-0x10]!
+    stp X21,X22, [sp,#-0x10]!
+	stp X19,X20, [sp,#-0x10]!
+	stp	X17,X18, [sp,#-0x10]!
+	stp	X15,X16, [sp,#-0x10]!
+	stp	X13,X14, [sp,#-0x10]!
+	stp	X11,X12, [sp,#-0x10]!
+	stp	X9,X10,  [sp,#-0x10]!
+	stp	X7,X8,   [sp,#-0x10]!
+	stp	X5,X6,   [sp,#-0x10]!
+	stp	X3,X4,   [sp,#-0x10]!
+    stp	X1,X2,   [sp,#-0x10]!
+    mrs	x9,     SPSR_EL1
+    stp x9, x0, [sp,#-0x10]!
 
-        asm!("mov sp, {0}", in(reg) next.sp, options(nostack, nomem));
+    stp q30, q31,  [sp,#-0x20]!
+    stp q28, q29,  [sp,#-0x20]!
+    stp q26, q27,  [sp,#-0x20]!
+    stp q24, q25,  [sp,#-0x20]!
+    stp q22, q23,  [sp,#-0x20]!
+    stp q20, q21,  [sp,#-0x20]!
+    stp q18, q19,  [sp,#-0x20]!
+    stp q16, q17,  [sp,#-0x20]!
+    stp q14, q15,  [sp,#-0x20]!
+    stp q12, q13,  [sp,#-0x20]!
+    stp q10, q11,  [sp,#-0x20]!
+    stp q8,  q9,   [sp,#-0x20]!
+    stp q6,  q7,   [sp,#-0x20]!
+    stp q4,  q5,   [sp,#-0x20]!
+    stp q2,  q3,   [sp,#-0x20]!
+    stp q0,  q1,   [sp,#-0x20]!
+    mrs     x9,  fpcr
+    mrs     x10, fpsr
+    stp x9,  x10,  [sp,#-0x10]!
+
+    mov x10, lr
+    mov x9, sp
+    sub x9, x9,   #0x10
+	stp x9, x10,  [sp,#-0x10]!"
+        );
+        asm!("mov {0}, x9", out(reg) prev.sp, options(nostack, nomem));
+        let sp = next.sp;
+
+        asm!("mov sp, {0}", in(reg) sp, options(nostack, nomem));
 
         asm!(
             "
@@ -141,7 +193,6 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
 	ldp	X25,X26,    [sp], #0x10
 	ldp	X27,X28,    [sp], #0x10
 	ldp	X29,X30,    [sp], #0x10
-
             ret
         ",
             options(nostack, nomem)

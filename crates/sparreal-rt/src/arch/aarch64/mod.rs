@@ -47,7 +47,7 @@ impl Platform for PlatformImpl {
 
     unsafe fn cpu_context_sp(ctx_ptr: *const u8) -> usize {
         let ctx: &Context = unsafe { &*(ctx_ptr as *const Context) };
-        ctx.sp
+        ctx.sp as _
     }
 
     unsafe fn get_current_tcb_addr() -> *mut u8 {
@@ -64,7 +64,7 @@ impl Platform for PlatformImpl {
     unsafe fn cpu_context_set_sp(ctx_ptr: *const u8, sp: usize) {
         unsafe {
             let ctx = &mut *(ctx_ptr as *mut Context);
-            ctx.sp = sp;
+            ctx.sp = sp as _;
         }
     }
 
@@ -74,8 +74,8 @@ impl Platform for PlatformImpl {
     unsafe fn cpu_context_set_pc(ctx_ptr: *const u8, pc: usize) {
         unsafe {
             let ctx = &mut *(ctx_ptr as *mut Context);
-            ctx.pc = pc;
-            ctx.x[30] = pc;
+            ctx.pc = pc as _;
+            ctx.lr = pc as _;
         }
     }
 
@@ -86,6 +86,8 @@ impl Platform for PlatformImpl {
         let next_ctx = unsafe { &*(next.sp as *const Context) };
 
         debug!("next: {:?}", next_ctx);
+
+
 
         tcb_switch(&mut prev, &mut next);
     }

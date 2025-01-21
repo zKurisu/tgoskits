@@ -27,7 +27,7 @@ unsafe extern "C" fn __handle_sync(ctx: &Context) {
             }
             _ => {
                 panic!(
-                    "\r\n{:?}\r\nUnhandled synchronous exception @ {:#x}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+                    "\r\n{:?}\r\nUnhandled synchronous exception @ {:p}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
                     ctx,
                     elr,
                     esr.get(),

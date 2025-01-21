@@ -2,7 +2,7 @@
 #![no_main]
 extern crate alloc;
 
-use core::time::Duration;
+use core::{hint::spin_loop, time::Duration};
 
 use alloc::string::ToString;
 use log::info;
@@ -24,6 +24,10 @@ fn main() {
     task::spawn_with_config(
         || {
             info!("task2");
+
+            // loop {
+            //     spin_loop();
+            // }
         },
         TaskConfig {
             name: "task2".to_string(),
