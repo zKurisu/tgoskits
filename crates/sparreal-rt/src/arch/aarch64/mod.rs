@@ -2,6 +2,7 @@ use core::arch::asm;
 
 use aarch64_cpu::registers::*;
 use context::{Context, tcb_switch};
+use log::trace;
 use sparreal_kernel::{
     globals::global_val, mem::KernelRegions, platform::PlatformInfoKind, platform_if::*, println,
     task::TaskControlBlock,
@@ -78,10 +79,10 @@ impl Platform for PlatformImpl {
         }
     }
 
-    unsafe fn cpu_context_switch(prev: *mut u8, next: *mut u8) {
-        let mut prev = TaskControlBlock::from(prev);
-        let mut next = TaskControlBlock::from(next);
-        tcb_switch(&mut prev, &mut next);
+    unsafe fn cpu_context_switch(prev_ptr: *mut u8, next_ptr: *mut u8) {
+        let next = TaskControlBlock::from(next_ptr);
+        trace!("switch to: {:?}", unsafe { &*(next.sp as *const Context) });
+        tcb_switch(prev_ptr, next_ptr);
     }
 
     fn wait_for_interrupt() {

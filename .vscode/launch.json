@@ -19,6 +19,7 @@
             "name": "KDebug lldb",
             "type": "lldb",
             "request": "launch",
+            "program": "${workspaceFolder}/target/kernel.elf",
             "initCommands": [
                 "platform select remote-gdb-server"
             ],

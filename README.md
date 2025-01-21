@@ -45,6 +45,14 @@ ostool run qemu
 ostool run qemu -d
 ```
 
+### windows
+
+msys2 安装 `gdb-multiarch`, 并添加到 `PATH`。
+
+```bash
+pacman -S mingw-w64-ucrt-x86_64-toolchain
+```
+
 vscode 选择调试配置 `KDebug`， 点击 `Run and Debug` 按钮。
 
 ## U-Boot 调试
@@ -66,7 +74,7 @@ ostool run uboot
  3. 启动内核
 
 ```rust
-use sparreal_kernel::platform::Platform;
+use sparreal_kernel::platform_if::Platform;
 use sparreal_macros::api_impl;
 
 pub struct PlatformImpl;
@@ -80,17 +88,3 @@ impl Platform for PlatformImpl {
     ... other fn
 }
 ```
-
-```rust
-pub use sparreal_kernel::*;
-
-// 启动MMU，并进入函数
-unsafe fn boot(kconfig: kernel::KernelConfig) -> ! {
-    // 初始化日志和内存分配器。
-    kernel::init_log_and_memory(&kconfig);
-    // 注册驱动
-    kernel::driver_register_append(drivers::registers());
-    // 启动内核
-    kernel::run()
-}
-``

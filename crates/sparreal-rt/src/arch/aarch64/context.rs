@@ -1,5 +1,5 @@
 use core::{
-    arch::{asm, naked_asm},
+    arch::asm,
     fmt::{self, Debug},
 };
 
@@ -44,57 +44,6 @@ impl Debug for Context {
         writeln!(f, "  spsr: {:#18x}", self.spsr)?;
         writeln!(f, "  pc  : {:p}", self.pc)?;
         writeln!(f, "  sp  : {:p}", self.sp)
-    }
-}
-
-#[naked]
-extern "C" fn __store_context() {
-    unsafe {
-        naked_asm!(
-            "
-	stp X29,X30, [sp,#-0x10]!
-	stp X27,X28, [sp,#-0x10]!
-    stp X25,X26, [sp,#-0x10]!
-	stp X23,X24, [sp,#-0x10]!
-    stp X21,X22, [sp,#-0x10]!
-	stp X19,X20, [sp,#-0x10]!
-	stp	X17,X18, [sp,#-0x10]!
-	stp	X15,X16, [sp,#-0x10]!
-	stp	X13,X14, [sp,#-0x10]!
-	stp	X11,X12, [sp,#-0x10]!
-	stp	X9,X10,  [sp,#-0x10]!
-	stp	X7,X8,   [sp,#-0x10]!
-	stp	X5,X6,   [sp,#-0x10]!
-	stp	X3,X4,   [sp,#-0x10]!
-    stp	X1,X2,   [sp,#-0x10]!
-    mrs	x9,     SPSR_EL1
-    stp x9, x0, [sp,#-0x10]!
-
-    stp q30, q31,  [sp,#-0x20]!
-    stp q28, q29,  [sp,#-0x20]!
-    stp q26, q27,  [sp,#-0x20]!
-    stp q24, q25,  [sp,#-0x20]!
-    stp q22, q23,  [sp,#-0x20]!
-    stp q20, q21,  [sp,#-0x20]!
-    stp q18, q19,  [sp,#-0x20]!
-    stp q16, q17,  [sp,#-0x20]!
-    stp q14, q15,  [sp,#-0x20]!
-    stp q12, q13,  [sp,#-0x20]!
-    stp q10, q11,  [sp,#-0x20]!
-    stp q8,  q9,   [sp,#-0x20]!
-    stp q6,  q7,   [sp,#-0x20]!
-    stp q4,  q5,   [sp,#-0x20]!
-    stp q2,  q3,   [sp,#-0x20]!
-    stp q0,  q1,   [sp,#-0x20]!
-    mrs     x9,  fpcr
-    mrs     x10, fpsr
-    stp x9,  x10,  [sp,#-0x10]!
-
-    mov x10, lr
-    mov x9, sp
-    sub x9, x9,   #0x10
-	stp x9, x10,  [sp,#-0x10]!",
-        )
     }
 }
 
@@ -259,12 +208,24 @@ fn __ctx_restore_x_q() {
 }
 
 #[inline(never)]
-pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
+#[unsafe(no_mangle)]
+pub fn tcb_switch(prev_ptr: *mut u8, next_ptr: *mut u8) {
     store_pc_is_lr();
 
     unsafe {
-        asm!("mov {0}, x9", out(reg) prev.sp, options(nostack, nomem));
-        asm!("mov sp, {0}", in(reg)  next.sp, options(nostack, nomem));
+        let mut prev = TaskControlBlock::from(prev_ptr);
+
+        let next = TaskControlBlock::from(next_ptr);
+
+        let sp: usize;
+
+        asm!("mov {0}, sp", out(reg) sp);
+
+        prev.sp = sp;
+        let ctx = &mut *(prev.sp as *mut Context);
+        ctx.pc = ctx.lr;
+
+        asm!("mov sp, {0}", in(reg) next.sp);
     }
 
     restore_pc_is_lr();
