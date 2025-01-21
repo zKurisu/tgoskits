@@ -7,7 +7,6 @@ use core::{
 };
 
 use alloc::{boxed::Box, string::String};
-use log::debug;
 
 use crate::{platform, platform_if::PlatformImpl, task::schedule::*};
 
@@ -141,7 +140,7 @@ impl TaskControlBlock {
     }
 
     pub(super) fn switch_to(&self, next: &TaskControlBlock) {
-        debug!("switch {} -> {}", self.name, next.name);
+        // debug!("switch {} -> {}", self.name, next.name);
         set_current(next);
         match self.state {
             TaskState::Stopped => finished_push(*self),
