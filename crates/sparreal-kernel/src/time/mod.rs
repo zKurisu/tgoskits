@@ -90,7 +90,7 @@ pub fn spin_delay(duration: Duration) {
 }
 
 pub fn sleep(duration: Duration) {
-    let pid = crate::task::current().info().pid;
+    let pid = crate::task::current().pid;
     after(duration, move || {
         crate::task::wake_up_in_irq(pid);
     });

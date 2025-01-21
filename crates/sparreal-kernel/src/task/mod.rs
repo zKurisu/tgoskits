@@ -1,11 +1,11 @@
 use alloc::string::{String, ToString};
-use tcb::{Pid, TaskControlBlock, set_current};
+use tcb::set_current;
 
 mod schedule;
 mod tcb;
 
 pub use schedule::suspend;
-pub use tcb::current;
+pub use tcb::{Pid, TaskControlBlock, TaskControlBlockData, current};
 
 #[derive(Debug, Clone)]
 pub enum TaskError {
@@ -41,12 +41,7 @@ where
 }
 
 pub fn init() {
-    let task = TaskControlBlock::new(|| {}, TaskConfig {
-        name: "Task0".into(),
-        priority: 0,
-        stack_size: 0,
-    })
-    .unwrap();
+    let task = TaskControlBlock::new_main();
     set_current(&task);
 }
 

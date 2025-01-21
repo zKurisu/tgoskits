@@ -113,6 +113,18 @@ pub fn kstack_size() -> usize {
     PlatformImpl::kstack_size()
 }
 
+pub fn page_size() -> usize {
+    #[cfg(feature = "mmu")]
+    {
+        MMUImpl::page_size()
+    }
+
+    #[cfg(not(feature = "mmu"))]
+    {
+        0x1000
+    }
+}
+
 pub fn app_main() {
     unsafe extern "C" {
         fn __sparreal_rt_main();
