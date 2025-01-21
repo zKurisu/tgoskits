@@ -18,7 +18,7 @@
         {
             "name": "KDebug lldb",
             "type": "lldb",
-            "request": "custom",
+            "request": "launch",
             "initCommands": [
                 "platform select remote-gdb-server"
             ],

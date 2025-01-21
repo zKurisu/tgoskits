@@ -91,6 +91,7 @@ pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
     panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
 }
 
+#[inline(always)]
 extern "C" fn handle_irq() {
     super::context::store_pc_is_elr();
     unsafe {
@@ -105,6 +106,7 @@ extern "C" fn handle_irq() {
     unsafe { asm!("eret") };
 }
 
+#[inline(always)]
 extern "C" fn handle_fiq() {
     super::context::store_pc_is_elr();
     unsafe {
@@ -119,6 +121,7 @@ extern "C" fn handle_fiq() {
     unsafe { asm!("eret") };
 }
 
+#[inline(always)]
 extern "C" fn handle_sync() {
     super::context::store_pc_is_elr();
     unsafe {
@@ -133,6 +136,7 @@ extern "C" fn handle_sync() {
     unsafe { asm!("eret") };
 }
 
+#[inline(always)]
 extern "C" fn handle_serror() {
     super::context::store_pc_is_elr();
     unsafe {
