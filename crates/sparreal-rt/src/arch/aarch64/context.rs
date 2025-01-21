@@ -4,6 +4,7 @@ use core::{
 };
 
 use sparreal_kernel::task::TaskControlBlock;
+use sparreal_macros::define_tcb_switch;
 
 #[repr(C, align(0x10))]
 #[derive(Clone)]
@@ -230,3 +231,7 @@ pub fn tcb_switch(prev_ptr: *mut u8, next_ptr: *mut u8) {
 
     restore_pc_is_lr();
 }
+
+
+
+define_tcb_switch!();

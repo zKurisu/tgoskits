@@ -191,3 +191,18 @@ pub fn module_driver(input: TokenStream) -> TokenStream {
     }
     .into()
 }
+
+#[proc_macro]
+pub fn define_tcb_switch(input: TokenStream) -> TokenStream {
+    let s = "mov sp, x0";
+
+    quote! {
+        #[naked]
+        pub unsafe extern "C" fn __tcb_switch(prev: *mut u8, next: *mut u8) {
+            core::arch::naked_asm!(
+                #s
+            )
+        }
+    }
+    .into()
+}

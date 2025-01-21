@@ -3,15 +3,13 @@
 use proc_macro::TokenStream;
 use syn::parse;
 
-pub fn store_cpu_context(input: TokenStream) -> Result<TokenStream, parse::Error> {
-    // let reg = syn::parse::<syn::LitStr>(input)?;
-
-    // let after = format!("[{},#-0x20]!", reg.value());
-
-    let after = format!("[{},#-0x20]!", "sp");
-    let asm_str = reg_op_pair("stp", "q", 0..32, &after, true);
-
-    Ok(asm_str.parse().unwrap())
+fn ctx_store_x_q() -> String {
+    let mut out = reg_op_pair("stp", "x", 1..32, "[sp,#-0x10]!", true);
+    out = format!(
+        "{out}\r\n    mrs	x9,     SPSR_EL1
+    stp x9, x0, [sp,#-0x10]!"
+    );
+    out
 }
 
 fn reg_op_pair(
