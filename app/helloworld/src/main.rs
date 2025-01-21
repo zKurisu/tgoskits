@@ -2,7 +2,7 @@
 #![no_main]
 extern crate alloc;
 
-use core::{hint::spin_loop, time::Duration};
+use core::time::Duration;
 
 use alloc::string::ToString;
 use log::info;

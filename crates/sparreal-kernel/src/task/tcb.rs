@@ -9,17 +9,9 @@ use core::{
 use alloc::{boxed::Box, string::String};
 use log::debug;
 
-use crate::{
-    globals::{STACK_SIZE, global_val},
-    mem::VirtAddr,
-    platform,
-    platform_if::PlatformImpl,
-    task::schedule::*,
-};
+use crate::{platform, platform_if::PlatformImpl, task::schedule::*};
 
 use super::{TaskConfig, TaskError};
-
-const TCB_ALIGN: usize = 16;
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]

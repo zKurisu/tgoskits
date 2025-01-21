@@ -1,4 +1,4 @@
-use core::{arch::asm, ffi::c_void};
+use core::arch::asm;
 
 use aarch64_cpu::registers::*;
 use context::{Context, tcb_switch};
@@ -86,8 +86,6 @@ impl Platform for PlatformImpl {
         let next_ctx = unsafe { &*(next.sp as *const Context) };
 
         debug!("next: {:?}", next_ctx);
-
-
 
         tcb_switch(&mut prev, &mut next);
     }

@@ -3,7 +3,6 @@ use core::{
     fmt::{self, Debug},
 };
 
-use log::debug;
 use sparreal_kernel::task::TaskControlBlock;
 
 #[repr(C, align(0x10))]
@@ -99,8 +98,8 @@ extern "C" fn __store_context() {
     }
 }
 
-#[inline(never)]
-pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
+#[inline(always)]
+fn __ctx_store_x_q() {
     unsafe {
         asm!(
             "
@@ -120,8 +119,12 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
 	stp	X3,X4,   [sp,#-0x10]!
     stp	X1,X2,   [sp,#-0x10]!
     mrs	x9,     SPSR_EL1
-    stp x9, x0, [sp,#-0x10]!
+    stp x9, x0, [sp,#-0x10]!"
+        );
 
+        #[cfg(hard_float)]
+        asm!(
+            "
     stp q30, q31,  [sp,#-0x20]!
     stp q28, q29,  [sp,#-0x20]!
     stp q26, q27,  [sp,#-0x20]!
@@ -141,21 +144,74 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
     mrs     x9,  fpcr
     mrs     x10, fpsr
     stp x9,  x10,  [sp,#-0x10]!
+        "
+        );
+    }
+}
 
+/// return `x9` is sp, `x10` is lr
+#[inline(always)]
+fn store_pc_is_lr() {
+    __ctx_store_x_q();
+    unsafe {
+        asm!(
+            "
     mov x10, lr
     mov x9, sp
     sub x9, x9,   #0x10
-	stp x9, x10,  [sp,#-0x10]!"
+	stp x9, x10,  [sp,#-0x10]!
+        "
         );
-        asm!("mov {0}, x9", out(reg) prev.sp, options(nostack, nomem));
-        let sp = next.sp;
+    }
+}
 
-        asm!("mov sp, {0}", in(reg) sp, options(nostack, nomem));
-
+#[inline(always)]
+pub(super) fn store_pc_is_elr() {
+    __ctx_store_x_q();
+    unsafe {
         asm!(
             "
-            ldp x9, lr, [sp], #0x10
+    mrs x10, ELR_EL1
+    mov x9, sp
+    sub x9, x9,   #0x10
+	stp x9, x10,  [sp,#-0x10]!
+        "
+        );
+    }
+}
 
+/// return `x9` is sp, `x10` is lr
+#[inline(always)]
+fn restore_pc_is_lr() {
+    unsafe {
+        asm!(
+            "
+    ldp x9, lr, [sp], #0x10
+        "
+        );
+    }
+    __ctx_restore_x_q();
+}
+
+#[inline(always)]
+pub(super) fn restore_pc_is_elr() {
+    unsafe {
+        asm!(
+            "
+    ldp X0, X10,    [sp], #0x10
+    msr	ELR_EL1,    X10
+        "
+        );
+    }
+    __ctx_restore_x_q();
+}
+
+#[inline(always)]
+fn __ctx_restore_x_q() {
+    unsafe {
+        #[cfg(hard_float)]
+        asm!(
+            "
     ldp    x9,  x10, [sp], #0x10
     msr    fpcr, x9
     msr    fpsr, x10
@@ -175,7 +231,11 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
     ldp    q26, q27, [sp], #0x20
     ldp    q28, q29, [sp], #0x20
     ldp    q30, q31, [sp], #0x20
+            "
+        );
 
+        asm!(
+            "
     ldp X9,X0,      [sp], #0x10
     msr	SPSR_EL1,   X9
 	ldp	X1,X2,      [sp], #0x10
@@ -193,9 +253,19 @@ pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
 	ldp	X25,X26,    [sp], #0x10
 	ldp	X27,X28,    [sp], #0x10
 	ldp	X29,X30,    [sp], #0x10
-            ret
-        ",
-            options(nostack, nomem)
-        )
+        "
+        );
     }
+}
+
+#[inline(never)]
+pub fn tcb_switch(prev: &mut TaskControlBlock, next: &mut TaskControlBlock) {
+    store_pc_is_lr();
+
+    unsafe {
+        asm!("mov {0}, x9", out(reg) prev.sp, options(nostack, nomem));
+        asm!("mov sp, {0}", in(reg)  next.sp, options(nostack, nomem));
+    }
+
+    restore_pc_is_lr();
 }

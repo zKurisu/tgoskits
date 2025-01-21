@@ -1,5 +1,3 @@
-use core::ffi::c_void;
-
 pub use driver_interface::DriverRegisterListRef;
 use sparreal_macros::api_trait;
 
