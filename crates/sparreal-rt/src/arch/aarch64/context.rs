@@ -1,9 +1,11 @@
 use core::{
     arch::asm,
     fmt::{self, Debug},
+    mem::offset_of,
+    ptr::addr_of,
 };
 
-use sparreal_kernel::task::TaskControlBlock;
+use sparreal_kernel::task::{TaskControlBlock, TaskControlBlockData};
 use sparreal_macros::define_tcb_switch;
 
 #[repr(C, align(0x10))]
@@ -214,24 +216,20 @@ pub fn tcb_switch(prev_ptr: *mut u8, next_ptr: *mut u8) {
     store_pc_is_lr();
 
     unsafe {
-        let mut prev = TaskControlBlock::from(prev_ptr);
-
-        let next = TaskControlBlock::from(next_ptr);
-
-        let sp: usize;
-
-        asm!("mov {0}, sp", out(reg) sp);
-
-        prev.sp = sp;
-        let ctx = &mut *(prev.sp as *mut Context);
-        ctx.pc = ctx.lr;
-
-        asm!("mov sp, {0}", in(reg) next.sp);
+        asm!(
+                "mov x8, sp",
+                "str x8, [x0, {sp_addr}]",
+                "ldr x9, [x8, {lr_addr}]",
+                "str x9, [x8, {pc_addr}]",
+                "ldr x8, [x1, {sp_addr}]",
+                "mov sp, x8",
+                sp_addr = const offset_of!(TaskControlBlockData, sp),
+                lr_addr = const offset_of!(Context, lr),
+                pc_addr = const offset_of!(Context, pc),
+        );
     }
 
     restore_pc_is_lr();
 }
-
-
 
 define_tcb_switch!();
