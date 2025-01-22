@@ -2,6 +2,7 @@ use aarch64_cpu::registers::*;
 use core::arch::{asm, global_asm};
 use log::*;
 use sparreal_kernel::mem::VirtAddr;
+use sparreal_macros::aarch64_trap_handler;
 
 use super::context::Context;
 
@@ -46,6 +47,13 @@ unsafe extern "C" fn __handle_irq(ctx: &Context) {
             in(reg) sp,
         );
     }
+}
+
+#[aarch64_trap_handler]
+fn hande_irq_2(ctx: &Context) -> usize {
+    let sp = ctx.sp;
+    sparreal_kernel::irq::handle_irq();
+    sp as _
 }
 
 #[unsafe(no_mangle)]

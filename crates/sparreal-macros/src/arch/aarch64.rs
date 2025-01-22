@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use proc_macro::TokenStream;
-use syn::parse;
+use syn::{Ident, ItemFn, parse};
 
 trait AsmFmt {
     fn fmt_asm(&self) -> Vec<String>;
@@ -13,6 +13,58 @@ impl AsmFmt for String {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect()
+    }
+}
+pub fn trap_handle_irq(func: ItemFn) -> proc_macro2::TokenStream {
+    let inner_name = format_ident!("__{}", func.sig.ident);
+    let stmts = &func.block.stmts;
+    let inputs = &func.sig.inputs;
+
+    let fp = __trap_handle_irq(&func, &inner_name, true);
+    let sp = __trap_handle_irq(&func, &inner_name, false);
+
+    quote! {
+        #[cfg(hard_float)]
+        #fp
+
+        #[cfg(not(hard_float))]
+        #sp
+
+        fn #inner_name(#inputs)->usize{
+            #(#stmts)*
+        }
+    }
+}
+
+pub fn __trap_handle_irq(
+    func: &ItemFn,
+    inner_name: &Ident,
+    is_fp: bool,
+) -> proc_macro2::TokenStream {
+    let func_name = &func.sig.ident;
+    let vis = &func.vis;
+
+    let mut asm_str = trap_store_regs(is_fp);
+    asm_str += "
+    mov x0, sp
+    BL {f}
+    mov sp, x0
+    ";
+
+    asm_str += &trap_restore_regs(is_fp);
+
+
+    let asm = asm_str.fmt_asm();
+
+    quote! {
+        #[unsafe(no_mangle)]
+        #[naked]
+        #vis unsafe extern "C" fn #func_name() {
+            core::arch::naked_asm!(
+                #(#asm),*,
+                f = sym #inner_name,
+            );
+        }
     }
 }
 
@@ -53,6 +105,27 @@ pub fn tcb_switch(is_fp: bool) -> proc_macro2::TokenStream {
             )
         }
     }
+}
+
+fn trap_store_regs(is_fp: bool) -> String {
+    let mut out = ctx_store_x_q(is_fp);
+    out += "
+    mrs x10, ELR_EL1
+    mov x9, sp
+    sub x9, x9,   #0x10
+	stp x9, x10,  [sp,#-0x10]!
+        ";
+    out
+}
+
+fn trap_restore_regs(is_fp: bool) -> String {
+   let mut out =   "
+    ldp X0, X10,    [sp], #0x10
+    msr	ELR_EL1,    X10
+        ".to_string();
+    out += &ctx_restore_x_q(is_fp);
+
+    out
 }
 
 fn ctx_store_x_q(is_fp: bool) -> String {
@@ -151,3 +224,4 @@ ldp X29,X30,    [sp], #0x10
         assert_eq!(a_str.trim(), want.trim());
     }
 }
+   

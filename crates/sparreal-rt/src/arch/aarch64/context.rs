@@ -3,7 +3,6 @@ use core::{
     fmt::{self, Debug},
 };
 
-use sparreal_kernel::task::TaskControlBlockData;
 use sparreal_macros::define_aarch64_tcb_switch;
 
 #[repr(C, align(0x10))]
