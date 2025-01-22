@@ -79,14 +79,14 @@ pub fn tcb_switch(is_fp: bool) -> proc_macro2::TokenStream {
     sub    x9, x9, #0x10
     stp    x9, x10, [sp, #-0x10]!
 
-    mov x8, sp
-    str x8, [x0, {sp_addr}] // prev.sp = sp
-    ldr x9, [x8, {lr_addr}] // x9 = prev.lr
-    str x9, [x8, {pc_addr}] // prev.pc = x9
-    ldr x8, [x1, {sp_addr}] // x8 = next.sp
-    mov sp, x8
+    mov    x8, sp
+    str    x8, [x0, {sp_addr}] // prev.sp = sp
+    ldr    x9, [x8, {lr_addr}] // x9 = prev.lr
+    str    x9, [x8, {pc_addr}] // prev.pc = x9
+    ldr    x8, [x1, {sp_addr}] // x8 = next.sp
+    mov    sp, x8
 
-    ldp	x9, lr,     [sp], #0x10
+    ldp    x9, lr,     [sp], #0x10
     ";
 
     out += &ctx_restore_x_q(is_fp);
@@ -225,5 +225,19 @@ ldp X29,X30,    [sp], #0x10
         println!("{a_str}");
 
         assert_eq!(a_str.trim(), want.trim());
+    }
+
+    #[test]
+    fn test_asm_fmt() {
+        let a = "
+            str    x8, [x0, {sp_addr}] // prev.sp = sp
+    ldr    x9, [x8, {lr_addr}] // x9 = prev.lr
+
+    "
+        .to_string();
+
+        let asm = a.fmt_asm();
+
+        println!("{asm:?}");
     }
 }
