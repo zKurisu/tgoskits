@@ -9,6 +9,7 @@ extern crate syn;
 mod api_trait;
 mod arch;
 
+use darling::{FromMeta, ast::NestedMeta};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{FnArg, ItemFn, PathArguments, Type, Visibility, parse, spanned::Spanned};
@@ -207,34 +208,45 @@ pub fn define_aarch64_tcb_switch(_input: TokenStream) -> TokenStream {
     .into()
 }
 
+/// A speaking volume. Deriving `FromMeta` will cause this to be usable
+/// as a string value for a meta-item key.
+#[derive(Debug, Clone, Copy, FromMeta)]
+#[darling(default)]
+enum Aarch64TrapHandlerKind {
+    Irq,
+    Fiq,
+    Sync,
+    #[darling(rename = "serror")]
+    SError,
+}
+
+#[derive(Debug, FromMeta)]
+struct Aarch64TrapHandlerArgs {
+    kind: Aarch64TrapHandlerKind,
+}
+
 #[proc_macro_attribute]
 pub fn aarch64_trap_handler(args: TokenStream, input: TokenStream) -> TokenStream {
-    // let args2: proc_macro2::TokenStream = args.clone().into();
+    let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+        Ok(v) => v,
+        Err(e) => {
+            return TokenStream::from(darling::Error::from(e).write_errors());
+        }
+    };
+    let args = match Aarch64TrapHandlerArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
+    };
 
-    let args_str = "irq";
-
-    // let args_str = args.to_string();
-    // let args_str = match args_str.split('=').nth(1) {
-    //     Some(value) => value.trim(),
-    //     None => {
-    //         return parse::Error::new(args2.clone().span(), "expected `handle=xxx`")
-    //             .to_compile_error()
-    //             .into();
-    //     }
-    // };
     let func = parse_macro_input!(input as ItemFn);
 
-    match args_str {
-        "irq" => arch::aarch64::trap_handle_irq(func).into(),
-        "fiq" => todo!(),
-        "sync" => todo!(),
-        "serror" => todo!(),
-        _=> todo!(),
-        // _ => parse::Error::new(
-        //     &args,
-        //     "invalid argument, only `irq`, `fiq`, `sync`, `serror` are supported",
-        // )
-        // .to_compile_error()
-        // .into(),
+    match args.kind {
+        Aarch64TrapHandlerKind::Irq | Aarch64TrapHandlerKind::Fiq => {
+            arch::aarch64::trap_handle_irq(func).into()
+        }
+        Aarch64TrapHandlerKind::Sync => arch::aarch64::trap_handle_irq(func).into(),
+        Aarch64TrapHandlerKind::SError => arch::aarch64::trap_handle_irq(func).into(),
     }
 }

@@ -1,13 +1,28 @@
 use aarch64_cpu::registers::*;
-use core::arch::{asm, global_asm};
+use core::arch::global_asm;
 use log::*;
 use sparreal_kernel::mem::VirtAddr;
 use sparreal_macros::aarch64_trap_handler;
 
 use super::context::Context;
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn __handle_sync(ctx: &Context) {
+#[aarch64_trap_handler(kind = "irq")]
+fn handle_irq(ctx: &Context) -> usize {
+    let sp = ctx.sp;
+    sparreal_kernel::irq::handle_irq();
+    sp as _
+}
+
+#[aarch64_trap_handler(kind = "fiq")]
+fn handle_fiq(ctx: &Context) -> usize {
+    let sp = ctx.sp;
+    sparreal_kernel::irq::handle_irq();
+    sp as _
+}
+
+#[aarch64_trap_handler(kind = "sync")]
+fn handle_sync(ctx: &Context) -> usize {
+    let sp = ctx.sp;
     let esr = ESR_EL1.extract();
     let iss = esr.read(ESR_EL1::ISS);
     let elr = ctx.pc;
@@ -35,29 +50,11 @@ unsafe extern "C" fn __handle_sync(ctx: &Context) {
             }
         }
     }
-}
-
-#[unsafe(no_mangle)]
-unsafe extern "C" fn __handle_irq(ctx: &Context) {
-    let sp = ctx.sp;
-    sparreal_kernel::irq::handle_irq();
-    unsafe {
-        asm!(
-            "mov x0, {0}",
-            in(reg) sp,
-        );
-    }
-}
-
-#[aarch64_trap_handler]
-fn hande_irq_2(ctx: &Context) -> usize {
-    let sp = ctx.sp;
-    sparreal_kernel::irq::handle_irq();
     sp as _
 }
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn __handle_serror(ctx: &Context) {
+#[aarch64_trap_handler(kind = "serror")]
+fn handle_serror(ctx: &Context) -> usize {
     error!("SError exception:");
     let esr = ESR_EL1.extract();
     let _iss = esr.read(ESR_EL1::ISS);
@@ -72,10 +69,6 @@ unsafe extern "C" fn __handle_serror(ctx: &Context) {
     );
 }
 
-#[unsafe(no_mangle)]
-unsafe extern "C" fn __handle_fiq() {
-    panic!("fiq")
-}
 fn handle_data_abort(iss: u64, _is_user: bool) {
     let wnr = (iss & (1 << 6)) != 0; // WnR: Write not Read
     let cm = (iss & (1 << 8)) != 0; // CM: Cache maintenance
@@ -97,66 +90,6 @@ pub enum PageFaultReason {
 
 pub fn handle_page_fault(vaddr: VirtAddr, reason: PageFaultReason) {
     panic!("Invalid addr fault @{vaddr:?}, reason: {reason:?}");
-}
-
-#[inline(always)]
-extern "C" fn handle_irq() {
-    super::context::store_pc_is_elr();
-    unsafe {
-        asm!(
-            "mov x0, sp",
-            "BL 	{handle}",
-            "mov sp, x0",
-            handle = sym __handle_irq
-        );
-    }
-    super::context::restore_pc_is_elr();
-    unsafe { asm!("eret") };
-}
-
-#[inline(always)]
-extern "C" fn handle_fiq() {
-    super::context::store_pc_is_elr();
-    unsafe {
-        asm!(
-            "mov x0, sp",
-            "BL 	{handle}",
-            "mov sp, x0",
-            handle = sym __handle_fiq
-        );
-    }
-    super::context::restore_pc_is_elr();
-    unsafe { asm!("eret") };
-}
-
-#[inline(always)]
-extern "C" fn handle_sync() {
-    super::context::store_pc_is_elr();
-    unsafe {
-        asm!(
-            "mov x0, sp",
-            "BL 	{handle}",
-            "mov sp, x0",
-            handle = sym __handle_sync
-        );
-    }
-    super::context::restore_pc_is_elr();
-    unsafe { asm!("eret") };
-}
-
-#[inline(always)]
-extern "C" fn handle_serror() {
-    super::context::store_pc_is_elr();
-    unsafe {
-        asm!(
-            "mov x0, sp",
-            "BL 	{handle}",
-            "mov sp, x0",
-            handle = sym __handle_serror
-        );
-    }
-    super::context::restore_pc_is_elr();
-    unsafe { asm!("eret") };
 }
 
 global_asm!(

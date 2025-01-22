@@ -52,7 +52,9 @@ pub fn __trap_handle_irq(
     ";
 
     asm_str += &trap_restore_regs(is_fp);
-
+    asm_str += "
+    eret
+    ";
 
     let asm = asm_str.fmt_asm();
 
@@ -119,10 +121,11 @@ fn trap_store_regs(is_fp: bool) -> String {
 }
 
 fn trap_restore_regs(is_fp: bool) -> String {
-   let mut out =   "
+    let mut out = "
     ldp X0, X10,    [sp], #0x10
     msr	ELR_EL1,    X10
-        ".to_string();
+        "
+    .to_string();
     out += &ctx_restore_x_q(is_fp);
 
     out
@@ -224,4 +227,3 @@ ldp X29,X30,    [sp], #0x10
         assert_eq!(a_str.trim(), want.trim());
     }
 }
-   
