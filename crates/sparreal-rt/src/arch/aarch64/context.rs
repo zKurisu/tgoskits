@@ -1,12 +1,10 @@
 use core::{
     arch::asm,
     fmt::{self, Debug},
-    mem::offset_of,
-    ptr::addr_of,
 };
 
-use sparreal_kernel::task::{TaskControlBlock, TaskControlBlockData};
-use sparreal_macros::define_tcb_switch;
+use sparreal_kernel::task::TaskControlBlockData;
+use sparreal_macros::define_aarch64_tcb_switch;
 
 #[repr(C, align(0x10))]
 #[derive(Clone)]
@@ -210,26 +208,4 @@ fn __ctx_restore_x_q() {
     }
 }
 
-#[inline(never)]
-#[unsafe(no_mangle)]
-pub fn tcb_switch(prev_ptr: *mut u8, next_ptr: *mut u8) {
-    store_pc_is_lr();
-
-    unsafe {
-        asm!(
-                "mov x8, sp",
-                "str x8, [x0, {sp_addr}]",
-                "ldr x9, [x8, {lr_addr}]",
-                "str x9, [x8, {pc_addr}]",
-                "ldr x8, [x1, {sp_addr}]",
-                "mov sp, x8",
-                sp_addr = const offset_of!(TaskControlBlockData, sp),
-                lr_addr = const offset_of!(Context, lr),
-                pc_addr = const offset_of!(Context, pc),
-        );
-    }
-
-    restore_pc_is_lr();
-}
-
-define_tcb_switch!();
+define_aarch64_tcb_switch!();

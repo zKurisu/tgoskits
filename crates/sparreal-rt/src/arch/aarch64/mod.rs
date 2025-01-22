@@ -1,7 +1,7 @@
 use core::arch::asm;
 
 use aarch64_cpu::registers::*;
-use context::{__tcb_switch, Context, tcb_switch};
+use context::{__tcb_switch, Context};
 use log::trace;
 use sparreal_kernel::{
     globals::global_val, mem::KernelRegions, platform::PlatformInfoKind, platform_if::*, println,

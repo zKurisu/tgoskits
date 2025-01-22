@@ -193,7 +193,7 @@ pub fn module_driver(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
-pub fn define_tcb_switch(_input: TokenStream) -> TokenStream {
+pub fn define_aarch64_tcb_switch(_input: TokenStream) -> TokenStream {
     let fp = arch::aarch64::tcb_switch(true);
     let sp = arch::aarch64::tcb_switch(false);
 

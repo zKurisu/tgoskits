@@ -47,9 +47,9 @@ pub fn tcb_switch(is_fp: bool) -> proc_macro2::TokenStream {
         pub unsafe extern "C" fn __tcb_switch(_prev: *mut u8, _next: *mut u8) {
             core::arch::naked_asm!(
                #(#asm),*,
-                sp_addr = const offset_of!(sparreal_kernel::task::TaskControlBlockData, sp),
-                lr_addr = const offset_of!(Context, lr),
-                pc_addr = const offset_of!(Context, pc)
+                sp_addr = const core::mem::offset_of!(sparreal_kernel::task::TaskControlBlockData, sp),
+                lr_addr = const core::mem::offset_of!(Context, lr),
+                pc_addr = const core::mem::offset_of!(Context, pc)
             )
         }
     }
