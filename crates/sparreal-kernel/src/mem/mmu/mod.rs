@@ -82,7 +82,7 @@ pub fn new_boot_table(rsv: &[BootMemoryRegion]) -> Result<usize, &'static str> {
                 name: "debugcon",
                 range: start..start + 0x1000,
                 access: AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-                cache: CacheSetting::Device,
+                cache: CacheSetting::DeviceBidirectional,
             },
             &mut access,
         );
@@ -149,10 +149,12 @@ fn map_region(
 fn early_handle_err(e: PagingError) {
     match e {
         PagingError::NoMemory => early_dbgln("no memory"),
-        PagingError::NotAligned => early_dbgln("not aligned"),
+        PagingError::NotAligned(e) => {
+            early_dbg(e);
+            early_dbgln(" not aligned");
+        }
         PagingError::NotMapped => early_dbgln("not mapped"),
         PagingError::AlreadyMapped => {}
-        PagingError::MappedToHugePage => early_dbgln("mapped to huge page"),
     }
     panic!()
 }

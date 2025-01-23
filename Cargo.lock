@@ -473,12 +473,13 @@ dependencies = [
 
 [[package]]
 name = "page-table-generic"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "734d342878ce1fd65c53078b17bc30adfb22e753c1bbe8f205d818837e9410f8"
+checksum = "a30ec0fae66e5c771997d02e8e42d1ac1af1dbbae5f28939ca7b36a9db118764"
 dependencies = [
  "bitflags",
  "log",
+ "thiserror",
 ]
 
 [[package]]
@@ -698,9 +699,9 @@ checksum = "2b9e2fdb3a1e862c0661768b7ed25390811df1947a8acbfbefe09b47078d93c4"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.14"
+version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb9e6ca4f869e1180728b7950e35922a7fc6397f7b641499e8f3ef06e50dc83"
+checksum = "11cd88e12b17c6494200a9c1b683a04fcac9573ed74cd1b62aeb2727c5592243"
 
 [[package]]
 name = "utf8-width"

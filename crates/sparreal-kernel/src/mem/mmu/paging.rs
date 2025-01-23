@@ -105,7 +105,7 @@ pub fn init_table() {
                     vaddr.into(),
                     reg.into(),
                     AccessSetting::Read | AccessSetting::Write,
-                    CacheSetting::Device,
+                    CacheSetting::DeviceBidirectional,
                 ),
                 0x1000,
                 true,
@@ -133,13 +133,13 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
                 vaddr.into(),
                 paddr.as_usize(),
                 AccessSetting::Read | AccessSetting::Write,
-                CacheSetting::Device,
+                CacheSetting::DeviceBidirectional,
             ),
             size,
             true,
             &mut heap,
             Some(&|p| {
-                MMUImpl::flush_tlb(p);
+                unsafe { MMUImpl::flush_tlb(p) };
             }),
         );
 

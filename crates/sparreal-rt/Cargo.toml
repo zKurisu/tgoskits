@@ -15,7 +15,7 @@ early-print = []
 
 [dependencies]
 log = "0.4"
-page-table-generic = { version = "0.3" }
+page-table-generic = { version = "0.4" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 sparreal-macros = { version = "0.6", path = "../sparreal-macros" }
 sparreal-kernel = { version = "0.6", path = "../sparreal-kernel", features = [

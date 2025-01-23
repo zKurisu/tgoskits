@@ -44,7 +44,7 @@ impl MMU for PageTableImpl {
 
         pte.set_mair_idx(MAIRDefault::get_idx(match config.setting.cache_setting {
             CacheSetting::Normal => MAIRKind::Normal,
-            CacheSetting::Device => MAIRKind::Device,
+            CacheSetting::DeviceBidirectional => MAIRKind::Device,
             CacheSetting::NonCache => MAIRKind::NonCache,
             CacheSetting::ToDevice => MAIRKind::Device,
             CacheSetting::FromDevice => MAIRKind::Device,
@@ -105,7 +105,7 @@ impl MMU for PageTableImpl {
             let mair_idx = pte.get_mair_idx();
 
             cache_setting = match MAIRDefault::from_idx(mair_idx) {
-                MAIRKind::Device => CacheSetting::Device,
+                MAIRKind::Device => CacheSetting::DeviceBidirectional,
                 MAIRKind::Normal => CacheSetting::Normal,
                 MAIRKind::NonCache => CacheSetting::NonCache,
             };
