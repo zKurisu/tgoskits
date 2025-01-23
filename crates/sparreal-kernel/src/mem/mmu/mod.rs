@@ -82,7 +82,7 @@ pub fn new_boot_table(rsv: &[BootMemoryRegion]) -> Result<usize, &'static str> {
                 name: "debugcon",
                 range: start..start + 0x1000,
                 access: AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-                cache: CacheSetting::DeviceBidirectional,
+                cache: CacheSetting::Device,
             },
             &mut access,
         );
