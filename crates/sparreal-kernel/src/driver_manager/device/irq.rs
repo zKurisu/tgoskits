@@ -35,7 +35,7 @@ pub fn init_by_fdt(
                     })
                     .collect();
                 let mut irq = probe(reg);
-                irq.open()?;
+                irq.open().map_err(|e| format!("irq open error: {e:?}"))?;
                 let dev = Device::new(
                     Descriptor {
                         driver_id: node.phandle().unwrap().as_usize().into(),

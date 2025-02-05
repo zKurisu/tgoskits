@@ -2,21 +2,18 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-
 pub(crate) mod _macro;
 pub mod interrupt_controller;
 mod register;
 pub mod timer;
 pub use register::*;
 pub(crate) mod err;
-pub use err::DriverError;
-pub use err::DriverResult;
+pub use err::{DriverError, DriverResult};
 pub use interrupt_controller::IrqConfig;
 
 pub trait DriverGeneric: Send {
-    fn open(&mut self) -> Result<(), String>;
-    fn close(&mut self) -> Result<(), String>;
+    fn open(&mut self) -> DriverResult<()>;
+    fn close(&mut self) -> DriverResult<()>;
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -4,7 +4,7 @@ use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        DriverGeneric, ProbeFnKind, RegAddress,
+        DriverError, DriverGeneric, DriverResult, ProbeFnKind, RegAddress,
         interrupt_controller::{self, CpuId, InterfaceCPU},
     },
     mem::iomap,
@@ -76,13 +76,16 @@ impl InterfaceCPU for GicPerCpu {
         irq: interrupt_controller::IrqId,
         trigger: interrupt_controller::Trigger,
     ) {
-        self.get_mut().set_trigger(convert_id(irq), match trigger {
-            interrupt_controller::Trigger::EdgeBoth => Trigger::Edge,
-            interrupt_controller::Trigger::EdgeRising => Trigger::Edge,
-            interrupt_controller::Trigger::EdgeFailling => Trigger::Edge,
-            interrupt_controller::Trigger::LevelHigh => Trigger::Level,
-            interrupt_controller::Trigger::LevelLow => Trigger::Level,
-        });
+        self.get_mut().set_trigger(
+            convert_id(irq),
+            match trigger {
+                interrupt_controller::Trigger::EdgeBoth => Trigger::Edge,
+                interrupt_controller::Trigger::EdgeRising => Trigger::Edge,
+                interrupt_controller::Trigger::EdgeFailling => Trigger::Edge,
+                interrupt_controller::Trigger::LevelHigh => Trigger::Level,
+                interrupt_controller::Trigger::LevelLow => Trigger::Level,
+            },
+        );
     }
 
     fn set_bind_cpu(&mut self, irq: interrupt_controller::IrqId, cpu_list: &[CpuId]) {
@@ -105,14 +108,15 @@ impl InterfaceCPU for GicPerCpu {
 }
 
 impl DriverGeneric for Gic {
-    fn open(&mut self) -> Result<(), alloc::string::String> {
-        let gic = GicV3::new(self.gicd, self.gicr).map_err(|e| format!("{:?}", e))?;
+    fn open(&mut self) -> DriverResult<()> {
+        let gic =
+            GicV3::new(self.gicd, self.gicr).map_err(|e| DriverError::Other(format!("{:?}", e)))?;
         unsafe { &mut *self.gic.get() }.replace(gic);
 
         Ok(())
     }
 
-    fn close(&mut self) -> Result<(), alloc::string::String> {
+    fn close(&mut self) -> DriverResult<()> {
         Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use aarch64_cpu::registers::*;
 use alloc::{boxed::Box, vec::Vec};
 use sparreal_kernel::driver_interface::{
-    DriverGeneric, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
+    DriverGeneric, DriverResult, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
 };
 use sparreal_macros::module_driver;
 
@@ -53,12 +53,12 @@ impl InterfaceCPU for ArmV8Timer {
 }
 
 impl DriverGeneric for ArmV8Timer {
-    fn open(&mut self) -> Result<(), alloc::string::String> {
+    fn open(&mut self) -> DriverResult<()> {
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::SET);
         Ok(())
     }
 
-    fn close(&mut self) -> Result<(), alloc::string::String> {
+    fn close(&mut self) -> DriverResult<()> {
         CNTP_CTL_EL0.modify(CNTP_CTL_EL0::ENABLE::CLEAR);
         Ok(())
     }
