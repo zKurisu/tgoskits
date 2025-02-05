@@ -4,12 +4,12 @@ use core::{
 };
 
 use crate::{DriverGeneric, interrupt_controller::IrqConfig};
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 
 mod queue;
 
 pub type Hardware = Box<dyn Interface>;
-pub type ProbeFn = fn(Vec<IrqConfig>) -> Hardware;
+pub type OnProbeFdt = fn(&[IrqConfig]) -> Hardware;
 pub type HardwareCPU = Box<dyn InterfaceCPU>;
 const NANO_PER_SEC: u128 = 1_000_000_000;
 

@@ -7,7 +7,9 @@ use alloc::{
     vec::Vec,
 };
 pub use driver_interface::interrupt_controller::Hardware;
-use driver_interface::{DriverRegister, ProbeFnKind, RegAddress, interrupt_controller::IrqConfig};
+use driver_interface::{
+    DriverRegister, OnProbeKindFdt, ProbeKind, RegAddress, interrupt_controller::IrqConfig,
+};
 use fdt_parser::Fdt;
 
 use super::{super::device::Descriptor, Device, DriverId};
@@ -19,33 +21,41 @@ pub fn init_by_fdt(
     let fdt = Fdt::from_ptr(fdt_addr).map_err(|e| format!("{e:?}"))?;
     let mut out = Vec::with_capacity(registers.len());
     for r in registers {
-        if let ProbeFnKind::InterruptController(probe) = r.probe {
-            let compa = r
-                .compatibles
-                .iter()
-                .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
-                .collect::<Vec<_>>();
-            for node in fdt.find_compatible(&compa) {
-                let reg = node
-                    .reg()
-                    .ok_or(format!("[{}] has no reg", node.name))?
-                    .map(|reg| RegAddress {
-                        addr: reg.address as _,
-                        size: reg.size,
-                    })
-                    .collect();
-                let mut irq = probe(reg);
-                irq.open().map_err(|e| format!("irq open error: {e:?}"))?;
-                let dev = Device::new(
-                    Descriptor {
-                        driver_id: node.phandle().unwrap().as_usize().into(),
-                        name: r.name.to_string(),
-                        ..Default::default()
-                    },
-                    irq,
-                );
+        for kind in r.probe_kinds {
+            match kind {
+                ProbeKind::Fdt {
+                    compatibles,
+                    on_probe,
+                } => {
+                    if let OnProbeKindFdt::InterruptController(probe) = on_probe {
+                        let compa = compatibles
+                            .iter()
+                            .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
+                            .collect::<Vec<_>>();
+                        for node in fdt.find_compatible(&compa) {
+                            let reg = node
+                                .reg()
+                                .ok_or(format!("[{}] has no reg", node.name))?
+                                .map(|reg| RegAddress {
+                                    addr: reg.address as _,
+                                    size: reg.size,
+                                })
+                                .collect::<Vec<_>>();
+                            let mut irq = probe(&reg);
+                            irq.open().map_err(|e| format!("irq open error: {e:?}"))?;
+                            let dev = Device::new(
+                                Descriptor {
+                                    driver_id: node.phandle().unwrap().as_usize().into(),
+                                    name: r.name.to_string(),
+                                    ..Default::default()
+                                },
+                                irq,
+                            );
 
-                out.push(dev);
+                            out.push(dev);
+                        }
+                    }
+                }
             }
         }
     }

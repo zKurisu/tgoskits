@@ -122,7 +122,7 @@ impl Platform for PlatformImpl {
         cache::dcache_range(op, addr, size);
     }
 
-    fn driver_registers() -> DriverRegisterListRef {
-        DriverRegisterListRef::from_raw(driver_registers())
+    fn driver_registers() -> DriverRegisterSlice {
+        DriverRegisterSlice::from_raw(driver_registers())
     }
 }

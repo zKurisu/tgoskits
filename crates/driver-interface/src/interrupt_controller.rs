@@ -1,13 +1,13 @@
 use core::{error::Error, fmt::Debug};
 
 use crate::{DriverGeneric, RegAddress, custom_type};
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 
 custom_type!(IrqId, usize, "{:#x}");
 custom_type!(CpuId, usize, "{:#x}");
 
 pub type Hardware = Box<dyn Interface>;
-pub type ProbeFn = fn(regs: Vec<RegAddress>) -> Hardware;
+pub type OnProbeFdt = fn(regs: &[RegAddress]) -> Hardware;
 pub type HardwareCPU = Box<dyn InterfaceCPU>;
 
 pub trait InterfaceCPU: Send {

@@ -4,7 +4,7 @@ use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use arm_gic_driver::{GicGeneric, GicV3, Trigger};
 use sparreal_kernel::{
     driver_interface::{
-        DriverError, DriverGeneric, DriverResult, ProbeFnKind, RegAddress,
+        DriverError, DriverGeneric, DriverResult, OnProbeKindFdt, ProbeKind, RegAddress,
         interrupt_controller::{self, CpuId, InterfaceCPU},
     },
     mem::iomap,
@@ -15,8 +15,12 @@ use super::*;
 
 module_driver!(
     name: "GICv3",
-    compatibles: &["arm,gic-v3"],
-    probe: ProbeFnKind::InterruptController(probe_gic),
+    probe_kinds: &[
+        ProbeKind::Fdt {
+            compatibles: &["arm,gic-v3"],
+            on_probe: OnProbeKindFdt::InterruptController(probe_gic)
+        }
+    ]
 );
 
 struct Gic {
@@ -131,7 +135,7 @@ impl interrupt_controller::Interface for Gic {
     }
 }
 
-fn probe_gic(regs: Vec<RegAddress>) -> interrupt_controller::Hardware {
+fn probe_gic(regs: &[RegAddress]) -> interrupt_controller::Hardware {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));

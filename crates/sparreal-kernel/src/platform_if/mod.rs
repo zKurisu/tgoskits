@@ -1,4 +1,4 @@
-pub use driver_interface::DriverRegisterListRef;
+pub use driver_interface::DriverRegisterSlice;
 use sparreal_macros::api_trait;
 
 use crate::mem::KernelRegions;
@@ -52,7 +52,7 @@ pub trait Platform {
 
     fn dcache_range(op: CacheOp, addr: usize, size: usize);
 
-    fn driver_registers() -> DriverRegisterListRef;
+    fn driver_registers() -> DriverRegisterSlice;
 }
 
 #[cfg(feature = "mmu")]

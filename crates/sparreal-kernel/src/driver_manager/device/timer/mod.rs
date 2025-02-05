@@ -5,7 +5,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use driver_interface::{DriverRegister, ProbeFnKind, timer::*};
+use driver_interface::{DriverRegister, OnProbeKindFdt, timer::*};
 use fdt_parser::Fdt;
 use log::debug;
 
@@ -48,30 +48,38 @@ pub fn init_by_fdt(
 ) -> Result<Device<Hardware>, String> {
     let fdt = Fdt::from_ptr(fdt_addr).map_err(|e| format!("{e:?}"))?;
     for r in registers {
-        if let ProbeFnKind::Timer(probe) = r.probe {
-            let compa = r
-                .compatibles
-                .iter()
-                .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
-                .collect::<Vec<_>>();
-            for node in fdt.find_compatible(&compa) {
-                let irq = match node.irq_info() {
-                    Some(irq) => irq,
-                    None => continue,
-                };
+        for kind in r.probe_kinds {
+            match kind {
+                driver_interface::ProbeKind::Fdt {
+                    compatibles,
+                    on_probe,
+                } => {
+                    if let OnProbeKindFdt::Timer(probe) = on_probe {
+                        let compa = compatibles
+                            .iter()
+                            .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
+                            .collect::<Vec<_>>();
+                        for node in fdt.find_compatible(&compa) {
+                            let irq = match node.irq_info() {
+                                Some(irq) => irq,
+                                None => continue,
+                            };
 
-                let timer = probe(irq.cfgs.clone());
-                debug!("[{}] ok", r.name);
-                let dev = Device::new(
-                    Descriptor {
-                        name: r.name.to_string(),
-                        irq: Some(irq),
-                        ..Default::default()
-                    },
-                    timer,
-                );
+                            let timer = probe(&irq.cfgs);
+                            debug!("[{}] ok", r.name);
+                            let dev = Device::new(
+                                Descriptor {
+                                    name: r.name.to_string(),
+                                    irq: Some(irq),
+                                    ..Default::default()
+                                },
+                                timer,
+                            );
 
-                return Ok(dev);
+                            return Ok(dev);
+                        }
+                    }
+                }
             }
         }
     }

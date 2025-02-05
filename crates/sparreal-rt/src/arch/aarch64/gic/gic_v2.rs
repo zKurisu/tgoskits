@@ -4,7 +4,8 @@ use core::{cell::UnsafeCell, error::Error, ptr::NonNull};
 use arm_gic_driver::GicGeneric;
 use sparreal_kernel::{
     driver_interface::{
-        DriverError, DriverGeneric, DriverResult, ProbeFnKind, RegAddress, interrupt_controller::*,
+        DriverError, DriverGeneric, DriverResult, OnProbeKindFdt, ProbeKind, RegAddress,
+        interrupt_controller::*,
     },
     mem::iomap,
 };
@@ -14,8 +15,12 @@ use super::*;
 
 module_driver!(
     name: "GICv2",
-    compatibles: &["arm,cortex-a15-gic", "arm,gic-400"],
-    probe: ProbeFnKind::InterruptController(probe_gic_v2),
+    probe_kinds: &[
+        ProbeKind::Fdt {
+            compatibles: &["arm,cortex-a15-gic", "arm,gic-400"],
+            on_probe: OnProbeKindFdt::InterruptController(probe_gic_v2)
+        },
+    ] ,
 );
 
 struct GicV2 {
@@ -126,7 +131,7 @@ impl Interface for GicV2 {
     }
 }
 
-fn probe_gic_v2(regs: Vec<RegAddress>) -> Hardware {
+fn probe_gic_v2(regs: &[RegAddress]) -> Hardware {
     let gicd_reg = regs[0];
     let gicc_reg = regs[1];
     let gicd = iomap(gicd_reg.addr.into(), gicd_reg.size.unwrap_or(0x1000));

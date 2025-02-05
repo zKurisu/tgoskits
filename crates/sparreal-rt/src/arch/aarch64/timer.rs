@@ -1,14 +1,19 @@
 use aarch64_cpu::registers::*;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use sparreal_kernel::driver_interface::{
-    DriverGeneric, DriverResult, ProbeFnKind, interrupt_controller::IrqConfig, timer::*,
+    DriverGeneric, DriverResult, OnProbeKindFdt, ProbeKind, interrupt_controller::IrqConfig,
+    timer::*,
 };
 use sparreal_macros::module_driver;
 
 module_driver!(
     name: "ARMv8 Timer",
-    compatibles: &["arm,armv8-timer"],
-    probe: ProbeFnKind::Timer(probe_timer),
+    probe_kinds: &[
+        ProbeKind::Fdt {
+            compatibles: &["arm,armv8-timer"],
+            on_probe:OnProbeKindFdt::Timer(probe_timer)
+        }
+    ]
 );
 
 #[derive(Clone)]
@@ -64,7 +69,7 @@ impl DriverGeneric for ArmV8Timer {
     }
 }
 
-fn probe_timer(irqs: Vec<IrqConfig>) -> Hardware {
+fn probe_timer(irqs: &[IrqConfig]) -> Hardware {
     Box::new(ArmV8Timer {
         irq: irqs[1].clone(),
     })

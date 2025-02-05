@@ -1,29 +1,36 @@
+use core::ops::Deref;
+
 use crate::{interrupt_controller, timer};
 
-#[repr(C)]
 #[derive(Clone)]
 pub struct DriverRegister {
     pub name: &'static str,
-    pub compatibles: &'static [&'static str],
-    pub probe: ProbeFnKind,
+    pub probe_kinds: &'static [ProbeKind],
 }
 
 unsafe impl Send for DriverRegister {}
 unsafe impl Sync for DriverRegister {}
 
+pub enum ProbeKind {
+    Fdt {
+        compatibles: &'static [&'static str],
+        on_probe: OnProbeKindFdt,
+    },
+}
+
 #[derive(Clone)]
-pub enum ProbeFnKind {
-    InterruptController(interrupt_controller::ProbeFn),
-    Timer(timer::ProbeFn),
+pub enum OnProbeKindFdt {
+    InterruptController(interrupt_controller::OnProbeFdt),
+    Timer(timer::OnProbeFdt),
 }
 
 #[repr(C)]
-pub struct DriverRegisterListRef {
+pub struct DriverRegisterSlice {
     data: *const u8,
     len: usize,
 }
 
-impl DriverRegisterListRef {
+impl DriverRegisterSlice {
     pub fn from_raw(data: &'static [u8]) -> Self {
         Self {
             data: data.as_ptr(),
@@ -35,5 +42,13 @@ impl DriverRegisterListRef {
         unsafe {
             core::slice::from_raw_parts(self.data as _, self.len / size_of::<DriverRegister>())
         }
+    }
+}
+
+impl Deref for DriverRegisterSlice {
+    type Target = [DriverRegister];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
