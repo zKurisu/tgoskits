@@ -4,7 +4,7 @@ use core::{
     ops::Range,
     ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut},
 };
-use fdt_parser::Node;
+use fdt_parser::{Node, Pci};
 use log::error;
 
 use crate::driver_manager::device::DriverId;
@@ -139,6 +139,28 @@ impl GetIrqConfig for Node<'_> {
                     Err(e) => error!("{:?}", e),
                 }
             }
+        }
+
+        Some(IrqInfo { irq_parent, cfgs })
+    }
+}
+
+pub trait GetPciIrqConfig {
+    fn child_irq_info(&self, bus: u8, device: u8, function: u8, irq_pin: u8) -> Option<IrqInfo>;
+}
+impl GetPciIrqConfig for Pci<'_> {
+    fn child_irq_info(&self, bus: u8, device: u8, func: u8, irq_pin: u8) -> Option<IrqInfo> {
+        let irq = self
+            .child_interrupts(bus, device, func, irq_pin as _)
+            .ok()?;
+
+        let irq_parent = DriverId::from(irq.parent.as_usize());
+
+        let mut cfgs = Vec::new();
+        let raw = irq.irqs.collect::<Vec<_>>();
+        match crate::irq::fdt_parse_config(irq_parent, &raw) {
+            Ok(cfg) => cfgs.push(cfg),
+            Err(e) => error!("{:?}", e),
         }
 
         Some(IrqInfo { irq_parent, cfgs })

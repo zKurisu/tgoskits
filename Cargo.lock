@@ -311,9 +311,9 @@ dependencies = [
 
 [[package]]
 name = "fdt-parser"
-version = "0.4.4"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0deb230715aa771c49f2eda04e5532a34acccbf31335885d9bd4e3cebee8dac0"
+checksum = "4bb6bb8f5b30e26fd1916a79f3655f9982c12b4d740aff65885851e7f078c1bf"
 
 [[package]]
 name = "fnv"
@@ -473,9 +473,9 @@ dependencies = [
 
 [[package]]
 name = "page-table-generic"
-version = "0.5.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "018c05ebe5dc33c40b248e813f8c4ae38e4d9ca5078069a54b9cd22b8464265f"
+checksum = "a415f145c89b8dc016e79a34ee5ba262708dd3c3f9ec33e2ae744e2bf9b16397"
 dependencies = [
  "bitflags",
  "log",
@@ -574,7 +574,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "simple_test"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "bare-test",
  "bare-test-macros",
@@ -583,7 +583,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "ansi_rgb",
  "anyhow",
@@ -606,7 +606,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-macros"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "abi-singleton",
  "darling",
@@ -617,7 +617,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",
@@ -662,9 +662,9 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "syn"
-version = "2.0.96"
+version = "2.0.98"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5d0adab1ae378d7f53bdebc67a39f1f151407ef230f0ce2883572f5d8985c80"
+checksum = "36147f1a48ae0ec2b5b3bc5b537d267457555a10dc06f3dbc8cb11ba3006d3b1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -699,9 +699,9 @@ checksum = "2b9e2fdb3a1e862c0661768b7ed25390811df1947a8acbfbefe09b47078d93c4"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11cd88e12b17c6494200a9c1b683a04fcac9573ed74cd1b62aeb2727c5592243"
+checksum = "a210d160f08b701c8721ba1c726c11662f877ea6b7094007e1ca9a1041945034"
 
 [[package]]
 name = "utf8-width"

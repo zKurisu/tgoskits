@@ -101,8 +101,6 @@ impl InterfaceCPU for GicV2PerCpu {
     fn parse_fdt_config(&self, prop_interupt: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         fdt_parse_irq_config(prop_interupt)
     }
-
-
 }
 
 impl DriverGeneric for GicV2 {
