@@ -12,8 +12,8 @@ pub use err::{DriverError, DriverResult};
 pub use interrupt_controller::IrqConfig;
 
 pub trait DriverGeneric: Send {
-    fn open(&mut self) -> DriverResult<()>;
-    fn close(&mut self) -> DriverResult<()>;
+    fn open(&mut self) -> DriverResult;
+    fn close(&mut self) -> DriverResult;
 }
 
 #[derive(Debug, Clone, Copy)]

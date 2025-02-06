@@ -62,8 +62,3 @@ fn fdt_parse_irq_config(itr: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         trigger,
     })
 }
-
-fn irq_pin_to_id(pin: usize) -> Result<IrqId, Box<dyn Error>> {
-    let irq_id = arm_gic_driver::IntId::spi(pin as _);
-    Ok((irq_id.to_u32() as usize).into())
-}

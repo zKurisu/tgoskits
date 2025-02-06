@@ -105,10 +105,6 @@ impl InterfaceCPU for GicPerCpu {
     fn parse_fdt_config(&self, prop_interupt: &[u32]) -> Result<IrqConfig, Box<dyn Error>> {
         fdt_parse_irq_config(prop_interupt)
     }
-
-    fn irq_pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
-        super::irq_pin_to_id(pin)
-    }
 }
 
 impl DriverGeneric for Gic {

@@ -6,4 +6,4 @@ pub enum DriverError {
     Other(String),
 }
 
-pub type DriverResult<T> = core::result::Result<T, DriverError>;
+pub type DriverResult<T=()> = core::result::Result<T, DriverError>;

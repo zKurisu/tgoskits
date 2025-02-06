@@ -61,11 +61,14 @@ pub(crate) fn init_current_cpu() {
 
         let device = Device::new(c.descriptor.clone(), device);
 
-        g.irq_chips.0.insert(id, Chip {
-            device,
-            mutex: Mutex::new(()),
-            handlers: UnsafeCell::new(Default::default()),
-        });
+        g.irq_chips.0.insert(
+            id,
+            Chip {
+                device,
+                mutex: Mutex::new(()),
+                handlers: UnsafeCell::new(Default::default()),
+            },
+        );
     }
 }
 
@@ -164,11 +167,6 @@ impl Chip {
         chip.end_interrupt(irq);
         Some(())
     }
-
-    fn pin_to_id(&self, pin: usize) -> Result<IrqId, Box<dyn Error>> {
-        let chip = unsafe { &*self.device.force_use() };
-        chip.irq_pin_to_id(pin)
-    }
 }
 
 pub struct NoIrqGuard {
@@ -214,18 +212,6 @@ pub struct IrqParam {
 }
 
 impl IrqParam {
-    pub fn new_pin(pin: usize, irq_chip: DriverId) -> Result<Self, Box<dyn Error>> {
-        let chip = chip(irq_chip);
-        let irq_id = chip.pin_to_id(pin)?;
-        Ok(Self {
-            irq_chip,
-            cfg: IrqConfig {
-                irq: irq_id,
-                trigger: Trigger::LevelLow,
-            },
-        })
-    }
-
     pub fn register_builder(
         &self,
         handler: impl Fn(IrqId) -> IrqHandleResult + 'static,
