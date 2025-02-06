@@ -1,6 +1,6 @@
 [package]
 name = "driver-interface"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition.workspace = true
 repository = "https://github.com/qclic/sparreal-os"
