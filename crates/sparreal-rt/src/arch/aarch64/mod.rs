@@ -104,8 +104,7 @@ impl Platform for PlatformImpl {
         unsafe { asm!("msr daifset, #2") };
     }
     fn irq_all_is_enabled() -> bool {
-        let c = DAIF.read(DAIF::I);
-        c > 0
+        !DAIF.is_set(DAIF::I)
     }
 
     fn on_boot_success() {

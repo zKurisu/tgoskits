@@ -103,7 +103,6 @@ impl IrqRegister {
     pub fn register(self) {
         let irq = self.param.cfg.irq;
         let irq_parent = self.param.irq_chip;
-        debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);
 
         let chip = chip(irq_parent);
         chip.register_handle(irq, self.handler);
@@ -121,6 +120,7 @@ impl IrqRegister {
 
         c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
+        debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);
     }
 
     pub fn priority(mut self, priority: usize) -> Self {
