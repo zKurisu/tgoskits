@@ -136,7 +136,7 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
                 CacheSetting::Device,
             ),
             size,
-            true,
+            false,
             &mut heap,
             Some(&|p| {
                 unsafe { MMUImpl::flush_tlb(p) };
