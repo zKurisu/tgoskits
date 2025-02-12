@@ -3,7 +3,7 @@ use core::{
     time::Duration,
 };
 
-use crate::{DriverGeneric, interrupt_controller::IrqConfig};
+use crate::{DriverGeneric, intc::IrqConfig};
 use alloc::boxed::Box;
 
 mod queue;

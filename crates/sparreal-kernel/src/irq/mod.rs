@@ -1,7 +1,7 @@
 use core::{cell::UnsafeCell, error::Error};
 
-use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
-use driver_interface::interrupt_controller::*;
+use alloc::{boxed::Box, collections::btree_map::BTreeMap};
+use driver_interface::intc::*;
 use log::{debug, error, warn};
 use spin::Mutex;
 
@@ -11,7 +11,7 @@ use crate::{
         device::{Device, DriverId},
     },
     globals::{self, cpu_global, global_val},
-    platform::{self},
+    platform::{self, cpu_id},
     platform_if::PlatformImpl,
 };
 pub use driver_manager::device::irq::IrqInfo;
@@ -77,7 +77,7 @@ pub enum IrqHandleResult {
     None,
 }
 
-fn chip(id: DriverId) -> &'static Chip {
+fn chip_cpu(id: DriverId) -> &'static Chip {
     globals::cpu_global()
         .irq_chips
         .0
@@ -89,14 +89,13 @@ pub fn fdt_parse_config(
     irq_parent: DriverId,
     prop_interrupts: &[u32],
 ) -> Result<IrqConfig, Box<dyn Error>> {
-    unsafe { &*chip(irq_parent).device.force_use() }.parse_fdt_config(prop_interrupts)
+    unsafe { &*chip_cpu(irq_parent).device.force_use() }.parse_fdt_config(prop_interrupts)
 }
 
 pub struct IrqRegister {
     pub param: IrqParam,
     pub handler: Box<IrqHandler>,
     pub priority: Option<usize>,
-    pub cpu_list: Vec<CpuId>,
 }
 
 impl IrqRegister {
@@ -104,20 +103,17 @@ impl IrqRegister {
         let irq = self.param.cfg.irq;
         let irq_parent = self.param.irq_chip;
 
-        let chip = chip(irq_parent);
+        let chip = chip_cpu(irq_parent);
         chip.register_handle(irq, self.handler);
 
-        let mut c = chip.device.spin_try_use("register irq");
+        let mut c = driver_manager::spin_use_intc(irq_parent, "Kernel IRQ register");
         if let Some(p) = self.priority {
             c.set_priority(irq, p);
         } else {
             c.set_priority(irq, 0);
         }
 
-        if !self.cpu_list.is_empty() {
-            c.set_bind_cpu(irq, &self.cpu_list);
-        }
-
+        c.set_target_cpu(irq, cpu_id());
         c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
         debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);
@@ -125,11 +121,6 @@ impl IrqRegister {
 
     pub fn priority(mut self, priority: usize) -> Self {
         self.priority = Some(priority);
-        self
-    }
-
-    pub fn cpu_list(mut self, cpu_list: Vec<CpuId>) -> Self {
-        self.cpu_list = cpu_list;
         self
     }
 }
@@ -220,7 +211,6 @@ impl IrqParam {
             param: self.clone(),
             handler: Box::new(handler),
             priority: None,
-            cpu_list: Vec::new(),
         }
     }
 }

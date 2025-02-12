@@ -10,15 +10,16 @@ keywords = ["os"]
 categories = ["embedded", "no-std"]
 
 [features]
-default = []
+default = ["early-print"]
 early-print = []
+
 
 [dependencies]
 log = "0.4"
 page-table-generic = { version = "0.5" }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
-sparreal-macros = { version = "0.6", path = "../sparreal-macros" }
-sparreal-kernel = { version = "0.6", path = "../sparreal-kernel", features = [
+sparreal-macros = { version = "0.7", path = "../sparreal-macros" }
+sparreal-kernel = { version = "0.7", path = "../sparreal-kernel", features = [
     "mmu",
 ] }
 bitflags = "2.6"
@@ -31,6 +32,6 @@ buddy_system_allocator = "0.11"
 aarch64-cpu = "10.0"
 tock-registers = "0.9"
 arm-pl011-rs = "0.2"
-arm-gic-driver = "0.3"
+arm-gic-driver = { version = "0.4" }
 arm_pl031 = "0.2.1"
 page-table-arm = { version = "0.1", path = "../page-table-arm" }

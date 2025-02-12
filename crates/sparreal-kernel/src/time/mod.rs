@@ -10,7 +10,7 @@ use crate::{
     irq::{IrqHandleResult, IrqParam},
 };
 
-use driver_interface::{interrupt_controller::IrqId, timer::*};
+use driver_interface::{intc::IrqId, timer::*};
 use log::error;
 
 #[derive(Default)]

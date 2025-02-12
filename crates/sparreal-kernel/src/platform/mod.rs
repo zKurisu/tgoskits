@@ -4,7 +4,7 @@ use core::ffi::CStr;
 use core::ops::Range;
 use core::ptr::NonNull;
 use driver_interface::DriverRegister;
-use driver_interface::interrupt_controller::CpuId;
+use driver_interface::intc::CpuId;
 
 use crate::globals::global_val;
 use crate::mem::PhysAddr;

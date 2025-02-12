@@ -1,14 +1,14 @@
 use alloc::{string::String, vec::Vec};
 use core::ptr::NonNull;
 use device::{
-    BorrowGuard,
+    BorrowGuard, DriverId,
     irq::{self},
     timer,
 };
 use log::warn;
 
 pub use driver_interface::DriverRegister;
-use driver_interface::interrupt_controller;
+use driver_interface::intc;
 use spin::{Mutex, MutexGuard};
 
 #[macro_use]
@@ -60,8 +60,11 @@ pub fn register_drivers(drivers: &[DriverRegister]) {
 fn registers() -> Vec<DriverRegister> {
     manager().registers.clone()
 }
+pub fn spin_use_intc(parent: DriverId, who: &str) -> BorrowGuard<intc::Hardware> {
+    manager().irq_chip.get(parent).unwrap().spin_try_use(who)
+}
 
-pub fn use_irq_chips_by(who: &str) -> Vec<BorrowGuard<interrupt_controller::Hardware>> {
+pub fn use_irq_chips_by(who: &str) -> Vec<BorrowGuard<intc::Hardware>> {
     manager()
         .irq_chip
         .list()

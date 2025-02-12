@@ -3,11 +3,11 @@ resolver = "2"
 members = ["app/*", "crates/*"]
 
 [workspace.package]
-version = "0.6.5"
+version = "0.7.0"
 edition = "2024"
 
 [workspace.dependencies]
-sparreal-rt = { path = "crates/sparreal-rt" }
+sparreal-rt = { path = "crates/sparreal-rt", default-features = false }
 sparreal-macros = { path = "crates/sparreal-macros" }
 sparreal-kernel = { path = "crates/sparreal-kernel" }
 page-table-arm = { path = "crates/page-table-arm" }

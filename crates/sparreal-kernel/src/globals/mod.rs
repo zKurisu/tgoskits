@@ -7,7 +7,7 @@ use core::{
 };
 
 use alloc::collections::btree_map::BTreeMap;
-use driver_interface::interrupt_controller::CpuId;
+use driver_interface::intc::CpuId;
 use percpu::PerCPU;
 
 pub use crate::platform::PlatformInfoKind;

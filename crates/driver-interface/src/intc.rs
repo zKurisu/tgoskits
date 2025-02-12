@@ -1,28 +1,28 @@
 use core::{error::Error, fmt::Debug};
 
-use crate::{DriverGeneric, RegAddress, custom_type};
+use crate::{DriverGeneric, custom_type};
 use alloc::boxed::Box;
 
 custom_type!(IrqId, usize, "{:#x}");
 custom_type!(CpuId, usize, "{:#x}");
 
 pub type Hardware = Box<dyn Interface>;
-pub type OnProbeFdt = fn(regs: &[RegAddress]) -> Hardware;
+pub type OnProbeFdt = fn(crate::fdt::Node<'_>) -> Result<Hardware, Box<dyn Error>>;
 pub type HardwareCPU = Box<dyn InterfaceCPU>;
 
-pub trait InterfaceCPU: Send {
+pub trait InterfaceCPU: Send + Sync {
     fn get_and_acknowledge_interrupt(&mut self) -> Option<IrqId>;
     fn end_interrupt(&mut self, irq: IrqId);
-    fn irq_enable(&mut self, irq: IrqId);
-    fn irq_disable(&mut self, irq: IrqId);
-    fn set_priority(&mut self, irq: IrqId, priority: usize);
-    fn set_trigger(&mut self, irq: IrqId, triger: Trigger);
-    fn set_bind_cpu(&mut self, irq: IrqId, cpu_list: &[CpuId]);
     fn parse_fdt_config(&self, prop_interrupts: &[u32]) -> Result<IrqConfig, Box<dyn Error>>;
 }
 
 pub trait Interface: DriverGeneric {
     fn current_cpu_setup(&self) -> HardwareCPU;
+    fn irq_enable(&mut self, irq: IrqId);
+    fn irq_disable(&mut self, irq: IrqId);
+    fn set_priority(&mut self, irq: IrqId, priority: usize);
+    fn set_trigger(&mut self, irq: IrqId, trigger: Trigger);
+    fn set_target_cpu(&mut self, irq: IrqId, cpu: CpuId);
 }
 
 /// The trigger configuration for an interrupt.

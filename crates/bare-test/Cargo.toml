@@ -1,6 +1,6 @@
 [package]
 name = "bare-test"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Zhourui <zrufo747@outlook.com>"]
 edition.workspace = true
 repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
@@ -12,11 +12,11 @@ categories = ["development-tools", "development-tools::testing"]
 [features]
 default = ["rt"]
 # 使用 `sparreal-rt` 作为运行时
-rt = ["dep:sparreal-rt"]
+rt = ["sparreal-rt"]
 
 [dependencies]
-sparreal-rt = { version = "0.6", path = "../sparreal-rt", optional = true }
-sparreal-kernel = { version = "0.6", path = "../sparreal-kernel" }
-sparreal-macros = { version = "0.6", path = "../sparreal-macros" }
+sparreal-rt = { version = "0.7", path = "../sparreal-rt", optional = true }
+sparreal-kernel = { version = "0.7", path = "../sparreal-kernel" }
+sparreal-macros = { version = "0.7", path = "../sparreal-macros" }
 bare-test-macros = { version = "0.2", path = "../bare-test-macros" }
 log = { version = "0.4" }

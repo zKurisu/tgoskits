@@ -16,8 +16,8 @@ mmu = []
 [dependencies]
 log = "0.4"
 buddy_system_allocator = "0.11"
-sparreal-macros = { version = "0.6", path = "../sparreal-macros" }
-driver-interface = { version = "0.3", path = "../driver-interface" }
+sparreal-macros = { version = "0.7", path = "../sparreal-macros" }
+driver-interface = { version = "0.4" }
 memory_addr = "0.3"
 page-table-generic = { version = "0.5" }
 fdt-parser = "0.4"

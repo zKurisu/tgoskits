@@ -1,8 +1,7 @@
 use aarch64_cpu::registers::*;
 use alloc::boxed::Box;
 use sparreal_kernel::driver_interface::{
-    DriverGeneric, DriverResult, OnProbeKindFdt, ProbeKind, interrupt_controller::IrqConfig,
-    timer::*,
+    DriverGeneric, DriverResult, OnProbeKindFdt, ProbeKind, intc::IrqConfig, timer::*,
 };
 use sparreal_macros::module_driver;
 

@@ -1,6 +1,6 @@
 use core::ops::Deref;
 
-use crate::{interrupt_controller, timer};
+use crate::{intc, timer};
 
 #[derive(Clone)]
 pub struct DriverRegister {
@@ -20,7 +20,7 @@ pub enum ProbeKind {
 
 #[derive(Clone)]
 pub enum OnProbeKindFdt {
-    InterruptController(interrupt_controller::OnProbeFdt),
+    InterruptController(intc::OnProbeFdt),
     Timer(timer::OnProbeFdt),
 }
 

@@ -6,10 +6,8 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-pub use driver_interface::interrupt_controller::Hardware;
-use driver_interface::{
-    DriverRegister, OnProbeKindFdt, ProbeKind, RegAddress, interrupt_controller::IrqConfig,
-};
+pub use driver_interface::intc::Hardware;
+use driver_interface::{DriverRegister, OnProbeKindFdt, ProbeKind, intc::IrqConfig};
 use fdt_parser::Fdt;
 
 use super::{super::device::Descriptor, Device, DriverId};
@@ -33,15 +31,8 @@ pub fn init_by_fdt(
                             .filter_map(|e| if e.is_empty() { None } else { Some(*e) })
                             .collect::<Vec<_>>();
                         for node in fdt.find_compatible(&compa) {
-                            let reg = node
-                                .reg()
-                                .ok_or(format!("[{}] has no reg", node.name))?
-                                .map(|reg| RegAddress {
-                                    addr: reg.address as _,
-                                    size: reg.size,
-                                })
-                                .collect::<Vec<_>>();
-                            let mut irq = probe(&reg);
+                            let mut irq = probe(node.clone())
+                                .map_err(|e| format!("irq probe error: {e:?}"))?;
                             irq.open().map_err(|e| format!("irq open error: {e:?}"))?;
                             let dev = Device::new(
                                 Descriptor {
@@ -81,6 +72,10 @@ impl Container {
 
     pub fn list(&self) -> Vec<&Device<Hardware>> {
         self.0.values().collect()
+    }
+
+    pub fn get(&self, id: DriverId) -> Option<Device<Hardware>> {
+        self.0.get(&id).cloned()
     }
 }
 

@@ -17,11 +17,20 @@ use spin::Mutex;
 
 use super::DriverError;
 
-#[derive(Clone)]
 pub struct Device<T> {
     pub descriptor: Descriptor,
     lock: Arc<Mutex<Lock>>,
     data: Arc<UnsafeCell<T>>,
+}
+
+impl<T> Clone for Device<T> {
+    fn clone(&self) -> Self {
+        Self {
+            descriptor: self.descriptor.clone(),
+            lock: self.lock.clone(),
+            data: self.data.clone(),
+        }
+    }
 }
 
 unsafe impl<T> Send for Device<T> {}
