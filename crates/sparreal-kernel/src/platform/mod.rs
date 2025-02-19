@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 use core::ffi::CStr;
 use core::ops::Range;
 use core::ptr::NonNull;
-use driver_interface::DriverRegister;
-use driver_interface::intc::CpuId;
+pub use rdrive::intc::CpuId;
+use rdrive::register::DriverRegister;
 
 use crate::globals::global_val;
 use crate::mem::PhysAddr;

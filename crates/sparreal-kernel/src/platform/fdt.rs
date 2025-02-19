@@ -5,9 +5,8 @@ use core::{
     ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut},
 };
 use fdt_parser::{Node, Pci};
-use log::error;
+use rdrive::{Phandle, probe::ProbeData};
 
-use crate::driver_manager::device::DriverId;
 use crate::globals::{self, global_val};
 use crate::irq::IrqInfo;
 use crate::mem::{Align, VirtAddr};
@@ -127,22 +126,35 @@ pub trait GetIrqConfig {
 impl GetIrqConfig for Node<'_> {
     fn irq_info(&self) -> Option<IrqInfo> {
         let irq_chip_node = self.interrupt_parent()?;
+        let phandle = irq_chip_node.node.phandle()?;
 
-        let irq_parent = DriverId::from(irq_chip_node.node.phandle()?.as_usize());
+        let interrupts = self.interrupts()?.map(|o| o.collect()).collect::<Vec<_>>();
 
-        let mut cfgs = Vec::new();
-        if let Some(irqs) = self.interrupts() {
-            for irq in irqs {
-                let raw = irq.collect::<Vec<_>>();
-                match crate::irq::fdt_parse_config(irq_parent, &raw) {
-                    Ok(cfg) => cfgs.push(cfg),
-                    Err(e) => error!("{:?}", e),
-                }
-            }
-        }
-
-        Some(IrqInfo { irq_parent, cfgs })
+        parse_irq_config(phandle, &interrupts)
     }
+}
+
+fn parse_irq_config(parent: Phandle, interrupts: &[Vec<u32>]) -> Option<IrqInfo> {
+    let mut irq_parent = None;
+
+    let mut cfgs = Vec::new();
+    for raw in interrupts {
+        match rdrive::read(|m| match &m.probe_kind {
+            ProbeData::Fdt(probe_data) => {
+                irq_parent = probe_data.phandle_2_device_id(parent);
+                Some(probe_data.parse_irq(parent, raw))
+            }
+            ProbeData::Static => None,
+        }) {
+            Some(Ok(cfg)) => cfgs.push(cfg),
+            _ => continue,
+        }
+    }
+
+    Some(IrqInfo {
+        irq_parent: irq_parent?,
+        cfgs,
+    })
 }
 
 pub trait GetPciIrqConfig {
@@ -154,15 +166,8 @@ impl GetPciIrqConfig for Pci<'_> {
             .child_interrupts(bus, device, func, irq_pin as _)
             .ok()?;
 
-        let irq_parent = DriverId::from(irq.parent.as_usize());
-
-        let mut cfgs = Vec::new();
         let raw = irq.irqs.collect::<Vec<_>>();
-        match crate::irq::fdt_parse_config(irq_parent, &raw) {
-            Ok(cfg) => cfgs.push(cfg),
-            Err(e) => error!("{:?}", e),
-        }
 
-        Some(IrqInfo { irq_parent, cfgs })
+        parse_irq_config(irq.parent, &[raw])
     }
 }

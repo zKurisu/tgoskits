@@ -1,23 +1,19 @@
-use core::{cell::UnsafeCell, error::Error};
+use core::cell::UnsafeCell;
 
-use alloc::{boxed::Box, collections::btree_map::BTreeMap};
-use driver_interface::intc::*;
-use log::{debug, error, warn};
+use alloc::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec};
+use log::{debug, warn};
+pub use rdrive::Phandle;
+use rdrive::{Device, DeviceId, IrqId, intc::*};
 use spin::Mutex;
 
 use crate::{
-    driver_manager::{
-        self,
-        device::{Device, DriverId},
-    },
-    globals::{self, cpu_global, global_val},
+    globals::{self, cpu_global},
     platform::{self, cpu_id},
     platform_if::PlatformImpl,
 };
-pub use driver_manager::device::irq::IrqInfo;
 
 #[derive(Default)]
-pub struct CpuIrqChips(BTreeMap<DriverId, Chip>);
+pub struct CpuIrqChips(BTreeMap<DeviceId, Chip>);
 
 pub type IrqHandler = dyn Fn(IrqId) -> IrqHandleResult;
 
@@ -35,33 +31,36 @@ pub fn enable_all() {
 }
 
 pub(crate) fn init_main_cpu() {
-    match &global_val().platform_info {
-        crate::globals::PlatformInfoKind::DeviceTree(fdt) => {
-            if let Err(e) = driver_manager::init_irq_chips_by_fdt(fdt.get_addr()) {
-                error!("{}", e);
-            }
-        }
+    for (phandle, intc) in rdrive::intc_all() {
+        debug!("[{}]({:?}) open", intc.descriptor.name, phandle,);
+        let chip = intc.upgrade().unwrap();
+        let mut g = chip.spin_try_borrow_by(0.into());
+
+        g.open().unwrap();
     }
 
     init_current_cpu();
 }
 
 pub(crate) fn init_current_cpu() {
-    let chip = driver_manager::use_irq_chips_by("Kernel IRQ init");
-    let g = unsafe { globals::cpu_global_mut() };
+    let globals = unsafe { globals::cpu_global_mut() };
 
-    for c in chip {
-        let id = c.descriptor.driver_id;
-        let device = c.current_cpu_setup();
+    for (phandle, intc) in rdrive::intc_all() {
+        let intc = intc.upgrade().unwrap();
+        let id = intc.descriptor.device_id;
+        let g = intc.spin_try_borrow_by(0.into());
+
+        let device = g.current_cpu_setup();
         debug!(
-            "[{}]({id:?}) Init cpu: {:?}",
-            c.descriptor.name,
+            "[{}]({:?}) init cpu: {:?}",
+            intc.descriptor.name,
+            phandle,
             platform::cpu_id(),
         );
 
-        let device = Device::new(c.descriptor.clone(), device);
+        let device = Device::new(intc.descriptor.clone(), device);
 
-        g.irq_chips.0.insert(
+        globals.irq_chips.0.insert(
             id,
             Chip {
                 device,
@@ -77,19 +76,12 @@ pub enum IrqHandleResult {
     None,
 }
 
-fn chip_cpu(id: DriverId) -> &'static Chip {
+fn chip_cpu(id: DeviceId) -> &'static Chip {
     globals::cpu_global()
         .irq_chips
         .0
         .get(&id)
         .unwrap_or_else(|| panic!("irq chip {:?} not found", id))
-}
-
-pub fn fdt_parse_config(
-    irq_parent: DriverId,
-    prop_interrupts: &[u32],
-) -> Result<IrqConfig, Box<dyn Error>> {
-    unsafe { &*chip_cpu(irq_parent).device.force_use() }.parse_fdt_config(prop_interrupts)
 }
 
 pub struct IrqRegister {
@@ -101,12 +93,17 @@ pub struct IrqRegister {
 impl IrqRegister {
     pub fn register(self) {
         let irq = self.param.cfg.irq;
-        let irq_parent = self.param.irq_chip;
+        let irq_parent = self.param.intc;
 
         let chip = chip_cpu(irq_parent);
         chip.register_handle(irq, self.handler);
 
-        let mut c = driver_manager::spin_use_intc(irq_parent, "Kernel IRQ register");
+        let mut c = rdrive::edit(|m| m.intc.get(irq_parent))
+            .unwrap()
+            .upgrade()
+            .unwrap()
+            .spin_try_borrow_by(0.into());
+
         if let Some(p) = self.priority {
             c.set_priority(irq, p);
         } else {
@@ -143,9 +140,7 @@ impl Chip {
     }
 
     fn handle_irq(&self) -> Option<()> {
-        let chip = unsafe { &mut *self.device.force_use() };
-
-        let irq = chip.get_and_acknowledge_interrupt()?;
+        let irq = self.device.get_and_acknowledge_interrupt()?;
 
         if let Some(handler) = unsafe { &mut *self.handlers.get() }.get(&irq) {
             let res = (handler)(irq);
@@ -155,7 +150,7 @@ impl Chip {
         } else {
             warn!("IRQ {:?} no handler", irq);
         }
-        chip.end_interrupt(irq);
+        self.device.end_interrupt(irq);
         Some(())
     }
 }
@@ -197,8 +192,14 @@ pub fn handle_irq() -> usize {
 }
 
 #[derive(Debug, Clone)]
+pub struct IrqInfo {
+    pub irq_parent: DeviceId,
+    pub cfgs: Vec<IrqConfig>,
+}
+
+#[derive(Debug, Clone)]
 pub struct IrqParam {
-    pub irq_chip: DriverId,
+    pub intc: DeviceId,
     pub cfg: IrqConfig,
 }
 

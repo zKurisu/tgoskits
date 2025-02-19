@@ -1,33 +1,56 @@
-[package]
-name = "sparreal-kernel"
-version.workspace = true
-authors = ["周睿 <zrufo747@outlook.com>"]
-edition.workspace = true
-repository = "https://github.com/ZR233/sparreal-os"
-license = "MPL-2.0"
-description = "Sparreal OS kernel"
-keywords = ["os"]
-categories = ["embedded", "no-std"]
+[dependencies]
+ansi_rgb = "0.2"
+buddy_system_allocator = "0.11"
+dma-api = "0.2"
+fdt-parser = "0.4"
+lock_api = "0.4"
+log = "0.4"
+memory_addr = "0.3"
+rgb = "0.8.47"
+spin = "0.9"
+page-table-generic = "0.5"
+rdrive = "0.1"
+
+[dependencies.anyhow]
+default-features = false
+version = "1.0"
+
+[dependencies.byte-unit]
+default-features = false
+features = ["byte"]
+version = "5.1"
+
+[dependencies.lazy_static]
+features = ["spin_no_std"]
+version = "1.5"
+
+[dependencies.pasts]
+default-features = false
+version = "0.14"
+
+
+[dependencies.sparreal-macros]
+path = "../sparreal-macros"
+version = "0.8"
+
+[dependencies.thiserror]
+default-features = false
+version = "2"
 
 [features]
 mmu = []
 
+[package]
+authors = ["周睿 <zrufo747@outlook.com>"]
+categories = ["embedded", "no-std"]
+description = "Sparreal OS kernel"
+keywords = ["os"]
+license = "MPL-2.0"
+name = "sparreal-kernel"
+repository = "https://github.com/ZR233/sparreal-os"
 
-[dependencies]
-log = "0.4"
-buddy_system_allocator = "0.11"
-sparreal-macros = { version = "0.7", path = "../sparreal-macros" }
-driver-interface = { version = "0.4" }
-memory_addr = "0.3"
-page-table-generic = { version = "0.5" }
-fdt-parser = "0.4"
-lock_api = "0.4"
-pasts = { version = "0.14", default-features = false }
-ansi_rgb = "0.2"
-rgb = "0.8.47"
-spin = "0.9"
-anyhow = { version = "1.0", default-features = false }
-byte-unit = { version = "5.1", features = ["byte"], default-features = false }
-lazy_static = { version = "1.5", features = ["spin_no_std"] }
-thiserror = { version = "2", default-features = false }
-dma-api = "0.2"
+[package.edition]
+workspace = true
+
+[package.version]
+workspace = true

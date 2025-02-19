@@ -7,8 +7,9 @@ use core::{
 };
 
 use alloc::collections::btree_map::BTreeMap;
-use driver_interface::intc::CpuId;
+use log::debug;
 use percpu::PerCPU;
+use platform::CpuId;
 
 pub use crate::platform::PlatformInfoKind;
 use crate::{
@@ -108,6 +109,8 @@ pub(crate) unsafe fn setup_percpu() {
         g.percpu.insert(cpu.cpu_id, percpu);
     }
     GLOBAL.cpu_ok.store(true, Ordering::SeqCst);
+
+    debug!("per cpu data ok");
 }
 
 pub(crate) fn cpu_global() -> &'static PerCPU {

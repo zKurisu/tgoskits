@@ -1,37 +1,57 @@
 [package]
-name = "sparreal-rt"
-version.workspace = true
 authors = ["周睿 <zrufo747@outlook.com>"]
-edition.workspace = true
-repository = "https://github.com/ZR233/sparreal-os"
-license = "MPL-2.0"
+categories = ["embedded", "no-std"]
 description = "Sparreal OS Runtime"
 keywords = ["os"]
-categories = ["embedded", "no-std"]
+license = "MPL-2.0"
+name = "sparreal-rt"
+repository = "https://github.com/ZR233/sparreal-os"
+
+[package.edition]
+workspace = true
+
+[package.version]
+workspace = true
+
+[dependencies]
+bitflags = "2.6"
+buddy_system_allocator = "0.11"
+dma-api = "0.2"
+fdt-parser = "0.4"
+log = "0.4"
+
+
+[dependencies.futures]
+default-features = false
+features = ["alloc"]
+version = "0.3"
+
+[dependencies.page-table-generic]
+version = "0.5"
+
+[dependencies.sparreal-kernel]
+features = ["mmu"]
+path = "../sparreal-kernel"
+version = "0.8"
+
+[dependencies.sparreal-macros]
+path = "../sparreal-macros"
+version = "0.8"
 
 [features]
 default = ["early-print"]
 early-print = []
 
 
-[dependencies]
-log = "0.4"
-page-table-generic = { version = "0.5" }
-futures = { version = "0.3", default-features = false, features = ["alloc"] }
-sparreal-macros = { version = "0.7", path = "../sparreal-macros" }
-sparreal-kernel = { version = "0.7", path = "../sparreal-kernel", features = [
-    "mmu",
-] }
-bitflags = "2.6"
-fdt-parser = "0.4"
-dma-api = "0.2"
-buddy_system_allocator = "0.11"
-
-
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "10.0"
-tock-registers = "0.9"
 arm-pl011-rs = "0.2"
-arm-gic-driver = { version = "0.4" }
 arm_pl031 = "0.2.1"
-page-table-arm = { version = "0.1", path = "../page-table-arm" }
+tock-registers = "0.9"
+
+[target.'cfg(target_arch = "aarch64")'.dependencies.arm-gic-driver]
+version = "0.6"
+
+[target.'cfg(target_arch = "aarch64")'.dependencies.page-table-arm]
+path = "../page-table-arm"
+version = "0.1"

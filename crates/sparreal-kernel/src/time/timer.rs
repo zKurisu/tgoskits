@@ -3,28 +3,11 @@ use core::{
     time::Duration,
 };
 
-use crate::{DriverGeneric, intc::IrqConfig};
+use super::queue;
 use alloc::boxed::Box;
+use rdrive::timer::*;
 
-mod queue;
-
-pub type Hardware = Box<dyn Interface>;
-pub type OnProbeFdt = fn(&[IrqConfig]) -> Hardware;
-pub type HardwareCPU = Box<dyn InterfaceCPU>;
 const NANO_PER_SEC: u128 = 1_000_000_000;
-
-pub trait Interface: Send {
-    fn get_current_cpu(&mut self) -> Box<dyn InterfaceCPU>;
-}
-
-pub trait InterfaceCPU: DriverGeneric + Sync {
-    fn set_timeval(&mut self, ticks: u64);
-    fn current_ticks(&self) -> u64;
-    fn tick_hz(&self) -> u64;
-    fn set_irq_enable(&mut self, enable: bool);
-    fn get_irq_status(&self) -> bool;
-    fn irq(&self) -> IrqConfig;
-}
 
 pub struct Timer {
     timer: HardwareCPU,
@@ -32,6 +15,7 @@ pub struct Timer {
 }
 
 unsafe impl Sync for Timer {}
+unsafe impl Send for Timer {}
 
 impl Timer {
     pub fn new(timer: HardwareCPU) -> Self {

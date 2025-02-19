@@ -98,15 +98,15 @@ checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
 
 [[package]]
 name = "arm-gic-driver"
-version = "0.4.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d427efca5d3498c700b1ceee4de12903218cd963ffa3eae89dd688fd213a19"
+checksum = "89c6858a856f5376a59472cd97a2c8155e4a4e40baf3321b2c072970d98374d6"
 dependencies = [
  "aarch64-cpu",
  "bitflags",
- "driver-interface 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "enum_dispatch",
  "log",
+ "rdif-intc",
  "tock-registers",
 ]
 
@@ -146,7 +146,7 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "bare-test"
-version = "0.3.2"
+version = "0.4.0"
 dependencies = [
  "bare-test-macros",
  "log",
@@ -252,26 +252,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13029088ff130c8eb6a35ff20410ebed5f6750507681bf3d90f74ba97032a407"
 
 [[package]]
-name = "driver-interface"
-version = "0.4.3"
-dependencies = [
- "fdt-parser",
- "futures",
- "log",
-]
-
-[[package]]
-name = "driver-interface"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baac2363e2f2039998dedbf3877726689cc522fa37011f9602c6c3d8026b31ef"
-dependencies = [
- "fdt-parser",
- "futures",
- "log",
-]
-
-[[package]]
 name = "embedded-io"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -323,9 +303,9 @@ dependencies = [
 
 [[package]]
 name = "fdt-parser"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3863007a35c211c7c98521018eca226b07fea95a555eb08324ad55c4b2e50c18"
+checksum = "f6ce5f2349481622d853a132241a102974317337ec643670a830e4194cb71181"
 
 [[package]]
 name = "fnv"
@@ -531,6 +511,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdif-base"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce9090d968a27bbfc80749ee351c476577230b10211decb813111300d8dfd9b4"
+
+[[package]]
+name = "rdif-intc"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92a8eb1b112b2bb467c4f074ee749d389cdeb84ce7756768a39637dbe2905a04"
+dependencies = [
+ "rdif-base",
+]
+
+[[package]]
+name = "rdif-timer"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9115e47b0302a357d678f573370501729844cb0d3ad39eeaa03c79782817638e"
+dependencies = [
+ "rdif-base",
+]
+
+[[package]]
+name = "rdrive"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "378cf235f705cb8881e63c7eda29a7f4931b94ae2bc153b1f0914d4ff913f3eb"
+dependencies = [
+ "fdt-parser",
+ "log",
+ "rdif-base",
+ "rdif-intc",
+ "rdif-timer",
+ "spin",
+ "thiserror",
+]
+
+[[package]]
+name = "rdrive-macro-utils"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56608f659dc99a1bdcf648c0f84c2bfe2bce40e0a3d8ab704291db5f822705fc"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "regex"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -586,7 +616,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "simple_test"
-version = "0.7.0"
+version = "0.8.1"
 dependencies = [
  "bare-test",
  "bare-test-macros",
@@ -595,14 +625,13 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.7.0"
+version = "0.8.1"
 dependencies = [
  "ansi_rgb",
  "anyhow",
  "buddy_system_allocator",
  "byte-unit",
  "dma-api",
- "driver-interface 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "fdt-parser",
  "lazy_static",
  "lock_api",
@@ -610,6 +639,7 @@ dependencies = [
  "memory_addr",
  "page-table-generic",
  "pasts",
+ "rdrive",
  "rgb",
  "sparreal-macros",
  "spin",
@@ -618,18 +648,19 @@ dependencies = [
 
 [[package]]
 name = "sparreal-macros"
-version = "0.7.0"
+version = "0.8.1"
 dependencies = [
  "abi-singleton",
  "darling",
  "proc-macro2",
  "quote",
+ "rdrive-macro-utils",
  "syn",
 ]
 
 [[package]]
 name = "sparreal-rt"
-version = "0.7.0"
+version = "0.8.1"
 dependencies = [
  "aarch64-cpu",
  "arm-gic-driver",

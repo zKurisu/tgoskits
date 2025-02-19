@@ -13,7 +13,5 @@ mod tests {
         let _fdt = match &global_val().platform_info {
             PlatformInfoKind::DeviceTree(fdt) => fdt.get(),
         };
-
-        assert_eq!(2 + 2, 4)
     }
 }

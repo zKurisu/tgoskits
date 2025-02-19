@@ -7,7 +7,9 @@
     "lldb.consoleMode": "commands",
     "rust-targets.targets": [
         "aarch64-unknown-none",
-        "aarch64-unknown-none-softfloat"
+        "aarch64-unknown-none-softfloat",
+        // for xtask
+        "system"
     ],
     "rust-analyzer.check.targets": [
         "aarch64-unknown-none",

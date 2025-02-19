@@ -1,5 +1,4 @@
 use crate::{MAIRKind, MAIRSetting};
-use aarch64_cpu::registers::*;
 
 pub struct MAIRDefault;
 
@@ -19,11 +18,13 @@ impl MAIRDefault {
 
     #[cfg(target_arch = "aarch64")]
     pub fn mair_el1_apply() {
+        use aarch64_cpu::registers::*;
         MAIR_EL1.set(Self::mair_value());
     }
 
     #[cfg(target_arch = "aarch64")]
     pub fn mair_el2_apply() {
+        use aarch64_cpu::registers::*;
         MAIR_EL2.set(Self::mair_value());
     }
 }

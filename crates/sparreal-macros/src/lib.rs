@@ -158,39 +158,7 @@ pub fn build_test_setup(_input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn module_driver(input: TokenStream) -> TokenStream {
-    let input = proc_macro2::TokenStream::from(input);
-    let mut name = None;
-
-    {
-        let mut it = input.clone().into_iter();
-        while let Some(t) = it.next() {
-            if let proc_macro2::TokenTree::Ident(i) = t {
-                if i == "name" {
-                    it.next();
-                    if let Some(proc_macro2::TokenTree::Literal(l)) = it.next() {
-                        let l = l.to_string();
-                        let l = l.trim_matches('"');
-                        name = Some(l.to_string());
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    let st_name = name.unwrap_or_default().replace("-", "_").replace(" ", "_");
-
-    let static_name = format_ident!("DRIVER_{}", st_name.to_uppercase());
-
-    quote! {
-        #[unsafe(link_section = ".driver.register")]
-        #[unsafe(no_mangle)]
-        #[used(linker)]
-        pub static #static_name: sparreal_kernel::driver_interface::DriverRegister = sparreal_kernel::driver_interface::DriverRegister{
-            #input
-        };
-    }
-    .into()
+    rdrive_macro_utils::module_driver_with_linker(input, "sparreal_kernel::driver")
 }
 
 #[proc_macro]
