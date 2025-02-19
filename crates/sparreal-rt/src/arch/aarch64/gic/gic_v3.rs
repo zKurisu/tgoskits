@@ -25,14 +25,14 @@ fn probe_gic(node: Node<'_>) -> Result<FdtProbeInfo, Box<dyn Error>> {
     let mut reg = node.reg().ok_or(format!("[{}] has no reg", node.name))?;
 
     let gicd_reg = reg.next().unwrap();
-    let gicc_reg = reg.next().unwrap();
+    let gicr_reg = reg.next().unwrap();
     let gicd = iomap(
         (gicd_reg.address as usize).into(),
         gicd_reg.size.unwrap_or(0x1000),
     );
     let gicr = iomap(
-        (gicc_reg.address as usize).into(),
-        gicc_reg.size.unwrap_or(0x1000),
+        (gicr_reg.address as usize).into(),
+        gicr_reg.size.unwrap_or(0x1000),
     );
 
     Ok(FdtProbeInfo {
