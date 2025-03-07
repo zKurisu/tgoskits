@@ -8,7 +8,7 @@ use spin::Mutex;
 
 use crate::{
     globals::{self, cpu_global},
-    platform::{self, cpu_id},
+    platform::{self, cpu_hard_id},
     platform_if::PlatformImpl,
 };
 
@@ -55,7 +55,7 @@ pub(crate) fn init_current_cpu() {
             "[{}]({:?}) init cpu: {:?}",
             intc.descriptor.name,
             phandle,
-            platform::cpu_id(),
+            platform::cpu_hard_id(),
         );
 
         let device = Device::new(intc.descriptor.clone(), device);
@@ -110,7 +110,7 @@ impl IrqRegister {
             c.set_priority(irq, 0);
         }
 
-        c.set_target_cpu(irq, cpu_id());
+        c.set_target_cpu(irq, cpu_hard_id().into());
         c.set_trigger(irq, self.param.cfg.trigger);
         c.irq_enable(irq);
         debug!("Enable irq {:?} on chip {:?}", irq, irq_parent);

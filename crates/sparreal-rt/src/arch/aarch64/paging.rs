@@ -2,18 +2,29 @@ use core::arch::asm;
 
 use aarch64_cpu::{asm::barrier::*, registers::*};
 use page_table_arm::*;
-use page_table_generic::*;
-use sparreal_kernel::{
-    io::print::{early_dbg, early_dbg_hexln},
-    mem::va_offset,
-    platform_if::*,
-};
-use sparreal_macros::api_impl;
+use sparreal_kernel::{io::print::*, mem::PhysAddr, platform_if::*};
+
+use super::cache;
 
 pub struct PageTableImpl;
 
 #[api_impl]
 impl MMU for PageTableImpl {
+    unsafe fn boot_regions() -> BootRsvRegionVec {
+        let mut ret = crate::mem::rsv_regions();
+        let debug_reg = PhysAddr::new(super::debug::reg()).align_down(0x1000);
+
+        ret.push(BootRegion::new(
+            debug_reg..debug_reg + 0x1000,
+            c"debug_uart",
+            AccessSetting::Read | AccessSetting::Write,
+            CacheSetting::Device,
+            RegionKind::Other,
+        ));
+
+        ret
+    }
+
     unsafe fn flush_tlb(addr: *const u8) {
         unsafe { asm!("tlbi vaae1is, {}; dsb nsh; isb", in(reg) addr as usize) };
     }
@@ -182,14 +193,14 @@ impl MMU for PageTableImpl {
             + TCR_EL1::T1SZ.val(16);
         TCR_EL1.write(TCR_EL1::IPS::Bits_48 + tcr_flags0 + tcr_flags1);
 
+        cache::dcache_all(CacheOp::CleanAndInvalidate);
+
         early_dbg("TCR_EL1: ");
         early_dbg_hexln(TCR_EL1.get());
         unsafe {
-            crate::debug::mmu_add_offset(va_offset());
+            super::debug::mmu_add_offset(RegionKind::Other.va_offset());
 
-            asm!("tlbi vmalle1");
-            isb(SY);
-            dsb(NSH);
+            MMUImpl::flush_tlb_all();
             // Enable the MMU and turn on I-cache and D-cache
             SCTLR_EL1
                 .modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);

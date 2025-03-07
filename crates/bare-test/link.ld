@@ -11,4 +11,4 @@ SECTIONS
     }
     /* 其他段定义 */
 }
-INSERT AFTER .rodata;
+INSERT AFTER .data;

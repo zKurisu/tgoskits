@@ -29,7 +29,7 @@ pub(crate) fn init_current_cpu() -> Option<()> {
     {
         let mut ls = rdrive::read(|m| m.timer.all());
         let (_, timer) = ls.pop()?;
-        
+
         let mut timer = timer.upgrade()?.spin_try_borrow_by(0.into());
 
         unsafe {

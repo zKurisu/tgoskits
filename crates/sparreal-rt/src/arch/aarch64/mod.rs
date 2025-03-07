@@ -3,26 +3,27 @@ use core::arch::asm;
 use aarch64_cpu::registers::*;
 use context::{__tcb_switch, Context};
 use log::trace;
-use sparreal_kernel::{
-    globals::global_val, mem::KernelRegions, platform::PlatformInfoKind, platform_if::*, println,
-    task::TaskControlBlock,
-};
-use sparreal_macros::api_impl;
+use sparreal_kernel::{platform_if::*, task::TaskControlBlock};
 
-use crate::mem::driver_registers;
+use crate::{consts, mem::driver_registers};
 
 mod boot;
 mod cache;
 mod context;
+mod debug;
 mod gic;
-pub(crate) mod mmu;
-mod psci;
+mod paging;
+mod power;
 mod timer;
 mod trap;
 
-pub(crate) fn cpu_id() -> usize {
-    const CPU_ID_MASK: u64 = 0xFF_FFFF + (0xFFFF_FFFF << 32);
-    (aarch64_cpu::registers::MPIDR_EL1.get() & CPU_ID_MASK) as usize
+#[cfg(not(feature = "vm"))]
+pub fn is_mmu_enabled() -> bool {
+    SCTLR_EL1.matches_any(&[SCTLR_EL1::M::Enable])
+}
+#[cfg(feature = "vm")]
+pub fn is_mmu_enabled() -> bool {
+    SCTLR_EL2.matches_any(&[SCTLR_EL2::M::Enable])
 }
 
 struct PlatformImpl;
@@ -30,15 +31,11 @@ struct PlatformImpl;
 #[api_impl]
 impl Platform for PlatformImpl {
     fn kstack_size() -> usize {
-        crate::config::KERNEL_STACK_SIZE
-    }
-
-    fn kernel_regions() -> KernelRegions {
-        crate::mem::kernel_regions()
+        consts::STACK_SIZE
     }
 
     fn cpu_id() -> usize {
-        cpu_id()
+        MPIDR_EL1.get() as usize & 0xff00ffffff
     }
 
     fn cpu_context_size() -> usize {
@@ -90,11 +87,14 @@ impl Platform for PlatformImpl {
     }
 
     fn shutdown() -> ! {
-        psci::system_off()
+        // psci::system_off()
+        loop {
+            aarch64_cpu::asm::wfi();
+        }
     }
 
     fn debug_put(b: u8) {
-        crate::debug::put(b);
+        debug::put(b);
     }
 
     fn irq_all_enable() {
@@ -105,16 +105,6 @@ impl Platform for PlatformImpl {
     }
     fn irq_all_is_enabled() -> bool {
         !DAIF.is_set(DAIF::I)
-    }
-
-    fn on_boot_success() {
-        match &global_val().platform_info {
-            PlatformInfoKind::DeviceTree(fdt) => {
-                if let Err(e) = psci::setup_method_by_fdt(fdt.get()) {
-                    println!("{}", e);
-                }
-            }
-        }
     }
 
     fn dcache_range(op: CacheOp, addr: usize, size: usize) {

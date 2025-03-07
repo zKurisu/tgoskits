@@ -1,8 +1,9 @@
+[alias]
+xtask = "run --package xtask --"
+
 [target.'cfg(all(target_os = "none"))']
 runner = "ostool cargo-test"
 
-[build]
-target = "aarch64-unknown-none"
+# [build]
+# target = "aarch64-unknown-none"
 
-[alias]
-xtask = "run -q --manifest-path xtask/Cargo.toml --"

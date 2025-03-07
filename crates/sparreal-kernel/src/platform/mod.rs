@@ -1,24 +1,27 @@
-use alloc::string::String;
-use alloc::vec::Vec;
-use core::ffi::CStr;
-use core::ops::Range;
-use core::ptr::NonNull;
-pub use rdrive::intc::CpuId;
+use alloc::{string::String, vec::Vec};
+use core::hint::spin_loop;
+use core::{ffi::CStr, fmt::Display, ops::Range};
+use log::error;
+
+use fdt::Fdt;
 use rdrive::register::DriverRegister;
 
 use crate::globals::global_val;
 use crate::mem::PhysAddr;
+use crate::mem::region::boot_regions;
 use crate::platform_if::*;
-use fdt::Fdt;
 
 pub mod fdt;
 
+#[derive(Clone)]
 pub enum PlatformInfoKind {
     DeviceTree(Fdt),
 }
 
+unsafe impl Send for PlatformInfoKind {}
+
 impl PlatformInfoKind {
-    pub fn new_fdt(addr: NonNull<u8>) -> Self {
+    pub fn new_fdt(addr: PhysAddr) -> Self {
         PlatformInfoKind::DeviceTree(Fdt::new(addr))
     }
 
@@ -60,24 +63,6 @@ impl PlatformInfoKind {
         })
     }
 
-    pub fn main_memory(&self) -> Option<Range<PhysAddr>> {
-        let kernel_text = PlatformImpl::kernel_regions().text;
-
-        let mut first = None;
-
-        for m in self.memorys() {
-            let r = m.start.as_usize()..m.end.as_usize();
-            if r.contains(&kernel_text.end) {
-                return Some(m);
-            }
-            if first.is_none() {
-                first = Some(m);
-            }
-        }
-
-        first
-    }
-
     pub fn debugcon(&self) -> Option<SerialPort> {
         match self {
             Self::DeviceTree(fdt) => fdt.debugcon(),
@@ -91,8 +76,8 @@ pub fn cpu_list() -> Vec<CPUInfo> {
     }
 }
 
-pub fn cpu_id() -> CpuId {
-    PlatformImpl::cpu_id().into()
+pub fn cpu_hard_id() -> CPUHardId {
+    CPUHardId(PlatformImpl::cpu_id())
 }
 
 pub fn platform_name() -> String {
@@ -101,8 +86,84 @@ pub fn platform_name() -> String {
     }
 }
 
+pub fn memory_main_available(
+    platform_info: &PlatformInfoKind,
+) -> Result<Range<PhysAddr>, &'static str> {
+    let text = boot_regions()
+        .into_iter()
+        .find(|o| o.name().eq(".text"))
+        .ok_or("can not find .text")?;
+    let text_end = text.range.end;
+
+    let main_memory = platform_info
+        .memorys()
+        .find(|m| m.contains(&text_end))
+        .ok_or("can not find main memory")?;
+
+    let mut start = PhysAddr::new(0);
+    for rsv in boot_regions() {
+        if main_memory.contains(&rsv.range.end) && rsv.range.end > start {
+            start = rsv.range.end;
+        }
+    }
+    start = start.align_up(0x1000);
+    Ok(start..main_memory.end)
+}
+
+pub fn regsions() -> Vec<BootRegion> {
+    let mut ret = boot_regions().to_vec();
+
+    let main_available = memory_main_available(&global_val().platform_info).unwrap();
+    ret.push(BootRegion::new(
+        main_available.clone(),
+        c"main mem",
+        AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
+        CacheSetting::Normal,
+        RegionKind::Other,
+    ));
+
+    for memory in phys_memorys() {
+        if memory.contains(&main_available.start) {
+            continue;
+        }
+
+        ret.push(BootRegion::new(
+            memory,
+            c"memory",
+            AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
+            CacheSetting::Normal,
+            RegionKind::Other,
+        ));
+    }
+
+    ret
+}
+
+pub fn phys_memorys() -> ArrayVec<Range<PhysAddr>, 12> {
+    match &global_val().platform_info {
+        PlatformInfoKind::DeviceTree(fdt) => fdt.memorys(),
+    }
+}
+
 pub fn shutdown() -> ! {
-    PlatformImpl::shutdown()
+    if let Some(power) = rdrive::read(|m| m.power.all()).first() {
+        power
+            .1
+            .upgrade()
+            .unwrap()
+            .spin_try_borrow_by(0.into())
+            .shutdown();
+        loop {
+            spin_loop();
+        }
+    } else {
+        error!("no power driver");
+        loop {
+            wait_for_interrupt();
+        }
+    }
+
+    // PlatformImpl::shutdown()
 }
 
 pub fn wait_for_interrupt() {
@@ -134,7 +195,7 @@ pub fn app_main() {
 
 #[derive(Debug)]
 pub struct CPUInfo {
-    pub cpu_id: CpuId,
+    pub cpu_id: CPUHardId,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -186,4 +247,51 @@ impl SerialPort {
 
 pub fn module_registers() -> Vec<DriverRegister> {
     PlatformImpl::driver_registers().as_slice().to_vec()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct CPUId(usize);
+impl Display for CPUId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+impl From<CPUId> for usize {
+    fn from(value: CPUId) -> Self {
+        value.0
+    }
+}
+impl From<usize> for CPUId {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub struct CPUHardId(usize);
+
+// impl CPUHardId {
+//     pub(crate) unsafe fn new(id: usize) -> Self {
+//         Self(id)
+//     }
+// }
+
+impl Display for CPUHardId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:#x}", self.0)
+    }
+}
+
+impl From<rdrive::intc::CpuId> for CPUHardId {
+    fn from(value: rdrive::intc::CpuId) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<CPUHardId> for rdrive::intc::CpuId {
+    fn from(value: CPUHardId) -> Self {
+        Self::from(value.0)
+    }
 }

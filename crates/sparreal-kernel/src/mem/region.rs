@@ -1,9 +1,22 @@
-use crate::platform_if::PlatformImpl;
+use arrayvec::ArrayVec;
+use page_table_generic::{AccessSetting, CacheSetting};
 
-pub fn bss() -> &'static [u8] {
-    PlatformImpl::kernel_regions().bss.as_slice()
+use crate::platform_if::{MMUImpl, PlatformImpl};
+
+use super::{mmu::BootRegion, once::OnceStatic};
+
+const MAX_BOOT_RSV_SIZE: usize = 12;
+pub type BootRsvRegionVec = ArrayVec<BootRegion, MAX_BOOT_RSV_SIZE>;
+
+static BOOT_RSV_REGION: OnceStatic<BootRsvRegionVec> = OnceStatic::new(ArrayVec::new_const());
+
+pub(crate) unsafe fn init_boot_rsv_region() {
+    unsafe {
+        let rsv_regions = MMUImpl::boot_regions();
+        BOOT_RSV_REGION.set(rsv_regions);
+    }
 }
 
-pub fn text() -> &'static [u8] {
-    PlatformImpl::kernel_regions().text.as_slice()
+pub fn boot_regions() -> &'static BootRsvRegionVec {
+    &BOOT_RSV_REGION
 }

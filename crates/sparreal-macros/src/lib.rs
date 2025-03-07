@@ -158,7 +158,7 @@ pub fn build_test_setup(_input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn module_driver(input: TokenStream) -> TokenStream {
-    rdrive_macro_utils::module_driver_with_linker(input, "sparreal_kernel::driver")
+    rdrive_macro_utils::module_driver_with_linker(input, "sparreal_kernel::driver", None)
 }
 
 #[proc_macro]

@@ -43,9 +43,7 @@ jobs:
     - uses: taiki-e/install-action@cargo-hack
 
     - name: Clippy for workspace
-      run: cargo clippy -- -D warnings
-    - name: Clippy for each package & each feature
-      run: cargo hack clippy --each-feature -- -Dwarnings
+      run: cargo clippy --target aarch64-unknown-none -- -D warnings
 
     - name: Add config
       run: |
@@ -54,7 +52,7 @@ jobs:
         echo "[compile.cargo]" >> .project.toml
         echo 'package = "helloworld"' >> .project.toml
         echo 'log_level = "Debug"' >> .project.toml
-        echo 'rust_flags = "-C link-arg=-Tlink.x -C link-arg=-no-pie -C link-arg=-znostart-stop-gc"' >> .project.toml
+        echo 'rust_flags = ""' >> .project.toml
         echo 'features = []' >> .project.toml
         echo "[compile.cargo.env]" >> .project.toml
         echo "[qemu]" >> .project.toml
@@ -68,8 +66,7 @@ jobs:
 
     - name: Test bare-test simple_test
       if: ${{ always() }}
-      working-directory: app/simple_test
-      run: cargo test --test test1
+      run: CARGO_BUILD_TARGET=aarch64-unknown-none cargo test -p simple_test  --test test1 -- --show-output
 
     - name: Test sparreal-macros
       if: ${{ always() }}

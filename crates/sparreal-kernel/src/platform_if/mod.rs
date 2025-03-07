@@ -1,11 +1,12 @@
+pub use page_table_generic::{AccessSetting, CacheSetting};
 pub use rdrive::register::DriverRegisterSlice;
+pub use sparreal_macros::api_impl;
 use sparreal_macros::api_trait;
 
-use crate::mem::KernelRegions;
+pub use crate::mem::region::BootRsvRegionVec;
 
 #[api_trait]
 pub trait Platform {
-    fn kernel_regions() -> KernelRegions;
     fn kstack_size() -> usize;
     fn cpu_id() -> usize;
     fn cpu_context_size() -> usize;
@@ -46,7 +47,6 @@ pub trait Platform {
     fn irq_all_disable();
     fn irq_all_is_enabled() -> bool;
 
-    fn on_boot_success() {}
     fn shutdown() -> !;
     fn debug_put(b: u8);
 
@@ -56,8 +56,17 @@ pub trait Platform {
 }
 
 #[cfg(feature = "mmu")]
+pub use crate::mem::mmu::*;
+
+#[cfg(feature = "mmu")]
 #[api_trait]
 pub trait MMU {
+    /// 启动所需的内存范围
+    ///
+    /// # Safety
+    ///
+    /// `MMU` 开启以前，链接地址是物理地址，开启后，为虚拟地址，应在`MMU`开启前调用并保存，开启`MMU`后若调用会错误的使用虚拟地址作为返回值
+    unsafe fn boot_regions() -> BootRsvRegionVec;
     fn set_kernel_table(addr: usize);
     fn get_kernel_table() -> usize;
     fn set_user_table(addr: usize);
@@ -70,8 +79,8 @@ pub trait MMU {
     fn flush_tlb_all();
     fn page_size() -> usize;
     fn table_level() -> usize;
-    fn new_pte(config: page_table_generic::PTEGeneric) -> usize;
-    fn read_pte(pte: usize) -> page_table_generic::PTEGeneric;
+    fn new_pte(config: PTEGeneric) -> usize;
+    fn read_pte(pte: usize) -> PTEGeneric;
     fn enable_mmu(stack_top: usize, jump_to: usize) -> !;
 }
 

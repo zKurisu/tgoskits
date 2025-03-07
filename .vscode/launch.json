@@ -4,17 +4,6 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        // lldb 不支持 riscv，需要用此配置调试
-        {
-            "type": "cppdbg",
-            "name": "KDebug cppdbg",
-            "request": "launch",
-            "miDebuggerServerAddress": "localhost:1234",
-            "program": "${workspaceFolder}/target/kernel.elf",
-            "miDebuggerPath": "gdb-multiarch",
-            "cwd": "${workspaceRoot}",
-            "preLaunchTask": "qemu debug"
-        },
         {
             "name": "KDebug lldb",
             "type": "lldb",
@@ -30,6 +19,17 @@
                 "gdb-remote localhost:1234" // Connect to the GDB Server
             ],
             "preLaunchTask": "qemu debug"
-        }
+        },
+        // lldb 不支持 riscv，需要用此配置调试
+        {
+            "type": "cppdbg",
+            "name": "KDebug cppdbg",
+            "request": "launch",
+            "miDebuggerServerAddress": "localhost:1234",
+            "program": "${workspaceFolder}/target/kernel.elf",
+            "miDebuggerPath": "gdb-multiarch",
+            "cwd": "${workspaceRoot}",
+            "preLaunchTask": "qemu debug"
+        },
     ]
 }

@@ -1,37 +1,13 @@
-use clap::{Args, Parser, Subcommand, ValueEnum};
+#![cfg_attr(target_os = "none", no_std)]
+#![cfg_attr(target_os = "none", no_main)]
 
-mod up_version;
+#[cfg(not(target_os = "none"))]
+mod cli;
 
-#[derive(Parser)]
-#[command(version, about, long_about = None)]
-#[command(propagate_version = true)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
+#[cfg(target_os = "none")]
+mod dump;
 
-#[derive(Subcommand)]
-enum Commands {
-    UpVersion(UpVersionArgs),
-}
-
-#[derive(Args, Debug)]
-struct UpVersionArgs {
-    #[arg(short, long)]
-    module: Module,
-    #[arg(short, long)]
-    break_change: bool,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-enum Module {
-    Sparreal,
-}
-
+#[cfg(not(target_os = "none"))]
 fn main() {
-    let cli = Cli::parse();
-
-    match &cli.command {
-        Commands::UpVersion(args) => up_version::exec(args),
-    }
+    cli::main();
 }

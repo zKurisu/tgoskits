@@ -1,9 +1,7 @@
-use core::fmt::Display;
+use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
-use core::ops::{Add, Sub};
+use core::ops::{Add, Range, Sub};
 use core::ptr::NonNull;
-
-use super::va_offset_now;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Address {
@@ -64,156 +62,120 @@ impl Sub<usize> for Address {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, PartialOrd)]
-#[repr(transparent)]
-pub struct Virt<T>(usize, PhantomData<T>);
-unsafe impl<T> Send for Virt<T> {}
+macro_rules! def_addr {
+    ($name:ident, $t:ty) => {
+        #[repr(transparent)]
+        #[derive(Clone, Copy, PartialEq, PartialOrd)]
+        pub struct $name<T>($t, core::marker::PhantomData<T>);
 
-impl<T> From<*const T> for Virt<T> {
-    fn from(value: *const T) -> Self {
-        Self(value as _, PhantomData)
-    }
+        impl<T> $name<T> {
+            pub const fn new(val: $t) -> Self {
+                Self(val, core::marker::PhantomData)
+            }
+
+            pub fn raw(self) -> $t {
+                self.0
+            }
+
+            pub fn align_down(self, align: usize) -> Self {
+                (align_down(self.0 as _, align) as $t).into()
+            }
+
+            pub fn align_up(self, align: usize) -> Self {
+                (align_up(self.0 as _, align) as $t).into()
+            }
+
+            pub fn align_offset(self, align: usize) -> usize {
+                align_offset(self.0 as _, align)
+            }
+
+            pub fn is_aligned_4k(self) -> bool {
+                self.is_aligned_to(0x1000)
+            }
+
+            pub fn is_aligned_to(self, align: usize) -> bool {
+                self.align_offset(align) == 0
+            }
+        }
+        impl<T> core::fmt::Debug for $name<T> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{:#x}", self.0)
+            }
+        }
+        impl<T> core::fmt::Display for $name<T> {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                write!(f, "{:#x}", self.0)
+            }
+        }
+        impl<T> From<$t> for $name<T> {
+            fn from(value: $t) -> Self {
+                Self(value, core::marker::PhantomData)
+            }
+        }
+        impl<T> From<$name<T>> for $t {
+            fn from(value: $name<T>) -> Self {
+                value.0
+            }
+        }
+
+        impl<T> core::ops::Add<usize> for $name<T> {
+            type Output = Self;
+
+            fn add(self, rhs: usize) -> Self::Output {
+                Self(self.0 as usize + rhs, core::marker::PhantomData)
+            }
+        }
+
+        impl<T> core::ops::Sub<usize> for $name<T> {
+            type Output = Self;
+
+            fn sub(self, rhs: usize) -> Self::Output {
+                Self(self.0 as usize - rhs, core::marker::PhantomData)
+            }
+        }
+
+        impl<T> core::ops::Sub<Self> for $name<T> {
+            type Output = usize;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                self.0 as usize - rhs.0 as usize
+            }
+        }
+    };
 }
-impl<T> From<*mut T> for Virt<T> {
-    fn from(value: *mut T) -> Self {
-        Self(value as _, PhantomData)
-    }
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct CRange<T: Debug + Sized + Clone + Copy> {
+    pub start: T,
+    pub end: T,
 }
-impl<T> From<NonNull<T>> for Virt<T> {
-    fn from(value: NonNull<T>) -> Self {
-        Self(value.as_ptr() as _, PhantomData)
+
+impl<T: Debug + Sized + Clone + Copy> From<Range<T>> for CRange<T> {
+    fn from(value: Range<T>) -> Self {
+        Self {
+            start: value.start,
+            end: value.end,
+        }
     }
 }
 
-impl<T> From<Virt<T>> for *const T {
-    fn from(value: Virt<T>) -> Self {
-        value.0 as *const T
+impl<T: Debug + Sized + Clone + Copy> Debug for CRange<T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "[{:?}, {:?})", self.start, self.end)
     }
 }
+
+def_addr!(Virt, usize);
+def_addr!(Phys, usize);
 
 pub type VirtAddr = Virt<u8>;
+pub type PhysAddr = Phys<u8>;
+pub type VirtCRange = CRange<VirtAddr>;
+pub type PhysCRange = CRange<PhysAddr>;
 
-impl<T> Virt<T> {
-    pub const fn new() -> Self {
-        Self(0, PhantomData)
-    }
-
-    pub fn as_mut_ptr(self) -> *mut T {
-        self.0 as *mut T
-    }
-
-    pub fn as_usize(self) -> usize {
-        self.0
-    }
-}
-
-impl<T> Default for Virt<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T> From<usize> for Virt<T> {
-    fn from(value: usize) -> Self {
-        Self(value, PhantomData)
-    }
-}
-impl<T> From<Virt<T>> for usize {
-    fn from(value: Virt<T>) -> Self {
-        value.0
-    }
-}
-
-impl<T> From<PhysAddr> for Virt<T> {
-    fn from(value: PhysAddr) -> Self {
-        Self((value.0 + va_offset_now()) as _, PhantomData)
-    }
-}
-
-impl From<PhysAddr> for usize {
-    fn from(value: PhysAddr) -> Self {
-        value.0
-    }
-}
-
-impl<T> From<Virt<T>> for PhysAddr {
-    fn from(value: Virt<T>) -> Self {
-        Self(value.as_usize() - va_offset_now())
-    }
-}
-
-#[derive(Default, Clone, Copy, PartialEq, PartialOrd)]
-#[repr(transparent)]
-pub struct PhysAddr(usize);
-
-unsafe impl Send for PhysAddr {}
-
-impl From<usize> for PhysAddr {
-    fn from(value: usize) -> Self {
-        Self(value as _)
-    }
-}
-
-impl PhysAddr {
-    pub const fn new() -> Self {
-        Self(0)
-    }
-
-    pub fn as_usize(&self) -> usize {
-        self.0
-    }
-}
-
-impl Sub<PhysAddr> for PhysAddr {
-    type Output = usize;
-
-    fn sub(self, rhs: PhysAddr) -> Self::Output {
-        self.as_usize() - rhs.as_usize()
-    }
-}
-
-pub trait Align: Clone + Copy
-where
-    usize: From<Self>,
-{
-    fn align_down(self, align: usize) -> Self
-    where
-        Self: From<usize>,
-    {
-        align_down(self.into(), align).into()
-    }
-
-    fn align_up(self, align: usize) -> Self
-    where
-        Self: From<usize>,
-    {
-        align_up(self.into(), align).into()
-    }
-
-    fn is_aligned_4k(self) -> bool {
-        self.is_aligned_to(0x1000)
-    }
-
-    fn is_aligned_to(self, align: usize) -> bool {
-        align_offset(self.into(), align) == 0
-    }
-}
-
-impl<T> Align for T
-where
-    T: Into<usize> + From<usize> + Copy,
-    usize: From<T>,
-{
-}
-
-impl<T> Add<usize> for Virt<T> {
-    type Output = Self;
-
-    fn add(self, rhs: usize) -> Self::Output {
-        let lhs: usize = self.into();
-        (lhs + rhs).into()
-    }
-}
+/// 运行地址
+pub struct RunAddr(usize);
 
 pub const fn align_offset(addr: usize, align: usize) -> usize {
     addr & (align - 1)
@@ -227,48 +189,34 @@ pub const fn align_up(addr: usize, align: usize) -> usize {
     (addr + align - 1) & !(align - 1)
 }
 
-impl Add<usize> for PhysAddr {
-    type Output = Self;
-
-    fn add(self, rhs: usize) -> Self::Output {
-        (self.as_usize() + rhs).into()
+impl<T> From<Virt<T>> for *const T {
+    fn from(value: Virt<T>) -> Self {
+        value.0 as _
     }
 }
 
-impl<T> Sub<usize> for Virt<T> {
-    type Output = Self;
-
-    fn sub(self, rhs: usize) -> Self::Output {
-        (self.as_usize() - rhs).into()
+impl<T> From<Virt<T>> for *mut T {
+    fn from(value: Virt<T>) -> *mut T {
+        value.0 as _
     }
 }
 
-impl<T> Sub<Virt<T>> for Virt<T> {
-    type Output = usize;
-
-    fn sub(self, rhs: Virt<T>) -> Self::Output {
-        self.as_usize() - rhs.as_usize()
+impl<T> From<NonNull<T>> for Virt<T> {
+    fn from(value: NonNull<T>) -> Self {
+        Self(value.as_ptr() as _, core::marker::PhantomData)
     }
 }
 
-impl Display for PhysAddr {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#x}", self.0)
-    }
-}
-impl<T> Display for Virt<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#x}", self.0)
-    }
+#[macro_export]
+macro_rules! pa {
+    (val: $val:expr) => {
+        Phys::new($val as _)
+    };
 }
 
-impl core::fmt::Debug for PhysAddr {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#x}", self.0)
-    }
-}
-impl<T> core::fmt::Debug for Virt<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{:#x}", self.0)
-    }
+#[macro_export]
+macro_rules! va {
+    (val: $val:expr) => {
+        Virt::new($val as _)
+    };
 }

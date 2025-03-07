@@ -8,27 +8,26 @@ use core::{
 
 use alloc::collections::btree_map::BTreeMap;
 use log::debug;
-use percpu::PerCPU;
-use platform::CpuId;
 
 pub use crate::platform::PlatformInfoKind;
 use crate::{
-    mem::PhysAddr,
-    platform::{self, cpu_list},
+    mem::{self, PhysAddr},
+    platform::{self, CPUHardId, CPUId, cpu_list, fdt::Fdt},
 };
 
+mod once;
 mod percpu;
+
+pub(crate) use percpu::*;
 
 pub struct GlobalVal {
     pub platform_info: PlatformInfoKind,
-    pub kstack_top: PhysAddr,
     pub main_memory: Range<PhysAddr>,
-    percpu: BTreeMap<CpuId, percpu::PerCPU>,
+    percpu: BTreeMap<CPUId, percpu::PerCPU>,
 }
 
 struct LazyGlobal {
     g_ok: AtomicBool,
-    cpu_ok: AtomicBool,
     g: UnsafeCell<Option<GlobalVal>>,
 }
 
@@ -51,7 +50,6 @@ impl LazyGlobal {
     const fn new() -> Self {
         Self {
             g_ok: AtomicBool::new(false),
-            cpu_ok: AtomicBool::new(false),
             g: UnsafeCell::new(None),
         }
     }
@@ -75,13 +73,10 @@ unsafe fn get_mut() -> &'static mut GlobalVal {
 /// # Safty
 /// 只能在其他CPU启动前调用
 pub(crate) unsafe fn setup(platform_info: PlatformInfoKind) -> Result<(), &'static str> {
-    let main_memory = platform_info
-        .main_memory()
-        .ok_or("No memory in platform info")?;
+    let main_memory = platform::memory_main_available(&platform_info)?;
 
     let g = GlobalVal {
         platform_info,
-        kstack_top: main_memory.end,
         main_memory,
         percpu: Default::default(),
     };
@@ -89,52 +84,6 @@ pub(crate) unsafe fn setup(platform_info: PlatformInfoKind) -> Result<(), &'stat
     unsafe {
         GLOBAL.g.get().write(Some(g));
         GLOBAL.g_ok.store(true, Ordering::SeqCst);
-
-        match &mut get_mut().platform_info {
-            PlatformInfoKind::DeviceTree(fdt) => {
-                fdt.setup()?;
-            }
-        }
     }
     Ok(())
-}
-
-/// #Safty
-/// 需要在内存初始化完成之后调用
-pub(crate) unsafe fn setup_percpu() {
-    let cpus = cpu_list();
-    let g = unsafe { get_mut() };
-    for cpu in cpus {
-        let percpu = PerCPU::default();
-        g.percpu.insert(cpu.cpu_id, percpu);
-    }
-    GLOBAL.cpu_ok.store(true, Ordering::SeqCst);
-
-    debug!("per cpu data ok");
-}
-
-pub(crate) fn cpu_global() -> &'static PerCPU {
-    cpu_global_meybeuninit().expect("CPU global is not init!")
-}
-
-pub(crate) fn cpu_global_meybeuninit() -> Option<&'static PerCPU> {
-    if !GLOBAL.cpu_ok.load(Ordering::SeqCst) {
-        return None;
-    }
-
-    let g = unsafe { get_mut() };
-    Some(g.percpu.get(&platform::cpu_id()).unwrap())
-}
-
-pub(crate) unsafe fn cpu_global_mut() -> &'static mut PerCPU {
-    unsafe { cpu_global_mut_meybeunint().expect("CPU global is not init!") }
-}
-
-pub(crate) unsafe fn cpu_global_mut_meybeunint() -> Option<&'static mut PerCPU> {
-    if !GLOBAL.cpu_ok.load(Ordering::SeqCst) {
-        return None;
-    }
-
-    let g = unsafe { get_mut() };
-    Some(g.percpu.get_mut(&platform::cpu_id()).unwrap())
 }

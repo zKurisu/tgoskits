@@ -2,8 +2,8 @@ use crate::{MAIRKind, MAIRSetting};
 
 pub struct MAIRDefault;
 
+#[cfg(target_arch = "aarch64")]
 impl MAIRDefault {
-    #[cfg(target_arch = "aarch64")]
     pub const fn mair_value() -> u64 {
         // Device-nGnRnE memory
         use aarch64_cpu::registers::*;
@@ -13,19 +13,27 @@ impl MAIRDefault {
             | MAIR_EL1::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc.value;
         let attr2 = MAIR_EL1::Attr2_Normal_Inner::NonCacheable.value
             | MAIR_EL1::Attr2_Normal_Outer::NonCacheable.value;
-        attr0 | attr1 | attr2 // 0x44_ff_04
+        attr0 | attr1 | attr2
     }
-
-    #[cfg(target_arch = "aarch64")]
+    pub const fn mair_el2_value() -> u64 {
+        // Device-nGnRnE memory
+        use aarch64_cpu::registers::*;
+        let attr0 = MAIR_EL2::Attr0_Device::nonGathering_nonReordering_noEarlyWriteAck.value;
+        // Normal memory
+        let attr1 = MAIR_EL2::Attr1_Normal_Inner::WriteBack_NonTransient_ReadWriteAlloc.value
+            | MAIR_EL2::Attr1_Normal_Outer::WriteBack_NonTransient_ReadWriteAlloc.value;
+        let attr2 = MAIR_EL2::Attr2_Normal_Inner::NonCacheable.value
+            | MAIR_EL2::Attr2_Normal_Outer::NonCacheable.value;
+        attr0 | attr1 | attr2
+    }
     pub fn mair_el1_apply() {
         use aarch64_cpu::registers::*;
         MAIR_EL1.set(Self::mair_value());
     }
 
-    #[cfg(target_arch = "aarch64")]
     pub fn mair_el2_apply() {
         use aarch64_cpu::registers::*;
-        MAIR_EL2.set(Self::mair_value());
+        MAIR_EL2.set(Self::mair_el2_value());
     }
 }
 

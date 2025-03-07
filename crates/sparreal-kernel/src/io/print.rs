@@ -1,4 +1,4 @@
-use core::fmt;
+use core::fmt::{self, Write};
 
 use alloc::boxed::Box;
 use spin::Mutex;
@@ -17,6 +17,19 @@ pub fn print(args: fmt::Arguments<'_>) {
     if let Some(ref mut writer) = *g {
         let _ = writer.write_fmt(args);
     }
+}
+
+struct DebW;
+
+impl fmt::Write for DebW {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        early_dbg(s);
+        Ok(())
+    }
+}
+
+pub fn early_dbg_fmt(args: fmt::Arguments<'_>) {
+    let _ = DebW {}.write_fmt(args);
 }
 
 pub fn early_dbg(s: &str) {

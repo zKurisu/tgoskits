@@ -16,11 +16,11 @@ pub fn init() {
 
     debug!("add registers");
 
-    rdrive::probe_intc().unwrap();
+    rdrive::probe_with_kind(DriverKind::Intc).unwrap();
 
     irq::init_main_cpu();
 
-    rdrive::probe_timer().unwrap();
+    rdrive::probe_with_kind(DriverKind::Timer).unwrap();
 
     time::init_current_cpu();
 }

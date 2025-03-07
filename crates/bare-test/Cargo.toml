@@ -7,16 +7,16 @@ version = "0.4"
 
 [dependencies.sparreal-kernel]
 path = "../sparreal-kernel"
-version = "0.8"
+version = "0.9"
 
 [dependencies.sparreal-macros]
 path = "../sparreal-macros"
-version = "0.8"
+version = "0.9"
 
 [dependencies.sparreal-rt]
 optional = true
 path = "../sparreal-rt"
-version = "0.8"
+version = "0.9"
 
 [features]
 default = ["rt"]
@@ -30,7 +30,7 @@ keywords = ["test", "case", "testing", "testcase", "unittest"]
 license = "MPL-2.0"
 name = "bare-test"
 repository = "https://github.com/qclic/sparreal-os/tree/main/crates/bare-test"
-version = "0.4.0"
+version = "0.4.1"
 
 [package.edition]
 workspace = true

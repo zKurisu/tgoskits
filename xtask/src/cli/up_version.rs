@@ -2,7 +2,7 @@ use std::{env::current_dir, fs, path::Path};
 
 use toml::Value;
 
-use crate::{Module, UpVersionArgs};
+use super::{Module, UpVersionArgs};
 
 pub fn exec(args: &UpVersionArgs) {
     println!(

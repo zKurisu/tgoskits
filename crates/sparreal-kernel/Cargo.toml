@@ -9,7 +9,9 @@ memory_addr = "0.3"
 rgb = "0.8.47"
 spin = "0.9"
 page-table-generic = "0.5"
-rdrive = "0.1"
+rdrive = "0.3"
+sparreal-macros = { workspace = true }
+arrayvec = { version = "0.7", default-features = false }
 
 [dependencies.anyhow]
 default-features = false
@@ -28,10 +30,6 @@ version = "1.5"
 default-features = false
 version = "0.14"
 
-
-[dependencies.sparreal-macros]
-path = "../sparreal-macros"
-version = "0.8"
 
 [dependencies.thiserror]
 default-features = false

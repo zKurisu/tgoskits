@@ -3,10 +3,13 @@
 use core::{
     alloc::GlobalAlloc,
     ptr::{NonNull, null_mut, slice_from_raw_parts_mut},
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use buddy_system_allocator::Heap;
 use log::debug;
+use mmu::RegionKind;
+use page_table_generic::{AccessSetting, CacheSetting};
 use spin::Mutex;
 
 use crate::{globals::global_val, platform::kstack_size, println};
@@ -15,8 +18,8 @@ mod addr;
 mod cache;
 #[cfg(feature = "mmu")]
 pub mod mmu;
+pub mod once;
 pub mod region;
-
 pub use addr::*;
 
 #[global_allocator]
@@ -63,46 +66,21 @@ unsafe impl GlobalAlloc for KAllocator {
     }
 }
 
-static mut VA_OFFSET: usize = 0;
-static mut VA_OFFSET_NOW: usize = 0;
-
-pub(crate) fn set_va_offset(offset: usize) {
-    unsafe { VA_OFFSET = offset };
+const STACK_BOTTOM: usize = 0xffff_e100_0000_0000;
+pub fn stack_bottom() -> usize {
+    STACK_BOTTOM
 }
-
-pub fn va_offset() -> usize {
-    unsafe { VA_OFFSET }
-}
-
-pub(crate) unsafe fn set_va_offset_now(va: usize) {
-    unsafe { VA_OFFSET_NOW = va };
-}
-
-fn va_offset_now() -> usize {
-    unsafe { VA_OFFSET_NOW }
+pub fn stack_top() -> usize {
+    STACK_BOTTOM + kstack_size()
 }
 
 pub(crate) fn init_heap() {
     let main = global_val().main_memory.clone();
-    let mut start = VirtAddr::from(main.start);
-    let mut end = VirtAddr::from(main.end);
-
-    let bss_end = crate::mem::region::bss().as_ptr_range().end.into();
-
-    if (start..end).contains(&bss_end) {
-        start = bss_end;
-    }
-
-    let stack_top = VirtAddr::from(global_val().kstack_top);
-    let stack_bottom = stack_top - kstack_size();
-
-    if (start..end).contains(&stack_bottom) {
-        end = stack_bottom;
-    }
+    let mut start = VirtAddr::from(main.start.raw() + RegionKind::Other.va_offset());
+    let mut end = VirtAddr::from(main.end.raw() + RegionKind::Other.va_offset());
 
     println!("heap add memory [{}, {})", start, end);
-    ALLOCATOR
-        .add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.as_mut_ptr(), end - start) });
+    ALLOCATOR.add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.into(), end - start) });
 
     println!("heap initialized");
 }
@@ -117,12 +95,12 @@ pub(crate) fn init_page_and_memory() {
         if memory.contains(&main.start) {
             continue;
         }
-        let start = VirtAddr::from(memory.start);
-        let end = VirtAddr::from(memory.end);
-        let len = memory.end - memory.start;
+        // let start = VirtAddr::from(memory.start);
+        // let end = VirtAddr::from(memory.end);
+        // let len = memory.end - memory.start;
 
-        debug!("Heap add memory [{}, {})", start, end);
-        ALLOCATOR.add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.as_mut_ptr(), len) });
+        // debug!("Heap add memory [{}, {})", start, end);
+        // ALLOCATOR.add_to_heap(unsafe { &mut *slice_from_raw_parts_mut(start.as_mut_ptr(), len) });
     }
 }
 

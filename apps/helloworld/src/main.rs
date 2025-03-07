@@ -1,16 +1,17 @@
 #![no_std]
 #![no_main]
 extern crate alloc;
+extern crate sparreal_rt;
 
 use core::time::Duration;
 
 use alloc::string::ToString;
 use log::info;
 use sparreal_kernel::{
+    prelude::*,
     task::{self, TaskConfig},
     time::{self, spin_delay},
 };
-use sparreal_rt::prelude::*;
 
 #[entry]
 fn main() {

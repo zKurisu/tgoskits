@@ -1,24 +1,22 @@
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-use core::{
-    ops::Range,
-    ptr::{NonNull, slice_from_raw_parts, slice_from_raw_parts_mut},
-};
+use arrayvec::ArrayVec;
+use core::{ops::Range, ptr::NonNull};
 use fdt_parser::{Node, Pci};
 use rdrive::{Phandle, probe::ProbeData};
 
-use crate::globals::{self, global_val};
 use crate::irq::IrqInfo;
-use crate::mem::{Align, VirtAddr};
-use crate::{io::print::*, mem::PhysAddr};
+use crate::mem::PhysAddr;
+use crate::platform_if::{RegionKind, is_mmu_enabled};
 
 use super::{CPUInfo, SerialPort};
 
+#[derive(Clone)]
 pub struct Fdt(PhysAddr);
 
 impl Fdt {
-    pub fn new(addr: NonNull<u8>) -> Self {
-        Self(VirtAddr::from(addr).into())
+    pub fn new(addr: PhysAddr) -> Self {
+        Self(addr)
     }
 
     pub fn model_name(&self) -> Option<String> {
@@ -37,50 +35,27 @@ impl Fdt {
             .map(|cpu| {
                 let reg = cpu.reg().unwrap().next().unwrap();
                 CPUInfo {
-                    cpu_id: (reg.address as usize).into(),
+                    cpu_id: super::CPUHardId(reg.address as usize),
                 }
             })
             .collect()
     }
 
-    pub fn setup(&mut self) -> Result<(), &'static str> {
-        let main_memory = global_val().main_memory.clone();
-        let fdt_start = self.move_to(main_memory.end.as_usize());
-        unsafe { globals::edit(|g| g.kstack_top = fdt_start.into()) };
-        Ok(())
-    }
-
-    fn move_to(&mut self, dst_end: usize) -> usize {
-        let size = self.get().total_size();
-
-        let dst = (dst_end - size).align_down(0x1000);
-
-        early_dbg("Move FDT from ");
-        early_dbg_hex(self.0.as_usize() as _);
-        early_dbg(" to ");
-        early_dbg_hexln(dst as _);
-
-        unsafe {
-            let dest = &mut *slice_from_raw_parts_mut(dst as _, size);
-            let src = &*slice_from_raw_parts(VirtAddr::from(self.0).as_mut_ptr(), size);
-            dest.copy_from_slice(src);
-            self.0 = dst.into();
-        }
-        dst
-    }
-
     pub fn get(&self) -> fdt_parser::Fdt<'static> {
-        let addr = VirtAddr::from(self.0).as_mut_ptr();
-        let ptr = NonNull::new(addr).unwrap();
-        fdt_parser::Fdt::from_ptr(ptr).unwrap()
+        fdt_parser::Fdt::from_ptr(self.get_addr()).unwrap()
     }
 
     pub fn get_addr(&self) -> NonNull<u8> {
-        unsafe { NonNull::new_unchecked(VirtAddr::from(self.0).as_mut_ptr()) }
+        NonNull::new(if is_mmu_enabled() {
+            (self.0 + RegionKind::Other.va_offset()).raw() as _
+        } else {
+            self.0.raw() as _
+        })
+        .unwrap()
     }
 
-    pub fn memorys(&self) -> Vec<Range<PhysAddr>> {
-        let mut out = Vec::new();
+    pub fn memorys(&self) -> ArrayVec<Range<PhysAddr>, 12> {
+        let mut out = ArrayVec::new();
 
         let fdt = self.get();
 
@@ -144,7 +119,6 @@ fn parse_irq_config(parent: Phandle, interrupts: &[Vec<u32>]) -> Option<IrqInfo>
                 irq_parent = probe_data.phandle_2_device_id(parent);
                 Some(probe_data.parse_irq(parent, raw))
             }
-            ProbeData::Static => None,
         }) {
             Some(Ok(cfg)) => cfgs.push(cfg),
             _ => continue,

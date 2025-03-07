@@ -1,28 +1,28 @@
-use alloc::{boxed::Box, format};
+use alloc::{boxed::Box, format, vec::Vec};
 use core::error::Error;
-use fdt_parser::Node;
 
-use arm_gic_driver::{fdt_parse_irq_config, v2::Gic};
+use arm_gic_driver::v2::Gic;
 use sparreal_kernel::{
-    driver::{
-        module_driver,
-        register::{intc::FdtProbeInfo, *},
-    },
+    driver::{module_driver, probe::HardwareKind, register::*},
     mem::iomap,
 };
 
 module_driver!(
     name: "GICv2",
+    kind: DriverKind::Intc,
     probe_kinds: &[
         ProbeKind::Fdt {
             compatibles: &["arm,cortex-a15-gic", "arm,gic-400"],
-            on_probe: OnProbeKindFdt::Intc(probe_gic)
+            on_probe: probe_gic
         },
     ] ,
 );
 
-fn probe_gic(node: Node<'_>) -> Result<FdtProbeInfo, Box<dyn Error>> {
-    let mut reg = node.reg().ok_or(format!("[{}] has no reg", node.name))?;
+fn probe_gic(info: FdtInfo<'_>) -> Result<Vec<HardwareKind>, Box<dyn Error>> {
+    let mut reg = info
+        .node
+        .reg()
+        .ok_or(format!("[{}] has no reg", info.node.name))?;
 
     let gicd_reg = reg.next().unwrap();
     let gicc_reg = reg.next().unwrap();
@@ -34,9 +34,7 @@ fn probe_gic(node: Node<'_>) -> Result<FdtProbeInfo, Box<dyn Error>> {
         (gicc_reg.address as usize).into(),
         gicc_reg.size.unwrap_or(0x1000),
     );
-
-    Ok(FdtProbeInfo {
-        hardware: Box::new(Gic::new(gicd, gicc)),
-        fdt_parse_config_fn: fdt_parse_irq_config,
-    })
+    Ok(alloc::vec![HardwareKind::Intc(Box::new(Gic::new(
+        gicd, gicc
+    )))])
 }

@@ -12,7 +12,7 @@ impl Impl for DMAImpl {
     fn map(addr: NonNull<u8>, _size: usize, _direction: dma_api::Direction) -> u64 {
         let vaddr = VirtAddr::from(addr);
         let paddr = PhysAddr::from(vaddr);
-        paddr.as_usize() as _
+        paddr.raw() as _
     }
 
     fn unmap(_addr: NonNull<u8>, _size: usize) {}

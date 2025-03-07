@@ -1,23 +1,57 @@
-use core::{alloc::Layout, ops::Range, ptr::NonNull};
+use core::{
+    alloc::Layout,
+    ffi::CStr,
+    ops::Range,
+    ptr::NonNull,
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+};
 
+use super::{
+    Phys, PhysAddr, PhysCRange, STACK_BOTTOM, Virt, once::OnceStatic, region::boot_regions,
+};
+pub use arrayvec::ArrayVec;
 use buddy_system_allocator::Heap;
 use page_table_generic::err::PagingError;
-pub use page_table_generic::{AccessSetting, CacheSetting, MapConfig};
+pub use page_table_generic::*;
+
+use crate::{
+    globals::{self, cpu_inited, global_val},
+    io::print::*,
+    platform,
+    platform_if::{MMUImpl, PlatformImpl},
+};
 
 mod paging;
 
+pub use paging::init_table;
 pub use paging::iomap;
 
-use crate::{
-    globals::global_val,
-    io::print::{early_dbg, early_dbg_hex, early_dbg_hexln, early_dbg_range, early_dbgln},
-    platform_if::MMUImpl,
-};
+pub const LINER_OFFSET: usize = 0xffff_f000_0000_0000;
+static TEXT_OFFSET: OnceStatic<usize> = OnceStatic::new(0);
+static IS_MMU_ENABLED: OnceStatic<bool> = OnceStatic::new(false);
 
-use paging::PageTableRef;
-pub use paging::init_table;
+pub fn set_mmu_enabled() {
+    unsafe { IS_MMU_ENABLED.set(true) };
+}
 
-use super::{Align, va_offset};
+pub fn is_mmu_enabled() -> bool {
+    *IS_MMU_ENABLED.get_ref()
+}
+
+/// 设置内核段偏移.
+///
+/// # Safety
+///
+/// 应在 cpu0 入口处执行
+pub unsafe fn set_text_va_offset(offset: usize) {
+    unsafe {
+        IS_MMU_ENABLED.set(false);
+        TEXT_OFFSET.set(offset);
+    }
+}
+pub fn get_text_va_offset() -> usize {
+    *TEXT_OFFSET.get_ref()
+}
 
 struct PageHeap(Heap<32>);
 
@@ -35,62 +69,132 @@ impl page_table_generic::Access for PageHeap {
     }
 }
 
-pub struct BootMemoryRegion {
-    pub name: &'static str,
-    pub range: Range<usize>,
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct BootRegion {
+    // 链接地址
+    pub range: PhysCRange,
+    pub name: *const u8,
     pub access: AccessSetting,
     pub cache: CacheSetting,
+    pub kind: RegionKind,
 }
-pub fn new_boot_table(rsv: &[BootMemoryRegion]) -> Result<usize, &'static str> {
-    let debugcon = global_val().platform_info.debugcon();
 
+impl BootRegion {
+    pub fn new(
+        range: Range<PhysAddr>,
+        name: &'static CStr,
+        access: AccessSetting,
+        cache: CacheSetting,
+        kind: RegionKind,
+    ) -> Self {
+        Self {
+            range: range.into(),
+            name: name.as_ptr() as _,
+            access,
+            cache,
+            kind,
+        }
+    }
+
+    pub fn new_with_len(
+        start: PhysAddr,
+        len: usize,
+        name: &'static CStr,
+        access: AccessSetting,
+        cache: CacheSetting,
+        kind: RegionKind,
+    ) -> Self {
+        Self::new(start..start + len, name, access, cache, kind)
+    }
+
+    pub fn name(&self) -> &'static str {
+        unsafe { CStr::from_ptr(self.name as _).to_str().unwrap() }
+    }
+
+    pub fn va_offset(&self) -> usize {
+        match self.kind {
+            RegionKind::Stack => {
+                if cpu_inited() {
+                    self.kind.va_offset()
+                } else {
+                    // cpu0
+                    STACK_BOTTOM - self.range.start.raw()
+                }
+            }
+            _ => self.kind.va_offset(),
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy)]
+pub enum RegionKind {
+    KImage,
+    Stack,
+    Other,
+}
+
+impl RegionKind {
+    pub fn va_offset(&self) -> usize {
+        match self {
+            RegionKind::KImage => get_text_va_offset(),
+            RegionKind::Stack => STACK_BOTTOM - globals::cpu_global().stack.start.raw(),
+            RegionKind::Other => LINER_OFFSET,
+        }
+    }
+}
+
+impl<T> From<Virt<T>> for Phys<T> {
+    fn from(value: Virt<T>) -> Self {
+        let v = value.raw();
+        todo!()
+    }
+}
+const MB: usize = 1024 * 1024;
+pub fn new_boot_table() -> Result<usize, &'static str> {
     let mut access = PageHeap(Heap::empty());
-    let memory = &global_val().main_memory;
-    let size = (memory.end - memory.start) / 2;
-    let start = memory.start + size;
-    let end = memory.end;
+    let main_mem = global_val().main_memory.clone();
 
-    early_dbg_range("page table allocator", start.as_usize()..end.as_usize());
-    unsafe { access.0.add_to_heap(start.as_usize(), end.as_usize()) };
+    let tmp_end = main_mem.end;
+    let tmp_size = tmp_end - main_mem.start.align_up(MB);
+    let tmp_pt = (main_mem.end - tmp_size / 2).raw();
+
+    early_dbg_range("page table allocator", tmp_pt..tmp_end.raw());
+    unsafe { access.0.add_to_heap(tmp_pt, tmp_end.raw()) };
 
     let mut table =
         PageTableRef::create_empty(&mut access).map_err(|_| "page table allocator no memory")?;
 
-    let va_offset = va_offset();
-
-    for memory in global_val().platform_info.memorys() {
-        map_region(
-            &mut table,
-            va_offset,
-            &BootMemoryRegion {
-                name: "memory",
-                range: memory.start.as_usize()..memory.end.as_usize(),
-                access: AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-                cache: CacheSetting::Normal,
-            },
-            &mut access,
+    for memory in platform::phys_memorys() {
+        let region = BootRegion::new(
+            memory,
+            c"memory",
+            AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
+            CacheSetting::Normal,
+            RegionKind::Other,
         );
+        map_region(&mut table, 0, &region, &mut access);
     }
 
-    if let Some(con) = debugcon {
-        let start = con.addr.align_down(0x1000).as_usize();
-
-        map_region(
-            &mut table,
-            va_offset,
-            &BootMemoryRegion {
-                name: "debugcon",
-                range: start..start + 0x1000,
-                access: AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-                cache: CacheSetting::Device,
-            },
-            &mut access,
-        );
+    for region in boot_regions() {
+        map_region(&mut table, region.va_offset(), region, &mut access);
     }
 
-    for region in rsv {
-        map_region(&mut table, va_offset, region, &mut access);
-    }
+    let main_memory = BootRegion::new(
+        global_val().main_memory.clone(),
+        c"main memory",
+        AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
+        CacheSetting::Normal,
+        RegionKind::Other,
+    );
+
+    map_region(
+        &mut table,
+        main_memory.va_offset(),
+        &main_memory,
+        &mut access,
+    );
 
     let table_addr = table.paddr();
 
@@ -101,47 +205,49 @@ pub fn new_boot_table(rsv: &[BootMemoryRegion]) -> Result<usize, &'static str> {
 }
 
 fn map_region(
-    table: &mut PageTableRef<'_>,
+    table: &mut paging::PageTableRef<'_>,
     va_offset: usize,
-    region: &BootMemoryRegion,
+    region: &BootRegion,
     access: &mut PageHeap,
 ) {
     let addr = region.range.start;
-    let size = region.range.end - region.range.start;
+    let size = region.range.end.raw() - region.range.start.raw();
 
     // let addr = align_down_1g(addr);
     // let size = align_up_1g(size);
-    let vaddr = addr + va_offset;
+    let vaddr = addr.raw() + va_offset;
 
-    early_dbg("map region: [");
-    early_dbg(region.name);
+    const NAME_LEN: usize = 12;
+
+    let name_right = if region.name().len() < NAME_LEN {
+        NAME_LEN - region.name().len()
+    } else {
+        0
+    };
+
+    early_dbg("map region [");
+    early_dbg(region.name());
+    for _ in 0..name_right {
+        early_dbg(" ");
+    }
     early_dbg("] [");
     early_dbg_hex(vaddr as _);
     early_dbg(", ");
     early_dbg_hex((vaddr + size) as _);
     early_dbg(") -> [");
-    early_dbg_hex(addr as _);
+    early_dbg_hex(addr.raw() as _);
     early_dbg(", ");
-    early_dbg_hex((addr + size) as _);
+    early_dbg_hex((addr.raw() + size) as _);
     early_dbgln(")");
 
     unsafe {
         if let Err(e) = table.map_region(
-            MapConfig::new(addr as _, addr, region.access, region.cache),
+            MapConfig::new(vaddr as _, addr.raw(), region.access, region.cache),
             size,
             true,
             access,
         ) {
-            early_handle_err(e);
-        }
-
-        if let Err(e) = table.map_region(
-            MapConfig::new(vaddr as _, addr, region.access, region.cache),
-            size,
-            true,
-            access,
-        ) {
-            early_handle_err(e);
+            // early_handle_err(e);
         }
     }
 }

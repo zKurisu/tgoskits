@@ -6,7 +6,7 @@ use spin::MutexGuard;
 
 use crate::{
     globals::global_val,
-    mem::{ALLOCATOR, Align, PhysAddr, VirtAddr},
+    mem::{ALLOCATOR, PhysAddr, VirtAddr},
 };
 
 use super::*;
@@ -45,7 +45,7 @@ struct HeapGuard<'a>(MutexGuard<'a, Heap<32>>);
 
 impl Access for HeapGuard<'_> {
     fn va_offset(&self) -> usize {
-        va_offset()
+        RegionKind::Other.va_offset()
     }
 
     unsafe fn alloc(&mut self, layout: Layout) -> Option<NonNull<u8>> {
@@ -59,62 +59,43 @@ impl Access for HeapGuard<'_> {
 
 pub fn init_table() {
     debug!("Initializing page table...");
-    let info = &global_val().platform_info;
-    let debugcon = info.debugcon();
+    let regions = platform::regsions();
+    for r in &regions {
+        trace!("{:<12}, [{}, {})", r.name(), r.range.start, r.range.end);
+    }
 
     unsafe {
-        let mut access = HeapGuard(ALLOCATOR.inner.lock());
+        {
+            let mut access = HeapGuard(ALLOCATOR.inner.lock());
 
-        let mut table = PageTableRef::create_empty(&mut access).unwrap();
+            let mut table = PageTableRef::create_empty(&mut access).unwrap();
 
-        for memory in info.memorys() {
-            let size = memory.end - memory.start;
-            let vaddr = VirtAddr::from(memory.start);
+            for region in &regions {
+                let size = region.range.end - region.range.start;
+                let vaddr = VirtAddr::from(region.range.start.raw() + region.kind.va_offset());
 
-            trace!(
-                "Mapping memory [{}, {}) -> [{}, {})",
-                vaddr,
-                vaddr + size,
-                memory.start,
-                memory.end,
-            );
+                table
+                    .map_region(
+                        MapConfig::new(
+                            vaddr.into(),
+                            region.range.start.into(),
+                            region.access,
+                            region.cache,
+                        ),
+                        size,
+                        true,
+                        &mut access,
+                    )
+                    .unwrap();
+            }
 
-            table
-                .map_region(
-                    MapConfig::new(
-                        vaddr.into(),
-                        memory.start.into(),
-                        AccessSetting::Read | AccessSetting::Write | AccessSetting::Execute,
-                        CacheSetting::Normal,
-                    ),
-                    size,
-                    true,
-                    &mut access,
-                )
-                .unwrap()
+            drop(access);
+
+            fence(Ordering::SeqCst);
+            debug!("Kernel table -> {:#x}", table.paddr());
+            set_kernel_table(table.paddr());
         }
-
-        if let Some(con) = debugcon {
-            let reg = con.addr.align_down(0x1000);
-
-            let vaddr = VirtAddr::from(reg);
-            trace!("Mapping stdout {} -> {}", vaddr, reg);
-
-            let _ = table.map_region(
-                MapConfig::new(
-                    vaddr.into(),
-                    reg.into(),
-                    AccessSetting::Read | AccessSetting::Write,
-                    CacheSetting::Device,
-                ),
-                0x1000,
-                true,
-                &mut access,
-            );
-        }
-
-        fence(Ordering::SeqCst);
-        set_kernel_table(table.paddr());
+        drop(regions);
         flush_tlb_all();
     };
 }
@@ -123,7 +104,7 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
     unsafe {
         let mut table = get_kernel_table();
         let paddr = paddr.align_down(0x1000);
-        let vaddr = VirtAddr::from(paddr);
+        let vaddr = VirtAddr::from(paddr.raw() + RegionKind::Other.va_offset());
         let size = size.max(0x1000);
 
         let mut heap = HeapGuard(ALLOCATOR.inner.lock());
@@ -131,7 +112,7 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
         let _ = table.map_region_with_handle(
             MapConfig::new(
                 vaddr.into(),
-                paddr.as_usize(),
+                paddr.into(),
                 AccessSetting::Read | AccessSetting::Write,
                 CacheSetting::Device,
             ),
@@ -143,6 +124,6 @@ pub fn iomap(paddr: PhysAddr, size: usize) -> NonNull<u8> {
             }),
         );
 
-        NonNull::new(vaddr.as_mut_ptr()).unwrap()
+        NonNull::new(vaddr.into()).unwrap()
     }
 }

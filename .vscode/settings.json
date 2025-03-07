@@ -1,7 +1,10 @@
 {
-    "rust-analyzer.cargo.allTargets": false,
-    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.check.allTargets": false,
     "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.check.targets": [
+        "aarch64-unknown-none",
+        "aarch64-unknown-none-softfloat",
+    ],
     "lldb.displayFormat": "auto",
     "lldb.dereferencePointers": true,
     "lldb.consoleMode": "commands",
@@ -10,8 +13,5 @@
         "aarch64-unknown-none-softfloat",
         // for xtask
         "system"
-    ],
-    "rust-analyzer.check.targets": [
-        "aarch64-unknown-none",
     ],
 }
