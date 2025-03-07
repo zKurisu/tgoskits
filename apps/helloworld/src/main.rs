@@ -17,7 +17,7 @@ use sparreal_kernel::{
 fn main() {
     info!("Hello, world!");
 
-    time::after(Duration::from_secs(1), || {
+    time::after(Duration::from_secs(2), || {
         info!("Timer callback");
         // shutdown();
     });
