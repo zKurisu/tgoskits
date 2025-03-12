@@ -14,6 +14,7 @@ SECTIONS
         KEEP(*(.text.boot .text.boot.*))
         . = ALIGN(4);
         *(.text .text.*);
+
         . = ALIGN(4K);
         _etext = .;
     } 
@@ -33,10 +34,13 @@ SECTIONS
         *(.data .data.*)
         *(.sdata .sdata.*)
         *(.got .got.*)
-        _sdriver = .;
-        *(.driver.register .driver.register.*)
-        _edriver = .;
     } 
+
+    DRIVERS : {  
+        _sdriver = .;
+        KEEP(*(.driver.register))
+        _edriver = .;
+    }
 
     .tdata : ALIGN(0x10) {
         _stdata = .;
@@ -61,7 +65,7 @@ SECTIONS
         *(COMMON)
         . = ALIGN(4K);
         _ebss = .;
-    } 
+    }
 
     _ekernel = .;
     _kernel_size = _ekernel - _skernel;
