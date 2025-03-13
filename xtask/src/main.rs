@@ -1,5 +1,5 @@
-#![cfg_attr(target_os = "none", no_std)]
-#![cfg_attr(target_os = "none", no_main)]
+#![cfg_attr(all(target_os = "none", not(test)), no_std)]
+#![cfg_attr(all(target_os = "none", not(test)), no_main)]
 
 #[cfg(not(target_os = "none"))]
 mod cli;
