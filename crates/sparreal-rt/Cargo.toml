@@ -2,6 +2,12 @@
 name = "sparreal-rt"
 version.workspace = true
 edition.workspace = true
+authors = ["周睿 <zrufo747@outlook.com>"]
+categories = ["embedded", "no-std"]
+description = "Sparreal OS kernel"
+keywords = ["os"]
+license = "MPL-2.0"
+repository = "https://github.com/ZR233/sparreal-os"
 
 [features]
 default = ["early-print"]
