@@ -4,14 +4,14 @@ use dma_api::Impl;
 
 use crate::platform_if::{CacheOp, PlatformImpl};
 
-use super::{PhysAddr, VirtAddr};
+use super::{PhysAddr, VirtAddr, mmu::RegionKind};
 
 struct DMAImpl;
 
 impl Impl for DMAImpl {
     fn map(addr: NonNull<u8>, _size: usize, _direction: dma_api::Direction) -> u64 {
         let vaddr = VirtAddr::from(addr);
-        let paddr = PhysAddr::from(vaddr);
+        let paddr = PhysAddr::new(vaddr.raw() - RegionKind::Other.va_offset());
         paddr.raw() as _
     }
 

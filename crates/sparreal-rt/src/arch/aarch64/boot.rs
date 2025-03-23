@@ -77,10 +77,8 @@ fn rust_entry(text_va: usize, fdt: *mut u8) -> ! {
         asm!(
             "
         LDR      x0, =vector_table_el1
-        SUB      x0,  x0, {}
         MSR      VBAR_EL1, x0
         ",
-        in(reg) text_va,
         );
     }
     match CurrentEL.read(CurrentEL::EL) {
