@@ -73,7 +73,7 @@ fn rust_entry(text_va: usize, fdt: *mut u8) -> ! {
     enable_fp();
     unsafe {
         mem::mmu::set_text_va_offset(text_va);
-        debug::init_by_fdt(fdt);
+        debug::setup_by_fdt(fdt, |r| r as _);
         asm!(
             "
         LDR      x0, =vector_table_el1

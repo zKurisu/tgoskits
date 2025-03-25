@@ -97,6 +97,16 @@ fn fdt_addr_range() -> Option<Range<PhysAddr>> {
     }
 }
 
+pub fn fdt_addr() -> Option<PhysAddr> {
+    let len = FDT_LEN.load(Ordering::Relaxed);
+    if len != 0 {
+        let fdt_addr = FDT_ADDR.load(Ordering::Relaxed);
+        Some(fdt_addr.into())
+    } else {
+        None
+    }
+}
+
 pub fn rsv_regions<const N: usize>() -> ArrayVec<BootRegion, N> {
     let mut rsv_regions = ArrayVec::<BootRegion, N>::new();
     rsv_regions.push(BootRegion::new(

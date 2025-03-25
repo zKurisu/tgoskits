@@ -4,6 +4,8 @@ use aarch64_cpu::{asm::barrier::*, registers::*};
 use page_table_arm::*;
 use sparreal_kernel::{io::print::*, mem::PhysAddr, platform_if::*};
 
+use crate::mem::fdt_addr;
+
 use super::cache;
 
 pub struct PageTableImpl;
@@ -198,7 +200,9 @@ impl MMU for PageTableImpl {
         early_dbg("TCR_EL1: ");
         early_dbg_hexln(TCR_EL1.get());
         unsafe {
-            super::debug::mmu_add_offset(RegionKind::Other.va_offset());
+            super::debug::setup_by_fdt(fdt_addr().unwrap().raw() as _, |r| {
+                (r + RegionKind::Other.va_offset()) as _
+            });
 
             MMUImpl::flush_tlb_all();
             // Enable the MMU and turn on I-cache and D-cache

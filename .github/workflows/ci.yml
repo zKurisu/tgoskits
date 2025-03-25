@@ -49,12 +49,13 @@ jobs:
       run: |
         echo "[compile]" > .project.toml
         echo 'target = "aarch64-unknown-none"' >> .project.toml
-        echo "[compile.cargo]" >> .project.toml
+        echo "[compile.build.Cargo]" >> .project.toml
         echo 'package = "helloworld"' >> .project.toml
         echo 'log_level = "Debug"' >> .project.toml
         echo 'rust_flags = ""' >> .project.toml
         echo 'features = []' >> .project.toml
-        echo "[compile.cargo.env]" >> .project.toml
+        echo 'kernel_is_bin = true' >> .project.toml
+        echo "[compile.build.Cargo.env]" >> .project.toml
         echo "[qemu]" >> .project.toml
         echo 'machine = "virt"' >> .project.toml
         echo 'cpu = "cortex-a53"' >> .project.toml
