@@ -36,7 +36,8 @@ pub fn put(byte: u8) {
     let _ = block!(UART.get().write(byte));
 }
 pub fn setup_by_fdt(fdt: *mut u8, f: FnPhysToVirt) -> Option<()> {
-    let (tx, _rx) = any_uart::init(NonNull::new(fdt)?, f)?;
+    let mut uart = any_uart::init(NonNull::new(fdt)?, f)?;
+    let tx = uart.tx.take().unwrap();
     let reg = REGBASE.load(Ordering::SeqCst);
     if reg == 0 {
         REGBASE.store(tx.mmio(), Ordering::SeqCst);
