@@ -474,21 +474,21 @@ checksum = "d75b0bedcc4fe52caa0e03d9f1151a323e4aa5e2d78ba3580400cd3c9e2bc4bc"
 [[package]]
 name = "page-table-arm"
 version = "0.1.0"
-dependencies = [
- "aarch64-cpu",
- "bitflags",
- "env_logger",
- "log",
-]
-
-[[package]]
-name = "page-table-arm"
-version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acf197095e2be67e34ecec01c1bc645e8e1c4eb8736ecb9eaf47419fe00cbfcf"
 dependencies = [
  "aarch64-cpu",
  "bitflags",
+ "log",
+]
+
+[[package]]
+name = "page-table-arm"
+version = "0.1.1"
+dependencies = [
+ "aarch64-cpu",
+ "bitflags",
+ "env_logger",
  "log",
 ]
 
@@ -750,7 +750,7 @@ dependencies = [
  "log",
  "memory_addr",
  "numeric-enum-macro",
- "page-table-arm 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "page-table-arm 0.1.0",
  "page-table-generic",
  "rgb",
  "smccc",

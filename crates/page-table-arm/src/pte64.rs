@@ -71,6 +71,10 @@ impl PTE {
         PTE(paddr as u64 & Self::PHYS_ADDR_MASK)
     }
 
+    pub fn set_paddr(&mut self, paddr: usize) {
+        self.0 = (paddr as u64 & Self::PHYS_ADDR_MASK) | self.0 & !Self::PHYS_ADDR_MASK;
+    }
+
     pub fn paddr(&self) -> usize {
         (self.0 & Self::PHYS_ADDR_MASK) as _
     }
