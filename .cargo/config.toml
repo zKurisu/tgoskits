@@ -1,5 +1,2 @@
-[alias]
-xtask = "run --package xtask --"
-
 [target.'cfg(all(target_os = "none"))']
-runner = "cargo osrun"
+runner = "ostool cargo-test"

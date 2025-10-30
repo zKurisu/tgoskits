@@ -1,9 +1,12 @@
 #![no_std]
+#![no_main]
 
 #[macro_use]
 extern crate alloc;
+
 #[macro_use]
 extern crate log;
 
-mod lang;
-pub mod os;
+pub extern crate somehal;
+
+pub use sparreal_kernel::*;

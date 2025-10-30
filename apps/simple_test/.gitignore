@@ -1,7 +1,0 @@
-/target
-/*.log
-/.idea
-.project*
-/.bare-test.toml
-.uboot.toml
-.*-schema.json
