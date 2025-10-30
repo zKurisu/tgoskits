@@ -59,7 +59,7 @@ impl Build {
         let ld_src = "src/arch/loongarch64/link.ld";
 
         if self.uspace {
-        self.kernel_load_vaddr = 0x9000000000200000;
+            self.kernel_load_vaddr = 0x9000000000200000;
         }
 
         let kernel_load_vaddr = self.kernel_load_vaddr as usize;

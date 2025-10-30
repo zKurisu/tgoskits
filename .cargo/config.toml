@@ -6,4 +6,6 @@ rustflags = [
   "-C",
   "relocation-model=pic",
   "-Clink-args=-pie",
+  "-Clink-args=-znostart-stop-gc",
+  "-Clink-args=-Tlink.x",
 ]
