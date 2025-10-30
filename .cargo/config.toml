@@ -1,2 +1,9 @@
-[target.'cfg(all(target_os = "none"))']
-runner = "ostool cargo-test"
+[target.'cfg(target_os = "none")']
+runner = "cargo osrun"
+
+[target.loongarch64-unknown-none-softfloat]
+rustflags = [
+  "-C",
+  "relocation-model=pic",
+  "-Clink-args=-pie",
+]
