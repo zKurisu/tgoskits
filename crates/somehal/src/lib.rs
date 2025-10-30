@@ -13,4 +13,4 @@ pub mod arch;
 
 #[cfg(efi)]
 mod efi_stub;
-mod reloc;
+mod elf;

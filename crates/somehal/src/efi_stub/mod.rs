@@ -2,7 +2,7 @@ use uefi::prelude::*;
 use uefi::println;
 use uefi_raw::table::system::SystemTable;
 
-use crate::arch::efi_relocate;
+use crate::arch::relocate;
 
 pub mod pe;
 
@@ -15,7 +15,7 @@ pub unsafe extern "C" fn efi_pe_entry(
     system_table: *const SystemTable,
 ) -> Status {
     unsafe {
-        efi_relocate();
+        relocate();
         ::uefi::boot::set_image_handle(image_handle);
         ::uefi::table::set_system_table(system_table);
         let _ = ::uefi::helpers::init();
