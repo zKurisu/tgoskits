@@ -1,8 +1,9 @@
+use core::fmt::Write;
+
+use rgb::RGB8;
 use uefi::prelude::*;
-use uefi::println;
 use uefi::proto::console::gop::GraphicsOutput;
 use uefi_raw::table::system::SystemTable;
-use rgb::RGB8;
 
 use crate::arch::relocate;
 
@@ -78,7 +79,8 @@ pub unsafe extern "C" fn efi_pe_entry(
         relocate();
         ::uefi::boot::set_image_handle(image_handle);
         ::uefi::table::set_system_table(system_table);
-        let _ = ::uefi::helpers::init();
+
+        crate::console::set_printer(&UefiPrinter);
 
         println!("Hello {}", 123);
 
@@ -88,15 +90,19 @@ pub unsafe extern "C" fn efi_pe_entry(
 
         match gop_result {
             Ok(mut gop) => {
-                println!("图形协议获取成功！");
+                println!("gop success!");
 
                 // 步骤2：查询并设置图形模式
                 let mode_info = gop.current_mode_info();
                 let mut framebuffer = gop.frame_buffer();
                 let pixel_format = mode_info.pixel_format();
 
-                println!("分辨率: {}x{}", mode_info.resolution().0, mode_info.resolution().1);
-                println!("像素格式: {:?}", pixel_format);
+                println!(
+                    "resv: {}x{}",
+                    mode_info.resolution().0,
+                    mode_info.resolution().1
+                );
+                println!("fmt: {:?}", pixel_format);
 
                 // 步骤3：定义长方体参数
                 let rect = Rectangle {
@@ -115,7 +121,7 @@ pub unsafe extern "C" fn efi_pe_entry(
                     RED,
                 );
 
-                println!("红色长方体绘制完成！");
+                println!("rect drawn!");
 
                 // 步骤5：实现持续动画效果
                 let mut offset = 0i32;
@@ -153,12 +159,33 @@ pub unsafe extern "C" fn efi_pe_entry(
                 }
             }
             Err(e) => {
-                println!("图形协议获取失败: {:?}", e);
-                println!("继续文本模式运行...");
+                println!("got fail: {:?}", e);
             }
         }
+
+        crate::arch::entry::prepare_kernel_entry();
     }
 
     // 返回成功状态
     Status::SUCCESS
+}
+
+struct UefiPrinter;
+impl crate::console::Printer for UefiPrinter {
+    fn read_byte(&self) -> Option<u8> {
+        // system::with_stdin(|stdin| {
+        //     let mut buffer = [0u16; 1];
+        //     match stdin.read_key(&mut buffer) {
+        //         Ok(()) => Some(buffer[0] as u8),
+        //         Err(_) => None,
+        //     }
+        // })
+        None
+    }
+
+    fn write_str(&self, s: &str) {
+        system::with_stdout(|stdout| {
+            let _ = stdout.write_str(s);
+        });
+    }
 }

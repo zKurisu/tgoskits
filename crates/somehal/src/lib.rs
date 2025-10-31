@@ -5,7 +5,7 @@
 extern crate alloc;
 
 #[macro_use]
-extern crate log;
+mod console;
 
 #[cfg(target_arch = "loongarch64")]
 #[path = "arch/loongarch64/mod.rs"]
