@@ -4,4 +4,4 @@
 .build*
 .qemu*
 .uboot*
-.spec-workspace
+.spec-workflow
