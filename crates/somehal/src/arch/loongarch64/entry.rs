@@ -4,5 +4,5 @@ pub unsafe extern "C" fn kernel_entry() -> ! {
 }
 
 pub(crate) fn prepare_kernel_entry() {
-    
+    println!("Preparing kernel entry...");
 }
