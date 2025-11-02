@@ -1,6 +1,6 @@
 use core::{fmt::Write, ptr::null};
 
-use acpi::sdt::{madt::Madt, spcr::Spcr};
+use acpi::sdt::spcr::Spcr;
 use uefi::{
     Result,
     boot::{MemoryDescriptor, MemoryType},
@@ -15,11 +15,12 @@ use uefi_raw::table::system::SystemTable;
 use crate::{
     acpi::{dbg2::Dbg2, set_rsdp},
     arch::relocate,
-    efi_stub::acpi_handle::AcpiHandle,
+    efi_stub::{acpi_handle::AcpiHandle, earlycon::setup_earlycon},
     mem::{self, MB, page_size},
 };
 
 mod acpi_handle;
+mod earlycon;
 pub mod pe;
 
 /// EFI PE 入口点 - 符合 EFI ABI 的汇编包装
@@ -70,7 +71,9 @@ fn efi_main() -> Result {
         }
     }
 
-    find_debug();
+    if let Err(e) = setup_earlycon() {
+        println!("Failed to setup early console: {:?}", e);
+    }
 
     let h = boot::get_handle_for_protocol::<LoadedImage>()?;
 
@@ -99,7 +102,7 @@ fn draw_sierpinski() -> Result {
 }
 
 struct UefiPrinter;
-impl crate::console::Printer for UefiPrinter {
+impl crate::console::Con for UefiPrinter {
     fn read_byte(&self) -> Option<u8> {
         // system::with_stdin(|stdin| {
         //     let mut buffer = [0u16; 1];
@@ -160,7 +163,7 @@ impl From<&MemoryDescriptor> for crate::mem::MemoryDescriptor {
     }
 }
 
-fn find_debug() -> Option<()> {
+fn find_image() -> Option<()> {
     let tb = match crate::acpi::tables(AcpiHandle) {
         Ok(t) => t,
         Err(e) => {
@@ -169,8 +172,8 @@ fn find_debug() -> Option<()> {
         }
     };
 
-    for spsr in tb.find_tables::<Spcr>() {
-        println!("Found SPCR table: {:#x?}", spsr);
+    for dbg2 in tb.find_tables::<Dbg2>() {
+        println!("Found DBG2 table: {:#x?}", dbg2);
     }
 
     Some(())

@@ -20,7 +20,7 @@ impl acpi::Handler for AcpiHandle {
     }
 
     fn unmap_physical_region<T>(region: &acpi::PhysicalMapping<Self, T>) {
-        drop(region);
+        let _ = region;
     }
 
     fn read_u8(&self, address: usize) -> u8 {

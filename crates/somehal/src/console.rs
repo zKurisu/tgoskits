@@ -1,7 +1,7 @@
 use core::fmt::Write;
 
 pub fn _print(args: core::fmt::Arguments) {
-    let _ = PrintFmt {}.write_fmt(args);
+    let _ = ConFmt {}.write_fmt(args);
 }
 
 #[macro_export]
@@ -15,26 +15,26 @@ macro_rules! println {
     ($($arg:tt)*) => ($crate::console::_print(core::format_args!("{}{}", core::format_args!($($arg)*), "\r\n")));
 }
 
-struct PrintFmt {}
+struct ConFmt {}
 
-impl Write for PrintFmt {
+impl Write for ConFmt {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        printer().write_str(s);
+        con().write_str(s);
         Ok(())
     }
 }
 
-fn printer() -> &'static dyn Printer {
-    unsafe { PRINT }
+fn con() -> &'static dyn Con {
+    unsafe { CON }
 }
 
-pub(crate) trait Printer: Send + Sync {
+pub(crate) trait Con: Send + Sync {
     fn write_str(&self, s: &str);
     fn read_byte(&self) -> Option<u8>;
 }
 
-struct NoPrinter;
-impl Printer for NoPrinter {
+struct NoCon;
+impl Con for NoCon {
     fn write_str(&self, _s: &str) {
         // Do nothing
     }
@@ -44,10 +44,10 @@ impl Printer for NoPrinter {
     }
 }
 
-static mut PRINT: &dyn Printer = &NoPrinter;
+static mut CON: &dyn Con = &NoCon;
 
-pub(crate) unsafe fn set_printer(printer: &'static dyn Printer) {
+pub(crate) unsafe fn set_printer(printer: &'static dyn Con) {
     unsafe {
-        PRINT = printer;
+        CON = printer;
     }
 }
