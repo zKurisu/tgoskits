@@ -2,18 +2,16 @@ use core::{cell::UnsafeCell, ptr::NonNull};
 
 use acpi::{AcpiError, Handler, PhysicalMapping, sdt::spcr::Spcr};
 use some_serial::ns16550::Ns16550;
+use some_serial::*;
 
 use crate::console::Con;
 
 use super::acpi_handle::AcpiHandle;
 
-pub(crate) fn setup_earlycon() -> Result<(), AcpiError> {
+pub(crate) fn acpi_setup_earlycon() -> Result<(), AcpiError> {
     let tb = crate::acpi::tables(AcpiHandle)?;
 
     for spsr in tb.find_tables::<Spcr>() {
-        println!("Found {:?}", spsr.interface_type());
-        println!("  Base address: {:#x?}", spsr.base_address());
-
         if deal_with_spsr(&spsr).is_some() {
             println!("Early console setup complete.");
             break;

@@ -418,6 +418,8 @@ dependencies = [
 [[package]]
 name = "rdif-base"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f8c32d8cbc18633a412130719b07d31135215d1715ac48fc3888ca835a811ba"
 dependencies = [
  "as-any",
  "async-trait",
@@ -438,6 +440,8 @@ dependencies = [
 [[package]]
 name = "rdif-serial"
 version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6668610226177053d66d9d3e55436cfa44f6428a5b755b9d7593288b738e3f12"
 dependencies = [
  "bitflags 2.10.0",
  "futures",
@@ -471,6 +475,8 @@ checksum = "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2"
 [[package]]
 name = "some-serial"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7112035303d2de9adc02d664d36ad6359bb41a66303265ca05fc7f9d8e2d86e2"
 dependencies = [
  "bare-test-macros",
  "bitflags 2.10.0",

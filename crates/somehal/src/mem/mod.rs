@@ -25,6 +25,10 @@ pub(crate) fn add_memory_descriptor(desc: MemoryDescriptor) {
     });
 }
 
+pub fn get_memory_map() -> &'static [MemoryDescriptor] {
+    &MEMORY_MAP
+}
+
 pub(crate) struct StaticCell<T> {
     value: UnsafeCell<Option<T>>,
 }

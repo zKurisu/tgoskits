@@ -1,6 +1,4 @@
-use core::{cell::UnsafeCell, fmt::Write};
-
-use some_serial::TSender;
+use core::fmt::Write;
 
 pub fn _print(args: core::fmt::Arguments) {
     let _ = ConFmt {}.write_fmt(args);

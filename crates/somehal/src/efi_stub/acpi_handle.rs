@@ -63,27 +63,27 @@ impl acpi::Handler for AcpiHandle {
         }
     }
 
-    fn read_io_u8(&self, port: u16) -> u8 {
+    fn read_io_u8(&self, _port: u16) -> u8 {
         todo!()
     }
 
-    fn read_io_u16(&self, port: u16) -> u16 {
+    fn read_io_u16(&self, _port: u16) -> u16 {
         todo!()
     }
 
-    fn read_io_u32(&self, port: u16) -> u32 {
+    fn read_io_u32(&self, _port: u16) -> u32 {
         todo!()
     }
 
-    fn write_io_u8(&self, port: u16, value: u8) {
+    fn write_io_u8(&self, _port: u16, _value: u8) {
         todo!()
     }
 
-    fn write_io_u16(&self, port: u16, value: u16) {
+    fn write_io_u16(&self, _port: u16, _value: u16) {
         todo!()
     }
 
-    fn write_io_u32(&self, port: u16, value: u32) {
+    fn write_io_u32(&self, _port: u16, _value: u32) {
         todo!()
     }
 

@@ -1,12 +1,11 @@
-use core::{fmt::Write, ptr::null};
+use core::{fmt::Write, hint::spin_loop, ptr::null};
 
-use acpi::sdt::spcr::Spcr;
 use uefi::{
     Result,
     boot::{MemoryDescriptor, MemoryType},
     mem::memory_map::MemoryMap,
     prelude::*,
-    proto::{console::gop::GraphicsOutput, loaded_image::LoadedImage},
+    proto::loaded_image::LoadedImage,
     system::with_config_table,
     table::cfg::{ACPI_GUID, ACPI2_GUID},
 };
@@ -15,13 +14,14 @@ use uefi_raw::table::system::SystemTable;
 use crate::{
     acpi::set_rsdp,
     arch::relocate,
-    efi_stub::{acpi_handle::AcpiHandle, earlycon::setup_earlycon},
     mem::{self, MB, page_size},
 };
 
 mod acpi_handle;
 mod earlycon;
 pub mod pe;
+
+pub(crate) use earlycon::acpi_setup_earlycon;
 
 /// EFI PE 入口点 - 符合 EFI ABI 的汇编包装
 /// 参数: a0 = image_handle, a1 = system_table
@@ -43,39 +43,31 @@ pub unsafe extern "C" fn efi_pe_entry(
             return e.status();
         }
 
-        if let Err(e) = draw_sierpinski() {
-            println!("Failed to draw Sierpinski triangle: {:?}", e);
-        } else {
-            println!("Sierpinski triangle drawn successfully.");
+        crate::arch::entry::efi_setup();
+
+        let mem_map = boot::exit_boot_services(None);
+
+        println!("Exited boot services, owned memory map obtained.");
+
+        for desc in mem_map.entries() {
+            if matches!(desc.ty, MemoryType::CONVENTIONAL)
+                && desc.page_count as usize >= 2 * MB / page_size()
+            {
+                println!("{desc:#x?}");
+                mem::add_memory_descriptor(desc.into());
+            }
         }
 
-        crate::arch::entry::efi_kernel_prepare();
+        loop {
+            spin_loop();
+        }
     }
-
-    // 返回成功状态
-    Status::SUCCESS
 }
 
 fn efi_main() -> Result {
     find_acpi_rsdp();
 
     println!("Page size: {:#x} bytes", crate::mem::page_size());
-
-    let mem_map = boot::memory_map(MemoryType::LOADER_DATA)?;
-    for desc in mem_map.entries() {
-        if matches!(desc.ty, MemoryType::CONVENTIONAL)
-            && desc.page_count as usize >= 2 * MB / page_size()
-        {
-            println!("{desc:#x?}");
-            mem::add_memory_descriptor(desc.into());
-        }
-    }
-
-    if let Err(e) = setup_earlycon() {
-        println!("Failed to setup early console: {:?}", e);
-    }
-
-    println!("UEFI early console initialized.");
 
     let h = boot::get_handle_for_protocol::<LoadedImage>()?;
 
@@ -93,13 +85,6 @@ fn efi_main() -> Result {
         }
     }
 
-    Ok(())
-}
-
-fn draw_sierpinski() -> Result {
-    // Open graphics output protocol.
-    let gop_handle = boot::get_handle_for_protocol::<GraphicsOutput>()?;
-    let mut gop = boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle)?;
     Ok(())
 }
 
@@ -149,19 +134,7 @@ impl From<&MemoryDescriptor> for crate::mem::MemoryDescriptor {
     fn from(value: &MemoryDescriptor) -> Self {
         crate::mem::MemoryDescriptor {
             physical_start: value.phys_start as usize,
-            size_in_bytes: (value.page_count as usize) * page_size(),
+            size_in_bytes: (value.page_count as usize) * 0x1000,
         }
     }
-}
-
-fn find_image() -> Option<()> {
-    let tb = match crate::acpi::tables(AcpiHandle) {
-        Ok(t) => t,
-        Err(e) => {
-            println!("Failed to get ACPI tables: {:?}", e);
-            return None;
-        }
-    };
-
-    Some(())
 }

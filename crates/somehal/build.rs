@@ -33,7 +33,7 @@ impl From<&str> for Arch {
     fn from(s: &str) -> Self {
         match s {
             "loongarch64" => Arch::Loongarch64,
-            _ => panic!("Unsupported architecture: {}", s),
+            _ => panic!("Unsupported architecture: {s}"),
         }
     }
 }
