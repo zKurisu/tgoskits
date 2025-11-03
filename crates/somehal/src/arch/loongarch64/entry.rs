@@ -94,10 +94,36 @@ pub(crate) fn efi_setup() {
 
 fn rust_main() -> ! {
     println!("Rust main.");
+
+    let sp: usize;
+    let pc: usize;
+    let head_lma: usize; // 实际加载地址 (Load Memory Address)
+
+    unsafe {
+        unsafe extern "C" {
+            fn _head();
+        }
+
+        core::arch::asm!(
+            "move {sp}, $sp",
+            "pcaddi {pc}, 0",
+            "la.pcrel {head}, {head_sym}",
+            sp = out(reg) sp,
+            pc = out(reg) pc,
+            head = out(reg) head_lma,
+            head_sym = sym _head,
+        );
+    }
+
+    println!("SP: {:#018x}", sp);
+    println!("PC: {:#018x}", pc);
+
     unsafe extern "C" {
         fn _head();
     }
-    println!("_head: {:#p}", _head as *const u8);
+    println!("_head (link addr): {:#018x}", _head as usize);
+    println!("_head (load addr): {:#018x}", head_lma);
+
     loop {
         spin_loop();
     }

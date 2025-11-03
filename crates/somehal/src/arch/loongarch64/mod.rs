@@ -1,10 +1,7 @@
-#[macro_use]
-mod stackframe;
-
 mod addrspace;
 pub(crate) mod entry;
 mod head;
-mod relocate;
 mod register;
+mod relocate;
 
 pub use relocate::relocate;
