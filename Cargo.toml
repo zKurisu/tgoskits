@@ -3,7 +3,12 @@ members = ["apps/*", "crates/*", "platform/sparreal-rt"]
 resolver = "3"
 
 [workspace.package]
+license = "MIT OR Apache-2.0"
+categories = ["embedded", "no-std"]
+description = "Boot kernel code with mmu."
 edition = "2024"
+keywords = ["os"]
+repository = "https://github.com/rcore-os/somehal"
 
 [workspace.dependencies]
 
