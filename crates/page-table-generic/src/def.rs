@@ -171,14 +171,14 @@ impl core::fmt::Debug for PagingError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::NoMemory => write!(f, "NoMemory"),
-            Self::AlignmentError { details } => write!(f, "AlignmentError: {}", details),
+            Self::AlignmentError { details } => write!(f, "AlignmentError: {details}"),
             Self::MappingConflict { vaddr, existing_paddr } => {
                 write!(f, "MappingConflict: vaddr={:#x}, existing_paddr={:#x}",
                        vaddr.raw(), existing_paddr.raw())
             }
-            Self::AddressOverflow { details } => write!(f, "AddressOverflow: {}", details),
-            Self::InvalidSize { details } => write!(f, "InvalidSize: {}", details),
-            Self::HierarchyError { details } => write!(f, "HierarchyError: {}", details),
+            Self::AddressOverflow { details } => write!(f, "AddressOverflow: {details}"),
+            Self::InvalidSize { details } => write!(f, "InvalidSize: {details}"),
+            Self::HierarchyError { details } => write!(f, "HierarchyError: {details}"),
         }
     }
 }
