@@ -68,6 +68,7 @@ impl<T: TableGeneric, A: FramAllocator> PageTable<T, A> {
             start_vaddr: VirtAddr::new(0),
             end_vaddr: VirtAddr::new(usize::MAX),
             visit_invalid: false,
+            visit_indirect: false,
         };
         self.walk(config)
     }

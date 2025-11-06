@@ -7,9 +7,6 @@ use std::{
 use page_table_generic::*;
 use tock_registers::{interfaces::*, register_bitfields, registers::*};
 
-pub const MB: usize = 1024 * 1024;
-pub const GB: usize = 1024 * MB;
-
 register_bitfields! [
     u64,
     PTE64 [
@@ -93,7 +90,6 @@ impl PageTableEntry for PteImpl {
     }
 }
 
-pub type Tb4kL4 = PageTable<T4kL4, crate::mocks::Fram4k>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct T4kL4;

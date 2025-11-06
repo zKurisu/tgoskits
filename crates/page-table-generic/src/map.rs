@@ -88,6 +88,15 @@ where
         unsafe { core::slice::from_raw_parts(vaddr as *const T::P, T::TABLE_LEN) }
     }
 
+    /// 从PTE创建子Frame（用于遍历子页表）
+    pub fn from_pte(pte: &T::P, allocator: A) -> Self {
+        Self {
+            paddr: pte.paddr(),
+            allocator,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// 递归映射的核心实现
     pub fn map_range_recursive(&mut self, config: MapRecursiveConfig<T::P>) -> PagingResult<()> {
         let mut vaddr = config.start_vaddr;
@@ -189,8 +198,10 @@ where
             };
             child_frame.map_range_recursive(child_config)?;
 
+            // 计算本轮映射的虚拟地址范围
+            let mapped_size = next_level_vaddr - vaddr;
             vaddr = next_level_vaddr;
-            paddr += next_level_vaddr - vaddr;
+            paddr += mapped_size;
         }
 
         Ok(())

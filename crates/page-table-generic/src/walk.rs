@@ -1,6 +1,4 @@
-use crate::{
-    FramAllocator, PageTable, PageTableEntry, PhysAddr, TableGeneric, VirtAddr,
-};
+use crate::{FramAllocator, PageTable, PageTableEntry, PhysAddr, TableGeneric, VirtAddr};
 
 use heapless::Vec;
 
@@ -14,6 +12,8 @@ pub struct PteInfo<P: PageTableEntry> {
     pub level: usize,
     /// 此页表项对应的虚拟地址
     pub vaddr: VirtAddr,
+    /// 此页表项是否为最终映射（叶子级别或大页）
+    pub is_final_mapping: bool,
     /// 原页表项对象
     pub pte: P,
 }
@@ -27,15 +27,16 @@ pub struct WalkConfig {
     pub end_vaddr: VirtAddr,
     /// 是否访问无效的页表项
     pub visit_invalid: bool,
+    /// 是否访问间接页表项（中间级别的有效页表项）
+    pub visit_indirect: bool,
 }
 
 /// 页表遍历迭代器
 pub struct PageTableWalker<'a, T: TableGeneric, A: FramAllocator> {
-    page_table: &'a PageTable<T, A>,
+    _phantom: core::marker::PhantomData<&'a ()>,
     config: WalkConfig,
     // 内部状态管理 - 使用heapless::Vec
     stack: Vec<WalkState<T, A>, MAX_WALK_DEPTH>,
-    current_vaddr: VirtAddr,
     finished: bool,
 }
 
@@ -68,8 +69,6 @@ where
     T: TableGeneric,
     A: FramAllocator,
 {
-    const INDEX_MASK: usize = (1 << T::INDEX_BITS) - 1;
-
     fn as_slice(&self) -> &[T::P] {
         let vaddr = self.allocator.phys_to_virt(self.paddr);
         unsafe { core::slice::from_raw_parts(vaddr as *const T::P, T::TABLE_LEN) }
@@ -90,7 +89,7 @@ where
     }
 
     /// 计算指定级别对应的映射大小（通用版本）
-    pub fn level_size(level: usize) -> usize {
+    fn level_size(level: usize) -> usize {
         if level == T::LEVEL {
             // 最后一级是页级别
             T::PAGE_SIZE
@@ -102,27 +101,15 @@ where
             T::PAGE_SIZE << (T::INDEX_BITS * (T::LEVEL - level))
         }
     }
-
-    /// 计算指定级别的页表索引（通用版本）
-    pub fn virt_to_index(vaddr: VirtAddr, level: usize) -> usize {
-        if level == 0 || level > T::LEVEL {
-            panic!("Invalid level: {} (valid: 1..{})", level, T::LEVEL);
-        }
-        // 计算当前级别的位移：页面大小的对数 + (总级别 - 当前级别) * 索引位数
-        let page_shift = T::PAGE_SIZE.trailing_zeros() as usize;
-        let shift = page_shift + (T::LEVEL - level) * T::INDEX_BITS;
-        (vaddr.raw() >> shift) & Self::INDEX_MASK
-    }
 }
 
 impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
     /// 创建新的页表遍历器
-    pub fn new(page_table: &'a PageTable<T, A>, config: WalkConfig) -> Self {
+    pub fn new(_page_table: &'a PageTable<T, A>, config: WalkConfig) -> Self {
         let mut walker = Self {
-            page_table,
+            _phantom: core::marker::PhantomData,
             config,
             stack: Vec::new(),
-            current_vaddr: config.start_vaddr,
             finished: false,
         };
 
@@ -130,8 +117,8 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
         if !walker.config.start_vaddr.ge(&walker.config.end_vaddr) {
             let root_state = WalkState {
                 frame: Frame {
-                    paddr: page_table.root.paddr,
-                    allocator: page_table.root.allocator,
+                    paddr: _page_table.root.paddr,
+                    allocator: _page_table.root.allocator,
                     _marker: core::marker::PhantomData,
                 },
                 level: T::LEVEL,
@@ -172,7 +159,8 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
             state.index += 1;
 
             // 获取当前条目的虚拟地址 - 重建完整的虚拟地址
-            let current_vaddr = Frame::<T, A>::reconstruct_vaddr(state.index - 1, state.level, state.base_vaddr);
+            let current_vaddr =
+                Frame::<T, A>::reconstruct_vaddr(state.index - 1, state.level, state.base_vaddr);
 
             // 跳过不在范围内的地址
             if current_vaddr < self.config.start_vaddr {
@@ -207,6 +195,18 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
                     index: 0,
                     base_vaddr: child_base_vaddr,
                 };
+
+                // 如果配置了访问间接页表项，则先返回当前中间级别的页表项
+                // 但仍然将子页表压入栈中以便后续遍历
+                if self.config.visit_indirect {
+                    // 先保存需要返回的信息，避免借用冲突
+                    let level = state.level;
+                    let vaddr = current_vaddr;
+
+                    // 先压入子页表状态，然后返回当前项
+                    self.stack.push(child_state).ok();
+                    return Some(PteInfo { level, vaddr, pte });
+                }
 
                 self.stack.push(child_state).ok(); // 栈容量足够时一定成功
                 continue;
