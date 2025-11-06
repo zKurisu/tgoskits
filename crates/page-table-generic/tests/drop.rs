@@ -43,8 +43,8 @@ fn test_deallocate() {
 
     println!("创建映射后分配数量: {}", allocator.allocated_count());
 
-    // 验证映射成功
-    let valid_entries: usize = page_table.walk_valid().count();
+    // // 验证映射成功
+    // let valid_entries: usize = page_table.walk_valid().count();
 
     // assert_eq!(valid_entries, 2, "应该有2个有效映射");
 

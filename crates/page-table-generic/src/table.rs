@@ -69,6 +69,10 @@ where
 
 impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
     /// 创建一个新的页表
+    ///
+    /// # Safety
+    ///
+    /// 调用者必须确保提供的FrameAllocator是有效的，并且在页表生命周期内保持有效
     pub unsafe fn new(allocator: A) -> PagingResult<Self> {
         let root = Frame::new(allocator)?;
         Ok(Self { root })

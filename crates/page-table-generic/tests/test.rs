@@ -245,11 +245,20 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     // 验证映射结果
     // 实际映射：系统创建了多个大页来处理这个范围
     // 至少应该有1个大页用于覆盖主要的映射范围
-    assert!(huge_pages >= 1, "应该至少有1个大页映射，实际有{}", huge_pages);
+    assert!(
+        huge_pages >= 1,
+        "应该至少有1个大页映射，实际有{}",
+        huge_pages
+    );
 
     // 验证2MB大页映射（从地址0开始）
-    let huge_page = mappings.iter().find(|(vaddr, _, is_huge, level)| *is_huge && *level == 2 && *vaddr == 0);
-    assert!(huge_page.is_some(), "应该有一个从地址0开始的Level 2大页映射");
+    let huge_page = mappings
+        .iter()
+        .find(|(vaddr, _, is_huge, level)| *is_huge && *level == 2 && *vaddr == 0);
+    assert!(
+        huge_page.is_some(),
+        "应该有一个从地址0开始的Level 2大页映射"
+    );
     if let Some((vaddr, paddr, _, level)) = huge_page {
         assert_eq!(*vaddr, 0, "大页应该从地址0开始");
         assert_eq!(*paddr, 0, "大页的物理地址应该从0开始");
@@ -257,7 +266,8 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     }
 
     // 验证总映射范围正确覆盖了请求的2MB + 12KB
-    let mapped_range = mappings.iter()
+    let mapped_range = mappings
+        .iter()
         .filter(|(_, _, _, level)| *level <= 2) // 只考虑Level 2及以下的最终映射
         .map(|(vaddr, _, _, _)| *vaddr)
         .collect::<Vec<_>>();
@@ -329,14 +339,17 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
 
     // 验证起始地址被正确映射
     let start_addr = 2 * MB - 0x1000;
-    let has_start_mapping = mappings.iter().any(|(vaddr, _, _, _)| *vaddr <= start_addr && start_addr < *vaddr + (*vaddr % 0x1000 + 0x1000));
+    let has_start_mapping = mappings.iter().any(|(vaddr, _, _, _)| {
+        *vaddr <= start_addr && start_addr < *vaddr + (*vaddr % 0x1000 + 0x1000)
+    });
     assert!(has_start_mapping, "应该包含起始地址{:#x}的映射", start_addr);
 
     // 验证映射范围覆盖了请求的整个区域
     let requested_end = start_addr + (2 * MB + 0x1000 * 3);
 
     // 验证有映射覆盖到请求的结束位置附近
-    let max_mapped = mappings.iter()
+    let max_mapped = mappings
+        .iter()
         .filter(|(_, _, _, level)| *level <= 2)
         .map(|(vaddr, _, _, _)| *vaddr)
         .max()
@@ -344,17 +357,28 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
 
     // 映射应该覆盖到至少请求的大小减去一个页面
     let min_expected_end = start_addr + (2 * MB + 0x1000 * 2); // 减去4KB容错
-    assert!(max_mapped >= min_expected_end,
-            "映射应该至少覆盖到地址{:#x}，实际最大映射地址{:#x}", min_expected_end, max_mapped);
+    assert!(
+        max_mapped >= min_expected_end,
+        "映射应该至少覆盖到地址{:#x}，实际最大映射地址{:#x}",
+        min_expected_end,
+        max_mapped
+    );
 
     // 验证映射的连续性（从起始地址开始的大致连续覆盖）
-    let mapping_vaddrs: Vec<_> = mappings.iter()
+    let mapping_vaddrs: Vec<_> = mappings
+        .iter()
         .filter(|(_, _, _, level)| *level <= 2)
         .map(|(vaddr, _, _, _)| *vaddr)
         .collect();
 
-    let has_range_coverage = mapping_vaddrs.iter().any(|&vaddr| vaddr >= start_addr && vaddr < requested_end);
-    assert!(has_range_coverage, "映射应该覆盖[{:#x}, {:#x})范围", start_addr, requested_end);
+    let has_range_coverage = mapping_vaddrs
+        .iter()
+        .any(|&vaddr| vaddr >= start_addr && vaddr < requested_end);
+    assert!(
+        has_range_coverage,
+        "映射应该覆盖[{:#x}, {:#x})范围",
+        start_addr, requested_end
+    );
 }
 
 #[test]
@@ -447,10 +471,12 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     assert!(total_mappings > 0, "应该有至少一个映射");
 
     // 验证地址空间分离
-    let low_mappings: Vec<_> = mappings.iter()
+    let low_mappings: Vec<_> = mappings
+        .iter()
         .filter(|(vaddr, _, _, _)| *vaddr < 2 * MB + 0x1000 * 3)
         .collect();
-    let high_mappings: Vec<_> = mappings.iter()
+    let high_mappings: Vec<_> = mappings
+        .iter()
         .filter(|(vaddr, _, _, _)| *vaddr >= 0x4000_0000)
         .collect();
 
@@ -458,7 +484,8 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     assert!(!high_mappings.is_empty(), "应该有高地址区域的映射");
 
     // 验证低地址区域映射 (第二次映射)
-    let low_huge = low_mappings.iter()
+    let low_huge = low_mappings
+        .iter()
         .find(|(_, _, is_huge, level)| *is_huge && *level == 2);
     assert!(low_huge.is_some(), "低地址区域应该有一个2MB大页");
     if let Some((vaddr, paddr, _, _)) = low_huge {
@@ -467,12 +494,16 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     }
 
     // 验证高地址区域映射 (第一次映射)
-    let high_huge = high_mappings.iter()
+    let high_huge = high_mappings
+        .iter()
         .find(|(_, _, is_huge, level)| *is_huge && *level <= 3);
     assert!(high_huge.is_some(), "高地址区域应该有大页映射");
     if let Some((vaddr, paddr, _, _)) = high_huge {
         assert_eq!(*vaddr, 0x4000_0000, "高地址大页应该从0x4000_0000开始");
-        assert_eq!(*paddr, 0x4000_0000, "高地址大页的物理地址应该从0x4000_0000开始");
+        assert_eq!(
+            *paddr, 0x4000_0000,
+            "高地址大页的物理地址应该从0x4000_0000开始"
+        );
     }
 }
 
@@ -494,6 +525,30 @@ fn test_huge_big_l3() {
         .try_init();
 
     test_huge_big::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+}
+
+#[test]
+fn test_v_p_not_align_l3() {
+    test_v_p_not_align::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+}
+
+fn test_v_p_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let mut pg = PageTable::<T, A>::new(alloc).unwrap();
+
+    pg.map(&MapConfig {
+        vaddr: 0x0000usize.into(),
+        paddr: 0x1000usize.into(),
+        size: 2 * MB,
+        pte,
+        allow_huge: true,
+        flush: false,
+    })
+    .unwrap();
 }
 
 // ===== Flag 验证辅助函数 =====
