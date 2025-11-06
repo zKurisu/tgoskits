@@ -175,6 +175,20 @@ impl PteImpl {
         )
     }
 
+    /// 读写模式：可读、可写、普通缓存
+    pub fn read_write() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
     /// 设备寄存器模式：读写、设备缓存、大页
     pub fn device_memory() -> Self {
         Self::new_with_flags(
@@ -226,6 +240,137 @@ impl PteImpl {
 
     pub fn cache_mode(&self) -> u64 {
         self.reg().read(PTE64::CACHE)
+    }
+
+    /// 创建一个新的空PTE
+    pub fn new() -> Self {
+        Self(0)
+    }
+
+    /// 可读可执行模式：只读、用户可执行
+    pub fn read_execute() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            true,  // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 全部权限模式：可读、可写、用户可执行、用户可访问、特权执行
+    pub fn all_permissions() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            true,  // user_execute
+            true,  // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 用户执行模式：只读、用户可执行
+    pub fn user_execute() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            true,  // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 特权执行模式：只读、特权执行
+    pub fn privilege_execute() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 非缓存模式：只读、非缓存
+    pub fn non_cache() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            0,     // non cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 普通缓存模式：只读、普通缓存
+    pub fn normal_cache() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 设备缓存模式：只读、设备缓存
+    pub fn device_cache() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            2,     // device cache
+            true,  // valid
+            false, // not block
+        )
+    }
+
+    /// 复杂用户映射：全部权限 + 大页
+    pub fn complex_user_mapping() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            true,  // user_execute
+            true,  // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            true,  // block (大页)
+        )
+    }
+
+    /// 复杂内核映射：读写 + 特权执行，非大页
+    pub fn complex_kernel_mapping() -> Self {
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
     }
 }
 

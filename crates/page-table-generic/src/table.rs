@@ -220,6 +220,66 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
         Ok(())
     }
 
+    /// 通过虚拟地址查询页表项
+    ///
+    /// # 参数
+    /// - `vaddr`: 要查询的虚拟地址
+    ///
+    /// # 返回值
+    /// - `Ok(T::P)`: 找到的页表项，包含物理地址信息
+    /// - `Err(PagingError)`: 查询失败，原因可能包括：
+    ///   - 地址未映射
+    ///   - 页表项无效
+    ///   - 页表层次结构错误
+    ///
+    pub fn translate(&self, vaddr: VirtAddr) -> PagingResult<(PhysAddr, T::P)> {
+        let pte = self
+            .root
+            .translate_recursive(vaddr, Frame::<T, A>::PT_LEVEL)?;
+
+        // 根据页表项类型计算正确的偏移
+        let (phys_addr, _) = if pte.is_huge() {
+            // 大页映射：需要使用大页大小计算偏移
+            let level_size = Frame::<T, A>::level_size(T::MAX_BLOCK_LEVEL);
+            let offset_in_page = vaddr.raw() % level_size;
+            (PhysAddr::new(pte.paddr().raw() + offset_in_page), level_size)
+        } else {
+            // 普通页面映射：使用页面大小
+            let offset_in_page = vaddr.raw() % T::PAGE_SIZE;
+            (PhysAddr::new(pte.paddr().raw() + offset_in_page), T::PAGE_SIZE)
+        };
+
+        Ok((phys_addr, pte))
+    }
+
+    /// 通过虚拟地址查询物理地址（便利方法）
+    ///
+    /// # 参数
+    /// - `vaddr`: 要查询的虚拟地址
+    ///
+    /// # 返回值
+    /// - `Ok(PhysAddr)`: 找到的物理地址
+    /// - `Err(PagingError)`: 查询失败
+    ///
+    pub fn translate_phys(&self, vaddr: VirtAddr) -> PagingResult<PhysAddr> {
+        let (p, _) = self.translate(vaddr)?;
+        Ok(p)
+    }
+
+    /// 检查虚拟地址是否已映射
+    ///
+    /// 这是一个便利方法，用于快速检查地址是否已映射而不需要获取页表项
+    ///
+    /// # 参数
+    /// - `vaddr`: 要检查的虚拟地址
+    ///
+    /// # 返回值
+    /// - `true`: 地址已映射
+    /// - `false`: 地址未映射
+    pub fn is_mapped(&self, vaddr: VirtAddr) -> bool {
+        self.translate(vaddr).is_ok()
+    }
+
     /// 获取页表的根帧物理地址
     pub fn root_paddr(&self) -> crate::PhysAddr {
         self.root.paddr

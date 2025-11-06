@@ -118,7 +118,7 @@ impl From<u32> for PhysAddr {
     }
 }
 
-#[derive(thiserror::Error, Clone, Copy, PartialEq, Eq)]
+#[derive(thiserror::Error, Clone, PartialEq, Eq)]
 pub enum PagingError {
     #[error("Memory allocation failed")]
     NoMemory,
@@ -139,6 +139,8 @@ pub enum PagingError {
     HierarchyError { details: &'static str },
     #[error("Invalid address range: {details}")]
     InvalidRange { details: &'static str },
+    #[error("Address not mapped")]
+    NotMapped,
 }
 
 impl core::fmt::LowerHex for VirtAddr {
@@ -180,6 +182,10 @@ impl PagingError {
     pub fn invalid_range(msg: &'static str) -> Self {
         Self::InvalidRange { details: msg }
     }
+
+    pub fn not_mapped() -> Self {
+        Self::NotMapped
+    }
 }
 
 impl core::fmt::Debug for PagingError {
@@ -202,6 +208,7 @@ impl core::fmt::Debug for PagingError {
             Self::InvalidSize { details } => write!(f, "InvalidSize: {details}"),
             Self::HierarchyError { details } => write!(f, "HierarchyError: {details}"),
             Self::InvalidRange { details } => write!(f, "InvalidRange: {details}"),
+            Self::NotMapped => write!(f, "NotMapped"),
         }
     }
 }
