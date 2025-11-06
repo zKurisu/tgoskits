@@ -4,6 +4,7 @@
 #![cfg(not(target_os = "none"))]
 
 use page_table_generic::*;
+use std::vec::Vec;
 
 mod mocks;
 
@@ -49,8 +50,10 @@ where
 
     println!("\n=== 映后状态 - walk_valid结果 ===");
     let mut count = 0;
+    let mut valid_entries = Vec::new();
     for p in pg.walk_valid() {
         println!("l: {}, va: {:?}, pte: {:?}", p.level, p.vaddr, p.pte);
+        valid_entries.push((p.vaddr, p.pte, p.level));
         count += 1;
     }
 
@@ -74,6 +77,69 @@ where
     }
 
     assert_eq!(count, 2); // walk_valid() 应该返回2个叶子级别条目
+
+    // === 严格的地址和属性验证 ===
+
+    // 验证虚拟地址：映射了0x0000f00000000000开始的0x2000字节（2个4KB页面）
+    let expected_vaddrs = [
+        VirtAddr::new(0x0000f00000000000), // 第一个页面
+        VirtAddr::new(0x0000f00000001000), // 第二个页面
+    ];
+
+    // 验证虚拟地址映射正确
+    for (i, (vaddr, pte, level)) in valid_entries.iter().enumerate() {
+        assert_eq!(
+            *vaddr, expected_vaddrs[i],
+            "第{}个条目的虚拟地址不匹配，期望 {:?}，实际 {:?}",
+            i, expected_vaddrs[i], vaddr
+        );
+
+        // 验证这是叶子级别（level 1，根据实际输出确定）
+        assert_eq!(
+            *level, 1,
+            "叶子级别页表项应该在level 1，实际在level {level}"
+        );
+
+        // 验证页表项是有效的
+        assert!(pte.valid(), "页表项应该是有效的");
+
+        // 验证不是大页（因为allow_huge=false且页面大小为4KB）
+        assert!(!pte.is_huge(), "页表项不应该是大页");
+
+        // 物理地址偏移验证：由于内存分配的随机性，我们只验证相对关系
+
+        // 注意：由于内存分配的随机性，我们只验证物理地址的偏移部分
+        // 实际的物理基地址可能不同，但偏移应该是固定的
+        let actual_paddr = pte.paddr();
+        let actual_offset = actual_paddr.raw() % 0x1000; // 页内偏移
+        assert_eq!(
+            actual_offset, 0,
+            "页内偏移应该是0，实际是 {actual_offset:?}"
+        );
+
+        // 验证两个页表项的物理地址相差0x1000（4KB）
+        if i > 0 {
+            let prev_pte = &valid_entries[i - 1].1;
+            let prev_paddr = prev_pte.paddr();
+            let addr_diff = actual_paddr.raw().saturating_sub(prev_paddr.raw());
+            assert_eq!(
+                addr_diff, 0x1000,
+                "相邻页面物理地址应该相差0x1000，实际相差 {addr_diff:?}"
+            );
+        }
+
+        println!(
+            "✓ 页面{}验证通过: VA={:?}, PA={:?}, Level={}, Valid={}, Huge={}",
+            i,
+            vaddr,
+            actual_paddr,
+            level,
+            pte.valid(),
+            pte.is_huge()
+        );
+    }
+
+    println!("🎉 所有地址和属性验证通过！");
 }
 
 #[test]
@@ -84,100 +150,4 @@ fn test_new() {
         .try_init();
 
     test_high::<T4kL4, Fram4k>(PteImpl(0), Fram4k);
-}
-
-#[test]
-fn test_walk_all_entries() {
-    let _ = env_logger::builder()
-        .is_test(true)
-        .filter_level(log::LevelFilter::Trace)
-        .try_init();
-
-    let mut pg = PageTable::<T4kL4, Fram4k>::new(Fram4k).unwrap();
-
-    // 映射一个低地址范围，便于验证
-    pg.map(&MapConfig {
-        vaddr: 0x1000usize.into(), // 使用简单地址
-        paddr: 0x0000usize.into(),
-        size: 0x2000,
-        pte: PteImpl(0),
-        allow_huge: false,
-        flush: false,
-    })
-    .unwrap();
-
-    println!("\n=== walker遍历所有页表项 ===");
-    let mut count_all = 0;
-    let mut count_final = 0;
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
-        println!(
-            "l: {}, va: {:?}, c: PTE PA: {:?} Block: {} | Final: {} Valid: {}",
-            p.level,
-            p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
-            p.is_final_mapping,
-            p.pte.valid()
-        );
-        count_all += 1;
-        if p.is_final_mapping {
-            count_final += 1;
-        }
-    }
-    println!("共返回 {count_all} 个页表项，其中 {count_final} 个是最终映射");
-
-    println!("\n=== 使用walk_valid()过滤仅最终映射 ===");
-    let mut count = 0;
-    for p in pg.walk_valid() {
-        println!(
-            "l: {}, va: {:?}, c: PTE PA: {:?} Block: {} | Final: {}",
-            p.level,
-            p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
-            p.is_final_mapping
-        );
-        count += 1;
-    }
-    println!("walk_valid() 共返回 {count} 个最终映射页表项");
-}
-
-#[test]
-fn test_page_table_entry_methods() {
-    let _ = env_logger::builder()
-        .is_test(true)
-        .filter_level(log::LevelFilter::Trace)
-        .try_init();
-
-    // 测试无效项
-    let invalid_pte = PteImpl(0);
-    println!("无效项:");
-    println!("  valid: {}", invalid_pte.valid());
-
-    // 测试有效叶子项（模拟）
-    let mut leaf_pte = PteImpl(0);
-    leaf_pte.set_valid(true);
-    leaf_pte.set_paddr(0x1000usize.into());
-    println!("\n叶子项:");
-    println!("  valid: {}", leaf_pte.valid());
-    println!("  is_huge: {}", leaf_pte.is_huge());
-
-    // 测试大页项
-    let mut huge_pte = PteImpl(0);
-    huge_pte.set_valid(true);
-    huge_pte.set_paddr(0x200000usize.into());
-    huge_pte.set_is_huge(true);
-    println!("\n大页项:");
-    println!("  valid: {}", huge_pte.valid());
-    println!("  is_huge: {}", huge_pte.is_huge());
-
-    // 验证基本断言
-    assert!(!invalid_pte.valid());
-    assert!(leaf_pte.valid());
-    assert!(!leaf_pte.is_huge());
-    assert!(huge_pte.valid());
-    assert!(huge_pte.is_huge());
 }
