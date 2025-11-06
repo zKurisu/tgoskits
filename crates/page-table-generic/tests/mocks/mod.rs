@@ -134,70 +134,70 @@ impl PteImpl {
     /// 用户权限模式：可读、可写、可执行、用户可访问
     pub fn user_mode() -> Self {
         Self::new_with_flags(
-            true,   // read
-            true,   // write
-            true,   // user_execute
-            true,   // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            true,  // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         )
     }
 
     /// 内核权限模式：可读、可写、特权执行
     pub fn kernel_mode() -> Self {
         Self::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            true,   // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         )
     }
 
     /// 只读数据模式：只读、普通缓存
     pub fn read_only() -> Self {
         Self::new_with_flags(
-            true,   // read
-            false,  // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         )
     }
 
     /// 设备寄存器模式：读写、设备缓存、大页
     pub fn device_memory() -> Self {
         Self::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            2,      // device cache
-            true,   // valid
-            true,   // block (大页)
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            2,     // device cache
+            true,  // valid
+            true,  // block (大页)
         )
     }
 
     /// 内存映射I/O模式：用户可访问、只读、设备缓存
     pub fn mmap_io() -> Self {
         Self::new_with_flags(
-            true,   // read
-            false,  // write
-            false,  // user_execute
-            true,   // user_access
-            false,  // privilege_execute
-            2,      // device cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            false, // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            2,     // device cache
+            true,  // valid
+            false, // not block
         )
     }
 
@@ -226,7 +226,6 @@ impl PteImpl {
         self.reg().read(PTE64::CACHE)
     }
 }
-
 
 #[derive(Debug, Clone, Copy)]
 pub struct T4kL3;

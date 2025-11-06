@@ -120,7 +120,9 @@ pub enum PagingError {
     NoMemory,
     #[error("Address alignment error: {details}")]
     AlignmentError { details: &'static str },
-    #[error("Mapping conflict: virtual address {vaddr:#x} already mapped to physical address {existing_paddr:#x}")]
+    #[error(
+        "Mapping conflict: virtual address {vaddr:#x} already mapped to physical address {existing_paddr:#x}"
+    )]
     MappingConflict {
         vaddr: VirtAddr,
         existing_paddr: PhysAddr,
@@ -131,6 +133,8 @@ pub enum PagingError {
     InvalidSize { details: &'static str },
     #[error("Page table hierarchy error: {details}")]
     HierarchyError { details: &'static str },
+    #[error("Invalid address range: {details}")]
+    InvalidRange { details: &'static str },
 }
 
 impl core::fmt::LowerHex for VirtAddr {
@@ -151,7 +155,10 @@ impl PagingError {
     }
 
     pub fn mapping_conflict(vaddr: VirtAddr, existing_paddr: PhysAddr) -> Self {
-        Self::MappingConflict { vaddr, existing_paddr }
+        Self::MappingConflict {
+            vaddr,
+            existing_paddr,
+        }
     }
 
     pub fn address_overflow(msg: &'static str) -> Self {
@@ -165,6 +172,10 @@ impl PagingError {
     pub fn hierarchy_error(msg: &'static str) -> Self {
         Self::HierarchyError { details: msg }
     }
+
+    pub fn invalid_range(msg: &'static str) -> Self {
+        Self::InvalidRange { details: msg }
+    }
 }
 
 impl core::fmt::Debug for PagingError {
@@ -172,13 +183,21 @@ impl core::fmt::Debug for PagingError {
         match self {
             Self::NoMemory => write!(f, "NoMemory"),
             Self::AlignmentError { details } => write!(f, "AlignmentError: {details}"),
-            Self::MappingConflict { vaddr, existing_paddr } => {
-                write!(f, "MappingConflict: vaddr={:#x}, existing_paddr={:#x}",
-                       vaddr.raw(), existing_paddr.raw())
+            Self::MappingConflict {
+                vaddr,
+                existing_paddr,
+            } => {
+                write!(
+                    f,
+                    "MappingConflict: vaddr={:#x}, existing_paddr={:#x}",
+                    vaddr.raw(),
+                    existing_paddr.raw()
+                )
             }
             Self::AddressOverflow { details } => write!(f, "AddressOverflow: {details}"),
             Self::InvalidSize { details } => write!(f, "InvalidSize: {details}"),
             Self::HierarchyError { details } => write!(f, "HierarchyError: {details}"),
+            Self::InvalidRange { details } => write!(f, "InvalidRange: {details}"),
         }
     }
 }

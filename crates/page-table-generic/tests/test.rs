@@ -218,49 +218,63 @@ fn assert_pte_flags(
         pte.is_readable(),
         expected_readable,
         "{} 读取权限不匹配，期望 {}，实际 {}",
-        test_name, expected_readable, pte.is_readable()
+        test_name,
+        expected_readable,
+        pte.is_readable()
     );
 
     assert_eq!(
         pte.is_writable(),
         expected_writable,
         "{} 写入权限不匹配，期望 {}，实际 {}",
-        test_name, expected_writable, pte.is_writable()
+        test_name,
+        expected_writable,
+        pte.is_writable()
     );
 
     assert_eq!(
         pte.is_user_executable(),
         expected_user_executable,
         "{} 用户执行权限不匹配，期望 {}，实际 {}",
-        test_name, expected_user_executable, pte.is_user_executable()
+        test_name,
+        expected_user_executable,
+        pte.is_user_executable()
     );
 
     assert_eq!(
         pte.is_user_accessible(),
         expected_user_accessible,
         "{} 用户访问权限不匹配，期望 {}，实际 {}",
-        test_name, expected_user_accessible, pte.is_user_accessible()
+        test_name,
+        expected_user_accessible,
+        pte.is_user_accessible()
     );
 
     assert_eq!(
         pte.is_privilege_executable(),
         expected_privilege_executable,
         "{} 特权执行权限不匹配，期望 {}，实际 {}",
-        test_name, expected_privilege_executable, pte.is_privilege_executable()
+        test_name,
+        expected_privilege_executable,
+        pte.is_privilege_executable()
     );
 
     assert_eq!(
         pte.cache_mode(),
         expected_cache_mode,
         "{} 缓存模式不匹配，期望 {}，实际 {}",
-        test_name, expected_cache_mode, pte.cache_mode()
+        test_name,
+        expected_cache_mode,
+        pte.cache_mode()
     );
 
     assert_eq!(
         pte.is_huge(),
         expected_huge,
         "{} 大页属性不匹配，期望 {}，实际 {}",
-        test_name, expected_huge, pte.is_huge()
+        test_name,
+        expected_huge,
+        pte.is_huge()
     );
 }
 
@@ -454,13 +468,13 @@ fn test_pte_read_only() {
         0x0000f00000000000usize.into(),
         1,
         "ReadOnly",
-        true,   // readable
-        false,  // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -473,26 +487,26 @@ fn test_pte_read_write() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00100000000usize.into(),
         1,
         "ReadWrite",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -505,26 +519,26 @@ fn test_pte_read_execute() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            false,  // write
-            true,   // user_execute
-            true,   // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            true,  // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00200000000usize.into(),
         1,
         "ReadExecute",
-        true,   // readable
-        false,  // writable
-        true,   // user_executable
-        true,   // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        true,  // user_executable
+        true,  // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -537,26 +551,26 @@ fn test_pte_all_permissions() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            true,   // write
-            true,   // user_execute
-            true,   // user_access
-            true,   // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            true,  // user_execute
+            true,  // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00300000000usize.into(),
         1,
         "AllPermissions",
-        true,   // readable
-        true,   // writable
-        true,   // user_executable
-        true,   // user_accessible
-        true,   // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        true,  // user_executable
+        true,  // user_accessible
+        true,  // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -575,13 +589,13 @@ fn test_pte_user_mode() {
         0x0000f00400000000usize.into(),
         1,
         "UserMode",
-        true,   // readable
-        true,   // writable
-        true,   // user_executable
-        true,   // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        true,  // user_executable
+        true,  // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -598,13 +612,13 @@ fn test_pte_kernel_mode() {
         0x0000f00500000000usize.into(),
         1,
         "KernelMode",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        true,   // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        true,  // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -617,26 +631,26 @@ fn test_pte_user_execute() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            false,  // write
-            true,   // user_execute
-            true,   // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            true,  // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00600000000usize.into(),
         1,
         "UserExecute",
-        true,   // readable
-        false,  // writable
-        true,   // user_executable
-        true,   // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        true,  // user_executable
+        true,  // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -649,26 +663,26 @@ fn test_pte_privilege_execute() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            false,  // write
-            false,  // user_execute
-            false,  // user_access
-            true,   // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00700000000usize.into(),
         1,
         "PrivilegeExecute",
-        true,   // readable
-        false,  // writable
-        false,  // user_executable
-        false,  // user_accessible
-        true,   // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        false, // user_executable
+        false, // user_accessible
+        true,  // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -683,26 +697,26 @@ fn test_pte_non_cache() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            0,      // non-cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            0,     // non-cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00800000000usize.into(),
         1,
         "NonCache",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        0,      // non-cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        0,     // non-cache
+        false, // not huge
     );
 }
 
@@ -715,26 +729,26 @@ fn test_pte_normal_cache() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            false,  // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00900000000usize.into(),
         1,
         "NormalCache",
-        true,   // readable
-        false,  // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -747,26 +761,26 @@ fn test_pte_device_cache() {
 
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            false,  // privilege_execute
-            2,      // device cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            false, // privilege_execute
+            2,     // device cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00a00000000usize.into(),
         1,
         "DeviceCache",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        2,      // device cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        2,     // device cache
+        false, // not huge
     );
 }
 
@@ -783,13 +797,13 @@ fn test_pte_mmap_io() {
         0x0000f00b00000000usize.into(),
         1,
         "MmapIO",
-        true,   // readable
-        false,  // writable
-        false,  // user_executable
-        true,   // user_accessible
-        false,  // privilege_execute
-        2,      // device cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        false, // user_executable
+        true,  // user_accessible
+        false, // privilege_execute
+        2,     // device cache
+        false, // not huge
     );
 }
 
@@ -808,13 +822,13 @@ fn test_pte_device_memory() {
         0x0000f00c00000000usize.into(),
         1,
         "DeviceMemory",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        false,  // privilege_execute
-        2,      // device cache
-        false,  // not huge (because allow_huge=false)
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        false, // privilege_execute
+        2,     // device cache
+        false, // not huge (because allow_huge=false)
     );
 }
 
@@ -828,26 +842,26 @@ fn test_pte_complex_user_mapping() {
     // 复杂用户映射：用户模式 + 只读数据 + 可执行代码
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            false,  // write (只读)
-            true,   // user_execute
-            true,   // user_access
-            false,  // privilege_execute
-            1,      // normal cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            false, // write (只读)
+            true,  // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00d00000000usize.into(),
         1,
         "ComplexUserMapping",
-        true,   // readable
-        false,  // writable
-        true,   // user_executable
-        true,   // user_accessible
-        false,  // privilege_execute
-        1,      // normal cache
-        false,  // not huge
+        true,  // readable
+        false, // writable
+        true,  // user_executable
+        true,  // user_accessible
+        false, // privilege_execute
+        1,     // normal cache
+        false, // not huge
     );
 }
 
@@ -861,25 +875,291 @@ fn test_pte_complex_kernel_mapping() {
     // 复杂内核映射：内核模式 + 读写 + 特权执行 + 设备缓存
     test_high_with_flags::<T4kL4, Fram4k>(
         PteImpl::new_with_flags(
-            true,   // read
-            true,   // write
-            false,  // user_execute
-            false,  // user_access
-            true,   // privilege_execute
-            2,      // device cache
-            true,   // valid
-            false,  // not block
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            2,     // device cache
+            true,  // valid
+            false, // not block
         ),
         Fram4k,
         0x0000f00e00000000usize.into(),
         1,
         "ComplexKernelMapping",
-        true,   // readable
-        true,   // writable
-        false,  // user_executable
-        false,  // user_accessible
-        true,   // privilege_execute
-        2,      // device cache
-        false,  // not huge
+        true,  // readable
+        true,  // writable
+        false, // user_executable
+        false, // user_accessible
+        true,  // privilege_execute
+        2,     // device cache
+        false, // not huge
     );
+}
+
+// ===== 释放功能测试 =====
+
+#[test]
+fn test_frame_recursive_deallocate() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let allocator = Fram4k;
+
+    // 创建一个根帧
+    let mut root_frame = Frame::<T4kL4, Fram4k>::new(allocator).unwrap();
+
+    // 创建几个子帧并设置PTE
+    let child1_paddr = allocator.alloc_frame().unwrap();
+    let child2_paddr = allocator.alloc_frame().unwrap();
+
+    {
+        let entries = root_frame.as_slice_mut();
+        // 设置有效的子页表项
+        entries[0] = PteImpl::kernel_mode();
+        entries[0].set_paddr(child1_paddr);
+        entries[0].set_valid(true);
+
+        entries[1] = PteImpl::kernel_mode();
+        entries[1].set_paddr(child2_paddr);
+        entries[1].set_valid(true);
+
+        // 设置一个大页项（不应该被递归释放）
+        entries[2] = PteImpl::device_memory();
+        entries[2].set_paddr(allocator.alloc_frame().unwrap());
+        entries[2].set_valid(true);
+        entries[2].set_is_huge(true);
+    }
+
+    // 验证初始状态
+    let entries_before = root_frame.as_slice();
+    assert!(entries_before[0].valid() && !entries_before[0].is_huge());
+    assert!(entries_before[1].valid() && !entries_before[1].is_huge());
+    assert!(entries_before[2].valid() && entries_before[2].is_huge());
+
+    // 释放子帧
+    root_frame.deallocate_children();
+
+    // 验证子页表项已被设为invalid，但大页项保持不变
+    let entries_after = root_frame.as_slice();
+    assert!(!entries_after[0].valid(), "子页表项1应该被设为invalid");
+    assert!(!entries_after[1].valid(), "子页表项2应该被设为invalid");
+    assert!(entries_after[2].valid(), "大页项应该保持有效");
+
+    // 手动释放剩余的大页帧
+    if entries_after[2].valid() {
+        allocator.dealloc_frame(entries_after[2].paddr());
+    }
+
+    // 释放根帧
+    allocator.dealloc_frame(root_frame.paddr);
+
+    println!("✓ Frame递归释放测试通过");
+}
+
+#[test]
+fn test_page_table_destroy() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let allocator = Fram4k;
+
+    // 创建页表
+    let mut page_table = PageTable::<T4kL4, Fram4k>::new(allocator).unwrap();
+    let root_paddr_before = page_table.root_paddr();
+
+    println!("页表创建成功，根地址: {:#x}", root_paddr_before.raw());
+
+    // 先测试空的页表销毁
+    let empty_page_table = PageTable::<T4kL4, Fram4k>::new(allocator).unwrap();
+    println!("测试空页表销毁...");
+    empty_page_table.destroy();
+    println!("✓ 空页表销毁成功");
+
+    // 添加一些映射来创建子页表
+    let config = MapConfig {
+        vaddr: 0x0000_2000_0000usize.into(),
+        paddr: allocator.alloc_frame().unwrap(),
+        size: 0x1000, // 4KB，简单测试
+        pte: PteImpl::user_mode(),
+        allow_huge: false,
+        flush: false,
+    };
+
+    println!("开始创建映射...");
+    match page_table.map(&config) {
+        Ok(()) => println!("映射创建成功"),
+        Err(e) => {
+            println!("映射创建失败: {:?}", e);
+            return;
+        }
+    }
+
+    // 验证页表有内容
+    let valid_entries: usize = page_table.walk_valid().count();
+    println!("有效映射数量: {}", valid_entries);
+    assert!(valid_entries > 0, "页表应该有有效的映射");
+
+    // 销毁页表（这会释放所有帧）
+    println!("开始销毁页表...");
+    page_table.destroy();
+
+    println!("✓ PageTable销毁测试通过");
+}
+
+#[test]
+fn test_deallocate_after_mapping() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let allocator = Fram4k;
+
+    // 创建页表并进行映射
+    let mut page_table = PageTable::<T4kL3, Fram4k>::new(allocator).unwrap();
+
+    // 创建多个映射
+    let configs = vec![
+        MapConfig {
+            vaddr: 0x1000_0000usize.into(),
+            paddr: allocator.alloc_frame().unwrap(),
+            size: 0x1000, // 4KB
+            pte: PteImpl::user_mode(),
+            allow_huge: false,
+            flush: false,
+        },
+        MapConfig {
+            vaddr: 0x2000_0000usize.into(),
+            paddr: allocator.alloc_frame().unwrap(),
+            size: 0x1000, // 4KB
+            pte: PteImpl::kernel_mode(),
+            allow_huge: false,
+            flush: false,
+        },
+    ];
+
+    for config in &configs {
+        page_table.map(config).unwrap();
+    }
+
+    // 验证映射成功
+    let valid_entries: usize = page_table.walk_valid().count();
+    assert_eq!(valid_entries, 2, "应该有2个有效映射");
+
+    println!("映射创建完成，开始释放...");
+
+    // 使用deallocate方法释放整个页表
+    page_table.deallocate();
+
+    println!("✓ 映射后释放测试通过");
+}
+
+#[test]
+fn test_single_entry_deallocate() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let allocator = Fram4k;
+
+    // 创建一个帧并添加子页表项
+    let mut root_frame = Frame::<T4kL3, Fram4k>::new(allocator).unwrap();
+
+    // 添加一个有效的子页表项
+    let child_frame = Frame::<T4kL3, Fram4k>::new(allocator).unwrap();
+    {
+        let entries = root_frame.as_slice_mut();
+        entries[5] = PteImpl::kernel_mode();
+        entries[5].set_paddr(child_frame.paddr);
+        entries[5].set_valid(true);
+    }
+
+    // 验证初始状态
+    let entries_before = root_frame.as_slice();
+    assert!(entries_before[5].valid());
+
+    // 测试单个条目释放
+    let deallocated = root_frame.dealloc_entry_recursive(5);
+    assert!(deallocated, "应该成功释放指定的条目");
+
+    // 验证条目已被设为invalid
+    let entries_after = root_frame.as_slice();
+    assert!(!entries_after[5].valid(), "被释放的条目应该为invalid");
+
+    // 测试释放不存在的条目
+    let not_deallocated = root_frame.dealloc_entry_recursive(10);
+    assert!(!not_deallocated, "不应该释放不存在的条目");
+
+    // 测试释放无效条目
+    let not_deallocated2 = root_frame.dealloc_entry_recursive(0);
+    assert!(!not_deallocated2, "不应该释放无效条目");
+
+    // 释放根帧
+    allocator.dealloc_frame(root_frame.paddr);
+
+    println!("✓ 单个条目释放测试通过");
+}
+
+#[test]
+fn test_deallocate_edge_cases() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    let allocator = Fram4k;
+
+    // 测试空帧的释放
+    {
+        let mut empty_frame = Frame::<T4kL4, Fram4k>::new(allocator).unwrap();
+        empty_frame.deallocate_children(); // 应该安全执行，不崩溃
+        allocator.dealloc_frame(empty_frame.paddr);
+    }
+
+    // 测试只有大页的帧释放
+    {
+        let mut huge_frame = Frame::<T4kL4, Fram4k>::new(allocator).unwrap();
+        let entries = huge_frame.as_slice_mut();
+
+        // 只设置大页项
+        entries[0] = PteImpl::device_memory();
+        entries[0].set_paddr(allocator.alloc_frame().unwrap());
+        entries[0].set_valid(true);
+        entries[0].set_is_huge(true);
+
+        // 释放子帧应该只释放子页表，不影响大页
+        huge_frame.deallocate_children();
+
+        // 大页项应该保持有效
+        let entries_after = huge_frame.as_slice();
+        assert!(entries_after[0].valid() && entries_after[0].is_huge());
+
+        // 手动清理
+        allocator.dealloc_frame(entries_after[0].paddr());
+        allocator.dealloc_frame(huge_frame.paddr);
+    }
+
+    // 测试deallocate_range的边界情况
+    {
+        let mut page_table = PageTable::<T4kL4, Fram4k>::new(allocator).unwrap();
+
+        // 测试无效范围
+        let result = page_table.deallocate_range(
+            0x1000_0000usize.into(),
+            0x0800_0000usize.into(), // 结束地址小于开始地址
+        );
+        assert!(result.is_err(), "应该返回无效范围错误");
+
+        // 释放页表
+        page_table.deallocate();
+    }
+
+    println!("✓ 边界情况测试通过");
 }

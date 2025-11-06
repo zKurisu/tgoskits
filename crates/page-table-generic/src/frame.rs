@@ -128,6 +128,85 @@ where
         let entry_size = Self::level_size(level);
         base_vaddr + index * entry_size
     }
+
+    /// 递归释放当前帧及所有子帧
+    ///
+    /// 此方法会：
+    /// 1. 递归释放所有有效的子页表帧
+    /// 2. 释放当前帧
+    /// 3. 在释放前将所有相关的PTE设为invalid
+    ///
+    /// # Safety
+    /// 调用者必须确保：
+    /// - 没有其他代码在访问这些页表
+    /// - 没有CPU正在使用这些页表进行地址翻译
+    pub fn deallocate_recursive(mut self) {
+        // 先递归释放所有子帧
+        self.deallocate_children();
+
+        // 再释放当前帧
+        self.allocator.dealloc_frame(self.paddr);
+    }
+
+    /// 只释放子帧，保留当前帧
+    ///
+    /// 遍历当前帧中的所有页表项，递归释放有效的子页表帧
+    /// 在释放前将指向子页表的PTE设为invalid
+    pub fn deallocate_children(&mut self) {
+        // 反向遍历以避免索引变化问题
+        for i in (0..Self::LEN).rev() {
+            // 先获取当前PTE的状态
+            let entry_info = {
+                let entries = self.as_slice();
+                if i < entries.len() {
+                    let entry = &entries[i];
+                    (entry.valid(), entry.is_huge(), entry.paddr())
+                } else {
+                    (false, false, crate::PhysAddr::new(0))
+                }
+            };
+
+            let (is_valid, is_huge, paddr) = entry_info;
+
+            // 检查是否是有效的子页表项（非叶子级别）
+            if is_valid && !is_huge {
+                // 递归释放子帧
+                let child_frame = Frame::<T, A>::from_paddr(paddr, self.allocator);
+                child_frame.deallocate_recursive();
+
+                // 将当前PTE设为invalid
+                let entries_mut = self.as_slice_mut();
+                entries_mut[i].set_valid(false);
+            }
+        }
+    }
+
+    /// 递归释放指定的单个页表项
+    ///
+    /// 如果该PTE指向有效的子页表，则递归释放该子页表及其所有子帧
+    /// 在释放前将PTE设为invalid
+    pub fn dealloc_entry_recursive(&mut self, index: usize) -> bool {
+        if index >= Self::LEN {
+            return false;
+        }
+
+        let entries = self.as_slice();
+        let entry = &entries[index];
+
+        if entry.valid() && !entry.is_huge() {
+            // 递归释放子帧
+            let child_frame = Frame::<T, A>::from_pte(entry, self.allocator);
+            child_frame.deallocate_recursive();
+
+            // 将当前PTE设为invalid
+            let entries_mut = self.as_slice_mut();
+            entries_mut[index].set_valid(false);
+
+            true
+        } else {
+            false
+        }
+    }
 }
 
 const fn cal_index_bits<T: TableGeneric>() -> usize {

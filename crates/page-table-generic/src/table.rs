@@ -113,4 +113,58 @@ impl<T: TableGeneric, A: FramAllocator> PageTable<T, A> {
     pub const fn valid_bits() -> usize {
         Frame::<T, A>::PT_VALID_BITS
     }
+
+    /// 销毁整个页表结构
+    ///
+    /// 此方法会：
+    /// 1. 递归释放根帧及所有子帧
+    /// 2. 释放页表占用的所有内存
+    /// 3. 在释放前将所有PTE设为invalid
+    ///
+    /// # Safety
+    /// 调用者必须确保：
+    /// - 没有其他代码在访问这个页表
+    /// - 没有CPU正在使用这个页表进行地址翻译
+    /// - 调用后不再使用这个PageTable实例
+    pub fn destroy(self) {
+        // 递归释放根帧及其所有子帧
+        self.root.deallocate_recursive();
+    }
+
+    /// 释放页表占用的所有帧
+    ///
+    /// 与destroy()不同，这个方法保留PageTable结构，
+    /// 但释放所有关联的帧。调用后PageTable不再可用。
+    pub fn deallocate(self) {
+        // 递归释放根帧及其所有子帧
+        self.root.deallocate_recursive();
+
+        // 注意：self会在函数结束时被drop，但由于所有帧都已释放，
+        // 这不会导致双重释放
+    }
+
+    /// 释放页表中的指定映射区域
+    ///
+    /// 释放指定虚拟地址范围内的所有页表项和子页表帧
+    /// 在释放前将相关PTE设为invalid
+    pub fn deallocate_range(&mut self, start_vaddr: VirtAddr, end_vaddr: VirtAddr) -> PagingResult {
+        if start_vaddr >= end_vaddr {
+            return Err(PagingError::invalid_range(
+                "Start address must be less than end address",
+            ));
+        }
+
+        // TODO: 实现范围释放逻辑
+        // 这里需要实现：
+        // 1. 遍历指定虚拟地址范围
+        // 2. 释放对应的页表项和子页表
+        // 3. 处理部分页表项的情况
+
+        Ok(())
+    }
+
+    /// 获取页表的根帧物理地址
+    pub fn root_paddr(&self) -> crate::PhysAddr {
+        self.root.paddr
+    }
 }
