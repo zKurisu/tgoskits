@@ -281,7 +281,7 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "758c929b48fa62de488915053c18303b94e9257859468aaf26ff6dee3e1be8bd"
 dependencies = [
- "heapless",
+ "heapless 0.9.1",
  "log",
  "thiserror",
 ]
@@ -360,6 +360,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47d60b12902ba28e2730cd37e95b8c9223af2808df9e902d4df49588d1470606"
 dependencies = [
  "byteorder",
+]
+
+[[package]]
+name = "heapless"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bfb9eb618601c89945a70e254898da93b13be0388091d42117462b265bb3fad"
+dependencies = [
+ "hash32",
+ "stable_deref_trait",
 ]
 
 [[package]]
@@ -503,6 +513,7 @@ version = "0.7.0"
 dependencies = [
  "bitflags 2.10.0",
  "env_logger",
+ "heapless 0.8.0",
  "log",
  "num-align",
  "thiserror",
@@ -645,7 +656,7 @@ checksum = "6668610226177053d66d9d3e55436cfa44f6428a5b755b9d7593288b738e3f12"
 dependencies = [
  "bitflags 2.10.0",
  "futures",
- "heapless",
+ "heapless 0.9.1",
  "rdif-base",
  "spin 0.10.0",
  "thiserror",
@@ -740,7 +751,7 @@ dependencies = [
  "bitflags 2.10.0",
  "dma-api",
  "enum_dispatch",
- "heapless",
+ "heapless 0.9.1",
  "log",
  "mbarrier",
  "rdif-serial",
@@ -759,7 +770,7 @@ dependencies = [
  "arrayvec",
  "buddy_system_allocator",
  "fdt-parser",
- "heapless",
+ "heapless 0.9.1",
  "log",
  "memory_addr",
  "numeric-enum-macro",
