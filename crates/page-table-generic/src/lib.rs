@@ -3,10 +3,14 @@
 use core::fmt::Debug;
 
 mod def;
+mod map;
 mod table;
+mod walk;
 
 pub use def::*;
+pub use map::*;
 pub use table::*;
+pub use walk::*;
 
 pub type PagingResult<T = ()> = Result<T, PagingError>;
 
