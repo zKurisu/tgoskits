@@ -21,8 +21,8 @@ fn test_deallocate() {
         MapConfig {
             vaddr: 0x1000_0000usize.into(),
             paddr: 0x1000_0000usize.into(),
-            // size: GB + 2 * MB + 0x1000 * 3,
-            size: GB,
+            size: GB + 2 * MB + 0x1000 * 3,
+            // size: GB,
             pte: PteImpl::user_mode(),
             allow_huge: true,
             flush: false,

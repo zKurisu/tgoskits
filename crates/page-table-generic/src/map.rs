@@ -131,7 +131,9 @@ where
                 new_frame
             };
 
-            let next_level_vaddr = vaddr + level_size.min(config.end_vaddr - vaddr);
+                      // 计算当前页表条目对应的范围结束地址
+            let current_entry_end = ((vaddr.raw() / level_size) + 1) * level_size;
+            let next_level_vaddr = VirtAddr::new(current_entry_end.min(config.end_vaddr.raw()));
             let mut child_frame = child_frame;
             let child_config = MapRecursiveConfig {
                 start_vaddr: vaddr,
