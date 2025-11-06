@@ -1,5 +1,5 @@
 use crate::{
-    FramAllocator, PagingError, PagingResult, TableGeneric, VirtAddr,
+    FramAllocator, PageTableEntry, PagingError, PagingResult, TableGeneric, VirtAddr,
     map::{Frame, MapConfig, MapRecursiveConfig},
     walk::{PageTableWalker, WalkConfig},
 };
@@ -58,19 +58,25 @@ impl<T: TableGeneric, A: FramAllocator> PageTable<T, A> {
     }
 
     /// 创建页表遍历迭代器
-    pub fn walk(&self, config: WalkConfig) -> PageTableWalker<T, A> {
+    pub fn walk_all(&self, config: WalkConfig) -> PageTableWalker<T, A> {
         PageTableWalker::new(self, config)
     }
 
-    /// 遍历所有有效页表项
-    pub fn walk_valid(&self) -> PageTableWalker<T, A> {
+    pub fn walk(
+        &self,
+        config: WalkConfig,
+    ) -> impl Iterator<Item = crate::walk::PteInfo<T::P>> + '_ {
+        PageTableWalker::new(self, config).filter(|p| p.pte.valid())
+    }
+
+    /// 遍历所有有效的最终映射页表项（过滤掉无效项和中间级别的页表指针）
+    pub fn walk_valid(&self) -> impl Iterator<Item = crate::walk::PteInfo<T::P>> + '_ {
         let config = WalkConfig {
             start_vaddr: VirtAddr::new(0),
             end_vaddr: VirtAddr::new(usize::MAX),
-            visit_invalid: false,
-            visit_indirect: false,
         };
         self.walk(config)
+            .filter(|p| p.pte.valid() && p.is_final_mapping)
     }
 
     /// 验证映射配置的有效性

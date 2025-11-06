@@ -226,9 +226,13 @@ where
         if level == 0 || level > T::LEVEL {
             panic!("Invalid level: {} (valid: 1..{})", level, T::LEVEL);
         }
-        // 计算当前级别的位移：页面大小的对数 + (总级别 - 当前级别) * 索引位数
+        // 计算当前级别的位移
+        // Level 1 (叶子): shift = page_shift + 0 * INDEX_BITS (取bits [20:12])
+        // Level 2: shift = page_shift + 1 * INDEX_BITS (取bits [29:21])
+        // Level 3: shift = page_shift + 2 * INDEX_BITS (取bits [38:30])
+        // Level 4 (根): shift = page_shift + 3 * INDEX_BITS (取bits [47:39])
         let page_shift = T::PAGE_SIZE.trailing_zeros() as usize;
-        let shift = page_shift + (T::LEVEL - level) * T::INDEX_BITS;
+        let shift = page_shift + (level - 1) * T::INDEX_BITS;
         (vaddr.raw() >> shift) & Self::INDEX_MASK
     }
 }

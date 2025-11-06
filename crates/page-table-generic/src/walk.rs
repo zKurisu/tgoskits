@@ -13,6 +13,8 @@ pub struct PteInfo<P: PageTableEntry> {
     /// 此页表项对应的虚拟地址
     pub vaddr: VirtAddr,
     /// 此页表项是否为最终映射（叶子级别或大页）
+    /// - true: 有效的叶子级别映射或大页映射
+    /// - false: 无效项或中间级别的页表指针
     pub is_final_mapping: bool,
     /// 原页表项对象
     pub pte: P,
@@ -25,10 +27,6 @@ pub struct WalkConfig {
     pub start_vaddr: VirtAddr,
     /// 结束虚拟地址（不包含）
     pub end_vaddr: VirtAddr,
-    /// 是否访问无效的页表项
-    pub visit_invalid: bool,
-    /// 是否访问间接页表项（中间级别的有效页表项）
-    pub visit_indirect: bool,
 }
 
 /// 页表遍历迭代器
@@ -76,30 +74,20 @@ where
 
     /// 重建完整的虚拟地址
     fn reconstruct_vaddr(index: usize, level: usize, base_vaddr: VirtAddr) -> VirtAddr {
-        // 对于页表遍历，我们需要重建完整的虚拟地址
-        // 使用更精确的计算方法
-        if level == 1 {
-            // 叶子级别，每个条目对应一个页面
-            base_vaddr + index * T::PAGE_SIZE
-        } else {
-            // 更高级别，每个条目对应一个子表
-            let entry_size = Self::level_size(level);
-            base_vaddr + index * entry_size
-        }
+        // 每个级别的条目覆盖的地址空间大小
+        let entry_size = Self::level_size(level);
+        base_vaddr + index * entry_size
     }
 
     /// 计算指定级别对应的映射大小（通用版本）
     fn level_size(level: usize) -> usize {
-        if level == T::LEVEL {
-            // 最后一级是页级别
-            T::PAGE_SIZE
-        } else if level > T::MAX_BLOCK_LEVEL {
-            // 不支持大页的级别
-            T::PAGE_SIZE
-        } else {
-            // 大页级别：页面大小 * 2^(索引位数 * (总级别 - 当前级别))
-            T::PAGE_SIZE << (T::INDEX_BITS * (T::LEVEL - level))
-        }
+        // 每个级别的条目覆盖的地址空间大小
+        // Level N: PAGE_SIZE << (INDEX_BITS * (N - 1))
+        // Level 4: PAGE_SIZE << (INDEX_BITS * 3) = 512GB
+        // Level 3: PAGE_SIZE << (INDEX_BITS * 2) = 1GB
+        // Level 2: PAGE_SIZE << (INDEX_BITS * 1) = 2MB
+        // Level 1: PAGE_SIZE << (INDEX_BITS * 0) = 4KB
+        T::PAGE_SIZE << (T::INDEX_BITS * (level - 1))
     }
 }
 
@@ -133,7 +121,7 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
         walker
     }
 
-    /// 查找下一个有效的页表项
+    /// 查找下一个页表项（遍历所有项）
     fn find_next_entry(&mut self) -> Option<PteInfo<T::P>> {
         loop {
             if self.finished {
@@ -172,12 +160,14 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
                 return None;
             }
 
-            // 根据配置决定是否处理无效项
-            if !pte.valid() && !self.config.visit_invalid {
-                continue;
-            }
+            // 判断是否为最终映射
+            // - 无效项：不是最终映射
+            // - 有效且是大页：是最终映射
+            // - 有效且在叶子级别（level == 1）：是最终映射
+            // - 有效但在中间级别且不是大页：不是最终映射（页表指针）
+            let is_final_mapping = pte.valid() && (pte.is_huge() || state.level == 1);
 
-            // 如果是有效的子页表项，需要深入下一级
+            // 如果是有效的子页表项（中间级别的页表指针），需要深入下一级
             if pte.valid() && !pte.is_huge() && state.level > 1 {
                 let child_frame = Frame {
                     paddr: pte.paddr(),
@@ -188,7 +178,7 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
                 // 计算子页表的基地址：当前条目的虚拟地址就是子页表覆盖的地址范围起点
                 let child_base_vaddr = current_vaddr;
 
-                // 创建子页表状态并压入栈中，优先处理子页表
+                // 创建子页表状态并压入栈中
                 let child_state = WalkState {
                     frame: child_frame,
                     level: state.level - 1,
@@ -196,27 +186,26 @@ impl<'a, T: TableGeneric, A: FramAllocator> PageTableWalker<'a, T, A> {
                     base_vaddr: child_base_vaddr,
                 };
 
-                // 如果配置了访问间接页表项，则先返回当前中间级别的页表项
-                // 但仍然将子页表压入栈中以便后续遍历
-                if self.config.visit_indirect {
-                    // 先保存需要返回的信息，避免借用冲突
-                    let level = state.level;
-                    let vaddr = current_vaddr;
+                // 先返回当前中间级别的页表项，然后压入子页表状态
+                let level = state.level;
+                let vaddr = current_vaddr;
 
-                    // 先压入子页表状态，然后返回当前项
-                    self.stack.push(child_state).ok();
-                    return Some(PteInfo { level, vaddr, pte });
-                }
+                self.stack.push(child_state).ok();
 
-                self.stack.push(child_state).ok(); // 栈容量足够时一定成功
-                continue;
+                return Some(PteInfo {
+                    level,
+                    vaddr,
+                    pte,
+                    is_final_mapping,
+                });
             }
 
-            // 返回找到的页表项信息
+            // 返回页表项信息（无效项、叶子级别或大页）
             return Some(PteInfo {
                 level: state.level,
                 vaddr: current_vaddr,
                 pte,
+                is_final_mapping,
             });
         }
     }
