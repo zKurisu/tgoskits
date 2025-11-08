@@ -7,5 +7,6 @@
     "rust-targets.targets": [
         "aarch64-unknown-none-softfloat",
         "loongarch64-unknown-none-softfloat",
+        "system"
     ],
 }

@@ -518,6 +518,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
+name = "os-helper"
+version = "0.1.0"
+dependencies = [
+ "heapless 0.9.1",
+]
+
+[[package]]
 name = "page-table-generic"
 version = "0.7.0"
 dependencies = [
@@ -753,9 +760,9 @@ dependencies = [
 
 [[package]]
 name = "some-serial"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7112035303d2de9adc02d664d36ad6359bb41a66303265ca05fc7f9d8e2d86e2"
+checksum = "20ad586f110c679176859fe111f2c3dd176b95bbe731e9b4c3d1c6382cb301c9"
 dependencies = [
  "bare-test-macros",
  "bitflags 2.10.0",
@@ -786,6 +793,7 @@ dependencies = [
  "log",
  "memory_addr",
  "numeric-enum-macro",
+ "os-helper",
  "prettyplease",
  "quote",
  "rgb",

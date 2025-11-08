@@ -1,0 +1,12 @@
+[package]
+name = "os-helper"
+version = "0.1.0"
+license.workspace = true
+categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+repository.workspace = true
+
+[dependencies]
+heapless = "0.9"

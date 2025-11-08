@@ -37,6 +37,8 @@ pub fn el_entry() -> ! {
     if let Some(cmdline) = crate::cmdline::cmdline() {
         println!("{cmdline}");
     }
+
+    crate::fdt::setup_memory_map();
     println!("Hello, Somehal on AArch64!");
 
     loop {}

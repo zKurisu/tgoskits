@@ -1,19 +1,7 @@
 use core::{cell::UnsafeCell, ops::Deref};
 
-#[derive(Debug, Clone, Copy)]
-pub struct MemoryDescriptor {
-    pub physical_start: usize,
-    pub size_in_bytes: usize,
-    pub memory_type: MemoryType,
-}
+pub use os_helper::memory::{MemoryDescriptor, MemoryType};
 
-#[derive(Debug, Clone, Copy)]
-pub enum MemoryType {
-    Usable,
-    Reserved,
-}
-
-#[unsafe(link_section = ".data")]
 static MEMORY_MAP: StaticCell<heapless::Vec<MemoryDescriptor, 64>> =
     StaticCell::new(Some(heapless::Vec::new()));
 

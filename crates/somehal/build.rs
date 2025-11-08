@@ -1,6 +1,10 @@
 use std::{fs, io::Write, path::PathBuf};
 
 fn main() {
+    if !std::env::var("TARGET").unwrap().contains("none") {
+        return;
+    }
+
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     println!("cargo:rustc-link-search={}", out_dir.display());
 
@@ -35,7 +39,7 @@ impl From<&str> for Arch {
         match s {
             "loongarch64" => Arch::Loongarch64,
             "aarch64" => Arch::Arch64,
-            _ => panic!("Unsupported architecture: {s}"),
+            _ => todo!(),
         }
     }
 }
