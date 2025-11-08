@@ -9,6 +9,17 @@ pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) -> ! {
         asm_sym_addr!(x8, "{fdt}"),
         "str  x0, [x8]",
 
+        // Clear BSS section from __bss_start to __bss_stop
+        asm_sym_addr!(x0, "__bss_start"),
+        asm_sym_addr!(x1, "__bss_stop"),
+        "mov x2, #0",        // Zero value to store
+        "1:",
+        "cmp x0, x1",        // Compare current address with end
+        "b.eq 2f",           // If reached end, exit loop
+        "str x2, [x0], #8",  // Store zero and advance by 8 bytes
+        "b 1b",              // Loop back
+        "2:",
+
         asm_sym_addr!(x8, "__cpu0_stack_top"),
         "mov sp, x8",
 

@@ -2,8 +2,8 @@ args = [
   "-nographic",
   "-cpu",
   "cortex-a53",
-#   "-machine",
-#   "virt,gic-version=3,virtualization=on"
+  "-machine",
+  "virt,gic-version=3,virtualization=on"
 ]
 fail_regex = []
 success_regex = []

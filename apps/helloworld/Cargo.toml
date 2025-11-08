@@ -6,4 +6,5 @@ version = "0.1.0"
 
 [dependencies]
 log = {workspace = true}
+somehal = {workspace = true}
 sparreal-rt = {workspace = true, features = []}

@@ -11,6 +11,9 @@ pub fn switch_to_elx() {
     SP_EL0.set(0);
     let current_el = CurrentEL.read(CurrentEL::EL);
     if current_el >= 2 {
+        let el_entry = sym_addr!(el_entry);
+        let sp = sym_addr!(__cpu0_stack_top);
+
         if current_el == 3 {
             // Set EL2 to 64bit and enable the HVC instruction.
             SCR_EL3.write(
@@ -24,9 +27,10 @@ pub fn switch_to_elx() {
                     + SPSR_EL3::I::Masked
                     + SPSR_EL3::F::Masked,
             );
+            let switch = sym_addr!(switch_to_elx);
 
-            ELR_EL3.set(switch_to_elx as usize as _);
-            SP_EL2.set(__cpu0_stack_top as usize as _);
+            ELR_EL3.set(switch as _);
+            SP_EL2.set(sp as _);
             barrier::isb(barrier::SY);
             eret();
         }
@@ -44,8 +48,8 @@ pub fn switch_to_elx() {
                 + SPSR_EL2::F::Masked,
         );
 
-        ELR_EL2.set(el_entry as usize as _);
-        SP_EL1.set(__cpu0_stack_top as usize as _);
+        ELR_EL2.set(el_entry as _);
+        SP_EL1.set(sp as _);
         barrier::isb(barrier::SY);
         eret();
     }
