@@ -1,13 +1,20 @@
 use heapless::Vec;
 
-use crate::mem::{MemoryDescriptor, MemoryType, page_size};
+use crate::{
+    kernel_code,
+    mem::{MemoryDescriptor, MemoryType, page_size},
+};
+use os_helper::memory::merge_memories;
 
 pub fn setup_memory_map() -> Option<()> {
     let fdt = super::fdt_base()?;
-    let mut ram = Vec::<MemoryDescriptor, 32>::new();
 
-    for memory in fdt.memory().flatten() {
-        for region in memory.regions().flatten() {
+    let mut ram = Vec::<MemoryDescriptor, 32>::new();
+    for memory in fdt.memory() {
+        let memory = memory.ok()?;
+        for region in memory.regions() {
+            let region = region.ok()?;
+
             if ram
                 .push(MemoryDescriptor {
                     physical_start: region.address as usize,
@@ -22,6 +29,11 @@ pub fn setup_memory_map() -> Option<()> {
     }
 
     let mut rsv = Vec::<MemoryDescriptor, 32>::new();
+    let _ = rsv.push(MemoryDescriptor {
+        physical_start: kernel_code().as_ptr() as usize,
+        size_in_bytes: kernel_code().len(),
+        memory_type: MemoryType::Reserved,
+    });
 
     for reserved in fdt.memory_reservation_blocks() {
         if rsv

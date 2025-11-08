@@ -25,9 +25,14 @@ mod elf;
 mod mem;
 
 trait ArchTrait {
+    fn kernel_code() -> &'static [u8];
     fn post_allocator();
 }
 
 pub fn post_allocator() {
     // arch::Arch::post_allocator();
+}
+
+fn kernel_code() -> &'static [u8] {
+    arch::Arch::kernel_code()
 }

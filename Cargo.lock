@@ -286,9 +286,9 @@ dependencies = [
 
 [[package]]
 name = "fdt-parser"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "758c929b48fa62de488915053c18303b94e9257859468aaf26ff6dee3e1be8bd"
+checksum = "ac31c65bf27abc963061bd20741543f422e413f7cce0145fff1750bb73dadabe"
 dependencies = [
  "heapless 0.9.1",
  "log",

@@ -14,3 +14,21 @@ mod head;
 mod relocate;
 
 use elx::*;
+
+use crate::ArchTrait;
+
+pub struct Arch;
+
+impl ArchTrait for Arch {
+    fn post_allocator() {}
+
+    fn kernel_code() -> &'static [u8] {
+        unsafe extern "C" {
+            fn _head();
+            fn __kernel_code_end();
+        }
+        let start = sym_addr!(_head);
+        let end = sym_addr!(__kernel_code_end);
+        unsafe { core::slice::from_raw_parts(start as *const u8, end - start) }
+    }
+}

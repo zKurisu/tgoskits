@@ -32,8 +32,14 @@ fn collect_boundaries(
         let _ = boundaries.push(region.physical_start + region.size_in_bytes);
     }
 
-    // 排序并去重
-    boundaries.sort();
+    // 手动排序（heapless::Vec在no_std环境下没有sort方法）
+    for i in 0..boundaries.len() {
+        for j in i + 1..boundaries.len() {
+            if boundaries[i] > boundaries[j] {
+                boundaries.swap(i, j);
+            }
+        }
+    }
 
     // 手动去重（heapless::Vec没有dedup方法）
     let mut unique_boundaries = heapless::Vec::<usize, 64>::new();
@@ -99,7 +105,7 @@ fn align_reserved_regions(
 
         // 向后对齐end地址
         let end = reserved.physical_start + reserved.size_in_bytes;
-        let aligned_end = ((end + page_size - 1) / page_size) * page_size;
+        let aligned_end = end.div_ceil(page_size) * page_size;
 
         let aligned_size = aligned_end - aligned_start;
 
@@ -127,9 +133,15 @@ fn merge_consecutive_segments(segments: Vec<MemoryDescriptor, 64>) -> Vec<Memory
 
     let mut merged = Vec::<MemoryDescriptor, 64>::new();
 
-    // 按起始地址排序
+    // 按起始地址手动排序（heapless::Vec在no_std环境下没有sort方法）
     let mut sorted_segments = segments;
-    sorted_segments.sort_by_key(|desc| desc.physical_start);
+    for i in 0..sorted_segments.len() {
+        for j in i + 1..sorted_segments.len() {
+            if sorted_segments[i].physical_start > sorted_segments[j].physical_start {
+                sorted_segments.swap(i, j);
+            }
+        }
+    }
 
     let mut current = sorted_segments[0];
 
@@ -192,6 +204,8 @@ pub fn merge_memories(
 mod test {
     extern crate std;
     use super::*;
+    use std::println;
+    use std::vec;
     use std::vec::Vec as StdVec;
 
     #[test]
@@ -222,14 +236,14 @@ mod test {
             assert_eq!(result[0].size_in_bytes, 0x1000);
             assert_eq!(result[0].memory_type, MemoryType::Usable);
 
-            // 保留区间：0x2000-0x3000 (页面对齐后扩展为0x0-0x4000)
-            assert_eq!(result[1].physical_start, 0x0);
-            assert_eq!(result[1].size_in_bytes, 0x4000);
+            // 保留区间：0x2000-0x3000
+            assert_eq!(result[1].physical_start, 0x2000);
+            assert_eq!(result[1].size_in_bytes, 0x1000);
             assert_eq!(result[1].memory_type, MemoryType::Reserved);
 
-            // 第二个可用区间：0x4000-0x5000
-            assert_eq!(result[2].physical_start, 0x4000);
-            assert_eq!(result[2].size_in_bytes, 0x1000);
+            // 第二个可用区间：0x3000-0x5000
+            assert_eq!(result[2].physical_start, 0x3000);
+            assert_eq!(result[2].size_in_bytes, 0x2000);
             assert_eq!(result[2].memory_type, MemoryType::Usable);
         }
 
