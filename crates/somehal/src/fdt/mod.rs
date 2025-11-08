@@ -1,5 +1,9 @@
 use fdt_parser::base;
 
+mod earlycon;
+
+pub use earlycon::setup_earlycon;
+
 #[unsafe(link_section = ".data")]
 pub static FDT_ADDR: usize = 0;
 

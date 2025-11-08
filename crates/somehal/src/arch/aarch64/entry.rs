@@ -21,8 +21,9 @@ pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) -> ! {
 
 pub fn el_entry() -> ! {
     super::relocate::apply();
-    crate::fdt::set_cmdline();
-    crate::console::setup_earlycon();
+    crate::fdt::setup_earlycon();
+
+    println!("Hello, Somehal on AArch64!");
 
     loop {}
 }
