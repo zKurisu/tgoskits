@@ -1,6 +1,7 @@
 [system.Cargo]
 args = [
-  "-Z", "build-std=core,alloc"  
+    "-Z",
+    "build-std=core,alloc",
 ]
 features = []
 package = "helloworld"
@@ -8,3 +9,5 @@ post_build_cmds = []
 pre_build_cmds = []
 target = "aarch64-unknown-none-softfloat"
 to_bin = true
+
+[system.Cargo.env]

@@ -1,0 +1,1 @@
+ostool run -c build-config\aarch64.toml qemu -q .\apps\helloworld\qemu-aarch64.toml
