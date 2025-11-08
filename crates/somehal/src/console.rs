@@ -104,7 +104,6 @@ unsafe impl Sync for EarlyconRecieverCell {}
 
 pub fn set_earlycon_by_cmdline() -> Result<(), &'static str> {
     let config = crate::cmdline::earlycon().ok_or("No earlycon parameter found")?;
-
     match config.uart_type {
         "ns16550" => {
             match config.io_type {
@@ -118,7 +117,7 @@ pub fn set_earlycon_by_cmdline() -> Result<(), &'static str> {
                         return Err("io type not supported on this architecture");
                     }
                 }
-                _ => set_16550_mmio(&config),
+                _ => set_16550_mmio(&config)?,
             };
         }
         "pl011" => {

@@ -1,6 +1,8 @@
 #[unsafe(link_section = ".data")]
 static CMDLINE: [u8; 4096] = [0; 4096];
 
+const BUILDIN_CMDLINE: Option<&str> = option_env!("KERNEL_BUILTIN_CMDLINE");
+
 pub fn set_cmdline(cmdline: &str) {
     let bytes = cmdline.as_bytes();
     let len = bytes.len().min(CMDLINE.len() - 1);
@@ -10,9 +12,10 @@ pub fn set_cmdline(cmdline: &str) {
         (CMDLINE.as_ptr() as *mut u8).add(len).write(0);
     }
 }
+
 pub fn cmdline() -> Option<&'static str> {
     if CMDLINE[0] == 0 {
-        return None;
+        return BUILDIN_CMDLINE;
     }
     let len = CMDLINE
         .iter()
@@ -65,7 +68,7 @@ fn parse_earlycon_argument(val: &'static str) -> Option<EarlyconConfig> {
 
     // 规范化驱动名
     // 驱动名用原始 first（保持 'static 切片），若是同义词替换为固定字面量
-    let uart_type: &'static str = match first.to_ascii_lowercase().as_str() {
+    let uart_type: &'static str = match first {
         "uart" | "uart8250" | "8250" | "ns16550" | "ns16550a" => "ns16550",
         _ => first,
     };
