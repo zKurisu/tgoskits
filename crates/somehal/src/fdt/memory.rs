@@ -72,10 +72,7 @@ pub fn setup_memory_map() -> Option<()> {
     }
 
     for desc in crate::mem::get_memory_map() {
-        println!(
-            "Memory Region: Start = {:#x}, Size = {:#x}, Type = {:?}",
-            desc.physical_start, desc.size_in_bytes, desc.memory_type
-        );
+        pr_range!("Memory Region", desc.physical_start, desc.size_in_bytes, " Type: {:?}", desc.memory_type);
     }
 
     Some(())

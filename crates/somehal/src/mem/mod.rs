@@ -5,8 +5,6 @@ pub use os_helper::memory::{MemoryDescriptor, MemoryType};
 use crate::ArchTrait;
 
 pub(crate) mod ram;
-pub(crate) mod tmp_alloc;
-
 static MEMORY_MAP: StaticCell<heapless::Vec<MemoryDescriptor, 64>> =
     StaticCell::new(Some(heapless::Vec::new()));
 
@@ -15,8 +13,6 @@ pub const MB: usize = 1024 * 1024;
 pub(crate) fn early_init() {
     ram::init();
     crate::fdt::save_fdt();
-
-    tmp_alloc::init();
 }
 
 pub(crate) fn kernel_range() -> core::ops::Range<usize> {

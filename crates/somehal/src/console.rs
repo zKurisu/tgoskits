@@ -4,6 +4,8 @@ use some_serial::*;
 
 use crate::cmdline::EarlyconConfig;
 
+pub(crate) static mut DEBUG_BASE: usize = 0;
+
 pub fn _print(args: core::fmt::Arguments) {
     let _ = ConFmt {}.write_fmt(args);
 }
@@ -17,6 +19,28 @@ macro_rules! print {
 macro_rules! println {
     () => ($crate::print!("\r\n"));
     ($($arg:tt)*) => ($crate::console::_print(core::format_args!("{}{}", core::format_args!($($arg)*), "\r\n")));
+}
+
+macro_rules! pr_range {
+    ($name:expr, $b:expr, $s:expr) => {
+        $crate::println!(
+            "{:<20}: [0x{:0>16x}, 0x{:0>16x}) ({:>5} Mb)",
+            $name,
+            $b,
+            $b + $s,
+            ($s) / 1024 / 1024
+        );
+    };
+    ($name:expr, $b:expr, $s:expr, $($arg:tt)*) => {
+        $crate::println!(
+            "{:<20}: [0x{:0>16x}, 0x{:0>16x}) ({:>5} Mb) {}",
+            $name,
+            $b,
+            $b + $s,
+            ($s) / 1024 / 1024,
+            core::format_args!($($arg)*)
+        );
+    };
 }
 
 #[allow(dead_code)]
@@ -127,7 +151,9 @@ pub fn set_earlycon_by_cmdline() -> Result<(), &'static str> {
             return Err("unsupported earlycon uart type");
         }
     }
-
+    unsafe {
+        DEBUG_BASE = config.base_addr.unwrap_or(0);
+    }
     Ok(())
 }
 

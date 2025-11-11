@@ -781,6 +781,7 @@ dependencies = [
  "aml",
  "ansi_rgb",
  "arrayvec",
+ "bitflags 2.10.0",
  "buddy_system_allocator",
  "fdt-parser",
  "heapless 0.9.1",

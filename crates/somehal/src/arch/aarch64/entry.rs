@@ -38,9 +38,9 @@ pub fn el_entry() -> ! {
         println!("{cmdline}");
     }
 
-    crate::fdt::setup_memory_map();
-
     crate::mem::early_init();
+    crate::arch::paging::map_early();
+    // crate::fdt::setup_memory_map();
 
     println!("Hello, Somehal on AArch64!");
 

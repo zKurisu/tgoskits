@@ -2,6 +2,8 @@ use core::ptr::NonNull;
 
 use some_serial::*;
 
+use crate::console::DEBUG_BASE;
+
 pub fn setup_earlycon() -> Option<()> {
     let _ = super::set_cmdline();
 
@@ -34,13 +36,15 @@ fn set_by_stdout() -> Option<()> {
 
                 crate::console::set_earlycon_sender(tx);
                 crate::console::set_earlycon_reciever(rx);
-                return Some(());
+                break;
             }
             _ => {
                 continue;
             }
         }
     }
-
+    unsafe {
+        DEBUG_BASE = addr.as_ptr() as usize;
+    }
     Some(())
 }

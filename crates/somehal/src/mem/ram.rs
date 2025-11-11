@@ -1,8 +1,9 @@
 use core::{alloc::Layout, cell::UnsafeCell};
 
 use num_align::NumAlign;
+use page_table_generic::FrameAllocator;
 
-use crate::ArchTrait;
+use crate::{ArchTrait, mem::page_size};
 
 struct SimpleAllocator {
     start: usize,
@@ -49,6 +50,19 @@ impl Ram {
 
     pub fn alloc(&self, layout: Layout) -> Option<*mut u8> {
         Some(unsafe { (*RAM_ALLOC.0.get()).alloc(layout) })
+    }
+}
+
+impl FrameAllocator for Ram {
+    fn alloc_frame(&self) -> Option<page_table_generic::PhysAddr> {
+        self.alloc(unsafe { Layout::from_size_align_unchecked(page_size(), page_size()) })
+            .map(|ptr| (ptr as usize).into())
+    }
+
+    fn dealloc_frame(&self, _frame: page_table_generic::PhysAddr) {}
+
+    fn phys_to_virt(&self, paddr: page_table_generic::PhysAddr) -> *mut u8 {
+        paddr.raw() as *mut u8
     }
 }
 
