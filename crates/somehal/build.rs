@@ -66,6 +66,8 @@ impl Build {
     }
 
     fn prepare_aarch64(&mut self) {
+        println!("cargo::rustc-check-cfg=cfg(hard_float)");
+
         let ld_src = "src/arch/aarch64/link.ld";
 
         self.kernel_vaddr = 0xF000_0020_0000;
