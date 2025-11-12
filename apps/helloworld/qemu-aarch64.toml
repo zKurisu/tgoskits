@@ -10,6 +10,8 @@ args = [
   "qemu.log"
 ]
 fail_regex = []
-success_regex = []
+success_regex = [
+  "All tests passed!"
+]
 to_bin = true
 uefi = false

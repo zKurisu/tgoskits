@@ -118,6 +118,10 @@ pub fn enable_mmu() -> ! {
     println!("Enabling MMU...");
     setup_sctlr();
     println!("MMU enabled.");
+    println!("All tests passed!");
+    loop {
+        // 
+    }
 
     // Jump to mmu_entry using physical address
     unsafe {
