@@ -2,17 +2,33 @@ use core::{cell::UnsafeCell, ops::Deref};
 
 pub use os_helper::memory::{MemoryDescriptor, MemoryType};
 
-use crate::ArchTrait;
+use crate::{ArchTrait, consts::VMLINUX_LOAD_ADDRESS};
 
+pub(crate) mod address;
 pub(crate) mod ram;
+
 static MEMORY_MAP: StaticCell<heapless::Vec<MemoryDescriptor, 64>> =
     StaticCell::new(Some(heapless::Vec::new()));
+static mut KERNEL_VCODE_OFFSET: usize = 0;
 
 pub const MB: usize = 1024 * 1024;
 
 pub(crate) fn early_init() {
+    let load_at = crate::arch::Arch::kernel_code().as_ptr() as usize;
+    unsafe {
+        KERNEL_VCODE_OFFSET = VMLINUX_LOAD_ADDRESS - load_at;
+    }
+
+    println!(
+        "Kernel Load @{load_at:#x}, VAddr Offset {:#x}",
+        kernel_vcode_offset()
+    );
     ram::init();
     crate::fdt::save_fdt();
+}
+
+pub(crate) fn kernel_vcode_offset() -> usize {
+    unsafe { KERNEL_VCODE_OFFSET }
 }
 
 pub(crate) fn kernel_range() -> core::ops::Range<usize> {

@@ -301,6 +301,7 @@ pub fn set_table(addr: usize) {
 #[inline(always)]
 pub fn setup_sctlr() {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
+    flush_tlb(None);
     barrier::dsb(barrier::SY);
     barrier::isb(barrier::SY);
 }

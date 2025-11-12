@@ -16,12 +16,14 @@ fn main() {
 
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     let uspace = std::env::var("CARGO_FEATURE_USPACE").is_ok();
+    let hv = std::env::var("CARGO_FEATURE_HV").is_ok();
 
     let mut build = Build {
         arch: Arch::from(arch.as_str()),
         out_dir,
-        kernel_load_vaddr: 0x200000,
+        kernel_vaddr: 0x200000,
         uspace,
+        hv,
     };
 
     build.prepare();
@@ -48,8 +50,9 @@ impl From<&str> for Arch {
 struct Build {
     arch: Arch,
     out_dir: PathBuf,
-    kernel_load_vaddr: u64,
+    kernel_vaddr: u64,
     uspace: bool,
+    hv: bool,
 }
 
 impl Build {
@@ -65,12 +68,18 @@ impl Build {
     fn prepare_aarch64(&mut self) {
         let ld_src = "src/arch/aarch64/link.ld";
 
-        self.kernel_load_vaddr = 0x0;
+        self.kernel_vaddr = 0xF000_0020_0000;
+        if self.hv {
+            self.uspace = false;
+        }
+        if self.uspace {
+            self.kernel_vaddr += 0xFFFF_0000_0000_0000;
+        }
 
-        let kernel_load_vaddr = self.kernel_load_vaddr as usize;
+        let kernel_vaddr = self.kernel_vaddr as usize;
 
         let ld = include_str!("src/arch/aarch64/link.ld")
-            .replace("${kernel_load_vaddr}", &format!("{kernel_load_vaddr:#x}"));
+            .replace("${kernel_load_vaddr}", &format!("{kernel_vaddr:#x}"));
 
         println!("cargo:rerun-if-changed={ld_src}");
         if std::env::var("CARGO_FEATURE_EFI").is_ok() {
@@ -81,7 +90,7 @@ impl Build {
         fs::write(ld_dst, ld).unwrap();
 
         let defines = quote::quote! {
-            pub const VMLINUX_LOAD_ADDRESS: usize = #kernel_load_vaddr;
+            pub const VMLINUX_LOAD_ADDRESS: usize = #kernel_vaddr;
         };
         let syntax_tree = syn::parse2(defines).unwrap();
         let formatted = prettyplease::unparse(&syntax_tree);
@@ -92,9 +101,9 @@ impl Build {
     fn prepare_loongarch64(&mut self) {
         let ld_src = "src/arch/loongarch64/link.ld";
 
-        self.kernel_load_vaddr = 0x9000000000200000;
+        self.kernel_vaddr = 0x9000000000200000;
 
-        let kernel_load_vaddr = self.kernel_load_vaddr as usize;
+        let kernel_load_vaddr = self.kernel_vaddr as usize;
 
         let ld = include_str!("src/arch/loongarch64/link.ld")
             .replace("${kernel_load_vaddr}", &format!("{kernel_load_vaddr:#x}"));

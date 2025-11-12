@@ -33,16 +33,23 @@ pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) -> ! {
 
 pub fn el_entry() -> ! {
     super::relocate::apply();
+
     crate::fdt::setup_earlycon();
     if let Some(cmdline) = crate::cmdline::cmdline() {
         println!("{cmdline}");
     }
 
     crate::mem::early_init();
-    crate::arch::paging::map_early();
+    crate::arch::paging::enable_mmu()
     // crate::fdt::setup_memory_map();
 
-    println!("Hello, Somehal on AArch64!");
+    // println!("Hello, Somehal on AArch64!");
+
+    // loop {}
+}
+
+pub fn mmu_entry() -> ! {
+    println!("MMU is enabled.");
 
     loop {}
 }

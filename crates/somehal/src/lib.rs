@@ -16,7 +16,7 @@ pub mod arch;
 pub mod arch;
 
 pub(crate) mod fdt;
-
+mod consts;
 mod acpi;
 mod cmdline;
 #[cfg(efi)]
@@ -26,6 +26,7 @@ mod mem;
 
 trait ArchTrait {
     fn kernel_code() -> &'static [u8];
+    fn pa_bits() -> usize;
     fn post_allocator();
 }
 

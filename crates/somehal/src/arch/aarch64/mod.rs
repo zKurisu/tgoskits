@@ -11,8 +11,8 @@ mod elx;
 
 mod entry;
 mod head;
-mod relocate;
 mod paging;
+mod relocate;
 
 use elx::*;
 
@@ -31,5 +31,9 @@ impl ArchTrait for Arch {
         let start = sym_addr!(_head);
         let end = sym_addr!(__kernel_code_end);
         unsafe { core::slice::from_raw_parts(start as *const u8, end - start) }
+    }
+
+    fn pa_bits() -> usize {
+        48
     }
 }
