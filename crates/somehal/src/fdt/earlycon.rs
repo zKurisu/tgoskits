@@ -31,6 +31,7 @@ fn set_by_stdout() -> Option<()> {
         match com {
             "arm,pl011" | "arm,primecell" => {
                 let mut serial = pl011::Pl011::new(addr, clock);
+                serial.open();
                 let tx = serial.take_tx()?;
                 let rx = serial.take_rx()?;
 
