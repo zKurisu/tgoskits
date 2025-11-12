@@ -3,6 +3,7 @@ members = ["apps/*", "crates/*", "platform/sparreal-rt"]
 resolver = "3"
 
 [workspace.package]
+authors = ["周睿 <zrufo747@outlook.com>"]
 license = "MIT OR Apache-2.0"
 categories = ["embedded", "no-std"]
 description = "Boot kernel code with mmu."
@@ -21,3 +22,4 @@ sparreal-kernel = {path = "crates/sparreal-kernel", version = "0.13"}
 sparreal-rt = {path = "platform/sparreal-rt", version = "0.13"}
 os-helper = {path = "crates/os-helper", version = "0.1"}
 page-table-generic = {path = "crates/page-table-generic", version = "0.7"}
+kasm-aarch64 = {path = "crates/kasm-aarch64", version = "0.2"}

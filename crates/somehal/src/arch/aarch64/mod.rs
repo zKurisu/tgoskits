@@ -13,6 +13,8 @@ mod entry;
 mod head;
 mod paging;
 mod relocate;
+mod trap;
+mod context;
 
 use elx::*;
 

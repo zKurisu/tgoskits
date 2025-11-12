@@ -44,6 +44,7 @@ uefi-raw = "0.12"
 aarch64-cpu = "11"
 aarch64-cpu-ext = "0.1"
 some-serial = "0.3"
+kasm-aarch64 = {workspace = true}
 
 [build-dependencies]
 prettyplease = "0.2"
