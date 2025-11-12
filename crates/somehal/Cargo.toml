@@ -34,6 +34,7 @@ page-table-generic = {workspace = true}
 rgb = "0.8"
 some-serial = "0.3"
 spin = "0.10"
+somehal-macros = {workspace = true}
 
 [target.'cfg(target_arch = "loongarch64")'.dependencies]
 uefi = {version = "0.36"}

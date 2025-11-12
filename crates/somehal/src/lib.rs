@@ -5,7 +5,7 @@
 extern crate alloc;
 
 #[macro_use]
-mod console;
+pub mod console;
 
 #[cfg(target_arch = "loongarch64")]
 #[path = "arch/loongarch64/mod.rs"]
@@ -23,6 +23,8 @@ mod efi_stub;
 mod elf;
 pub(crate) mod fdt;
 mod mem;
+
+pub use somehal_macros::{entry, secondary_entry};
 
 trait ArchTrait {
     fn kernel_code() -> &'static [u8];
@@ -42,6 +44,8 @@ fn prime_entry() -> ! {
     fdt::setup_earlycon();
     fdt::setup_memory_map();
 
-    println!("All tests passed!");
-    loop {}
+    unsafe extern "C" {
+        fn __somehal_main() -> !;
+    }
+    unsafe { __somehal_main() }
 }

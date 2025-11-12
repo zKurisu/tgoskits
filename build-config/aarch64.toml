@@ -4,7 +4,7 @@ args = [
     "build-std=core,alloc",
 ]
 features = [
-  "somehal/uspace"
+  "sparreal-rt/uspace"
 ]
 package = "helloworld"
 post_build_cmds = []

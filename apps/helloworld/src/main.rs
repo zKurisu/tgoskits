@@ -1,10 +1,12 @@
 #![no_std]
 #![no_main]
 
-use sparreal_rt::somehal;
 extern crate alloc;
+#[macro_use]
 extern crate sparreal_rt;
 
+#[sparreal_rt::entry]
 fn main() {
-    // unsafe { somehal::arch::relocate() };
+    println!("Hello, world!");
+    println!("All tests passed!");
 }

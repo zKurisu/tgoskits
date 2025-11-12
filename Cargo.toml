@@ -19,7 +19,9 @@ log = "0.4"
 anyhow = {version = "1.0", default-features = false}
 
 somehal = {path = "crates/somehal", version = "0.5"}
+somehal-macros = {path = "crates/somehal-macros", version = "0.1"}
 sparreal-kernel = {path = "crates/sparreal-kernel", version = "0.13"}
+sparreal-macros = {path = "crates/sparreal-macros", version = "0.10"}
 sparreal-rt = {path = "platform/sparreal-rt", version = "0.13"}
 os-helper = {path = "crates/os-helper", version = "0.1"}
 page-table-generic = {path = "crates/page-table-generic", version = "0.7"}
