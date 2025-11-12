@@ -148,8 +148,9 @@ impl Pte {
     {
         let mut flags = self.as_flags();
         f(&mut flags);
-        self.0 = 0;
-        self.0 |= flags.bits();
+        // 保留物理地址和 MAIR 索引，只更新标志位
+        let preserved = self.0 & (Self::PHYS_ADDR_MASK | Self::MAIR_MASK);
+        self.0 = preserved | flags.bits();
     }
 
     // pub fn new(cache: CacheKind) -> Self {

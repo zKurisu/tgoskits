@@ -85,25 +85,46 @@ pub fn enable_mmu() -> ! {
     }
 
     println!("Page table entries analysis:");
-    for (i, pte_info) in table.walk(0.into(), usize::MAX.into()).enumerate() {
-        if i < 10 {
-            // Limit output to first 10 entries to avoid spam
-            let paddr = pte_info.pte.paddr();
-            let level = pte_info.level;
-            let vaddr = pte_info.vaddr;
-            let flags = pte_info.pte.as_flags();
-            println!(
-                "  PTE[{}]: vaddr={:#x}, paddr={:#x}, level={}, valid={}, huge={}, flags_bits={:#x}",
-                i,
-                vaddr.raw(),
-                paddr.raw(),
-                level,
-                pte_info.pte.valid(),
-                pte_info.pte.is_huge(),
-                flags.bits()
-            );
+    let mut total_entries = 0;
+    let mut valid_entries = 0;
+    let mut huge_entries = 0;
+    let mut normal_entries = 0;
+
+    for pte_info in table.walk(0.into(), usize::MAX.into()) {
+        total_entries += 1;
+        if pte_info.pte.valid() {
+            valid_entries += 1;
+            if pte_info.is_final_mapping {
+                if pte_info.pte.is_huge() {
+                    huge_entries += 1;
+                } else {
+                    normal_entries += 1;
+                }
+
+                if total_entries <= 20 {
+                    let paddr = pte_info.pte.paddr();
+                    let level = pte_info.level;
+                    let vaddr = pte_info.vaddr;
+                    let flags = pte_info.pte.as_flags();
+                    println!(
+                        "  PTE[{}]: vaddr={:#x}, paddr={:#x}, level={}, valid={}, huge={}, flags={:#x}",
+                        total_entries - 1,
+                        vaddr.raw(),
+                        paddr.raw(),
+                        level,
+                        pte_info.pte.valid(),
+                        pte_info.pte.is_huge(),
+                        flags.bits()
+                    );
+                }
+            }
         }
     }
+
+    println!("Total PTEs walked: {}", total_entries);
+    println!("Valid PTEs: {}", valid_entries);
+    println!("Huge page mappings: {}", huge_entries);
+    println!("Normal page mappings: {}", normal_entries);
 
     let tb_addr = table.root_paddr();
     BOOT_TABLE.call_once(|| table);
@@ -118,10 +139,6 @@ pub fn enable_mmu() -> ! {
     println!("Enabling MMU...");
     setup_sctlr();
     println!("MMU enabled.");
-    println!("All tests passed!");
-    loop {
-        // 
-    }
 
     // Jump to mmu_entry using physical address
     unsafe {

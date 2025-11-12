@@ -76,6 +76,7 @@ where
 
             // 检查是否可以使用大页映射
             if config.allow_huge
+                && config.level > 1
                 && config.level <= T::MAX_BLOCK_LEVEL
                 && level_size <= remaining_size
                 && vaddr.raw() % level_size == 0
@@ -89,9 +90,9 @@ where
                 }
 
                 let mut new_pte = config.pte_template;
-                new_pte.set_paddr(paddr);
-                new_pte.set_valid(true);
-                new_pte.set_is_huge(true);
+                new_pte.set_is_huge(true); // 必须先设置 huge 标志
+                new_pte.set_paddr(paddr); // 然后设置物理地址
+                new_pte.set_valid(true); // 最后设置有效标志
                 *pte_ref = new_pte;
 
                 // 如果需要刷新TLB，立即执行
@@ -114,9 +115,9 @@ where
                 }
 
                 let mut new_pte = config.pte_template;
-                new_pte.set_paddr(paddr);
-                new_pte.set_valid(true);
-                new_pte.set_is_huge(false);
+                new_pte.set_is_huge(false); // 确保不是大页
+                new_pte.set_paddr(paddr); // 设置物理地址
+                new_pte.set_valid(true); // 设置有效标志
                 *pte_ref = new_pte;
 
                 // 如果需要刷新TLB，立即执行
@@ -147,19 +148,19 @@ where
                 let new_frame = Frame::<T, A>::new(allocator)?;
                 let new_frame_paddr = new_frame.paddr;
 
-                // 链接子页表
+                // 链接子页表 - 子页表指针必须是 NON_BLOCK（不是大页）
                 let entries = self.as_slice_mut();
                 let pte_ref = &mut entries[index];
                 let mut new_pte = config.pte_template;
-                new_pte.set_paddr(new_frame_paddr);
-                new_pte.set_valid(true);
-                new_pte.set_is_huge(false);
+                new_pte.set_is_huge(false); // 子页表指针不是大页
+                new_pte.set_paddr(new_frame_paddr); // 设置指向子页表的物理地址
+                new_pte.set_valid(true); // 设置有效标志
                 *pte_ref = new_pte;
 
                 new_frame
             };
 
-                      // 计算当前页表条目对应的范围结束地址
+            // 计算当前页表条目对应的范围结束地址
             let current_entry_end = ((vaddr.raw() / level_size) + 1) * level_size;
             let next_level_vaddr = VirtAddr::new(current_entry_end.min(config.end_vaddr.raw()));
             let mut child_frame = child_frame;
@@ -234,7 +235,8 @@ where
             let next_level_vaddr = VirtAddr::new(current_entry_end.min(config.end_vaddr.raw()));
 
             {
-                let mut child_frame: Frame<T, A> = Frame::from_paddr(child_paddr, allocator.clone());
+                let mut child_frame: Frame<T, A> =
+                    Frame::from_paddr(child_paddr, allocator.clone());
                 let child_config = UnmapRecursiveConfig {
                     start_vaddr: vaddr,
                     end_vaddr: next_level_vaddr,
