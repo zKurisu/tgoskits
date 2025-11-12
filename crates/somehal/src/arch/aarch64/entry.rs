@@ -53,41 +53,20 @@ pub fn mmu_entry() -> ! {
     // Immediate check if we got here
     println!("=== MMU_ENTRY REACHED ===");
 
-    // Check MMU status
-    println!("MMU status in mmu_entry: {:#x}", {
-        let mut sctlr: u64;
-        unsafe { asm!("mrs {}, sctlr_el1", out(reg) sctlr); }
-        sctlr
-    });
+    let pc = unsafe {
+        let mut value: usize;
+        asm!("adr {0}, .", out(reg) value);
+        value
+    };
 
-    // Check current exception level
-    println!("Current EL: {}", {
-        let mut el: u64;
-        unsafe { asm!("mrs {}, currentel", out(reg) el); }
-        (el >> 2) & 0x3
-    });
+    let sp = unsafe {
+        let mut value: usize;
+        asm!("mov {0}, sp", out(reg) value);
+        value
+    };
 
-    // Check TTBR0/TTBR1
-    println!("TTBR0_EL1: {:#x}", {
-        let mut ttbr0: u64;
-        unsafe { asm!("mrs {}, ttbr0_el1", out(reg) ttbr0); }
-        ttbr0
-    });
-
-    println!("TTBR1_EL1: {:#x}", {
-        let mut ttbr1: u64;
-        unsafe { asm!("mrs {}, ttbr1_el1", out(reg) ttbr1); }
-        ttbr1
-    });
-
-    // Check TCR
-    println!("TCR_EL1: {:#x}", {
-        let mut tcr: u64;
-        unsafe { asm!("mrs {}, tcr_el1", out(reg) tcr); }
-        tcr
-    });
-
-    println!("MMU is enabled and working!");
+    println!("Current PC: {pc:#x}");
+    println!("Current SP: {sp:#x}");
 
     // Try to access some memory
     let test_addr = 0x40200000 as *mut u64;

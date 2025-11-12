@@ -1,14 +1,14 @@
 use core::arch::asm;
 
 use num_align::NumAlign;
-use page_table_generic::{GB, MapConfig, PageTable, PageTableEntry};
+use page_table_generic::{GB, MapConfig, PageTable};
 
 use crate::{
     arch::{
         elx::{Pte, PteFlags, Table, set_table, setup_sctlr, setup_table_regs},
         entry::mmu_entry,
     },
-    consts::VMLINUX_LOAD_ADDRESS,
+    consts::{KERNEL_LINER_OFFSET, VMLINUX_LOAD_ADDRESS},
     mem::{MB, kernel_vcode_offset, page_size, ram::Ram},
 };
 
@@ -84,48 +84,6 @@ pub fn enable_mmu() -> ! {
             .unwrap();
     }
 
-    println!("Page table entries analysis:");
-    let mut total_entries = 0;
-    let mut valid_entries = 0;
-    let mut huge_entries = 0;
-    let mut normal_entries = 0;
-
-    for pte_info in table.walk(0.into(), usize::MAX.into()) {
-        total_entries += 1;
-        if pte_info.pte.valid() {
-            valid_entries += 1;
-            if pte_info.is_final_mapping {
-                if pte_info.pte.is_huge() {
-                    huge_entries += 1;
-                } else {
-                    normal_entries += 1;
-                }
-
-                if total_entries <= 20 {
-                    let paddr = pte_info.pte.paddr();
-                    let level = pte_info.level;
-                    let vaddr = pte_info.vaddr;
-                    let flags = pte_info.pte.as_flags();
-                    println!(
-                        "  PTE[{}]: vaddr={:#x}, paddr={:#x}, level={}, valid={}, huge={}, flags={:#x}",
-                        total_entries - 1,
-                        vaddr.raw(),
-                        paddr.raw(),
-                        level,
-                        pte_info.pte.valid(),
-                        pte_info.pte.is_huge(),
-                        flags.bits()
-                    );
-                }
-            }
-        }
-    }
-
-    println!("Total PTEs walked: {}", total_entries);
-    println!("Valid PTEs: {}", valid_entries);
-    println!("Huge page mappings: {}", huge_entries);
-    println!("Normal page mappings: {}", normal_entries);
-
     let tb_addr = table.root_paddr();
     BOOT_TABLE.call_once(|| table);
     println!("Boot page table at physical address: {:#x}", tb_addr);
@@ -136,19 +94,29 @@ pub fn enable_mmu() -> ! {
     setup_table_regs();
     set_table(tb_addr.into());
 
+    unsafe extern "C" {
+        fn __cpu0_stack_top();
+    }
+
+    let v_sp = sym_addr!(__cpu0_stack_top) + KERNEL_LINER_OFFSET;
+    let v_entry = mmu_entry_phys + kernel_vcode_offset();
+
     println!("Enabling MMU...");
     setup_sctlr();
-    println!("MMU enabled.");
+    println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}");
 
     // Jump to mmu_entry using physical address
     unsafe {
         asm!(
             "
             mov x8, {0}
+            mov x9, {1}
+            mov sp, x9
             br x8
         ",
-            in(reg) mmu_entry_phys,
-            options(noreturn)
+            in(reg) v_entry,
+            in(reg) v_sp,
+            options(noreturn, nostack)
         )
     }
 }
