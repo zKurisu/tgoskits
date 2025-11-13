@@ -1,6 +1,6 @@
-use core::{arch::naked_asm, ffi::c_void, hint::spin_loop};
+use core::{arch::naked_asm, ffi::c_void};
 
-use crate::{arch::addrspace::*, efi_stub::acpi_setup_earlycon};
+use crate::{arch::addrspace::*, efi_stub::acpi_setup_earlycon, prime_entry};
 
 static FW_ARG0: usize = 0;
 static FW_ARG1: usize = 0;
@@ -96,7 +96,11 @@ fn rust_main() -> ! {
     super::relocate();
     println!("Rust main.");
 
-    loop {
-        spin_loop();
+    if let Some(cmdline) = crate::cmdline::cmdline() {
+        println!("{cmdline}");
     }
+
+    crate::mem::early_init();
+
+    prime_entry()
 }

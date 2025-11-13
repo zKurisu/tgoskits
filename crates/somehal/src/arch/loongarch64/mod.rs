@@ -11,12 +11,6 @@ pub use relocate::relocate;
 
 use crate::ArchTrait;
 
-static mut IS_MMU_ENABLED: bool = false;
-
-fn is_mmu_enabled() -> bool {
-    unsafe { IS_MMU_ENABLED }
-}
-
 pub struct Arch;
 
 impl ArchTrait for Arch {

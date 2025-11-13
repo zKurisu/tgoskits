@@ -1,4 +1,4 @@
-use core::{fmt::Write, hint::spin_loop, ptr::null, sync::atomic::AtomicBool};
+use core::{fmt::Write, ptr::null, sync::atomic::AtomicBool};
 
 use uefi::{
     Result,

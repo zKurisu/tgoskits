@@ -5,6 +5,7 @@ use some_serial::ns16550::Ns16550;
 use some_serial::*;
 
 use crate::console::Con;
+use crate::mem::_fixmap_io;
 
 use super::acpi_handle::AcpiHandle;
 
@@ -43,7 +44,7 @@ fn deal_with_spsr(spsr: &PhysicalMapping<impl Handler, Spcr>) -> Option<()> {
         acpi::sdt::spcr::SpcrInterfaceType::Full16550
         | acpi::sdt::spcr::SpcrInterfaceType::Generic16550 => {
             let mut uart = Ns16550::new_mmio(
-                NonNull::new(base_address.address as _).unwrap(),
+                NonNull::new(_fixmap_io(base_address.address as _)).unwrap(),
                 clock,
                 base_address.access_size as _,
             );
@@ -75,15 +76,12 @@ struct SenderCell(UnsafeCell<Option<some_serial::Sender>>);
 unsafe impl Sync for SenderCell {}
 
 impl Con for SenderCell {
-    fn write_str(&self, s: &str) {
+    fn write_bytes(&self, bytes: &[u8]) -> usize {
         unsafe {
             if let Some(ref mut sender) = *self.0.get() {
-                let bytes = s.as_bytes();
-                let mut buff = bytes;
-                while !buff.is_empty() {
-                    let n = sender.write_bytes(buff);
-                    buff = &buff[n..];
-                }
+                sender.write_bytes(bytes)
+            } else {
+                bytes.len()
             }
         }
     }

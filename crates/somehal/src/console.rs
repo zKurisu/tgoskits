@@ -66,7 +66,7 @@ fn con() -> &'static dyn Con {
 #[allow(dead_code)]
 pub(crate) trait Con: Send + Sync {
     fn write_bytes(&self, _bytes: &[u8]) -> usize {
-        0
+        _bytes.len()
     }
     fn write_str(&self, s: &str) {
         let bytes = s.as_bytes();

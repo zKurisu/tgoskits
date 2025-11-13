@@ -38,6 +38,7 @@ impl_trait! {
 impl Console for ConsoleImpl {
     fn early_write(bytes: &[u8]) -> usize {
         somehal::console::_write_bytes(bytes)
+        // bytes.len()
     }
 
     fn early_read() -> Option<u8> {
