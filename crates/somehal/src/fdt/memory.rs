@@ -4,7 +4,7 @@ use crate::{
     kernel_code,
     mem::{MemoryDescriptor, MemoryType, page_size, virt_to_phys},
 };
-use os_helper::memory::merge_memories;
+use kernutil::memory::merge_memories;
 
 pub fn setup_memory_map() -> Option<()> {
     let fdt = super::fdt_base()?;

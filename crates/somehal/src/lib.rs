@@ -32,6 +32,14 @@ pub use somehal_macros::{entry, secondary_entry};
 trait ArchTrait {
     fn kernel_code() -> &'static [u8];
     fn post_allocator();
+
+    fn virt_to_phys(vaddr: usize) -> usize {
+        vaddr
+    }
+
+    fn phys_to_virt(paddr: usize) -> usize {
+        paddr
+    }
 }
 
 pub fn post_allocator() {

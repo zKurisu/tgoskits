@@ -1,5 +1,5 @@
 [package]
-name = "os-helper"
+name = "kernutil"
 version = "0.1.0"
 license.workspace = true
 categories.workspace = true

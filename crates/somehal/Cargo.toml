@@ -29,7 +29,7 @@ heapless = "0.9"
 log = "0.4"
 num-align = "0.1"
 numeric-enum-macro = "0.2"
-os-helper = {workspace = true}
+kernutil = {workspace = true}
 page-table-generic = {workspace = true}
 rgb = "0.8"
 some-serial = "0.3"

@@ -539,6 +539,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "kernutil"
+version = "0.1.0"
+dependencies = [
+ "heapless 0.9.1",
+]
+
+[[package]]
 name = "lenient_semver"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -618,13 +625,6 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
-
-[[package]]
-name = "os-helper"
-version = "0.1.0"
-dependencies = [
- "heapless 0.9.1",
-]
 
 [[package]]
 name = "page-table-generic"
@@ -906,10 +906,10 @@ dependencies = [
  "fdt-parser",
  "heapless 0.9.1",
  "kasm-aarch64",
+ "kernutil",
  "log",
  "num-align",
  "numeric-enum-macro",
- "os-helper",
  "page-table-generic",
  "prettyplease",
  "quote",
@@ -938,8 +938,8 @@ version = "0.13.0"
 dependencies = [
  "ansi_rgb",
  "buddy_system_allocator",
+ "kernutil",
  "log",
- "os-helper",
  "rgb",
  "sparreal-macros",
  "spin 0.10.0",

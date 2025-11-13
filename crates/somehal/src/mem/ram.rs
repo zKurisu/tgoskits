@@ -1,7 +1,7 @@
 use core::{alloc::Layout, cell::UnsafeCell};
 
 use num_align::NumAlign;
-use os_helper::memory::{MemoryDescriptor, MemoryType};
+use kernutil::memory::{MemoryDescriptor, MemoryType};
 use page_table_generic::FrameAllocator;
 
 use crate::{ArchTrait, mem::page_size};

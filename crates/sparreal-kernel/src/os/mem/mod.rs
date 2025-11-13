@@ -1,4 +1,4 @@
-use os_helper::memory::MemoryDescriptor;
+use kernutil::memory::MemoryDescriptor;
 
 use crate::os::mem::address::{PhysAddr, VirtAddr};
 
@@ -7,7 +7,7 @@ mod allocator;
 
 pub(crate) fn init_heap(regions: &[MemoryDescriptor]) {
     for region in regions {
-        if region.memory_type == os_helper::memory::MemoryType::Usable {
+        if region.memory_type == kernutil::memory::MemoryType::Usable {
             let start = PhysAddr::new(region.physical_start);
             let size = region.size_in_bytes;
             let start: VirtAddr = start.into();

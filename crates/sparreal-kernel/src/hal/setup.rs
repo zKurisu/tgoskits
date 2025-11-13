@@ -1,4 +1,4 @@
-use os_helper::memory::MemoryDescriptor;
+use kernutil::memory::MemoryDescriptor;
 
 pub fn setup_allocator(regions: &[MemoryDescriptor]) {
     crate::os::mem::init_heap(regions);

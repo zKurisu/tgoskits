@@ -1,6 +1,6 @@
 use core::{cell::UnsafeCell, ops::Deref};
 
-pub use os_helper::memory::{MemoryDescriptor, MemoryType};
+pub use kernutil::memory::{MemoryDescriptor, MemoryType};
 
 use crate::ArchTrait;
 
