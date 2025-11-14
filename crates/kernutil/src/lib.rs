@@ -1,5 +1,8 @@
 #![no_std]
 
-pub mod id;
-pub mod memory;
 pub mod address;
+pub mod id;
+mod lazystatic;
+pub mod memory;
+
+pub use lazystatic::LazyStatic;
