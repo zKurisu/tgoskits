@@ -1,6 +1,6 @@
 use core::{arch::naked_asm, ffi::c_void};
 
-use crate::{arch::addrspace::*, efi_stub::acpi_setup_earlycon, prime_entry};
+use crate::{arch::addrspace::*, prime_entry};
 
 static FW_ARG0: usize = 0;
 static FW_ARG1: usize = 0;
@@ -82,14 +82,6 @@ pub unsafe extern "C" fn kernel_entry(
         fw_arg2 = sym FW_ARG2,
         rust_main = sym rust_main,
     )
-}
-
-pub(crate) fn efi_setup() {
-    if let Err(e) = acpi_setup_earlycon() {
-        println!("Failed to setup early console: {e:?}");
-    }
-
-    println!("EFI kernel preparation complete.");
 }
 
 fn rust_main() -> ! {

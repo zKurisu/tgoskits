@@ -18,12 +18,9 @@ use crate::{
 };
 
 mod acpi_handle;
-mod earlycon;
 pub mod pe;
 mod system;
 mod table;
-
-pub(crate) use earlycon::acpi_setup_earlycon;
 
 /// EFI PE 入口点 - 符合 EFI ABI 的汇编包装
 /// 参数: a0 = image_handle, a1 = system_table
@@ -47,8 +44,6 @@ pub unsafe extern "C" fn efi_pe_entry(
             println!("EFI application error: {:?}", e);
             return e.status();
         }
-
-        crate::arch::entry::efi_setup();
 
         UEFI_SERVICE_OK.store(false, core::sync::atomic::Ordering::Relaxed);
         let mem_map = boot::exit_boot_services(None);

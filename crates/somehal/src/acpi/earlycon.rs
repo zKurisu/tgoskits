@@ -7,10 +7,8 @@ use some_serial::*;
 use crate::console::Con;
 use crate::mem::_fixmap_io;
 
-use super::acpi_handle::AcpiHandle;
-
 pub(crate) fn acpi_setup_earlycon() -> Result<(), AcpiError> {
-    let tb = crate::acpi::tables(AcpiHandle)?;
+    let tb = crate::acpi::tables()?;
 
     for spsr in tb.find_tables::<Spcr>() {
         if deal_with_spsr(&spsr).is_some() {
@@ -68,7 +66,6 @@ fn set_sender(sender: some_serial::Sender) {
     }
 }
 
-#[unsafe(link_section = ".data")]
 static SENDER: SenderCell = SenderCell(UnsafeCell::new(None));
 
 struct SenderCell(UnsafeCell<Option<some_serial::Sender>>);
