@@ -1,5 +1,5 @@
 use acpi::AcpiTables;
-use core::ffi::c_void;
+use core::{ffi::c_void, ptr::NonNull};
 
 pub(crate) mod earlycon;
 mod handle;
@@ -19,11 +19,19 @@ pub(crate) fn set_rsdp(addr: *const c_void) {
 }
 
 /// 获取RSDP地址
-fn rsdp() -> *const c_void {
-    phys_to_virt(unsafe { RSDP as _ }) as *const c_void
+fn rsdp() -> Option<NonNull<u8>> {
+    let rsdp = unsafe { RSDP };
+    if rsdp == 0 {
+        return None;
+    }
+
+    let ptr = phys_to_virt(rsdp);
+    NonNull::new(ptr)
 }
 
 pub fn tables() -> Result<AcpiTables<AcpiHandle>, acpi::AcpiError> {
+    let ptr = rsdp().ok_or(acpi::AcpiError::NoValidRsdp)?;
+
     let h = AcpiHandle;
-    unsafe { ::acpi::AcpiTables::from_rsdp(h, rsdp() as usize) }
+    unsafe { ::acpi::AcpiTables::from_rsdp(h, ptr.as_ptr() as usize) }
 }

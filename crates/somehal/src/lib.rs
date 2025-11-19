@@ -53,7 +53,7 @@ fn prime_entry() -> ! {
     mem::set_mmu_enabled();
     fdt::setup_earlycon();
     fdt::setup_memory_map();
-    acpi::earlycon::acpi_setup_earlycon().unwrap();
+    let _ = acpi::earlycon::acpi_setup_earlycon();
 
     mem::print_memory_map();
 
