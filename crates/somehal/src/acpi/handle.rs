@@ -1,4 +1,4 @@
-use core::{ptr::NonNull, time::Duration};
+use core::ptr::NonNull;
 
 use crate::mem::phys_to_virt;
 

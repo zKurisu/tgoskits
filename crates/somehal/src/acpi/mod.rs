@@ -1,4 +1,4 @@
-use acpi::{AcpiTables, Handler};
+use acpi::AcpiTables;
 use core::ffi::c_void;
 
 pub(crate) mod earlycon;
