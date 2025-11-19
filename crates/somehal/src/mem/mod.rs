@@ -1,5 +1,6 @@
 use core::{cell::UnsafeCell, ops::Deref};
 
+use byte_unit::Byte;
 pub use kernutil::memory::{MemoryDescriptor, MemoryType};
 use num_align::NumAlign;
 
@@ -10,7 +11,9 @@ pub(crate) mod ram;
 pub(crate) mod region;
 
 static mut MMU_ENABLED: bool = false;
-static MEMORY_MAP: StaticCell<heapless::Vec<MemoryDescriptor, 64>> =
+static MEMORY_RAM: StaticCell<heapless::Vec<MemoryDescriptor, 32>> =
+    StaticCell::new(Some(heapless::Vec::new()));
+static MEMORY_RSV: StaticCell<heapless::Vec<MemoryDescriptor, 32>> =
     StaticCell::new(Some(heapless::Vec::new()));
 
 pub const MB: usize = 1024 * 1024;
@@ -75,14 +78,67 @@ pub fn page_size() -> usize {
     core::ptr::addr_of!(PAGE_SIZE) as usize
 }
 
-pub(crate) fn add_memory_descriptor(desc: MemoryDescriptor) {
-    MEMORY_MAP.update(|map| {
-        let _ = map.push(desc);
+fn rsv_memories() -> heapless::Vec<MemoryDescriptor, 32> {
+    let mut rsv = MEMORY_RSV.clone();
+    let _ = rsv.push(MemoryDescriptor {
+        name: "Kernel",
+        physical_start: virt_to_phys(kernel_range().start as *const u8),
+        size_in_bytes: kernel_range().end - kernel_range().start,
+        memory_type: MemoryType::Reserved,
     });
+    let _ = rsv.push(ram::to_rsvd_memory_descriptor());
+
+    rsv
 }
 
-pub fn get_memory_map() -> &'static [MemoryDescriptor] {
-    &MEMORY_MAP
+pub fn memory_map() -> heapless::Vec<MemoryDescriptor, 64> {
+    let mut result = kernutil::memory::cal_free_memories(&MEMORY_RAM, &rsv_memories(), page_size());
+
+    result.sort_by(|a, b| a.physical_start.cmp(&b.physical_start));
+
+    let start = result.first().map_or(0, |m| m.physical_start);
+    let end = result
+        .last()
+        .map_or(0, |m| m.physical_start + m.size_in_bytes);
+
+    for rsv in rsv_memories().iter() {
+        if (start..end).contains(&(rsv.physical_start)) {
+            let _ = result.push(*rsv);
+        }
+    }
+
+    result.sort_by(|a, b| a.physical_start.cmp(&b.physical_start));
+
+    result
+}
+
+pub fn print_memory_map() {
+    println!("Memory Map:");
+    for desc in memory_map().iter() {
+        println!(
+            "  {:<20} {:>#016x} - {:>#016x} ({:#.2})",
+            desc.name,
+            desc.physical_start,
+            desc.physical_start + desc.size_in_bytes,
+            Byte::from(desc.size_in_bytes)
+        );
+    }
+}
+
+pub(crate) fn add_memory_descriptor(desc: MemoryDescriptor) {
+    if matches!(desc.memory_type, MemoryType::Usable) {
+        MEMORY_RAM.update(|map| {
+            if map.push(desc).is_err() {
+                println!("Warning: memory usable regions exceed the max supported count");
+            }
+        });
+    } else {
+        MEMORY_RSV.update(|map| {
+            if map.push(desc).is_err() {
+                println!("Warning: memory reserved regions exceed the max supported count");
+            }
+        });
+    }
 }
 
 pub(crate) struct StaticCell<T> {

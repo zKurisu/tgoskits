@@ -1,8 +1,8 @@
 use heapless::Vec;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryDescriptor {
-    // pub name: &'static str,
+    pub name: &'static str,
     pub physical_start: usize,
     pub size_in_bytes: usize,
     pub memory_type: MemoryType,
@@ -14,64 +14,26 @@ pub enum MemoryType {
     Reserved,
 }
 
-/// 收集所有内存区域的边界点并排序去重
-fn collect_boundaries(
-    ram: &[MemoryDescriptor],
+pub fn cal_free_memories(
+    free: &[MemoryDescriptor],
     rsv: &[MemoryDescriptor],
-) -> heapless::Vec<usize, 64> {
-    let mut boundaries = heapless::Vec::<usize, 64>::new();
+    page_size: usize,
+) -> Vec<MemoryDescriptor, 64> {
+    let filtered_rsv = filter_reserved_overlaps(free, rsv);
+    let aligned_rsv = align_reserved_regions(&filtered_rsv, page_size);
+    let mut split_ram = split_ram_regions(free, &aligned_rsv);
 
-    // 收集RAM区域的边界点
-    for region in ram {
-        let _ = boundaries.push(region.physical_start);
-        let _ = boundaries.push(region.physical_start + region.size_in_bytes);
-    }
+    sort_by_physical_start(&mut split_ram);
+    let merged_segments = merge_contiguous_free_segments(split_ram);
 
-    // 收集RSV区域的边界点
-    for region in rsv {
-        let _ = boundaries.push(region.physical_start);
-        let _ = boundaries.push(region.physical_start + region.size_in_bytes);
-    }
-
-    // 手动排序（heapless::Vec在no_std环境下没有sort方法）
-    for i in 0..boundaries.len() {
-        for j in i + 1..boundaries.len() {
-            if boundaries[i] > boundaries[j] {
-                boundaries.swap(i, j);
-            }
+    let mut result = Vec::<MemoryDescriptor, 64>::new();
+    for descriptor in merged_segments.into_iter() {
+        if result.push(descriptor).is_err() {
+            break;
         }
     }
 
-    // 手动去重（heapless::Vec没有dedup方法）
-    let mut unique_boundaries = heapless::Vec::<usize, 64>::new();
-    for &boundary in &boundaries {
-        if unique_boundaries.last() != Some(&boundary) {
-            let _ = unique_boundaries.push(boundary);
-        }
-    }
-
-    unique_boundaries
-}
-
-/// 基于边界点生成连续的内存区间段
-fn generate_segments(boundaries: &[usize]) -> heapless::Vec<(usize, usize), 128> {
-    let mut segments = heapless::Vec::<(usize, usize), 128>::new();
-
-    if boundaries.len() < 2 {
-        return segments;
-    }
-
-    // 生成连续的区间段
-    for i in 0..boundaries.len() - 1 {
-        let start = boundaries[i];
-        let end = boundaries[i + 1];
-
-        if start < end {
-            let _ = segments.push((start, end));
-        }
-    }
-
-    segments
+    result
 }
 
 /// 判断区间段是否与任何保留区域相交
@@ -93,6 +55,37 @@ fn determine_segment_type(
     MemoryType::Usable
 }
 
+fn filter_reserved_overlaps(
+    free: &[MemoryDescriptor],
+    rsv: &[MemoryDescriptor],
+) -> heapless::Vec<MemoryDescriptor, 64> {
+    let mut filtered = heapless::Vec::<MemoryDescriptor, 64>::new();
+
+    for reserved in rsv {
+        let rsv_start = reserved.physical_start;
+        let rsv_end = reserved.physical_start + reserved.size_in_bytes;
+
+        if overlaps_any_free(rsv_start, rsv_end, free) && filtered.push(*reserved).is_err() {
+            break;
+        }
+    }
+
+    filtered
+}
+
+fn overlaps_any_free(start: usize, end: usize, free: &[MemoryDescriptor]) -> bool {
+    for region in free {
+        let region_start = region.physical_start;
+        let region_end = region.physical_start + region.size_in_bytes;
+
+        if start < region_end && end > region_start {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// 对保留区域进行页面对齐扩展
 fn align_reserved_regions(
     rsv: &[MemoryDescriptor],
@@ -111,11 +104,9 @@ fn align_reserved_regions(
         let aligned_size = aligned_end - aligned_start;
 
         if aligned_size > 0 {
-            let aligned_descriptor = MemoryDescriptor {
-                physical_start: aligned_start,
-                size_in_bytes: aligned_size,
-                memory_type: reserved.memory_type,
-            };
+            let mut aligned_descriptor = *reserved;
+            aligned_descriptor.physical_start = aligned_start;
+            aligned_descriptor.size_in_bytes = aligned_size;
 
             if aligned_rsv.push(aligned_descriptor).is_err() {
                 break;
@@ -126,266 +117,251 @@ fn align_reserved_regions(
     aligned_rsv
 }
 
-/// 合并连续的同类型内存描述符
-fn merge_consecutive_segments(segments: Vec<MemoryDescriptor, 64>) -> Vec<MemoryDescriptor, 64> {
-    if segments.is_empty() {
-        return segments;
-    }
+fn split_ram_regions(
+    ram: &[MemoryDescriptor],
+    rsv: &[MemoryDescriptor],
+) -> Vec<MemoryDescriptor, 128> {
+    let mut segments = Vec::<MemoryDescriptor, 128>::new();
 
-    let mut merged = Vec::<MemoryDescriptor, 64>::new();
+    for region in ram {
+        if region.size_in_bytes == 0 {
+            continue;
+        }
 
-    // 按起始地址手动排序（heapless::Vec在no_std环境下没有sort方法）
-    let mut sorted_segments = segments;
-    for i in 0..sorted_segments.len() {
-        for j in i + 1..sorted_segments.len() {
-            if sorted_segments[i].physical_start > sorted_segments[j].physical_start {
-                sorted_segments.swap(i, j);
+        let region_start = region.physical_start;
+        let region_end = region_start + region.size_in_bytes;
+        let mut boundaries = heapless::Vec::<usize, 64>::new();
+        let _ = boundaries.push(region_start);
+        let _ = boundaries.push(region_end);
+
+        for reserved in rsv {
+            let overlap_start = region_start.max(reserved.physical_start);
+            let overlap_end = region_end.min(reserved.physical_start + reserved.size_in_bytes);
+
+            if overlap_start < overlap_end {
+                let _ = boundaries.push(overlap_start);
+                let _ = boundaries.push(overlap_end);
+            }
+        }
+
+        if boundaries.len() < 2 {
+            continue;
+        }
+
+        sort_usize_vec(&mut boundaries);
+        let unique_boundaries = dedup_sorted(boundaries);
+
+        if unique_boundaries.len() < 2 {
+            continue;
+        }
+
+        for idx in 0..unique_boundaries.len() - 1 {
+            let start = unique_boundaries[idx];
+            let end = unique_boundaries[idx + 1];
+
+            if start == end {
+                continue;
+            }
+
+            let classification = determine_segment_type(start, end, rsv);
+            let mut descriptor = *region;
+            descriptor.physical_start = start;
+            descriptor.size_in_bytes = end - start;
+            descriptor.memory_type = classification;
+
+            if descriptor.size_in_bytes == 0 {
+                continue;
+            }
+
+            if descriptor.memory_type == MemoryType::Reserved {
+                continue;
+            }
+
+            if segments.push(descriptor).is_err() {
+                return segments;
             }
         }
     }
 
-    let mut current = sorted_segments[0];
+    segments
+}
 
-    for segment in sorted_segments.iter().skip(1) {
-        // 检查是否连续且类型相同
-        let current_end = current.physical_start + current.size_in_bytes;
+fn sort_usize_vec<const N: usize>(values: &mut heapless::Vec<usize, N>) {
+    for i in 0..values.len() {
+        for j in i + 1..values.len() {
+            if values[i] > values[j] {
+                values.swap(i, j);
+            }
+        }
+    }
+}
 
-        if current_end == segment.physical_start && current.memory_type == segment.memory_type {
-            // 合并到当前段
-            current.size_in_bytes += segment.size_in_bytes;
-        } else {
-            // 保存当前段，开始新段
-            let _ = merged.push(current);
-            current = *segment;
+fn dedup_sorted<const N: usize>(values: heapless::Vec<usize, N>) -> heapless::Vec<usize, N> {
+    let mut deduped = heapless::Vec::<usize, N>::new();
+
+    for value in values.into_iter() {
+        if deduped.last() != Some(&value) {
+            let _ = deduped.push(value);
         }
     }
 
-    // 添加最后一段
-    let _ = merged.push(current);
-
-    merged
+    deduped
 }
 
-pub fn merge_memories(
-    ram: &[MemoryDescriptor],
-    rsv: &[MemoryDescriptor],
-    page_size: usize,
-) -> Vec<MemoryDescriptor, 64> {
-    let mut result = Vec::<MemoryDescriptor, 64>::new();
+fn sort_by_physical_start<const N: usize>(segments: &mut Vec<MemoryDescriptor, N>) {
+    for i in 0..segments.len() {
+        for j in i + 1..segments.len() {
+            if segments[i].physical_start > segments[j].physical_start {
+                segments.swap(i, j);
+            }
+        }
+    }
+}
 
-    // 1. 对保留区域进行页面对齐扩展
-    let aligned_rsv = align_reserved_regions(rsv, page_size);
+fn merge_contiguous_free_segments<const N: usize>(
+    segments: Vec<MemoryDescriptor, N>,
+) -> Vec<MemoryDescriptor, N> {
+    let mut merged = Vec::<MemoryDescriptor, N>::new();
 
-    // 2. 收集所有边界点
-    let boundaries = collect_boundaries(ram, &aligned_rsv);
+    for segment in segments.into_iter() {
+        if segment.size_in_bytes == 0 {
+            continue;
+        }
 
-    // 3. 生成连续区间段
-    let segments = generate_segments(&boundaries);
+        if match merged.last_mut() {
+            Some(last) if should_merge_free(last, &segment) => {
+                last.size_in_bytes += segment.size_in_bytes;
+                true
+            }
+            _ => false,
+        } {
+            continue;
+        }
 
-    // 4. 为每个区间段确定类型并创建内存描述符
-    for (segment_start, segment_end) in segments {
-        let memory_type = determine_segment_type(segment_start, segment_end, &aligned_rsv);
-
-        let descriptor = MemoryDescriptor {
-            physical_start: segment_start,
-            size_in_bytes: segment_end - segment_start,
-            memory_type,
-        };
-
-        if result.push(descriptor).is_err() {
+        if merged.push(segment).is_err() {
             break;
         }
     }
 
-    // 5. 合并连续的同类型区间
-    merge_consecutive_segments(result)
+    merged
+}
+
+fn should_merge_free(prev: &MemoryDescriptor, next: &MemoryDescriptor) -> bool {
+    prev.memory_type == MemoryType::Usable
+        && next.memory_type == MemoryType::Usable
+        && prev.physical_start + prev.size_in_bytes == next.physical_start
 }
 
 #[cfg(all(not(target_os = "none"), test))]
 mod test {
     extern crate std;
     use super::*;
-    use std::println;
     use std::vec;
     use std::vec::Vec as StdVec;
 
+    const PAGE_SIZE: usize = 4096;
+
+    fn desc(name: &'static str, start: usize, size: usize, ty: MemoryType) -> MemoryDescriptor {
+        MemoryDescriptor {
+            name,
+            physical_start: start,
+            size_in_bytes: size,
+            memory_type: ty,
+        }
+    }
+
     #[test]
-    fn test_merge_memories() {
-        const PAGE_SIZE: usize = 4096;
+    fn splits_ram_segments_when_reserved_inside() {
+        let ram: StdVec<MemoryDescriptor> = vec![desc("ram", 0x1000, 0x4000, MemoryType::Usable)];
+        let rsv: StdVec<MemoryDescriptor> = vec![desc("rsv", 0x2000, 0x1000, MemoryType::Reserved)];
 
-        // 测试1：RAM被RSV分割
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x1000,
-                size_in_bytes: 0x4000,
-                memory_type: MemoryType::Usable,
-            }];
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-            let rsv: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x2000,
-                size_in_bytes: 0x1000,
-                memory_type: MemoryType::Reserved,
-            }];
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], desc("ram", 0x1000, 0x1000, MemoryType::Usable));
+        assert_eq!(result[1], desc("ram", 0x3000, 0x2000, MemoryType::Usable));
+    }
 
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
+    #[test]
+    fn keeps_ram_only_when_no_reserved_overlap() {
+        let ram: StdVec<MemoryDescriptor> = vec![
+            desc("ram_high", 0x5000, 0x0800, MemoryType::Usable),
+            desc("ram_low", 0x1000, 0x1000, MemoryType::Usable),
+        ];
+        let rsv: StdVec<MemoryDescriptor> = vec![];
 
-            // 预期结果：3个区间 - [0x1000-0x2000]可用, [0x2000-0x3000]保留, [0x3000-0x5000]可用
-            assert_eq!(result.len(), 3);
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-            // 第一个可用区间：0x1000-0x2000
-            assert_eq!(result[0].physical_start, 0x1000);
-            assert_eq!(result[0].size_in_bytes, 0x1000);
-            assert_eq!(result[0].memory_type, MemoryType::Usable);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].physical_start, 0x1000);
+        assert_eq!(result[1].physical_start, 0x5000);
+        assert_eq!(result[0].memory_type, MemoryType::Usable);
+        assert_eq!(result[1].memory_type, MemoryType::Usable);
+    }
 
-            // 保留区间：0x2000-0x3000
-            assert_eq!(result[1].physical_start, 0x2000);
-            assert_eq!(result[1].size_in_bytes, 0x1000);
-            assert_eq!(result[1].memory_type, MemoryType::Reserved);
+    #[test]
+    fn preserves_reserved_regions_outside_ram() {
+        let ram: StdVec<MemoryDescriptor> = vec![desc("ram", 0x1000, 0x2000, MemoryType::Usable)];
+        let rsv: StdVec<MemoryDescriptor> = vec![desc("rsv", 0x5000, 0x1000, MemoryType::Reserved)];
 
-            // 第二个可用区间：0x3000-0x5000
-            assert_eq!(result[2].physical_start, 0x3000);
-            assert_eq!(result[2].size_in_bytes, 0x2000);
-            assert_eq!(result[2].memory_type, MemoryType::Usable);
-        }
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-        // 测试2：无相交的情况
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![
-                MemoryDescriptor {
-                    physical_start: 0x1000,
-                    size_in_bytes: 0x1000,
-                    memory_type: MemoryType::Usable,
-                },
-                MemoryDescriptor {
-                    physical_start: 0x5000,
-                    size_in_bytes: 0x1000,
-                    memory_type: MemoryType::Usable,
-                },
-            ];
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], desc("ram", 0x1000, 0x2000, MemoryType::Usable));
+    }
 
-            let rsv: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x3000,
-                size_in_bytes: 0x1000,
-                memory_type: MemoryType::Reserved,
-            }];
+    #[test]
+    fn removes_fully_reserved_ram_segments() {
+        let ram: StdVec<MemoryDescriptor> = vec![desc("ram", 0x2000, 0x2000, MemoryType::Usable)];
+        let rsv: StdVec<MemoryDescriptor> = vec![desc("rsv", 0x1000, 0x4000, MemoryType::Reserved)];
 
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-            // 预期结果：3个区间，保持原样
-            assert_eq!(result.len(), 3);
-            assert_eq!(result[0].memory_type, MemoryType::Usable);
-            assert_eq!(result[1].memory_type, MemoryType::Reserved);
-            assert_eq!(result[2].memory_type, MemoryType::Usable);
-        }
+        assert!(result.is_empty());
+    }
 
-        // 测试3：完全包含的情况
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x2000,
-                size_in_bytes: 0x4000,
-                memory_type: MemoryType::Usable,
-            }];
+    #[test]
+    fn splits_multiple_overlaps_and_retains_order() {
+        let ram: StdVec<MemoryDescriptor> = vec![desc("ram", 0x0000, 0x6000, MemoryType::Usable)];
+        let rsv: StdVec<MemoryDescriptor> = vec![
+            desc("rsv0", 0x1000, 0x0800, MemoryType::Reserved),
+            desc("rsv1", 0x3000, 0x0800, MemoryType::Reserved),
+        ];
 
-            let rsv: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x3000,
-                size_in_bytes: 0x1000,
-                memory_type: MemoryType::Reserved,
-            }];
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
+        assert_eq!(result.len(), 3);
+        assert_eq!(result[0], desc("ram", 0x0000, 0x1000, MemoryType::Usable));
+        assert_eq!(result[1], desc("ram", 0x2000, 0x1000, MemoryType::Usable));
+        assert_eq!(result[2], desc("ram", 0x4000, 0x2000, MemoryType::Usable));
+    }
 
-            // 预期结果：RSV在页面对齐后会覆盖RAM的一部分
-            assert!(result.len() >= 1);
-        }
+    #[test]
+    fn merges_adjacent_free_segments() {
+        let ram: StdVec<MemoryDescriptor> = vec![
+            desc("ram_low", 0x0000, 0x2000, MemoryType::Usable),
+            desc("ram_high", 0x2000, 0x2000, MemoryType::Usable),
+        ];
+        let rsv: StdVec<MemoryDescriptor> = vec![desc("rsv", 0x4000, 0x1000, MemoryType::Reserved)];
 
-        // 测试4：空输入
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![];
-            let rsv: StdVec<MemoryDescriptor> = vec![];
+        let result: StdVec<_> = cal_free_memories(&ram, &rsv, PAGE_SIZE)
+            .into_iter()
+            .collect();
 
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
-            assert_eq!(result.len(), 0);
-        }
-
-        // 测试5：只有RAM，无RSV
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x1000,
-                size_in_bytes: 0x2000,
-                memory_type: MemoryType::Usable,
-            }];
-            let rsv: StdVec<MemoryDescriptor> = vec![];
-
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0].memory_type, MemoryType::Usable);
-            assert_eq!(result[0].physical_start, 0x1000);
-            assert_eq!(result[0].size_in_bytes, 0x2000);
-        }
-
-        // 测试6：只有RSV，无RAM
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![];
-            let rsv: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x2000,
-                size_in_bytes: 0x1000,
-                memory_type: MemoryType::Reserved,
-            }];
-
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
-            // 页面对齐后RSV会被扩展
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0].memory_type, MemoryType::Reserved);
-        }
-
-        // 测试7：连续的同类型区域合并
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![
-                MemoryDescriptor {
-                    physical_start: 0x1000,
-                    size_in_bytes: 0x1000,
-                    memory_type: MemoryType::Usable,
-                },
-                MemoryDescriptor {
-                    physical_start: 0x2000,
-                    size_in_bytes: 0x1000,
-                    memory_type: MemoryType::Usable,
-                },
-            ];
-            let rsv: StdVec<MemoryDescriptor> = vec![];
-
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
-            // 应该合并为一个区间
-            assert_eq!(result.len(), 1);
-            assert_eq!(result[0].physical_start, 0x1000);
-            assert_eq!(result[0].size_in_bytes, 0x2000);
-            assert_eq!(result[0].memory_type, MemoryType::Usable);
-        }
-
-        // 测试8：页面对齐边界情况
-        {
-            let ram: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x1000,
-                size_in_bytes: 0x2000,
-                memory_type: MemoryType::Usable,
-            }];
-
-            // RSV区域刚好在页面边界
-            let rsv: StdVec<MemoryDescriptor> = vec![MemoryDescriptor {
-                physical_start: 0x2000,
-                size_in_bytes: 0x100,
-                memory_type: MemoryType::Reserved,
-            }];
-
-            let result = merge_memories(&ram, &rsv, PAGE_SIZE);
-            // 由于页面对齐，RSV会扩展到整个页面
-            assert!(result.len() >= 2);
-
-            // 检查是否有保留区域
-            let has_reserved = result
-                .iter()
-                .any(|desc| desc.memory_type == MemoryType::Reserved);
-            assert!(has_reserved);
-        }
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result[0],
+            desc("ram_low", 0x0000, 0x4000, MemoryType::Usable)
+        );
     }
 }

@@ -1,9 +1,9 @@
 use kernutil::memory::MemoryDescriptor;
 
-pub fn setup_allocator(regions: &[MemoryDescriptor]) {
+pub fn setup_allocator(free: &[MemoryDescriptor]) {
     crate::os::logger::init();
     info!("Setting up allocator...");
-    crate::os::mem::init_heap(regions);
+    crate::os::mem::init_heap(free);
 }
 
 pub fn setup() -> ! {

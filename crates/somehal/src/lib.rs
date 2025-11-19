@@ -55,6 +55,8 @@ fn prime_entry() -> ! {
     fdt::setup_memory_map();
     acpi::earlycon::acpi_setup_earlycon().unwrap();
 
+    mem::print_memory_map();
+
     unsafe extern "C" {
         fn __somehal_main() -> !;
     }

@@ -1,10 +1,10 @@
 use core::{alloc::Layout, cell::UnsafeCell};
 
-use num_align::NumAlign;
 use kernutil::memory::{MemoryDescriptor, MemoryType};
+use num_align::NumAlign;
 use page_table_generic::FrameAllocator;
 
-use crate::{ArchTrait, mem::page_size};
+use crate::{ArchTrait, mem::{page_size, virt_to_phys}};
 
 struct SimpleAllocator {
     start: usize,
@@ -69,6 +69,7 @@ impl FrameAllocator for Ram {
 
 pub fn init() {
     let kernel_end = crate::arch::Arch::kernel_code().as_ptr_range().end as usize;
+    let kernel_end = virt_to_phys(kernel_end as _);
     unsafe {
         (*RAM_ALLOC.0.get()).init(kernel_end);
     }
@@ -82,6 +83,7 @@ pub fn to_rsvd_memory_descriptor() -> MemoryDescriptor {
     let start = unsafe { RAM_ALLOC.0.get().as_ref().unwrap().start };
 
     MemoryDescriptor {
+        name: "SomeHal Reserved",
         physical_start: start,
         size_in_bytes: current() as usize - start,
         memory_type: MemoryType::Reserved,
