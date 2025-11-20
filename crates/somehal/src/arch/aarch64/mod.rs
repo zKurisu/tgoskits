@@ -28,7 +28,8 @@ impl ArchTrait for Arch {
     fn kernel_code() -> &'static [u8] {
         let start = ext_sym_addr!(_head);
         let end = ext_sym_addr!(__kernel_code_end);
-        unsafe { core::slice::from_raw_parts(start as *const u8, end - start) }
+        let size = end - start;
+        unsafe { core::slice::from_raw_parts(start as *const u8, size) }
     }
 
     fn _pa(vaddr: *const u8) -> usize {

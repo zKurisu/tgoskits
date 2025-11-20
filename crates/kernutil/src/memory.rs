@@ -269,7 +269,7 @@ mod test {
             memory_type: ty,
         }
     }
-
+    
     #[test]
     fn splits_ram_segments_when_reserved_inside() {
         let ram: StdVec<MemoryDescriptor> = vec![desc("ram", 0x1000, 0x4000, MemoryType::Usable)];

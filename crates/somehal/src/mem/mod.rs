@@ -1,6 +1,6 @@
 use core::{cell::UnsafeCell, ops::Deref};
 
-use byte_unit::Byte;
+use byte_unit::{Byte, UnitType};
 pub use kernutil::memory::{MemoryDescriptor, MemoryType};
 use num_align::NumAlign;
 
@@ -66,8 +66,8 @@ pub(crate) fn early_init() {
 
 pub(crate) fn kernel_range() -> core::ops::Range<usize> {
     let kernel = crate::arch::Arch::kernel_code().as_ptr_range();
-    let start = kernel.start as usize;
-    let end = ram::current() as usize;
+    let start = virt_to_phys(kernel.start);
+    let end = virt_to_phys(kernel.end);
     start..end
 }
 
@@ -80,15 +80,45 @@ pub fn page_size() -> usize {
 
 fn rsv_memories() -> heapless::Vec<MemoryDescriptor, 32> {
     let mut rsv = MEMORY_RSV.clone();
+    let kernel_range = kernel_range();
+
     let _ = rsv.push(MemoryDescriptor {
         name: "Kernel",
-        physical_start: virt_to_phys(kernel_range().start as *const u8),
-        size_in_bytes: kernel_range().end - kernel_range().start,
+        physical_start: kernel_range.start,
+        size_in_bytes: kernel_range.end - kernel_range.start,
         memory_type: MemoryType::Reserved,
     });
     let _ = rsv.push(ram::to_rsvd_memory_descriptor());
 
-    rsv
+    merge_contiguous_with_same_name(rsv)
+}
+
+fn merge_contiguous_with_same_name(
+    mut list: heapless::Vec<MemoryDescriptor, 32>,
+) -> heapless::Vec<MemoryDescriptor, 32> {
+    if list.is_empty() {
+        return list;
+    }
+
+    list.sort_by(|a, b| a.physical_start.cmp(&b.physical_start));
+
+    let mut merged: heapless::Vec<MemoryDescriptor, 32> = heapless::Vec::new();
+    for desc in list.into_iter() {
+        if let Some(last) = merged.last_mut() {
+            let last_end = last.physical_start + last.size_in_bytes;
+            if last.name == desc.name && last_end == desc.physical_start {
+                last.size_in_bytes += desc.size_in_bytes;
+                continue;
+            }
+        }
+
+        if merged.push(desc).is_err() {
+            println!("Warning: reserved regions exceed the max supported count");
+            break;
+        }
+    }
+
+    merged
 }
 
 pub fn memory_map() -> heapless::Vec<MemoryDescriptor, 64> {
@@ -115,12 +145,13 @@ pub fn memory_map() -> heapless::Vec<MemoryDescriptor, 64> {
 pub fn print_memory_map() {
     println!("Memory Map:");
     for desc in memory_map().iter() {
+        let fmt = Byte::from(desc.size_in_bytes).get_appropriate_unit(UnitType::Binary);
         println!(
             "  {:<20} {:>#016x} - {:>#016x} ({:#.2})",
             desc.name,
             desc.physical_start,
             desc.physical_start + desc.size_in_bytes,
-            Byte::from(desc.size_in_bytes)
+            fmt
         );
     }
 }
@@ -152,6 +183,7 @@ impl<T> StaticCell<T> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn set(&self, v: T) {
         unsafe {
             *self.value.get() = Some(v);
