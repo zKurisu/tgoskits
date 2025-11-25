@@ -4,18 +4,18 @@ use crate::{arch::cache::local_flush_icache_range, mem::StaticCell};
 
 const VECSIZE: usize = 0x200;
 
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct Vector([u8; VECSIZE]);
+
 // 等效于 C: long exception_handlers[VECSIZE * 128 / sizeof(long)] __aligned(SZ_64K);
 // 在 64 位系统中，sizeof(long) = 8，所以数组大小为 VECSIZE * 128 / 8 = VECSIZE * 16
 #[repr(C, align(65536))] // 65536 = 64KB 对齐
-struct ExceptionHandlers {
-    data: [usize; VECSIZE * 16],
-}
+struct ExceptionHandlers([Vector; 128]);
 
 impl ExceptionHandlers {
     const fn new() -> Self {
-        Self {
-            data: [0; VECSIZE * 16],
-        }
+        Self([Vector([0; VECSIZE]); 128])
     }
 }
 
@@ -23,7 +23,7 @@ static EXCEPTION_HANDLERS: StaticCell<ExceptionHandlers> =
     StaticCell::new(Some(ExceptionHandlers::new()));
 
 fn eentry_addr() -> usize {
-    EXCEPTION_HANDLERS.data.as_ptr() as usize
+    EXCEPTION_HANDLERS.0.as_ptr() as usize
 }
 
 fn tlbrentry_addr() -> usize {
@@ -36,10 +36,10 @@ pub fn per_cpu_trap_init(is_primary: bool) {
 
     if is_primary {
         for i in 0..64 {
-            set_handler(i * VECSIZE, handle_reserved);
+            set_handler(i, handle_reserved);
         }
         for i in 64..=64 + 14 {
-            set_handler(i * VECSIZE, handle_int);
+            set_handler(i, handle_int);
         }
 
         local_flush_icache_range(eentry_addr(), eentry_addr() + 0x400);
@@ -58,15 +58,18 @@ fn configure_exception_vector() {
     tlbrentry::set_tlbrentry(tlbrentry_addr());
 }
 
-fn set_handler(offset: usize, handler: fn()) {
+fn set_handler(idx: usize, handler: fn()) {
     unsafe {
         let src = core::slice::from_raw_parts(handler as *const u8, VECSIZE);
-        let dst = core::slice::from_raw_parts_mut((eentry_addr() as *mut u8).add(offset), VECSIZE);
-        dst.copy_from_slice(src);
-        local_flush_icache_range(
-            dst.as_ptr_range().start as usize,
-            dst.as_ptr_range().end as usize,
-        );
+        EXCEPTION_HANDLERS.update(|vec| {
+            let dst = &mut vec.0[idx].0[..];
+            dst.copy_from_slice(src);
+
+            local_flush_icache_range(
+                dst.as_ptr_range().start as usize,
+                dst.as_ptr_range().end as usize,
+            );
+        });
     }
 }
 
