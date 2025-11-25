@@ -601,6 +601,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
+name = "loongArch64"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c9f0d275c70310e2a9d2fc23250c5ac826a73fa828a5f256401f85c5c554283"
+dependencies = [
+ "bit_field",
+ "bitflags 2.10.0",
+]
+
+[[package]]
 name = "mbarrier"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -938,6 +948,7 @@ dependencies = [
  "kasm-aarch64",
  "kernutil",
  "log",
+ "loongArch64",
  "num-align",
  "numeric-enum-macro",
  "page-table-generic",

@@ -6,6 +6,9 @@
 extern crate alloc;
 
 #[macro_use]
+extern crate core;
+
+#[macro_use]
 extern crate log;
 
 #[macro_use]
@@ -34,6 +37,8 @@ trait ArchTrait {
     fn kernel_code() -> &'static [u8];
     fn post_allocator();
 
+    fn per_cpu_trap_init(is_primary: bool);
+
     fn _pa(vaddr: *const u8) -> usize;
     fn _va(paddr: usize) -> *mut u8;
     fn _io(paddr: usize) -> *mut u8;
@@ -51,6 +56,7 @@ fn kernel_code() -> &'static [u8] {
 
 fn prime_entry() -> ! {
     mem::set_mmu_enabled();
+    arch::Arch::per_cpu_trap_init(true);
     fdt::setup_earlycon();
     fdt::setup_memory_map();
     let _ = acpi::earlycon::acpi_setup_earlycon();

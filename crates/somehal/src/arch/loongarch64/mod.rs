@@ -6,6 +6,8 @@ pub(crate) mod entry;
 mod head;
 mod register;
 mod relocate;
+mod trap;
+mod cache;
 
 pub use relocate::relocate;
 
@@ -36,5 +38,9 @@ impl ArchTrait for Arch {
 
     fn _io(paddr: usize) -> *mut u8 {
         addrspace::to_uncache(paddr) as *mut u8
+    }
+
+    fn per_cpu_trap_init(is_primary: bool) {
+        trap::per_cpu_trap_init(is_primary);
     }
 }
