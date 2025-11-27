@@ -1,54 +1,80 @@
-use core::{arch::naked_asm, mem::offset_of};
+use core::{arch::global_asm, mem::offset_of};
 
 use loongArch64::register::{ecfg, eentry, estat, tlbrentry};
 
-use crate::{
-    arch::{cache::local_flush_icache_range, context::TrapFrame, register::csr},
-    mem::StaticCell,
-};
+use crate::arch::{context::TrapFrame, register::csr};
+
+/// LoongArch Exception Codes
+#[allow(dead_code)]
+mod exccode {
+    /// TLB Refill - Page Invalid for Load
+    pub const TLBL: usize = 0x1;
+    /// TLB Refill - Page Invalid for Store
+    pub const TLBS: usize = 0x2;
+    /// TLB Refill - TLB Invalid for Load
+    pub const TLBI: usize = 0x3;
+    /// TLB Modify exception
+    pub const TLBM: usize = 0x4;
+    /// TLB No Read permission
+    pub const TLBNR: usize = 0x5;
+    /// TLB No Execute permission
+    pub const TLBNX: usize = 0x6;
+    /// TLB Privilege Error
+    pub const TLBPE: usize = 0x7;
+    /// Address Error - Fetch
+    pub const ADF: usize = 0x8;
+    /// Address Error - Memory access
+    pub const ADE: usize = 0x8;
+    /// Address Alignment Error - Load/Store
+    pub const ALE: usize = 0x9;
+    /// Bound Check Error
+    pub const BCE: usize = 0xa;
+    /// System Call
+    pub const SYS: usize = 0xb;
+    /// Breakpoint
+    pub const BP: usize = 0xc;
+    /// Reserved Instruction
+    pub const INE: usize = 0xd;
+    /// Instruction Privilege Error
+    pub const IPE: usize = 0xe;
+    /// FPU Disabled
+    pub const FPDIS: usize = 0xf;
+    /// 128-bit vector (LSX) Disabled
+    pub const LSXDIS: usize = 0x10;
+    /// 256-bit vector (LASX) Disabled
+    pub const LASXDIS: usize = 0x11;
+    /// Floating Point Exception
+    pub const FPE: usize = 0x12;
+    /// Watch Exception
+    pub const WATCH: usize = 0x13;
+    /// Binary Translation Disabled
+    pub const BTDIS: usize = 0x14;
+    /// TLB Refill (special, from TLBRENTRY)
+    pub const TLBR: usize = 0x3f;
+    /// Hardware Interrupt (start)
+    pub const INT_START: usize = 64;
+    /// Hardware Interrupt (end)
+    pub const INT_END: usize = 64 + 14;
+}
 
 const VECSIZE: usize = 0x200;
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-struct Vector([u8; VECSIZE]);
-
-// 等效于 C: long exception_handlers[VECSIZE * 128 / sizeof(long)] __aligned(SZ_64K);
-// 在 64 位系统中，sizeof(long) = 8，所以数组大小为 VECSIZE * 128 / 8 = VECSIZE * 16
-#[repr(C, align(65536))] // 65536 = 64KB 对齐
-struct ExceptionHandlers([Vector; 128]);
-
-impl ExceptionHandlers {
-    const fn new() -> Self {
-        Self([Vector([0; VECSIZE]); 128])
-    }
+// 从链接脚本获取异常向量表地址
+unsafe extern "C" {
+    static __exception_vectors: u8;
 }
 
-static EXCEPTION_HANDLERS: StaticCell<ExceptionHandlers> =
-    StaticCell::new(Some(ExceptionHandlers::new()));
-
 fn eentry_addr() -> usize {
-    EXCEPTION_HANDLERS.0.as_ptr() as usize
+    unsafe { &__exception_vectors as *const _ as usize }
 }
 
 fn tlbrentry_addr() -> usize {
     eentry_addr() + 80 * VECSIZE
 }
 
-pub fn per_cpu_trap_init(is_primary: bool) {
+pub fn per_cpu_trap_init(_is_primary: bool) {
     setup_vint_size();
     configure_exception_vector();
-
-    if is_primary {
-        for i in 0..64 {
-            set_handler(i, handle_reserved);
-        }
-        for i in 64..=64 + 14 {
-            set_handler(i, handle_vint);
-        }
-
-        local_flush_icache_range(eentry_addr(), eentry_addr() + 0x400);
-    }
 }
 
 fn setup_vint_size() {
@@ -57,79 +83,17 @@ fn setup_vint_size() {
 }
 
 /// 配置异常向量
-/// 等效于 C 的 configure_exception_vector()
 fn configure_exception_vector() {
     eentry::set_eentry(eentry_addr());
     tlbrentry::set_tlbrentry(tlbrentry_addr());
 }
 
-fn set_handler(idx: usize, handler: unsafe extern "C" fn()) {
-    unsafe {
-        let src = core::slice::from_raw_parts(handler as *const u8, VECSIZE);
-        EXCEPTION_HANDLERS.update(|vec| {
-            let dst = &mut vec.0[idx].0[..];
-            dst.copy_from_slice(src);
-
-            local_flush_icache_range(
-                dst.as_ptr_range().start as usize,
-                dst.as_ptr_range().end as usize,
-            );
-        });
-    }
-}
-
-unsafe extern "C" fn handle_reserved() {}
-
-#[unsafe(naked)]
-unsafe extern "C" fn handle_vint() {
-    naked_asm!(
-        backup_t0t1!(),
-        "move    $t0,  $sp",
-        "addi.d  $sp,  $sp, -{frame_size}",
-        push_general_regs!(),
-        "st.d    $t0, $sp, {tf_sp}",
-        restore_t0t1!(),
-        "st.d    $t0, $sp, {tf_t0}",
-        "st.d    $t1, $sp, {tf_t1}",
-        "csrrd   $t0, {prmd}",
-        "st.d    $t0, $sp, {tf_prmd}",
-        "csrrd   $t0, {era}",
-        "st.d    $t0, $sp, {tf_era}",
-        "move    $t0,  $sp",
-        "bl {do_vint}",
-        "ld.d    $t0,  $sp, {tf_era}",
-        "csrwr    $t0, {era}",
-        "ld.d    $t0,  $sp, {tf_prmd}",
-        "csrwr    $t0, {prmd}",
-        pop_general_regs!(),
-        "ld.d    $sp,  $sp, {tf_sp}",
-        "ertn",
-        do_vint = sym do_vint,
-        frame_size = const size_of::<TrapFrame>(),
-        tf_sp = const offset_of!(TrapFrame, regs.sp),
-        tf_t0 = const offset_of!(TrapFrame, regs.t0),
-        tf_t1 = const offset_of!(TrapFrame, regs.t1),
-        tf_prmd = const offset_of!(TrapFrame, prmd),
-        prmd = const csr::PRMD,
-        tf_era = const offset_of!(TrapFrame, era),
-        era = const csr::ERA,
-    )
-}
-
 /// 处理向量中断
-/// 等效于 C 的 do_vint()
 fn do_vint(_tf: &mut TrapFrame) {
-    // unsigned int estat = read_csr_estat() & CSR_ESTAT_IS;
     let mut estat = estat::read().is();
 
-    // while ((hwirq = ffs(estat)))
-    // ffs (find first set) 返回第一个被设置的位的位置（1-based）
     while estat != 0 {
-        // 找到第一个设置的位（从低位开始，0-based）
         let hwirq = estat.trailing_zeros() + 1;
-
-        // estat &= ~BIT(hwirq - 1);
-        // 清除已处理的位
         estat &= !(1 << (hwirq - 1));
 
         unsafe extern "Rust" {
@@ -138,4 +102,870 @@ fn do_vint(_tf: &mut TrapFrame) {
 
         unsafe { _somehal_handle_irq((hwirq - 1) as _) };
     }
+}
+
+/// Page Fault 处理函数 (普通 TLB 异常: TLBL, TLBS, TLBI, TLBM, TLBNR, TLBNX, TLBPE)
+#[unsafe(no_mangle)]
+extern "C" fn do_page_fault(tf: &TrapFrame, write: usize, address: usize) -> ! {
+    let estat = estat::read();
+    let ecode = estat.ecode();
+    let esubcode = estat.esubcode();
+
+    let fault_type = match ecode {
+        exccode::TLBL => "TLB Load Invalid",
+        exccode::TLBS => "TLB Store Invalid",
+        exccode::TLBI => "TLB Invalid",
+        exccode::TLBM => "TLB Modify",
+        exccode::TLBNR => "TLB No Read Permission",
+        exccode::TLBNX => "TLB No Execute Permission",
+        exccode::TLBPE => "TLB Privilege Error",
+        _ => "Unknown Page Fault",
+    };
+
+    let access_type = if write != 0 { "write" } else { "read" };
+
+    panic!(
+        "\n\
+        ============================================================\n\
+        PAGE FAULT EXCEPTION\n\
+        ============================================================\n\
+        Type:        {} (ecode=0x{:x}, esubcode=0x{:x})\n\
+        Access:      {}\n\
+        Address:     0x{:016x}\n\
+        ERA (PC):    0x{:016x}\n\
+        PRMD:        0x{:016x}\n\
+        \n\
+        General Registers:\n\
+        ------------------------------------------------------------\n\
+        ra:  0x{:016x}    tp:  0x{:016x}\n\
+        sp:  0x{:016x}    a0:  0x{:016x}\n\
+        a1:  0x{:016x}    a2:  0x{:016x}\n\
+        a3:  0x{:016x}    a4:  0x{:016x}\n\
+        a5:  0x{:016x}    a6:  0x{:016x}\n\
+        a7:  0x{:016x}    t0:  0x{:016x}\n\
+        t1:  0x{:016x}    t2:  0x{:016x}\n\
+        t3:  0x{:016x}    t4:  0x{:016x}\n\
+        t5:  0x{:016x}    t6:  0x{:016x}\n\
+        t7:  0x{:016x}    t8:  0x{:016x}\n\
+        u0:  0x{:016x}    fp:  0x{:016x}\n\
+        s0:  0x{:016x}    s1:  0x{:016x}\n\
+        s2:  0x{:016x}    s3:  0x{:016x}\n\
+        s4:  0x{:016x}    s5:  0x{:016x}\n\
+        s6:  0x{:016x}    s7:  0x{:016x}\n\
+        s8:  0x{:016x}\n\
+        ============================================================",
+        fault_type,
+        ecode,
+        esubcode,
+        access_type,
+        address,
+        tf.era,
+        tf.prmd,
+        tf.regs.ra,
+        tf.regs.tp,
+        tf.regs.sp,
+        tf.regs.a0,
+        tf.regs.a1,
+        tf.regs.a2,
+        tf.regs.a3,
+        tf.regs.a4,
+        tf.regs.a5,
+        tf.regs.a6,
+        tf.regs.a7,
+        tf.regs.t0,
+        tf.regs.t1,
+        tf.regs.t2,
+        tf.regs.t3,
+        tf.regs.t4,
+        tf.regs.t5,
+        tf.regs.t6,
+        tf.regs.t7,
+        tf.regs.t8,
+        tf.regs.u0,
+        tf.regs.fp,
+        tf.regs.s0,
+        tf.regs.s1,
+        tf.regs.s2,
+        tf.regs.s3,
+        tf.regs.s4,
+        tf.regs.s5,
+        tf.regs.s6,
+        tf.regs.s7,
+        tf.regs.s8,
+    )
+}
+
+/// TLB Refill 处理函数 (从 TLBRENTRY 入口触发)
+/// TLB Refill 使用独立的 CSR: TLBRERA, TLBRPRMD, TLBRBADV
+#[unsafe(no_mangle)]
+extern "C" fn do_tlb_refill(tf: &TrapFrame, address: usize) -> ! {
+    panic!(
+        "\n\
+        ============================================================\n\
+        TLB REFILL EXCEPTION\n\
+        ============================================================\n\
+        Address:     0x{:016x}\n\
+        ERA (PC):    0x{:016x}\n\
+        PRMD:        0x{:016x}\n\
+        \n\
+        General Registers:\n\
+        ------------------------------------------------------------\n\
+        ra:  0x{:016x}    tp:  0x{:016x}\n\
+        sp:  0x{:016x}    a0:  0x{:016x}\n\
+        a1:  0x{:016x}    a2:  0x{:016x}\n\
+        a3:  0x{:016x}    a4:  0x{:016x}\n\
+        a5:  0x{:016x}    a6:  0x{:016x}\n\
+        a7:  0x{:016x}    t0:  0x{:016x}\n\
+        t1:  0x{:016x}    t2:  0x{:016x}\n\
+        t3:  0x{:016x}    t4:  0x{:016x}\n\
+        t5:  0x{:016x}    t6:  0x{:016x}\n\
+        t7:  0x{:016x}    t8:  0x{:016x}\n\
+        u0:  0x{:016x}    fp:  0x{:016x}\n\
+        s0:  0x{:016x}    s1:  0x{:016x}\n\
+        s2:  0x{:016x}    s3:  0x{:016x}\n\
+        s4:  0x{:016x}    s5:  0x{:016x}\n\
+        s6:  0x{:016x}    s7:  0x{:016x}\n\
+        s8:  0x{:016x}\n\
+        ============================================================",
+        address,
+        tf.era,
+        tf.prmd,
+        tf.regs.ra,
+        tf.regs.tp,
+        tf.regs.sp,
+        tf.regs.a0,
+        tf.regs.a1,
+        tf.regs.a2,
+        tf.regs.a3,
+        tf.regs.a4,
+        tf.regs.a5,
+        tf.regs.a6,
+        tf.regs.a7,
+        tf.regs.t0,
+        tf.regs.t1,
+        tf.regs.t2,
+        tf.regs.t3,
+        tf.regs.t4,
+        tf.regs.t5,
+        tf.regs.t6,
+        tf.regs.t7,
+        tf.regs.t8,
+        tf.regs.u0,
+        tf.regs.fp,
+        tf.regs.s0,
+        tf.regs.s1,
+        tf.regs.s2,
+        tf.regs.s3,
+        tf.regs.s4,
+        tf.regs.s5,
+        tf.regs.s6,
+        tf.regs.s7,
+        tf.regs.s8,
+    )
+}
+
+// ============================================================================
+// Exception Vector Table - 直接定义在 .exception.vectors 节中
+// 每个向量间隔 VECSIZE (0x200 = 512 字节)
+// ============================================================================
+
+// TrapFrame 结构体的偏移常量
+const TF_SP: usize = offset_of!(TrapFrame, regs.sp);
+const TF_T0: usize = offset_of!(TrapFrame, regs.t0);
+const TF_T1: usize = offset_of!(TrapFrame, regs.t1);
+const TF_PRMD: usize = offset_of!(TrapFrame, prmd);
+const TF_ERA: usize = offset_of!(TrapFrame, era);
+const FRAME_SIZE: usize = size_of::<TrapFrame>();
+
+global_asm!(
+    // CSR 常量
+    ".equ CSR_PRMD, {csr_prmd}",
+    ".equ CSR_ERA, {csr_era}",
+    ".equ CSR_BADV, {csr_badv}",
+    ".equ CSR_KS0, 0x30",
+    ".equ CSR_KS1, 0x31",
+    ".equ CSR_TLBRBADV, 0x89",
+    ".equ CSR_TLBRERA, 0x8a",
+    ".equ CSR_TLBRPRMD, 0x8f",
+
+    // TrapFrame 偏移
+    ".equ TF_SP, {tf_sp}",
+    ".equ TF_T0, {tf_t0}",
+    ".equ TF_T1, {tf_t1}",
+    ".equ TF_PRMD, {tf_prmd}",
+    ".equ TF_ERA, {tf_era}",
+    ".equ FRAME_SIZE, {frame_size}",
+
+    // VECSIZE 常量
+    ".equ VECSIZE, 0x200",
+
+    // ========================================================================
+    // 宏定义
+    // ========================================================================
+    r#"
+.macro BACKUP_T0T1
+    csrwr   $t0, CSR_KS0
+    csrwr   $t1, CSR_KS1
+.endm
+
+.macro RESTORE_T0T1
+    csrrd   $t0, CSR_KS0
+    csrrd   $t1, CSR_KS1
+.endm
+
+.macro SAVE_REGS_EXCEPT_T0T1
+    st.d    $zero, $sp, 0
+    st.d    $ra, $sp, 8
+    st.d    $tp, $sp, 16
+    // skip sp (24) - saved separately
+    st.d    $a0, $sp, 32
+    st.d    $a1, $sp, 40
+    st.d    $a2, $sp, 48
+    st.d    $a3, $sp, 56
+    st.d    $a4, $sp, 64
+    st.d    $a5, $sp, 72
+    st.d    $a6, $sp, 80
+    st.d    $a7, $sp, 88
+    // skip t0, t1 (96, 104) - saved separately
+    st.d    $t2, $sp, 112
+    st.d    $t3, $sp, 120
+    st.d    $t4, $sp, 128
+    st.d    $t5, $sp, 136
+    st.d    $t6, $sp, 144
+    st.d    $t7, $sp, 152
+    st.d    $t8, $sp, 160
+    st.d    $r21, $sp, 168
+    st.d    $fp, $sp, 176
+    st.d    $s0, $sp, 184
+    st.d    $s1, $sp, 192
+    st.d    $s2, $sp, 200
+    st.d    $s3, $sp, 208
+    st.d    $s4, $sp, 216
+    st.d    $s5, $sp, 224
+    st.d    $s6, $sp, 232
+    st.d    $s7, $sp, 240
+    st.d    $s8, $sp, 248
+.endm
+
+.macro RESTORE_REGS
+    ld.d    $ra, $sp, 8
+    ld.d    $tp, $sp, 16
+    ld.d    $a0, $sp, 32
+    ld.d    $a1, $sp, 40
+    ld.d    $a2, $sp, 48
+    ld.d    $a3, $sp, 56
+    ld.d    $a4, $sp, 64
+    ld.d    $a5, $sp, 72
+    ld.d    $a6, $sp, 80
+    ld.d    $a7, $sp, 88
+    ld.d    $t0, $sp, 96
+    ld.d    $t1, $sp, 104
+    ld.d    $t2, $sp, 112
+    ld.d    $t3, $sp, 120
+    ld.d    $t4, $sp, 128
+    ld.d    $t5, $sp, 136
+    ld.d    $t6, $sp, 144
+    ld.d    $t7, $sp, 152
+    ld.d    $t8, $sp, 160
+    ld.d    $r21, $sp, 168
+    ld.d    $fp, $sp, 176
+    ld.d    $s0, $sp, 184
+    ld.d    $s1, $sp, 192
+    ld.d    $s2, $sp, 200
+    ld.d    $s3, $sp, 208
+    ld.d    $s4, $sp, 216
+    ld.d    $s5, $sp, 224
+    ld.d    $s6, $sp, 232
+    ld.d    $s7, $sp, 240
+    ld.d    $s8, $sp, 248
+.endm
+"#,
+
+    // ========================================================================
+    // 开始异常向量表
+    // ========================================================================
+    ".section .exception.vectors, \"ax\"",
+    ".balign 0x10000",              // 64KB 对齐
+
+    // ------------------------------------------------------------------------
+    // Vector 0: 保留异常
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_0:",
+    "b      handle_reserved_exception",
+
+    // ------------------------------------------------------------------------
+    // Vector 1: TLBL - TLB Load Invalid (Page Fault for Load)
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_1:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",      // 保存原 SP
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",             // TrapFrame 指针
+    "li.d    $a1, 0",               // write = 0 (读操作)
+    "csrrd   $a2, CSR_BADV",        // 错误地址
+    "bl      do_page_fault",
+    // do_page_fault 是 noreturn，不会返回
+
+    // ------------------------------------------------------------------------
+    // Vector 2: TLBS - TLB Store Invalid (Page Fault for Store)
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_2:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 1",               // write = 1 (写操作)
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vector 3: TLBI - TLB Invalid
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_3:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 0",
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vector 4: TLBM - TLB Modify
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_4:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 1",
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vector 5: TLBNR - TLB No Read Permission
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_5:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 0",
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vector 6: TLBNX - TLB No Execute Permission
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_6:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 0",
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vector 7: TLBPE - TLB Privilege Error
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_7:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "li.d    $a1, 0",
+    "csrrd   $a2, CSR_BADV",
+    "bl      do_page_fault",
+
+    // ------------------------------------------------------------------------
+    // Vectors 8-63: Reserved exceptions -> handle_reserved_exception
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_exc_8:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_9:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_10:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_11:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_12:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_13:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_14:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_15:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_16:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_17:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_18:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_19:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_20:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_21:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_22:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_23:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_24:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_25:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_26:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_27:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_28:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_29:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_30:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_31:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_32:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_33:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_34:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_35:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_36:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_37:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_38:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_39:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_40:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_41:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_42:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_43:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_44:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_45:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_46:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_47:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_48:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_49:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_50:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_51:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_52:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_53:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_54:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_55:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_56:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_57:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_58:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_59:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_60:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_61:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_62:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_63:", "b handle_reserved_exception",
+
+    // ------------------------------------------------------------------------
+    // Vectors 64-78: Hardware Interrupts (HWI0-HWI14)
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    "handle_vint_64:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "bl      {do_vint}",
+    "ld.d    $t0, $sp, TF_ERA",
+    "csrwr   $t0, CSR_ERA",
+    "ld.d    $t0, $sp, TF_PRMD",
+    "csrwr   $t0, CSR_PRMD",
+    "RESTORE_REGS",
+    "ld.d    $sp, $sp, TF_SP",
+    "ertn",
+
+    // 复制相同的中断处理代码到后续向量
+    ".balign VECSIZE",
+    "handle_vint_65:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_66:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_67:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_68:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_69:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_70:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_71:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_72:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_73:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_74:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_75:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_76:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_77:", "b handle_vint_64",
+    ".balign VECSIZE",
+    "handle_vint_78:", "b handle_vint_64",
+
+    // 填充剩余向量 (79)
+    ".balign VECSIZE",
+    "handle_exc_79:", "b handle_reserved_exception",
+
+    // ------------------------------------------------------------------------
+    // Vector 80: TLB Refill Handler (TLBRENTRY 指向这里)
+    // TLB Refill 使用特殊的 CSR: TLBRERA, TLBRPRMD, TLBRBADV
+    // 需要保存上下文并调用 do_page_fault
+    // ------------------------------------------------------------------------
+    ".balign VECSIZE",
+    ".global handle_tlb_refill",
+    "handle_tlb_refill:",
+    // 使用 KS0/KS1 保存 t0/t1 (TLB Refill 时这是安全的)
+    "csrwr   $t0, CSR_KS0",
+    "csrwr   $t1, CSR_KS1",
+
+    // 保存原始 SP 到 t0
+    "move    $t0, $sp",
+    // 分配栈帧
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+
+    // 保存通用寄存器 (除了 t0, t1)
+    "SAVE_REGS_EXCEPT_T0T1",
+
+    // 保存原始 SP
+    "st.d    $t0, $sp, TF_SP",
+
+    // 恢复并保存 t0, t1
+    "csrrd   $t0, CSR_KS0",
+    "csrrd   $t1, CSR_KS1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+
+    // TLB Refill 使用 TLBRPRMD 和 TLBRERA (不是普通的 PRMD/ERA)
+    "csrrd   $t0, CSR_TLBRPRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_TLBRERA",
+    "st.d    $t0, $sp, TF_ERA",
+
+    // 调用 do_tlb_refill(tf, address)
+    "move    $a0, $sp",             // TrapFrame 指针
+    "csrrd   $a1, CSR_TLBRBADV",    // 错误地址
+    "bl      do_tlb_refill",
+    // do_tlb_refill 是 noreturn，不会返回
+
+    // 填充到 128 个向量 (81-127)
+    ".balign VECSIZE",
+    "handle_exc_81:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_82:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_83:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_84:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_85:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_86:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_87:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_88:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_89:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_90:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_91:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_92:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_93:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_94:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_95:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_96:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_97:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_98:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_99:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_100:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_101:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_102:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_103:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_104:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_105:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_106:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_107:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_108:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_109:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_110:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_111:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_112:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_113:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_114:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_115:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_116:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_117:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_118:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_119:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_120:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_121:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_122:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_123:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_124:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_125:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_126:", "b handle_reserved_exception",
+    ".balign VECSIZE",
+    "handle_exc_127:", "b handle_reserved_exception",
+
+    // ------------------------------------------------------------------------
+    // 保留异常通用处理入口
+    // ------------------------------------------------------------------------
+    ".balign 16",
+    "handle_reserved_exception:",
+    "BACKUP_T0T1",
+    "move    $t0, $sp",
+    "addi.d  $sp, $sp, -FRAME_SIZE",
+    "SAVE_REGS_EXCEPT_T0T1",
+    "st.d    $t0, $sp, TF_SP",
+    "RESTORE_T0T1",
+    "st.d    $t0, $sp, TF_T0",
+    "st.d    $t1, $sp, TF_T1",
+    "csrrd   $t0, CSR_PRMD",
+    "st.d    $t0, $sp, TF_PRMD",
+    "csrrd   $t0, CSR_ERA",
+    "st.d    $t0, $sp, TF_ERA",
+    "move    $a0, $sp",
+    "bl      do_reserved_exception",
+    // do_reserved_exception 是 noreturn，不会返回
+
+    csr_prmd = const csr::PRMD,
+    csr_era = const csr::ERA,
+    csr_badv = const csr::BADV,
+    tf_sp = const TF_SP,
+    tf_t0 = const TF_T0,
+    tf_t1 = const TF_T1,
+    tf_prmd = const TF_PRMD,
+    tf_era = const TF_ERA,
+    frame_size = const FRAME_SIZE,
+    do_vint = sym do_vint,
+);
+
+/// 保留异常处理函数
+#[unsafe(no_mangle)]
+extern "C" fn do_reserved_exception(tf: &TrapFrame) -> ! {
+    let estat = estat::read();
+    let ecode = estat.ecode();
+    let esubcode = estat.esubcode();
+
+    panic!(
+        "\n\
+        ============================================================\n\
+        RESERVED EXCEPTION\n\
+        ============================================================\n\
+        Ecode:       0x{:x}\n\
+        Esubcode:    0x{:x}\n\
+        ERA (PC):    0x{:016x}\n\
+        PRMD:        0x{:016x}\n\
+        \n\
+        General Registers:\n\
+        ------------------------------------------------------------\n\
+        ra:  0x{:016x}    tp:  0x{:016x}\n\
+        sp:  0x{:016x}    a0:  0x{:016x}\n\
+        a1:  0x{:016x}    a2:  0x{:016x}\n\
+        a3:  0x{:016x}    a4:  0x{:016x}\n\
+        a5:  0x{:016x}    a6:  0x{:016x}\n\
+        a7:  0x{:016x}    t0:  0x{:016x}\n\
+        t1:  0x{:016x}    t2:  0x{:016x}\n\
+        t3:  0x{:016x}    t4:  0x{:016x}\n\
+        t5:  0x{:016x}    t6:  0x{:016x}\n\
+        t7:  0x{:016x}    t8:  0x{:016x}\n\
+        u0:  0x{:016x}    fp:  0x{:016x}\n\
+        s0:  0x{:016x}    s1:  0x{:016x}\n\
+        s2:  0x{:016x}    s3:  0x{:016x}\n\
+        s4:  0x{:016x}    s5:  0x{:016x}\n\
+        s6:  0x{:016x}    s7:  0x{:016x}\n\
+        s8:  0x{:016x}\n\
+        ============================================================",
+        ecode,
+        esubcode,
+        tf.era,
+        tf.prmd,
+        tf.regs.ra,
+        tf.regs.tp,
+        tf.regs.sp,
+        tf.regs.a0,
+        tf.regs.a1,
+        tf.regs.a2,
+        tf.regs.a3,
+        tf.regs.a4,
+        tf.regs.a5,
+        tf.regs.a6,
+        tf.regs.a7,
+        tf.regs.t0,
+        tf.regs.t1,
+        tf.regs.t2,
+        tf.regs.t3,
+        tf.regs.t4,
+        tf.regs.t5,
+        tf.regs.t6,
+        tf.regs.t7,
+        tf.regs.t8,
+        tf.regs.u0,
+        tf.regs.fp,
+        tf.regs.s0,
+        tf.regs.s1,
+        tf.regs.s2,
+        tf.regs.s3,
+        tf.regs.s4,
+        tf.regs.s5,
+        tf.regs.s6,
+        tf.regs.s7,
+        tf.regs.s8,
+    )
 }

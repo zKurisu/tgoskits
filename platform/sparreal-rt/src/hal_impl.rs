@@ -11,10 +11,10 @@ impl Platform for InitImpl {
         somehal::power::shutdown()
     }
     fn irq_is_enabled(irq: usize) -> bool {
-        todo!()
+        false // TODO: implement
     }
     fn irq_set_enabled(irq: usize, enabled: bool) {
-        todo!()
+        // TODO: implement
     }
 }
 }
@@ -46,7 +46,7 @@ struct CpuImpl;
 impl_trait! {
 impl Cpu for CpuImpl {
     fn current_cpu_id() -> usize {
-        todo!()
+        0 // TODO: implement
     }
 
     fn irq_all_is_enabled() -> bool {
