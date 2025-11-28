@@ -34,4 +34,6 @@ pub trait Console {
     fn early_read() -> Option<u8>;
 }
 
-pub fn handle_irq(irq_number: usize) {}
+pub fn handle_irq(irq_number: usize) {
+    crate::os::irq::handle_irq(irq_number);
+}

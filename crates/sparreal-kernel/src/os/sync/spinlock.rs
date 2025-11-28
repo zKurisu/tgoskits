@@ -218,8 +218,8 @@ impl<T> IrqSpinlock<T> {
     ///
     /// 此方法不提供同步保证，调用者需要确保没有其他地方在并发访问数据
     #[inline]
-    pub unsafe fn get(&self) -> &T {
-        unsafe { &*self.data.get() }
+    pub unsafe fn get(&self) -> *mut T {
+        self.data.get()
     }
 
     /// 获取内部数据的可变引用
