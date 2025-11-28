@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub mod irq {
     pub const SWI0: u32 = 0;
     pub const SWI1: u32 = 1;
