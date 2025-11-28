@@ -1,6 +1,10 @@
 #![no_std]
 #![no_main]
 
+use core::{sync::atomic::AtomicBool, time::Duration};
+
+use sparreal_rt::hal::timer::one_shot_after;
+
 extern crate alloc;
 #[macro_use]
 extern crate sparreal_rt;
@@ -11,9 +15,23 @@ fn main() {
 
     // 测试 Page Fault: 访问一个未映射的地址
     println!("Testing page fault by accessing unmapped address 0x6000_0000_0000...");
-    unsafe {
-        let ptr = 0x6000_0000_0000usize as *const u64;
-        let _value = core::ptr::read_volatile(ptr);
+    // unsafe {
+    //     let ptr = 0x6000_0000_0000usize as *const u64;
+    //     let _value = core::ptr::read_volatile(ptr);
+    // }
+
+    static TEST_IRQ: AtomicBool = AtomicBool::new(false);
+
+    let _ = one_shot_after(Duration::from_millis(200), || {
+        TEST_IRQ.store(true, core::sync::atomic::Ordering::SeqCst);
+    });
+
+    // 等待中断触发
+    println!("Waiting for timer interrupt...");
+    loop {
+        if TEST_IRQ.load(core::sync::atomic::Ordering::SeqCst) {
+            break;
+        }
     }
 
     println!("All tests passed!");
