@@ -126,18 +126,9 @@ fn test_multiple_timers_order() {
     })
     .unwrap();
 
-    assert_test!(
-        wait_for_flag(&FIRST, 500),
-        "First timer not triggered"
-    );
-    assert_test!(
-        wait_for_flag(&SECOND, 500),
-        "Second timer not triggered"
-    );
-    assert_test!(
-        wait_for_flag(&THIRD, 500),
-        "Third timer not triggered"
-    );
+    assert_test!(wait_for_flag(&FIRST, 500), "First timer not triggered");
+    assert_test!(wait_for_flag(&SECOND, 500), "Second timer not triggered");
+    assert_test!(wait_for_flag(&THIRD, 500), "Third timer not triggered");
 
     info!("[PASS] test_multiple_timers_order");
 }
@@ -190,10 +181,7 @@ fn test_cancel_invalid_timer() {
     .unwrap();
 
     // 等待定时器触发
-    assert_test!(
-        wait_for_flag(&TRIGGERED, 500),
-        "Timer should trigger"
-    );
+    assert_test!(wait_for_flag(&TRIGGERED, 500), "Timer should trigger");
 
     // 定时器已经触发，再次取消应该返回 false
     let cancelled = cancel(handle);
@@ -258,10 +246,7 @@ fn test_timer_accuracy() {
     })
     .unwrap();
 
-    assert_test!(
-        wait_for_flag(&TRIGGERED, 500),
-        "Timer not triggered"
-    );
+    assert_test!(wait_for_flag(&TRIGGERED, 500), "Timer not triggered");
 
     let actual_delay_ms = TRIGGER_TIME.load(Ordering::SeqCst);
     // 允许 ±50ms 的误差
@@ -287,7 +272,10 @@ fn test_time_list() {
 
     // 检查 time_list
     let list = time_list();
-    assert_test!(!list.is_empty(), "time_list should contain at least one timer");
+    assert_test!(
+        !list.is_empty(),
+        "time_list should contain at least one timer"
+    );
 
     info!("[INFO] Pending timers: {}", list.len());
     for entry in &list {
@@ -298,10 +286,7 @@ fn test_time_list() {
     }
 
     // 等待定时器触发
-    assert_test!(
-        wait_for_flag(&TRIGGERED, 1000),
-        "Timer not triggered"
-    );
+    assert_test!(wait_for_flag(&TRIGGERED, 1000), "Timer not triggered");
 
     // 触发后列表应该少一个
     let list_after = time_list();
