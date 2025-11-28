@@ -3,7 +3,7 @@
 
 use core::{sync::atomic::AtomicBool, time::Duration};
 
-use sparreal_rt::hal::timer::one_shot_after;
+use sparreal_rt::os::time::one_shot_after;
 
 extern crate alloc;
 #[macro_use]
@@ -22,9 +22,10 @@ fn main() {
 
     static TEST_IRQ: AtomicBool = AtomicBool::new(false);
 
-    let _ = one_shot_after(Duration::from_millis(200), || {
+    one_shot_after(Duration::from_millis(200), || {
         TEST_IRQ.store(true, core::sync::atomic::Ordering::SeqCst);
-    });
+    })
+    .unwrap();
 
     // 等待中断触发
     println!("Waiting for timer interrupt...");

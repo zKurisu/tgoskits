@@ -25,7 +25,10 @@ pub trait Cpu {
     fn current_cpu_id() -> usize;
     fn irq_all_is_enabled() -> bool;
     fn irq_all_set_enable(enabled: bool);
-    fn timer_irq() -> usize;
+    fn systimer_irq() -> usize;
+    fn systimer_enable();
+    fn systimer_disable();
+    fn systimer_set_next_event(interval_ns: u64);
 }
 
 #[trait_ffi::def_extern_trait(mod_path = "hal::al", not_def_impl)]

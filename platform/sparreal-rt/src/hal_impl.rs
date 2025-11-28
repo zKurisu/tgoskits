@@ -58,8 +58,20 @@ impl Cpu for CpuImpl {
     }
 
 
-    fn timer_irq() -> usize {
-        somehal::irq::timer_irq()
+    fn systimer_irq() -> usize {
+        somehal::irq::systimer_irq()
+    }
+
+    fn systimer_enable() {
+        somehal::timer::enable();
+    }
+
+    fn systimer_disable() {
+        somehal::timer::disable();
+    }
+
+    fn systimer_set_next_event(interval_ns: u64) {
+        somehal::timer::set_next_event(interval_ns);
     }
 }
 }

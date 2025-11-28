@@ -32,6 +32,7 @@ pub(crate) mod fdt;
 pub mod irq;
 pub mod mem;
 pub mod power;
+pub mod timer;
 
 pub use somehal_macros::{entry, secondary_entry};
 
@@ -46,8 +47,12 @@ trait ArchTrait {
     fn _io(paddr: usize) -> *mut u8;
     fn ioremap(paddr: usize, size: usize) -> *mut u8;
 
-    fn timer_irq() -> usize;
+    fn systimer_irq() -> usize;
     fn shutdown() -> !;
+
+    fn systimer_enable();
+    fn systimer_disable();
+    fn systimer_set_next_event(interval_ns: u64);
 
     fn irq_all_is_enabled() -> bool;
     fn irq_all_set_enable(enable: bool);

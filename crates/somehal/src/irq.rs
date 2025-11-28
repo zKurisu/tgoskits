@@ -1,7 +1,7 @@
 use crate::ArchTrait;
 
-pub fn timer_irq() -> usize {
-    crate::arch::Arch::timer_irq()
+pub fn systimer_irq() -> usize {
+    crate::arch::Arch::systimer_irq()
 }
 
 pub fn irq_all_is_enabled() -> bool {

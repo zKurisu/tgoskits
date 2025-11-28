@@ -6,6 +6,8 @@ use core::{
 
 use crate::os::sync::IrqSpinlock;
 
+const NS_PER_SEC: u64 = 1_000_000_000;
+
 type TimerCallback = Box<dyn FnMut() + Send + 'static>;
 
 static TIMER_MANAGER: IrqSpinlock<Option<TimerManager>> = IrqSpinlock::new(None);
@@ -152,8 +154,10 @@ pub(crate) fn init() {
 
     TIMER_READY.store(true, Ordering::Release);
 
-    let timer_irq = crate::hal::al::cpu::timer_irq();
-    crate::os::irq::register_handler(timer_irq, timer_irq_handler);
+    let timer_irq = crate::hal::al::cpu::systimer_irq();
+    crate::os::irq::register_handler(timer_irq, systimer_irq_handler);
+    crate::hal::al::cpu::systimer_disable();
+    arm_next_tick();
 }
 
 /// Schedule a one-shot timer after the provided delay.
@@ -201,8 +205,9 @@ pub fn tick_period() -> Duration {
     with_manager(|mgr| mgr.tick_period).unwrap_or_default()
 }
 
-fn timer_irq_handler() {
+fn systimer_irq_handler() {
     let callbacks = with_manager_mut(|mgr| mgr.handle_irq()).unwrap_or_default();
+    arm_next_tick();
     run_callbacks(callbacks);
 }
 
@@ -242,4 +247,29 @@ where
 {
     let mut guard = TIMER_MANAGER.lock();
     guard.as_mut().map(f)
+}
+
+fn arm_next_tick() {
+    if !TIMER_READY.load(Ordering::Acquire) {
+        return;
+    }
+
+    let period = tick_period();
+    if period == Duration::ZERO {
+        return;
+    }
+
+    let ns = duration_to_ns(period);
+    if ns == 0 {
+        return;
+    }
+
+    crate::hal::al::cpu::systimer_set_next_event(ns);
+}
+
+fn duration_to_ns(duration: Duration) -> u64 {
+    duration
+        .as_secs()
+        .saturating_mul(NS_PER_SEC)
+        .saturating_add(duration.subsec_nanos() as u64)
 }
