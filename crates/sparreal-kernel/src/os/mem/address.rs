@@ -1,4 +1,4 @@
-use core::{fmt::Debug, ops::Range, ptr::NonNull};
+use core::ptr::NonNull;
 
 use crate::hal::al;
 
@@ -82,34 +82,6 @@ macro_rules! def_addr {
             }
         }
     };
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct CRange<T: Debug + Sized + Clone + Copy> {
-    pub start: T,
-    pub end: T,
-}
-
-impl<T: Debug + Sized + Clone + Copy> CRange<T> {
-    pub fn to_range(self) -> Range<T> {
-        self.start..self.end
-    }
-}
-
-impl<T: Debug + Sized + Clone + Copy> From<Range<T>> for CRange<T> {
-    fn from(value: Range<T>) -> Self {
-        Self {
-            start: value.start,
-            end: value.end,
-        }
-    }
-}
-
-impl<T: Debug + Sized + Clone + Copy> Debug for CRange<T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "[{:?}, {:?})", self.start, self.end)
-    }
 }
 
 def_addr!(Virt, usize);
