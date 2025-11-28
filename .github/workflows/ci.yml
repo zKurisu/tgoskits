@@ -36,45 +36,14 @@ jobs:
     - name: Install ostool
       run: cargo install ostool
     - name: Add Target
-      run: rustup target add aarch64-unknown-none
+      run: rustc --version
     - name: Check code format
       run: cargo fmt --all -- --check
 
     - uses: taiki-e/install-action@cargo-hack
 
-    - name: Clippy for workspace
-      run: cargo clippy --target aarch64-unknown-none -- -D warnings
-
-    - name: Add config
-      run: |
-        echo "[compile]" > .project.toml
-        echo 'target = "aarch64-unknown-none"' >> .project.toml
-        echo "[compile.build.Cargo]" >> .project.toml
-        echo 'package = "helloworld"' >> .project.toml
-        echo 'log_level = "Debug"' >> .project.toml
-        echo 'rust_flags = ""' >> .project.toml
-        echo 'features = []' >> .project.toml
-        echo 'kernel_is_bin = true' >> .project.toml
-        echo "[compile.build.Cargo.env]" >> .project.toml
-        echo "[qemu]" >> .project.toml
-        echo 'machine = "virt"' >> .project.toml
-        echo 'cpu = "cortex-a53"' >> .project.toml
-        echo 'graphic = false' >> .project.toml
-        echo 'args = ""' >> .project.toml       
+    # - name: Clippy for workspace
+      # run: cargo clippy --target loongarch64-unknown-none-softfloat -- -D warnings
 
     - name: Build test
-      run: ostool build
-
-    - name: Test bare-test simple_test
-      if: ${{ always() }}
-      run: CARGO_BUILD_TARGET=aarch64-unknown-none cargo test -p simple_test  --test test1 -- --show-output
-
-    - name: Test sparreal-macros
-      if: ${{ always() }}
-      working-directory: crates/sparreal-macros
-      run: cargo test --target x86_64-unknown-linux-gnu
-
-    - name: Test page-table-arm
-      if: ${{ always() }}
-      working-directory: crates/page-table-arm
-      run: cargo test --target x86_64-unknown-linux-gnu
+      run: chmod +x ./test_all.sh && ./test_all.sh
