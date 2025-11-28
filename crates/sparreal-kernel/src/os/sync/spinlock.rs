@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn test_irq_spinlock_empty() {
-        let lock: IrqSpinlock<()> = IrqSpinlock::empty();
+        let lock: IrqSpinlock<()> = IrqSpinlock::<()>::empty();
         assert!(!lock.is_locked());
 
         let value: () = lock.into_inner();

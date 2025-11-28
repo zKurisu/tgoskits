@@ -1,0 +1,9 @@
+args = ["-nographic"]
+fail_regex = [
+  "Panicked:",
+]
+success_regex = [
+  "All async tests passed!",
+]
+to_bin = true
+uefi = true
