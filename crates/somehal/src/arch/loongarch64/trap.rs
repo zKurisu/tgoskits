@@ -105,7 +105,7 @@ impl SoftIrqId {
     /// 创建 CPU 私有中断号
     /// hwirq: 硬件中断号 (0-14)
     pub fn private_irq(hwirq: usize) -> Self {
-        debug_assert!(hwirq < EXCCODE_INT_NUM, "hwirq {} out of range", hwirq);
+        debug_assert!(hwirq < EXCCODE_INT_NUM, "hwirq {hwirq} out of range");
         Self::new(hwirq)
     }
 
@@ -123,7 +123,7 @@ impl SoftIrqId {
             IrqKind::External(self.raw() - EXCCODE_INT_NUM)
         }
     }
-    
+
     /// 检查是否为定时器中断
     pub fn is_timer(&self) -> bool {
         self.raw() == cpuintc::TI as usize
