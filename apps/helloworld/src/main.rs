@@ -13,8 +13,7 @@ extern crate sparreal_rt;
 #[sparreal_rt::entry]
 fn main() {
     info!("Hello, world!");
-    // 测试 Page Fault: 访问一个未映射的地址
-    println!("Testing page fault by accessing unmapped address 0x6000_0000_0000...");
+
     static TEST_IRQ: AtomicBool = AtomicBool::new(false);
 
     one_shot_after(Duration::from_millis(200), || {

@@ -31,6 +31,7 @@ pub trait Cpu {
     fn systimer_enable();
     fn systimer_disable();
     fn systimer_set_next_event(intval: Duration);
+    fn systimer_ack();
     fn systimer_since_boot() -> Duration;
 }
 

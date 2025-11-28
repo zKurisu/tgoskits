@@ -12,7 +12,7 @@ impl Platform for InitImpl {
         somehal::power::shutdown()
     }
     fn irq_is_enabled(irq: usize) -> bool {
-        false // TODO: implement
+        somehal::irq::irq_all_is_enabled()
     }
     fn irq_set_enabled(irq: usize, enabled: bool) {
         // TODO: implement
@@ -73,6 +73,9 @@ impl Cpu for CpuImpl {
 
     fn systimer_set_next_event(interval: Duration) {
         somehal::timer::set_next_event(interval);
+    }
+    fn systimer_ack() {
+        somehal::timer::ack();
     }
     fn systimer_since_boot() -> Duration {
         somehal::timer::since_boot()

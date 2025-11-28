@@ -39,43 +39,65 @@ pub struct TimeListEntry {
 }
 
 /// Software timer core that keeps a sorted list of one-shot callbacks.
+/// Uses on-demand hardware timer interrupts instead of periodic ticks.
 struct TimerManager {
-    tick_period: Duration,
-    now: Duration,
     next_id: u64,
     timers: BTreeMap<TimerKey, TimerCallback>,
     index: BTreeMap<TimerId, Duration>,
 }
 
 impl TimerManager {
-    fn new(tick_period: Duration) -> Self {
-        assert!(tick_period > Duration::ZERO, "tick period must be non-zero");
+    fn new() -> Self {
         Self {
-            tick_period,
-            now: Duration::ZERO,
             next_id: 1,
             timers: BTreeMap::new(),
             index: BTreeMap::new(),
         }
     }
 
+    /// Get current monotonic time from hardware
+    fn now() -> Duration {
+        crate::hal::al::cpu::systimer_since_boot()
+    }
+
     fn schedule_after<F>(&mut self, delay: Duration, callback: F) -> TimerResult<TimerHandle>
     where
         F: FnOnce() + Send + 'static,
     {
-        let deadline = self.now.checked_add(delay).ok_or(TimerError::Overflow)?;
-        let h = self.schedule_at(deadline, callback);
-        Ok(h)
+        let now = Self::now();
+        let deadline = now.checked_add(delay).ok_or(TimerError::Overflow)?;
+        Ok(self.schedule_at_internal(deadline, callback))
     }
 
     fn schedule_at<F>(&mut self, deadline: Duration, callback: F) -> TimerHandle
     where
         F: FnOnce() + Send + 'static,
     {
+        self.schedule_at_internal(deadline, callback)
+    }
+
+    fn schedule_at_internal<F>(&mut self, deadline: Duration, callback: F) -> TimerHandle
+    where
+        F: FnOnce() + Send + 'static,
+    {
         let id = self.next_timer_id();
         let key = TimerKey { deadline, id };
+
+        // Check if this is the new earliest deadline
+        let is_earliest = self
+            .timers
+            .keys()
+            .next()
+            .is_none_or(|k| deadline < k.deadline);
+
         self.timers.insert(key, into_callback(callback));
         self.index.insert(id, deadline);
+
+        // If this is the earliest timer, reprogram hardware timer
+        if is_earliest {
+            self.arm_hardware_timer();
+        }
+
         TimerHandle(id)
     }
 
@@ -85,24 +107,28 @@ impl TimerManager {
                 deadline,
                 id: handle.0,
             };
+            let was_first = self.timers.keys().next().is_some_and(|k| *k == key);
             self.timers.remove(&key);
+
+            // If we removed the earliest timer, reprogram for the next one
+            if was_first {
+                self.arm_hardware_timer();
+            }
             return true;
         }
         false
     }
 
     fn handle_irq(&mut self) -> Vec<TimerCallback> {
-        self.now = self
-            .now
-            .checked_add(self.tick_period)
-            .unwrap_or(Duration::MAX);
-
+        let now = Self::now();
         let mut expired = Vec::new();
+
+        // Collect all expired timers
         loop {
             let Some(key) = self.timers.keys().next().cloned() else {
                 break;
             };
-            if key.deadline > self.now {
+            if key.deadline > now {
                 break;
             }
             if let Some(cb) = self.timers.remove(&key) {
@@ -110,13 +136,35 @@ impl TimerManager {
             }
             self.index.remove(&key.id);
         }
+
+        // Arm hardware timer for next deadline (if any)
+        self.arm_hardware_timer();
+
         expired
     }
 
+    /// Program the hardware timer for the next deadline
+    fn arm_hardware_timer(&self) {
+        if let Some(key) = self.timers.keys().next() {
+            let now = Self::now();
+            let delay = key.deadline.saturating_sub(now);
+
+            // Ensure minimum delay to avoid missing the interrupt
+            let delay = delay.max(Duration::from_micros(1));
+
+            crate::hal::al::cpu::systimer_set_next_event(delay);
+            crate::hal::al::cpu::systimer_enable();
+        } else {
+            // No pending timers, disable hardware timer
+            crate::hal::al::cpu::systimer_disable();
+        }
+    }
+
     fn snapshot(&self) -> Vec<TimeListEntry> {
+        let now = Self::now();
         let mut list = Vec::with_capacity(self.timers.len());
         for key in self.timers.keys() {
-            let remaining = key.deadline.saturating_sub(self.now);
+            let remaining = key.deadline.saturating_sub(now);
             list.push(TimeListEntry {
                 handle: TimerHandle(key.id),
                 deadline: key.deadline,
@@ -124,6 +172,10 @@ impl TimerManager {
             });
         }
         list
+    }
+
+    fn next_deadline(&self) -> Option<Duration> {
+        self.timers.keys().next().map(|k| k.deadline)
     }
 
     fn next_timer_id(&mut self) -> TimerId {
@@ -143,44 +195,57 @@ pub(crate) fn init() {
         if guard.is_some() {
             return;
         }
-        *guard = Some(TimerManager::new(default_tick_period()));
+        *guard = Some(TimerManager::new());
     }
 
     TIMER_READY.store(true, Ordering::Release);
 
     let timer_irq = crate::hal::al::cpu::systimer_irq();
     crate::os::irq::register_handler(timer_irq, systimer_irq_handler);
+
+    // Timer starts disabled, will be enabled when first timer is scheduled
     crate::hal::al::cpu::systimer_disable();
-    next_tick();
 }
 
 /// Schedule a one-shot timer after the provided delay.
-pub(crate) fn one_shot_after<F>(delay: Duration, callback: F) -> Result<TimerHandle, TimerError>
+pub fn one_shot_after<F>(delay: Duration, callback: F) -> Result<TimerHandle, TimerError>
 where
     F: FnOnce() + Send + 'static,
 {
+    if !is_ready() {
+        return Err(TimerError::NotReady);
+    }
     let mut cb = Some(callback);
     with_manager_mut(|mgr| mgr.schedule_after(delay, cb.take().unwrap()))
         .ok_or(TimerError::NotReady)?
 }
 
 /// Schedule a one-shot timer that fires at the absolute deadline.
-pub(crate) fn one_shot_at<F>(deadline: Duration, callback: F) -> Result<TimerHandle, TimerError>
+pub fn one_shot_at<F>(deadline: Duration, callback: F) -> Result<TimerHandle, TimerError>
 where
     F: FnOnce() + Send + 'static,
 {
+    if !is_ready() {
+        return Err(TimerError::NotReady);
+    }
     let mut cb = Some(callback);
     with_manager_mut(|mgr| mgr.schedule_at(deadline, cb.take().unwrap()))
         .ok_or(TimerError::NotReady)
 }
 
-pub(crate) fn cancel(handle: TimerHandle) -> bool {
+/// Cancel a scheduled timer.
+pub fn cancel(handle: TimerHandle) -> bool {
     with_manager_mut(|mgr| mgr.cancel(handle)).unwrap_or(false)
 }
 
-/// Monotonic time elapsed since the timer subsystem was initialised.
-pub(crate) fn uptime() -> Duration {
-    super::al::cpu::systimer_since_boot()
+/// Monotonic time elapsed since boot.
+pub fn uptime() -> Duration {
+    crate::hal::al::cpu::systimer_since_boot()
+}
+
+/// Get the next scheduled deadline (if any).
+pub fn next_deadline() -> Option<Duration> {
+    with_manager(|mgr| mgr.next_deadline()).flatten()
 }
 
 /// Snapshot the current pending timers for diagnostics.
@@ -188,17 +253,15 @@ pub fn time_list() -> Vec<TimeListEntry> {
     with_manager(|mgr| mgr.snapshot()).unwrap_or_default()
 }
 
+/// Check if timer subsystem is ready.
 pub fn is_ready() -> bool {
     TIMER_READY.load(Ordering::Acquire)
 }
 
-pub fn tick_period() -> Duration {
-    with_manager(|mgr| mgr.tick_period).unwrap_or_default()
-}
-
 fn systimer_irq_handler() {
+    // Acknowledge the timer interrupt first to prevent interrupt storm
+    crate::hal::al::cpu::systimer_ack();
     let callbacks = with_manager_mut(|mgr| mgr.handle_irq()).unwrap_or_default();
-    next_tick();
     run_callbacks(callbacks);
 }
 
@@ -220,10 +283,6 @@ where
     })
 }
 
-fn default_tick_period() -> Duration {
-    Duration::from_millis(1)
-}
-
 fn with_manager<F, R>(f: F) -> Option<R>
 where
     F: FnOnce(&TimerManager) -> R,
@@ -238,21 +297,4 @@ where
 {
     let mut guard = TIMER_MANAGER.lock();
     guard.as_mut().map(f)
-}
-
-fn next_tick() {
-    if !TIMER_READY.load(Ordering::Acquire) {
-        return;
-    }
-
-    let period = tick_period();
-    if period == Duration::ZERO {
-        return;
-    }
-
-    if period.is_zero() {
-        return;
-    }
-
-    crate::hal::al::cpu::systimer_set_next_event(period);
 }

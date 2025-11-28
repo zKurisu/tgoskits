@@ -16,7 +16,7 @@ use loongArch64::{
 };
 pub use relocate::relocate;
 
-use crate::{ArchTrait, arch::register::irq::TI};
+use crate::{ArchTrait, arch::register::irq::TI, irq::SoftIrqId};
 
 const MIN_TICKS: usize = 4;
 
@@ -69,11 +69,19 @@ impl ArchTrait for Arch {
         let ticks = (ticks + 3) & !3;
         let ticks = ticks.min(usize::MAX);
 
+        // 先禁用定时器
         tcfg::set_en(false);
+        // 设置单次模式
         tcfg::set_periodic(false);
+        // 设置初始值
         tcfg::set_init_val(ticks);
+        // 清除可能存在的中断
         ticlr::clear_timer_interrupt();
-        tcfg::set_en(true);
+        // 不在这里 enable，让调用者通过 systimer_enable() 来使能
+    }
+
+    fn systimer_ack() {
+        ticlr::clear_timer_interrupt();
     }
 
     fn systimer_freq() -> usize {
@@ -96,5 +104,47 @@ impl ArchTrait for Arch {
 
     fn irq_all_set_enable(enable: bool) {
         crmd::set_ie(enable);
+    }
+
+    fn irq_is_enabled(irq: SoftIrqId) -> bool {
+        use loongArch64::register::ecfg::{self, LineBasedInterrupt};
+
+        match irq.kind() {
+            trap::IrqKind::Private(hwirq) => {
+                // 对于 CPU 本地中断，检查 ECFG.LIE 对应位
+                // ECFG.LIE 位 0-12 对应中断 0-12 (SWI0-1, HWI0-7, PCOV, TI, IPI)
+                let lie = ecfg::read().lie();
+                let mask = LineBasedInterrupt::from_bits_retain(1 << hwirq);
+                lie.contains(mask)
+            }
+            trap::IrqKind::External(_hwirq) => {
+                // 外部中断需要通过级联中断控制器来检查
+                // 目前暂不支持，返回 false
+                false
+            }
+        }
+    }
+
+    fn irq_set_enable(irq: SoftIrqId, enable: bool) {
+        use loongArch64::register::ecfg::{self, LineBasedInterrupt};
+
+        match irq.kind() {
+            trap::IrqKind::Private(hwirq) => {
+                // 对于 CPU 本地中断，设置 ECFG.LIE 对应位
+                // 参考 Linux: set_csr_ecfg(ECFGF(d->hwirq)) / clear_csr_ecfg(ECFGF(d->hwirq))
+                let current_lie = ecfg::read().lie();
+                let mask = LineBasedInterrupt::from_bits_retain(1 << hwirq);
+                let new_lie = if enable {
+                    current_lie | mask
+                } else {
+                    current_lie - mask
+                };
+                ecfg::set_lie(new_lie);
+            }
+            trap::IrqKind::External(_hwirq) => {
+                // 外部中断需要通过级联中断控制器来设置
+                // 目前暂不支持
+            }
+        }
     }
 }

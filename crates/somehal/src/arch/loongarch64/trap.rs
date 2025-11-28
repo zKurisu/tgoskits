@@ -1,8 +1,14 @@
 use core::{arch::global_asm, fmt::Arguments, mem::offset_of};
 
-use loongArch64::register::{ecfg, eentry, estat, tlbrentry};
+use loongArch64::register::{
+    ecfg::{self},
+    eentry, estat, tlbrentry,
+};
 
-use crate::arch::{context::TrapFrame, register::csr};
+use crate::{
+    arch::{context::TrapFrame, register::csr},
+    irq::SoftIrqId,
+};
 
 /// LoongArch Exception Codes
 #[allow(dead_code)]
@@ -58,6 +64,76 @@ mod exccode {
 }
 
 const VECSIZE: usize = 0x200;
+
+use super::register::irq as cpuintc;
+
+/// CPU 中断源数量 (SWI0-1, HWI0-7, PCOV, TI, IPI, NMI, AVEC)
+const EXCCODE_INT_NUM: usize = 15;
+
+/// 中断类型，包含硬件中断号
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IrqKind {
+    /// CPU 本地中断 (SWI, HWI, TI, IPI, PMC, NMI, AVEC)
+    /// hwirq 范围: 0-14，对应 ESTAT.IS 位
+    Private(usize),
+    /// 外部中断 (通过级联中断控制器)
+    /// hwirq 为级联控制器的中断号
+    External(usize),
+}
+
+impl IrqKind {
+    /// 获取硬件中断号
+    pub fn hwirq(&self) -> usize {
+        match self {
+            IrqKind::Private(hwirq) => *hwirq,
+            IrqKind::External(hwirq) => *hwirq,
+        }
+    }
+
+    /// 检查是否为私有中断
+    pub fn is_private(&self) -> bool {
+        matches!(self, IrqKind::Private(_))
+    }
+
+    /// 检查是否为外部中断
+    pub fn is_external(&self) -> bool {
+        matches!(self, IrqKind::External(_))
+    }
+}
+
+impl SoftIrqId {
+    /// 创建 CPU 私有中断号
+    /// hwirq: 硬件中断号 (0-14)
+    pub fn private_irq(hwirq: usize) -> Self {
+        debug_assert!(hwirq < EXCCODE_INT_NUM, "hwirq {} out of range", hwirq);
+        Self::new(hwirq)
+    }
+
+    /// 创建外部中断号
+    /// 外部中断通过级联控制器路由，软件中断号 = hwirq + CPU_INT_NUM
+    pub fn extern_irq(hwirq: usize) -> Self {
+        Self::new(hwirq + EXCCODE_INT_NUM)
+    }
+
+    /// 获取中断类型及硬件中断号
+    pub fn kind(&self) -> IrqKind {
+        if self.raw() < EXCCODE_INT_NUM {
+            IrqKind::Private(self.raw())
+        } else {
+            IrqKind::External(self.raw() - EXCCODE_INT_NUM)
+        }
+    }
+    
+    /// 检查是否为定时器中断
+    pub fn is_timer(&self) -> bool {
+        self.raw() == cpuintc::TI as usize
+    }
+
+    /// 检查是否为 IPI 中断
+    pub fn is_ipi(&self) -> bool {
+        self.raw() == cpuintc::IPI as usize
+    }
+}
 
 // 从链接脚本获取异常向量表地址
 unsafe extern "C" {

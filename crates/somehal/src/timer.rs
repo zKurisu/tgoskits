@@ -20,6 +20,12 @@ pub fn set_next_event(interval: Duration) {
     crate::arch::Arch::systimer_set_interval(ticks);
 }
 
+/// Acknowledge and clear the timer interrupt.
+/// This must be called in the timer interrupt handler.
+pub fn ack() {
+    crate::arch::Arch::systimer_ack();
+}
+
 pub fn since_boot() -> Duration {
     elapsed()
 }

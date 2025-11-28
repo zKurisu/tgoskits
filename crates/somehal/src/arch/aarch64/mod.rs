@@ -66,6 +66,8 @@ impl ArchTrait for Arch {
 
     fn systimer_set_interval(_ticks: u64) {}
 
+    fn systimer_ack() {}
+
     fn systimer_freq() -> u64 {
         todo!()
     }

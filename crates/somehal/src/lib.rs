@@ -36,6 +36,8 @@ pub mod timer;
 
 pub use somehal_macros::{entry, secondary_entry};
 
+use crate::irq::SoftIrqId;
+
 trait ArchTrait {
     fn kernel_code() -> &'static [u8];
     fn post_allocator();
@@ -54,6 +56,8 @@ trait ArchTrait {
     fn systimer_disable();
     /// Set the timer interval in ticks
     fn systimer_set_interval(ticks: usize);
+    /// Acknowledge and clear the timer interrupt
+    fn systimer_ack();
     /// Get the timer frequency in Hz
     fn systimer_freq() -> usize;
     /// Get the current timer tick count
@@ -61,6 +65,9 @@ trait ArchTrait {
 
     fn irq_all_is_enabled() -> bool;
     fn irq_all_set_enable(enable: bool);
+
+    fn irq_is_enabled(irq: SoftIrqId) -> bool;
+    fn irq_set_enable(irq: SoftIrqId, enable: bool);
 }
 
 pub fn post_allocator() {
