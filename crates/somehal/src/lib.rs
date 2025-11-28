@@ -52,7 +52,12 @@ trait ArchTrait {
 
     fn systimer_enable();
     fn systimer_disable();
-    fn systimer_set_next_event(interval_ns: u64);
+    /// Set the timer interval in ticks
+    fn systimer_set_interval(ticks: usize);
+    /// Get the timer frequency in Hz
+    fn systimer_freq() -> usize;
+    /// Get the current timer tick count
+    fn systimer_tick() -> usize;
 
     fn irq_all_is_enabled() -> bool;
     fn irq_all_set_enable(enable: bool);

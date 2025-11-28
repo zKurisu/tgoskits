@@ -1,3 +1,4 @@
+use core::time::Duration;
 use sparreal_kernel::{hal::al::*, impl_trait};
 
 struct InitImpl;
@@ -70,8 +71,11 @@ impl Cpu for CpuImpl {
         somehal::timer::disable();
     }
 
-    fn systimer_set_next_event(interval_ns: u64) {
-        somehal::timer::set_next_event(interval_ns);
+    fn systimer_set_next_event(interval: Duration) {
+        somehal::timer::set_next_event(interval);
+    }
+    fn systimer_since_boot() -> Duration {
+        somehal::timer::since_boot()
     }
 }
 }

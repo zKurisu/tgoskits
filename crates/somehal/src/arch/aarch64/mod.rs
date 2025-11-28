@@ -64,7 +64,15 @@ impl ArchTrait for Arch {
 
     fn systimer_disable() {}
 
-    fn systimer_set_next_event(_interval_ns: u64) {}
+    fn systimer_set_interval(_ticks: u64) {}
+
+    fn systimer_freq() -> u64 {
+        todo!()
+    }
+
+    fn systimer_tick() -> u64 {
+        todo!()
+    }
 
     fn shutdown() -> ! {
         todo!()

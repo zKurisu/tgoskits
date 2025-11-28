@@ -6,8 +6,6 @@ use core::{
 
 use crate::os::sync::IrqSpinlock;
 
-const NS_PER_SEC: u64 = 1_000_000_000;
-
 type TimerCallback = Box<dyn FnMut() + Send + 'static>;
 
 static TIMER_MANAGER: IrqSpinlock<Option<TimerManager>> = IrqSpinlock::new(None);
@@ -128,10 +126,6 @@ impl TimerManager {
         list
     }
 
-    fn uptime(&self) -> Duration {
-        self.now
-    }
-
     fn next_timer_id(&mut self) -> TimerId {
         loop {
             let id = TimerId(self.next_id);
@@ -157,7 +151,7 @@ pub(crate) fn init() {
     let timer_irq = crate::hal::al::cpu::systimer_irq();
     crate::os::irq::register_handler(timer_irq, systimer_irq_handler);
     crate::hal::al::cpu::systimer_disable();
-    arm_next_tick();
+    next_tick();
 }
 
 /// Schedule a one-shot timer after the provided delay.
@@ -186,10 +180,7 @@ pub(crate) fn cancel(handle: TimerHandle) -> bool {
 
 /// Monotonic time elapsed since the timer subsystem was initialised.
 pub(crate) fn uptime() -> Duration {
-    if !TIMER_READY.load(Ordering::Acquire) {
-        return Duration::ZERO;
-    }
-    with_manager(|mgr| mgr.uptime()).unwrap_or(Duration::ZERO)
+    super::al::cpu::systimer_since_boot()
 }
 
 /// Snapshot the current pending timers for diagnostics.
@@ -207,7 +198,7 @@ pub fn tick_period() -> Duration {
 
 fn systimer_irq_handler() {
     let callbacks = with_manager_mut(|mgr| mgr.handle_irq()).unwrap_or_default();
-    arm_next_tick();
+    next_tick();
     run_callbacks(callbacks);
 }
 
@@ -249,7 +240,7 @@ where
     guard.as_mut().map(f)
 }
 
-fn arm_next_tick() {
+fn next_tick() {
     if !TIMER_READY.load(Ordering::Acquire) {
         return;
     }
@@ -259,17 +250,9 @@ fn arm_next_tick() {
         return;
     }
 
-    let ns = duration_to_ns(period);
-    if ns == 0 {
+    if period.is_zero() {
         return;
     }
 
-    crate::hal::al::cpu::systimer_set_next_event(ns);
-}
-
-fn duration_to_ns(duration: Duration) -> u64 {
-    duration
-        .as_secs()
-        .saturating_mul(NS_PER_SEC)
-        .saturating_add(duration.subsec_nanos() as u64)
+    crate::hal::al::cpu::systimer_set_next_event(period);
 }

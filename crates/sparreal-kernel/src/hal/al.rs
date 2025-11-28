@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 pub use heapless::Vec as StackVec;
 pub use kernutil::memory::MemoryDescriptor;
 
@@ -28,7 +30,8 @@ pub trait Cpu {
     fn systimer_irq() -> usize;
     fn systimer_enable();
     fn systimer_disable();
-    fn systimer_set_next_event(interval_ns: u64);
+    fn systimer_set_next_event(intval: Duration);
+    fn systimer_since_boot() -> Duration;
 }
 
 #[trait_ffi::def_extern_trait(mod_path = "hal::al", not_def_impl)]

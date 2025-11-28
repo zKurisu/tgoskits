@@ -12,14 +12,13 @@ mod trap;
 
 use loongArch64::{
     register::{crmd, tcfg, ticlr},
-    time,
+    time::{Time, get_timer_freq},
 };
 pub use relocate::relocate;
 
 use crate::{ArchTrait, arch::register::irq::TI};
 
-const MIN_TICKS: u64 = 4;
-const NS_PER_SEC: u128 = 1_000_000_000;
+const MIN_TICKS: usize = 4;
 
 pub struct Arch;
 
@@ -64,13 +63,25 @@ impl ArchTrait for Arch {
         tcfg::set_en(false);
     }
 
-    fn systimer_set_next_event(interval_ns: u64) {
-        let ticks = interval_ns_to_ticks(interval_ns);
+    fn systimer_set_interval(ticks: usize) {
+        let ticks = ticks.max(MIN_TICKS);
+        // Ensure the value is aligned to a multiple of 4 as required by TCFG
+        let ticks = (ticks + 3) & !3;
+        let ticks = ticks.min(usize::MAX);
+
         tcfg::set_en(false);
         tcfg::set_periodic(false);
         tcfg::set_init_val(ticks);
         ticlr::clear_timer_interrupt();
         tcfg::set_en(true);
+    }
+
+    fn systimer_freq() -> usize {
+        get_timer_freq()
+    }
+
+    fn systimer_tick() -> usize {
+        Time::read()
     }
 
     fn shutdown() -> ! {
@@ -86,26 +97,4 @@ impl ArchTrait for Arch {
     fn irq_all_set_enable(enable: bool) {
         crmd::set_ie(enable);
     }
-}
-
-fn interval_ns_to_ticks(interval_ns: u64) -> usize {
-    if interval_ns == 0 {
-        return MIN_TICKS as usize;
-    }
-
-    let freq = time::get_timer_freq() as u128;
-    if freq == 0 {
-        return MIN_TICKS as usize;
-    }
-
-    let mut ticks = (freq * interval_ns as u128) / NS_PER_SEC;
-    if ticks < MIN_TICKS as u128 {
-        ticks = MIN_TICKS as u128;
-    }
-
-    // Ensure the value is aligned to a multiple of 4 as required by TCFG
-    ticks = (ticks + 3) & !3u128;
-
-    ticks = ticks.min(usize::MAX as u128);
-    ticks as usize
 }
