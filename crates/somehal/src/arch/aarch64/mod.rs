@@ -51,4 +51,24 @@ impl ArchTrait for Arch {
     fn _io(paddr: usize) -> *mut u8 {
         Self::_va(paddr)
     }
+    
+    fn per_cpu_trap_init(is_primary: bool) {
+        todo!()
+    }
+    
+    fn timer_irq() -> usize {
+        todo!()
+    }
+    
+    fn shutdown() -> ! {
+        todo!()
+    }
+    
+    fn irq_all_is_enabled() -> bool {
+        todo!()
+    }
+    
+    fn irq_all_set_enable(enable: bool) {
+        todo!()
+    }
 }

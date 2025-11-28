@@ -7,6 +7,8 @@ use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicBool, Ordering};
 
+use crate::os::irq::NoIrqGuard;
+
 /// 禁止中断的原始Spinlock实现
 ///
 /// 使用原子操作和中断禁用来提供线程安全。
@@ -114,7 +116,7 @@ unsafe impl<T: Send> Sync for IrqSpinlock<T> {}
 /// 当这个守卫被drop时，锁会自动释放，中断状态也会恢复。
 pub struct IrqMutexGuard<'a, T> {
     lock: &'a IrqSpinlock<T>,
-    _irq_guard: crate::hal::irq::NoIrqGuard, // 确保中断在整个守卫生命周期内被禁用
+    _irq_guard: NoIrqGuard, // 确保中断在整个守卫生命周期内被禁用
 }
 
 impl<T> IrqSpinlock<T> {
@@ -166,7 +168,7 @@ impl<T> IrqSpinlock<T> {
     #[inline]
     pub fn lock(&self) -> IrqMutexGuard<T> {
         // 禁用中断（这会在整个守卫生命周期内保持）
-        let irq_guard = crate::hal::irq::NoIrqGuard::new();
+        let irq_guard = NoIrqGuard::new();
 
         // 获取锁
         self.raw.lock();
@@ -188,7 +190,7 @@ impl<T> IrqSpinlock<T> {
     /// * `None` - 锁已被占用时，中断状态不变
     #[inline]
     pub fn try_lock(&self) -> Option<IrqMutexGuard<T>> {
-        let irq_guard = crate::hal::irq::NoIrqGuard::new();
+        let irq_guard = NoIrqGuard::new();
         if self.raw.try_lock() {
             Some(IrqMutexGuard {
                 lock: self,

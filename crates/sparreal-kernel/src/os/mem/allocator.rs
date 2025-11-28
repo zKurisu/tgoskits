@@ -6,9 +6,9 @@ use core::{
 use buddy_system_allocator::Heap;
 use spin::Mutex;
 
-use crate::{
-    hal::irq::NoIrqGuard,
-    os::mem::address::{PhysAddr, VirtAddr},
+use crate::os::{
+    irq::NoIrqGuard,
+    mem::address::{PhysAddr, VirtAddr},
 };
 
 #[cfg(target_os = "none")]
