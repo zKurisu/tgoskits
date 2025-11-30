@@ -153,10 +153,37 @@ impl ArchTrait for Arch {
     }
 
     fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>) {
-        todo!()
+        // 获取页表的根物理地址
+        let root_paddr = pt.root_paddr().raw();
+
+        // 设置 PGDH (高地址空间页表基地址，用于内核空间)
+        paging::write_csr_pgdh(root_paddr as u64);
+
+        // 刷新 TLB
+        paging::local_flush_tlb_all();
+
+        // 将页表存储起来以便后续获取
+        // 注意：这里我们使用 forget 来防止页表被释放
+        core::mem::forget(pt);
     }
 
     fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A> {
-        todo!()
+        // 从 PGDH 寄存器读取当前内核页表的根地址
+        let root_paddr = paging::read_csr_pgdh() as usize;
+
+        // 创建 PageTableRef，然后包装成 PageTable
+        // 注意：这里假设 A 实现了 Default trait
+        let allocator: A = unsafe { core::mem::zeroed() };
+        let pt_ref = page_table_generic::PageTableRef::<Self::PT, A>::from_paddr(
+            root_paddr.into(),
+            allocator,
+        );
+
+        // 手动构造 PageTable
+        // SAFETY: PageTable 只是 PageTableRef 的包装，内存布局兼容
+        unsafe {
+            let pt = core::mem::ManuallyDrop::new(pt_ref);
+            core::ptr::read(&pt as *const _ as *const PageTable<Self::PT, A>)
+        }
     }
 }
