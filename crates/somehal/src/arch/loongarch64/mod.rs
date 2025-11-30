@@ -15,6 +15,7 @@ use loongArch64::{
     register::{crmd, tcfg, ticlr},
     time::{Time, get_timer_freq},
 };
+use page_table_generic::{FrameAllocator, PageTable};
 pub use relocate::relocate;
 
 use crate::{ArchTrait, arch::register::irq::TI, irq::SoftIrqId};
@@ -24,7 +25,7 @@ const MIN_TICKS: usize = 4;
 pub struct Arch;
 
 impl ArchTrait for Arch {
-    type PageTable = paging::Generic;
+    type PT = paging::Generic;
 
     fn kernel_code() -> &'static [u8] {
         let start = ext_sym_addr!(_head);
@@ -150,10 +151,12 @@ impl ArchTrait for Arch {
             }
         }
     }
-    
-    fn setup_paging() {
-        paging::setup();
-    }
-    
 
+    fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>) {
+        todo!()
+    }
+
+    fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A> {
+        todo!()
+    }
 }

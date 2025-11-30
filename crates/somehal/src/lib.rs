@@ -41,7 +41,7 @@ pub use somehal_macros::{entry, secondary_entry};
 use crate::irq::SoftIrqId;
 
 trait ArchTrait {
-    type PageTable: TableGeneric;
+    type PT: TableGeneric;
 
     fn kernel_code() -> &'static [u8];
     fn post_allocator();
@@ -52,7 +52,9 @@ trait ArchTrait {
     fn _va(paddr: usize) -> *mut u8;
     fn _io(paddr: usize) -> *mut u8;
     fn ioremap(paddr: usize, size: usize) -> *mut u8;
-    fn setup_paging();
+
+    fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>);
+    fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A>;
 
     fn systimer_irq() -> usize;
     fn shutdown() -> !;
@@ -77,7 +79,6 @@ trait ArchTrait {
 
 pub fn post_allocator() {
     debug!("Setup after allocator");
-    arch::Arch::setup_paging();
     arch::Arch::post_allocator();
 }
 
