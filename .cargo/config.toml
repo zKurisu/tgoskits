@@ -1,7 +1,4 @@
-# [unstable]
-# build-std = ["core", "alloc"]
-
-[target.'cfg(target_os = "none")']
+[target.'cfg(not(any(windows, unix)))']
 runner = "cargo osrun"
 
 [target.loongarch64-unknown-none-softfloat]
