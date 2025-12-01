@@ -3,12 +3,12 @@ mod guard;
 use alloc::{boxed::Box, collections::btree_map::BTreeMap};
 pub use guard::*;
 
-use crate::os::sync::IrqSpinlock;
+use crate::{hal::al::IrqId, os::sync::IrqSpinlock};
 
-static IRQ_VEC: IrqSpinlock<BTreeMap<usize, Box<dyn Fn() + Send + Sync>>> =
+static IRQ_VEC: IrqSpinlock<BTreeMap<IrqId, Box<dyn Fn() + Send + Sync>>> =
     IrqSpinlock::new(BTreeMap::new());
 
-pub fn register_handler<F>(irq: usize, handler: F)
+pub fn register_handler<F>(irq: IrqId, handler: F)
 where
     F: Fn() + Send + Sync + 'static,
 {
@@ -17,7 +17,7 @@ where
     guard.insert(irq, Box::new(handler));
 }
 
-pub(crate) fn handle_irq(irq: usize) {
+pub(crate) fn handle_irq(irq: IrqId) {
     let guard = IRQ_VEC.lock();
     if let Some(handler) = guard.get(&irq) {
         handler();

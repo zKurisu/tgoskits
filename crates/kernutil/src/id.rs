@@ -1,116 +1,142 @@
+/// 批量定义 ID 类型
+///
+/// # 用法
+/// ```ignore
+/// define_ids! {
+///     /// 任务 ID
+///     TaskId(usize),
+///     /// CPU ID
+///     CpuId(u32),
+///     /// 进程 ID
+///     ProcessId(usize),
+/// }
+/// ```
 #[macro_export]
-macro_rules! define_id {
-    ($name:ident: $inner_type:ty) => {
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        #[repr(transparent)]
-        pub struct $name($inner_type);
+macro_rules! define_ids {
+    (
+        $(
+            $(#[$meta:meta])*
+            $name:ident($inner_type:ty)
+        ),* $(,)?
+    ) => {
+        $(
+            $(#[$meta])*
+            #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+            #[repr(transparent)]
+            pub struct $name($inner_type);
 
-        impl $name {
-            /// 创建新的 ID
-            #[inline]
-            pub const fn new(value: $inner_type) -> Self {
-                Self(value)
+            impl $name {
+                /// 创建新的 ID
+                #[inline]
+                pub const fn new(value: $inner_type) -> Self {
+                    Self(value)
+                }
+
+                /// 获取内部值
+                #[inline]
+                pub const fn raw(&self) -> $inner_type {
+                    self.0
+                }
             }
 
-            /// 获取内部值
-            #[inline]
-            pub const fn raw(&self) -> $inner_type {
-                self.0
+            impl Default for $name {
+                #[inline]
+                fn default() -> Self {
+                    Self(<$inner_type>::default())
+                }
             }
-        }
 
-        impl Default for $name {
-            #[inline]
-            fn default() -> Self {
-                Self(<$inner_type>::default())
+            impl core::fmt::Display for $name {
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    write!(f, "{}", self.0)
+                }
             }
-        }
 
-        impl core::fmt::Display for $name {
-            #[inline]
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{}", self.0)
+            impl core::fmt::Debug for $name {
+                #[inline]
+                fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                    write!(f, "{}({:?})", stringify!($name), self.0)
+                }
             }
-        }
 
-        impl core::fmt::Debug for $name {
-            #[inline]
-            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                write!(f, "{}({:?})", stringify!($name), self.0)
+            impl From<$inner_type> for $name {
+                #[inline]
+                fn from(value: $inner_type) -> Self {
+                    Self(value)
+                }
             }
-        }
 
-        impl From<$inner_type> for $name {
-            #[inline]
-            fn from(value: $inner_type) -> Self {
-                Self(value)
+            impl From<$name> for $inner_type {
+                #[inline]
+                fn from(id: $name) -> Self {
+                    id.0
+                }
             }
-        }
 
-        impl From<$name> for $inner_type {
-            #[inline]
-            fn from(id: $name) -> Self {
-                id.0
+            impl core::ops::Add<$inner_type> for $name {
+                type Output = Self;
+
+                #[inline]
+                fn add(self, rhs: $inner_type) -> Self::Output {
+                    Self(self.0 + rhs)
+                }
             }
-        }
 
-        impl core::ops::Add<$inner_type> for $name {
-            type Output = Self;
+            impl core::ops::Add<$name> for $name {
+                type Output = Self;
 
-            #[inline]
-            fn add(self, rhs: $inner_type) -> Self::Output {
-                Self(self.0 + rhs)
+                #[inline]
+                fn add(self, rhs: $name) -> Self::Output {
+                    Self(self.0 + rhs.0)
+                }
             }
-        }
 
-        impl core::ops::Add<$name> for $name {
-            type Output = Self;
-
-            #[inline]
-            fn add(self, rhs: $name) -> Self::Output {
-                Self(self.0 + rhs.0)
+            impl core::ops::AddAssign<$inner_type> for $name {
+                #[inline]
+                fn add_assign(&mut self, rhs: $inner_type) {
+                    self.0 += rhs;
+                }
             }
-        }
 
-        impl core::ops::Sub<$inner_type> for $name {
-            type Output = Self;
+            impl core::ops::Sub<$inner_type> for $name {
+                type Output = Self;
 
-            #[inline]
-            fn sub(self, rhs: $inner_type) -> Self::Output {
-                Self(self.0 - rhs)
+                #[inline]
+                fn sub(self, rhs: $inner_type) -> Self::Output {
+                    Self(self.0 - rhs)
+                }
             }
-        }
 
-        impl core::ops::Sub<$name> for $name {
-            type Output = Self;
+            impl core::ops::Sub<$name> for $name {
+                type Output = Self;
 
-            #[inline]
-            fn sub(self, rhs: $name) -> Self::Output {
-                Self(self.0 - rhs.0)
+                #[inline]
+                fn sub(self, rhs: $name) -> Self::Output {
+                    Self(self.0 - rhs.0)
+                }
             }
-        }
 
-        impl core::ops::AddAssign<$inner_type> for $name {
-            #[inline]
-            fn add_assign(&mut self, rhs: $inner_type) {
-                self.0 += rhs;
+            impl core::ops::SubAssign<$inner_type> for $name {
+                #[inline]
+                fn sub_assign(&mut self, rhs: $inner_type) {
+                    self.0 -= rhs;
+                }
             }
-        }
-
-        impl core::ops::SubAssign<$inner_type> for $name {
-            #[inline]
-            fn sub_assign(&mut self, rhs: $inner_type) {
-                self.0 -= rhs;
-            }
-        }
+        )*
     };
 }
 
 #[cfg(test)]
 mod tests {
-    // 在测试模块中重新定义 ID 类型用于测试
-    define_id!(TestId: usize);
-    define_id!(NegId: isize);
+
+    // 使用 define_ids! 批量定义测试用 ID 类型
+    define_ids! {
+        /// 测试用 ID
+        TestId(usize),
+        /// 支持负数的 ID
+        NegId(isize),
+    }
 
     #[test]
     fn test_basic_id_creation() {

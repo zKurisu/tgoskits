@@ -8,7 +8,7 @@ pub fn start_kernel() -> ! {
     al::platform::post_allocator();
     timer::init();
 
-    al::cpu::irq_all_set_enable(true);
+    al::cpu::irq_local_set_enable(true);
 
     unsafe extern "C" {
         fn __sparreal_main();

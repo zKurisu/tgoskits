@@ -11,11 +11,11 @@ impl Platform for InitImpl {
     fn shutdown() -> ! {
         somehal::power::shutdown()
     }
-    fn irq_is_enabled(irq: usize) -> bool {
-        somehal::irq::irq_is_enabled(irq)
+    fn irq_is_enabled(irq: IrqId) -> bool {
+        somehal::irq::irq_is_enabled(irq.into())
     }
-    fn irq_set_enabled(irq: usize, enable: bool) {
-        somehal::irq::irq_set_enable(irq, enable);
+    fn irq_set_enabled(irq: IrqId, enable: bool) {
+        somehal::irq::irq_set_enable(irq.into(), enable);
     }
 }
 }
@@ -50,17 +50,17 @@ impl Cpu for CpuImpl {
         0 // TODO: implement
     }
 
-    fn irq_all_is_enabled() -> bool {
-        somehal::irq::irq_all_is_enabled()
+    fn irq_local_is_enabled() -> bool {
+        somehal::irq::irq_local_is_enabled()
     }
 
-    fn irq_all_set_enable(enable: bool) {
-        somehal::irq::irq_all_set_enable(enable);
+    fn irq_local_set_enable(enable: bool) {
+        somehal::irq::irq_local_set_enable(enable);
     }
 
 
-    fn systimer_irq() -> usize {
-        somehal::irq::systimer_irq()
+    fn systimer_irq() -> IrqId {
+        somehal::irq::systimer_irq().into()
     }
 
     fn systimer_enable() {
@@ -98,6 +98,6 @@ impl Console for ConsoleImpl {
 }
 
 #[unsafe(no_mangle)]
-pub extern "Rust" fn _somehal_handle_irq(hwirq: usize) {
+pub extern "Rust" fn _somehal_handle_irq(hwirq: IrqId) {
     handle_irq(hwirq);
 }
