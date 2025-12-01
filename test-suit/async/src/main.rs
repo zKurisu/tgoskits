@@ -7,8 +7,9 @@
 //! - 执行器状态管理
 //! - 定时器集成
 
-#![no_std]
 #![no_main]
+#![cfg_attr(not(any(windows, unix)), no_std)]
+#![cfg(not(any(windows, unix)))]
 
 extern crate alloc;
 #[macro_use]

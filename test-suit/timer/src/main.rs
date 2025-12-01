@@ -1,5 +1,6 @@
-#![no_std]
 #![no_main]
+#![cfg_attr(not(any(windows, unix)), no_std)]
+#![cfg(not(any(windows, unix)))]
 
 use core::{
     sync::atomic::{AtomicBool, AtomicUsize, Ordering},

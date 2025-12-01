@@ -29,10 +29,13 @@ pub(crate) fn init_heap(regions: &[MemoryDescriptor]) {
                 start + size,
                 adjusted_byte
             );
-            let memory = unsafe { core::slice::from_raw_parts_mut(start.into(), size) };
 
             #[cfg(target_os = "none")]
-            allocator::ALLOCATOR.add_to_frame(memory);
+            {
+                let memory = unsafe { core::slice::from_raw_parts_mut(start.into(), size) };
+
+                allocator::ALLOCATOR.add_to_frame(memory);
+            }
         }
     }
 }

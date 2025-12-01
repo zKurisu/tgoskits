@@ -1,6 +1,7 @@
 use core::{hint::spin_loop, panic::PanicInfo};
 
-#[cfg_attr(target_os = "none", panic_handler)]
+#[allow(dead_code)]
+#[cfg_attr(not(any(windows, unix)), panic_handler)]
 fn panic(info: &PanicInfo) -> ! {
     error!("Panicked: {info:?}");
     loop {

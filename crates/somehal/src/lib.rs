@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(iter_next_chunk)]
+#![cfg(not(any(windows, unix)))]
 
 #[allow(unused_imports)]
 #[macro_use]
@@ -21,6 +22,10 @@ pub mod arch;
 
 #[cfg(target_arch = "aarch64")]
 #[path = "arch/aarch64/mod.rs"]
+pub mod arch;
+
+#[cfg(target_arch = "x86_64")]
+#[path = "arch/x86_64/mod.rs"]
 pub mod arch;
 
 mod acpi;
