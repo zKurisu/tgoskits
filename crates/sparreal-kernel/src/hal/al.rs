@@ -1,16 +1,14 @@
-use core::time::Duration;
+use core::{ptr::NonNull, time::Duration};
 
 pub use heapless::Vec as StackVec;
-use kernutil::define_ids;
+use kernutil::define_type;
 pub use kernutil::memory::MemoryDescriptor;
 
 #[trait_ffi::def_extern_trait(mod_path = "hal::al")]
 pub trait Memory {
     /// Convert virtual address to physical address
-    /// # Safety
-    /// The caller must ensure that the provided virtual address is valid and mapped.
-    unsafe fn virt_to_phys(virt: *mut u8) -> usize;
-    fn phys_to_virt(phys: usize) -> *mut u8;
+    fn virt_to_phys(virt: VirtAddr) -> PhysAddr;
+    fn phys_to_virt(phys: PhysAddr) -> VirtAddr;
     fn page_size() -> usize;
     fn memory_map() -> StackVec<MemoryDescriptor, 64>;
 
@@ -53,7 +51,56 @@ pub fn handle_irq(irq: IrqId) {
     crate::os::irq::handle_irq(irq);
 }
 
-define_ids! {
-    PageTabeAddr(usize),
+#[derive(thiserror::Error, Debug)]
+pub enum PageError {
+    #[error("Invalid Address")]
+    InvalidAddress,
+    #[error("Out of Memory")]
+    OutOfMemory,
+    #[error("Page Already Exists")]
+    Exist,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MapSettings {
+    pub access: AccessFlags,
+    pub mem_attributes: MemAttributes,
+}
+
+bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct AccessFlags: usize {
+        const READ = 1;
+        const WRITE = 1<<2;
+        const EXECUTE = 1<<3;
+        const LOWER = 1<<4;
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct MemAttributes: usize {
+        const NORMAL = 0;
+        const DEVICE = 1<<0;
+        const UNCACHED = 1<<1;
+    }
+}
+
+pub trait PageTable {
+    fn addr(&self) -> PhysAddr;
+    fn map(
+        &mut self,
+        phys_start: PhysAddr,
+        virt_start: VirtAddr,
+        size: usize,
+        settings: MapSettings,
+    ) -> Result<(), PageError>;
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PageError>;
+}
+
+define_type! {
+    /// Interrupt Request Identifier
     IrqId(usize),
+    /// Physical Address
+    PhysAddr(usize),
+    /// Virtual Address
+    VirtAddr(usize),
 }

@@ -24,12 +24,12 @@ struct MemoryImpl;
 
 impl_trait! {
 impl Memory for MemoryImpl {
-    unsafe fn virt_to_phys(virt: *mut u8) -> usize {
-        somehal::mem::virt_to_phys(virt)
+    fn virt_to_phys(virt: VirtAddr) -> PhysAddr {
+        somehal::mem::virt_to_phys(virt.raw() as _).into()
     }
 
-    fn phys_to_virt(phys: usize) -> *mut u8 {
-        somehal::mem::phys_to_virt(phys as _)
+    fn phys_to_virt(phys: PhysAddr) -> VirtAddr {
+        somehal::mem::phys_to_virt(phys.raw() as _).into()
     }
 
     fn page_size() -> usize {

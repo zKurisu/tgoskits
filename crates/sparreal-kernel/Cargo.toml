@@ -12,12 +12,14 @@ version = "0.13.0"
 [dependencies]
 ansi_rgb = "0.2"
 buddy_system_allocator = "0.11"
+byte-unit = {workspace = true}
+heapless.workspace = true
 log = {workspace = true}
 rgb = "0.8"
 spin = "0.10"
+thiserror = {version = "2", default-features = false}
 trait-ffi = "0.2"
-byte-unit = {workspace = true }
-heapless.workspace = true
+bitflags = "2"
 
 kernutil = {workspace = true}
 sparreal-macros = {workspace = true}

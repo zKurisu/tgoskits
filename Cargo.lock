@@ -978,6 +978,7 @@ name = "sparreal-kernel"
 version = "0.13.0"
 dependencies = [
  "ansi_rgb",
+ "bitflags 2.10.0",
  "buddy_system_allocator",
  "byte-unit",
  "heapless 0.9.1",
@@ -986,6 +987,7 @@ dependencies = [
  "rgb",
  "sparreal-macros",
  "spin 0.10.0",
+ "thiserror",
  "trait-ffi",
 ]
 
