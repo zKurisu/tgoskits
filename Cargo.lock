@@ -347,6 +347,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "dma-api"
+version = "0.6.0"
+dependencies = [
+ "aarch64-cpu-ext",
+ "cfg-if",
+ "spin 0.10.0",
+ "thiserror",
+]
+
+[[package]]
 name = "enum_dispatch"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -918,7 +928,7 @@ checksum = "20ad586f110c679176859fe111f2c3dd176b95bbe731e9b4c3d1c6382cb301c9"
 dependencies = [
  "bare-test-macros",
  "bitflags 2.10.0",
- "dma-api",
+ "dma-api 0.5.2",
  "enum_dispatch",
  "heapless 0.9.1",
  "log",
@@ -981,6 +991,7 @@ dependencies = [
  "bitflags 2.10.0",
  "buddy_system_allocator",
  "byte-unit",
+ "dma-api 0.6.0",
  "heapless 0.9.1",
  "kernutil",
  "log",
