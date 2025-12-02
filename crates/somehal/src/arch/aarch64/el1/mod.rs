@@ -5,7 +5,7 @@ use aarch64_cpu::{
 use aarch64_cpu_ext::asm::tlb::*;
 use page_table_generic::{PageTableEntry, TableGeneric, VirtAddr};
 
-use crate::arch::entry::el_entry;
+use crate::{arch::entry::el_entry, mem::PageTableInfo};
 
 pub fn switch_to_elx() {
     unsafe extern "C" {
@@ -142,6 +142,11 @@ impl Pte {
         Self(flags.bits())
     }
 
+    /// 创建空页表项
+    pub const fn empty() -> Self {
+        Self(0)
+    }
+
     #[allow(unused)]
     pub fn update_flags<F>(&mut self, f: F)
     where
@@ -213,6 +218,14 @@ impl PageTableEntry for Pte {
             self.0 |= bits;
         }
     }
+
+    fn set_mem_config(&mut self, _config: page_table_generic::MemConfig) {
+        todo!()
+    }
+
+    fn mem_config(&self) -> page_table_generic::MemConfig {
+        todo!()
+    }
 }
 
 impl core::fmt::Debug for Pte {
@@ -240,7 +253,7 @@ impl TableGeneric for Generic {
 }
 
 #[inline(always)]
-fn flush_tlb(vaddr: Option<VirtAddr>) {
+pub fn flush_tlb(vaddr: Option<VirtAddr>) {
     match vaddr {
         Some(addr) => {
             tlbi(VAAE1IS::new(addr.raw()));
@@ -292,12 +305,28 @@ pub fn setup_table_regs() {
     barrier::isb(barrier::SY);
 }
 
-#[inline(always)]
-pub fn set_table(addr: usize) {
-    TTBR1_EL1.set_baddr(addr as _);
-    TTBR0_EL1.set_baddr(addr as _);
-    barrier::dsb(barrier::SY);
-    barrier::isb(barrier::SY);
+pub fn get_kernal_table() -> PageTableInfo {
+    let val = TTBR1_EL1.extract();
+    PageTableInfo {
+        asid: val.read(TTBR1_EL1::ASID) as _,
+        addr: (val.read(TTBR1_EL1::BADDR) << 1) as _,
+    }
+}
+
+pub fn set_kernal_table(tb: PageTableInfo) {
+    TTBR1_EL1.set(TTBR1_EL1::ASID.val(tb.asid as u64).value + tb.addr as u64);
+}
+
+pub fn set_user_table(tb: PageTableInfo) {
+    TTBR0_EL1.set(TTBR0_EL1::ASID.val(tb.asid as u64).value + tb.addr as u64);
+}
+
+pub fn get_user_table() -> PageTableInfo {
+    let val = TTBR0_EL1.extract();
+    PageTableInfo {
+        asid: val.read(TTBR0_EL1::ASID) as _,
+        addr: (val.read(TTBR0_EL1::BADDR) << 1) as _,
+    }
 }
 
 #[inline(always)]
@@ -306,4 +335,16 @@ pub fn setup_sctlr() {
     flush_tlb(None);
     barrier::dsb(barrier::SY);
     barrier::isb(barrier::SY);
+}
+
+pub fn systick_enable() {
+    CNTP_CTL_EL0.write(CNTP_CTL_EL0::ENABLE::SET);
+}
+
+pub fn systick_disable() {
+    CNTP_CTL_EL0.modify(CNTP_CTL_EL0::IMASK::SET);
+}
+
+pub fn systick_set_interval(ticks: usize) {
+    CNTP_TVAL_EL0.set(ticks as u64);
 }

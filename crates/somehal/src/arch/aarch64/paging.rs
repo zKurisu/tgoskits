@@ -4,9 +4,12 @@ use num_align::NumAlign;
 use page_table_generic::{GB, MapConfig, PageTable};
 
 use crate::{
-    arch::elx::{Pte, set_table, setup_sctlr, setup_table_regs},
+    arch::elx::{
+        Pte, flush_tlb, get_kernal_table, set_kernal_table, set_user_table, setup_sctlr,
+        setup_table_regs,
+    },
     consts::KERNEL_LINER_OFFSET,
-    mem::{page_size, ram::Ram},
+    mem::{PageTableInfo, page_size, ram::Ram},
     prime_entry,
 };
 
@@ -68,7 +71,13 @@ pub fn enable_mmu() -> ! {
     let mmu_entry_phys = prime_entry as usize;
     println!("MMU Entry point at physical address: {:#x}", mmu_entry_phys);
     setup_table_regs();
-    set_table(tb_addr.into());
+    let tb = PageTableInfo {
+        asid: 0,
+        addr: tb_addr.into(),
+    };
+    set_kernal_table(tb);
+    set_user_table(tb);
+    flush_tlb(None);
 
     let v_sp = ext_sym_addr!(__cpu0_stack_top) + KERNEL_LINER_OFFSET;
     let v_entry = mmu_entry_phys + KERNEL_LINER_OFFSET;

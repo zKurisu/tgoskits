@@ -43,7 +43,7 @@ pub mod timer;
 pub use page_table_generic::*;
 pub use somehal_macros::{entry, secondary_entry};
 
-use crate::irq::SoftIrqId;
+use crate::{irq::SoftIrqId, mem::PageTableInfo};
 
 trait ArchTrait {
     type PT: TableGeneric;
@@ -59,13 +59,9 @@ trait ArchTrait {
     fn ioremap(paddr: usize, size: usize) -> *mut u8;
 
     fn create_page_table<A: FrameAllocator>(allocator: A) -> PageTable<Self::PT, A>;
-    fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>);
-    fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A>;
 
-    /// Get the current kernel page table physical address and ASID
-    fn kernel_page_table_paddr_asid() -> (usize, usize);
-    /// Set the kernel page table physical address and ASID
-    fn set_kernel_page_table_paddr_asid(paddr: usize, asid: usize);
+    fn kernel_page_table() -> PageTableInfo;
+    fn set_kernel_page_table(val: PageTableInfo);
 
     fn systimer_irq() -> usize;
     fn shutdown() -> !;
@@ -94,13 +90,16 @@ pub fn post_allocator() {
 }
 
 /// Get the current kernel page table physical address and ASID
-pub fn kernel_page_table_paddr_asid() -> (usize, usize) {
-    arch::Arch::kernel_page_table_paddr_asid()
+pub fn kernel_page_table_paddr() -> usize {
+    arch::Arch::kernel_page_table().addr
 }
 
 /// Set the kernel page table physical address and ASID
-pub fn set_kernel_page_table_paddr_asid(paddr: usize, asid: usize) {
-    arch::Arch::set_kernel_page_table_paddr_asid(paddr, asid)
+pub fn set_kernel_page_table_paddr(paddr: usize) {
+    arch::Arch::set_kernel_page_table(PageTableInfo {
+        asid: 0,
+        addr: paddr,
+    });
 }
 
 fn prime_entry() -> ! {

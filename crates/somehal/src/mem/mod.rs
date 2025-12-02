@@ -14,6 +14,12 @@ pub use crate::arch::Pte;
 pub use page_table_generic::*;
 pub type PageTable<A> = crate::arch::PT<A>;
 
+#[derive(Debug, Clone, Copy)]
+pub struct PageTableInfo {
+    pub asid: usize,
+    pub addr: usize,
+}
+
 static mut MMU_ENABLED: bool = false;
 static MEMORY_RAM: StaticCell<heapless::Vec<MemoryDescriptor, 32>> =
     StaticCell::new(Some(heapless::Vec::new()));

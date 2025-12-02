@@ -16,8 +16,8 @@ pub trait Memory {
 
     fn page_table_new() -> Box<dyn PageTable>;
 
-    fn kernel_page_table() -> (PhysAddr, Asid);
-    fn set_kernel_page_table(pt: PhysAddr, asid: Asid);
+    fn kernel_page_table() -> PhysAddr;
+    fn set_kernel_page_table(pt: PhysAddr);
 }
 
 #[trait_ffi::def_extern_trait(not_def_impl, mod_path = "hal::al")]

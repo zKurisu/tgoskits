@@ -47,13 +47,13 @@ impl Memory for MemoryImpl {
         Box::new( PageTableImpl( somehal::mem::new_page_table(KAlloc)))
     }
 
-    fn kernel_page_table() -> (PhysAddr, Asid) {
-        let (paddr, asid) = somehal::kernel_page_table_paddr_asid();
-        (PhysAddr::new(paddr), Asid::new(asid))
+    fn kernel_page_table() -> PhysAddr {
+        let paddr = somehal::kernel_page_table_paddr();
+        PhysAddr::new(paddr)
     }
 
-    fn set_kernel_page_table(pt: PhysAddr, asid: Asid) {
-        somehal::set_kernel_page_table_paddr_asid(pt.raw(), asid.raw());
+    fn set_kernel_page_table(pt: PhysAddr) {
+        somehal::set_kernel_page_table_paddr(pt.raw());
     }
 }
 }

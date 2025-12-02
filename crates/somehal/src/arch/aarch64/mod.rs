@@ -16,9 +16,16 @@ mod paging;
 mod relocate;
 mod trap;
 
+use aarch64_cpu::registers::*;
+pub use elx::Pte;
 use elx::*;
 
-use crate::ArchTrait;
+use crate::{ArchTrait, mem::PageTableInfo};
+
+// ARM Generic Timer IRQ number (PPI 30)
+const TIMER_IRQ: usize = 30;
+
+pub type PT<A> = page_table_generic::PageTable<paging::Generic, A>;
 
 pub struct Arch;
 
@@ -42,7 +49,7 @@ impl ArchTrait for Arch {
         (paddr + crate::consts::KERNEL_LINER_OFFSET) as *mut u8
     }
 
-    fn ioremap(paddr: usize, size: usize) -> *mut u8 {
+    fn ioremap(paddr: usize, _size: usize) -> *mut u8 {
         if crate::mem::is_mmu_enabled() {
             todo!()
         } else {
@@ -54,28 +61,37 @@ impl ArchTrait for Arch {
         Self::_va(paddr)
     }
 
-    fn per_cpu_trap_init(is_primary: bool) {
-        todo!()
+    fn per_cpu_trap_init(_is_primary: bool) {
+        trap::setup();
     }
 
     fn systimer_irq() -> usize {
-        todo!()
+        TIMER_IRQ
     }
 
-    fn systimer_enable() {}
-
-    fn systimer_disable() {}
-
-    fn systimer_set_interval(_ticks: u64) {}
-
-    fn systimer_ack() {}
-
-    fn systimer_freq() -> u64 {
-        todo!()
+    fn systimer_enable() {
+        elx::systick_enable();
     }
 
-    fn systimer_tick() -> u64 {
-        todo!()
+    fn systimer_disable() {
+        elx::systick_disable();
+    }
+
+    fn systimer_set_interval(ticks: usize) {
+        elx::systick_set_interval(ticks);
+    }
+
+    fn systimer_ack() {
+        // ARM generic timer doesn't need explicit ACK
+        // The interrupt is cleared when a new timer value is set
+    }
+
+    fn systimer_freq() -> usize {
+        CNTFRQ_EL0.get() as _
+    }
+
+    fn systimer_tick() -> usize {
+        CNTPCT_EL0.get() as _
     }
 
     fn shutdown() -> ! {
@@ -83,37 +99,48 @@ impl ArchTrait for Arch {
     }
 
     fn irq_all_is_enabled() -> bool {
-        todo!()
+        unsafe {
+            let daif: u64;
+            core::arch::asm!(
+                "mrs {daif}, daif",
+                daif = out(reg) daif,
+                options(nomem, nostack, pure)
+            );
+            // IRQ is enabled when bit 1 (I bit) is 0
+            (daif & (1 << 1)) == 0
+        }
     }
 
     fn irq_all_set_enable(enable: bool) {
-        todo!()
+        unsafe {
+            if enable {
+                core::arch::asm!("msr daifclr, #2", options(nomem, nostack));
+            } else {
+                core::arch::asm!("msr daifset, #2", options(nomem, nostack));
+            }
+        }
     }
 
-    fn set_kernel_page_table<A: page_table_generic::FrameAllocator>(
-        pt: page_table_generic::PageTable<Self::PT, A>,
-    ) {
-        todo!()
+    fn create_page_table<A: page_table_generic::FrameAllocator>(
+        allocator: A,
+    ) -> page_table_generic::PageTable<Self::PT, A> {
+        page_table_generic::PageTable::<Self::PT, A>::new(allocator).unwrap()
     }
 
-    fn get_kernel_page_table<A: page_table_generic::FrameAllocator>()
-    -> page_table_generic::PageTable<Self::PT, A> {
-        todo!()
+    fn kernel_page_table() -> PageTableInfo {
+        elx::get_kernal_table()
     }
 
-    fn kernel_page_table_paddr_asid() -> (usize, usize) {
-        todo!()
+    fn set_kernel_page_table(val: PageTableInfo) {
+        elx::set_kernal_table(val);
     }
 
-    fn set_kernel_page_table_paddr_asid(paddr: usize, asid: usize) {
-        todo!()
+    fn irq_is_enabled(_irq: crate::irq::SoftIrqId) -> bool {
+        // For now, return false (can be extended with GIC support)
+        false
     }
 
-    fn irq_is_enabled(crate::irq: crate::irq::SoftIrqId) -> bool {
-        todo!()
-    }
-
-    fn irq_set_enable(crate::irq: crate::irq::SoftIrqId, enable: bool) {
-        todo!()
+    fn irq_set_enable(_irq: crate::irq::SoftIrqId, _enable: bool) {
+        // For now, do nothing (can be extended with GIC support)
     }
 }
