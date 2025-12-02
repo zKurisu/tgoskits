@@ -31,7 +31,7 @@ impl FrameAllocator for KAlloc {
         ALLOCATOR.lock_heap32().alloc(page_layout()).ok().map(|nn| {
             let virt = VirtAddr::from(nn);
             let phys: PhysAddr = virt.into();
-            page_table_generic::PhysAddr::new(phys.raw())
+            phys.raw().into()
         })
     }
 

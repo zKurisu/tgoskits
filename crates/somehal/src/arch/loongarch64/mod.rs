@@ -167,15 +167,32 @@ impl ArchTrait for Arch {
     }
 
     fn kernel_page_table() -> crate::mem::PageTableInfo {
-        todo!()
+        use crate::mem::PageTableInfo;
+
+        PageTableInfo {
+            addr: paging::read_csr_pgdh() as usize,
+            asid: paging::read_csr_asid() as usize,
+        }
     }
 
     fn set_kernel_page_table(val: crate::mem::PageTableInfo) {
-        todo!()
+        // 设置内核页表基地址到 PGDH (高地址空间)
+        paging::write_csr_pgdh(val.addr as u64);
+        // 设置 ASID
+        paging::write_csr_asid(val.asid as u64);
+        // 刷新 TLB
+        paging::local_flush_tlb_all();
+        // 添加指令同步屏障,确保 TLB 刷新生效
+        unsafe {
+            core::arch::asm!("dbar 0", options(nomem, nostack));
+            core::arch::asm!("ibar 0", options(nomem, nostack));
+        }
     }
 
     fn enable_paging() {
-        todo!()
+        // LoongArch64 在启动时已经启用了分页
+        // 这里只需要确保 TLB 已经刷新
+        paging::local_flush_tlb_all();
     }
 }
 

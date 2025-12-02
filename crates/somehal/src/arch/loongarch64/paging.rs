@@ -176,11 +176,11 @@ pub const PS_2M: u64 = 0x15;
 /// 1GB 巨页的 PS 值
 pub const PS_1G: u64 = 0x1e;
 
-/// 默认页大小 (16KB = 0x0e)
-pub const PS_DEFAULT_SIZE: u64 = PS_16K;
+/// 默认页大小 (4KB = 0x0c)
+pub const PS_DEFAULT_SIZE: u64 = PS_4K;
 
-/// 默认页面大小 (字节) - 16KB
-pub const PAGE_SIZE: usize = 16384;
+/// 默认页面大小 (字节) - 4KB
+pub const PAGE_SIZE: usize = 4096;
 
 /// 页内偏移位数
 pub const PAGE_SHIFT: usize = PAGE_SIZE.trailing_zeros() as usize;
@@ -195,17 +195,17 @@ pub const PTE_INDEX_BITS: usize = PAGE_SHIFT - 3;
 /// 每个页表的条目数
 pub const PTRS_PER_PTE: usize = 1 << PTE_INDEX_BITS;
 
-// 4级页表配置 (以 16KB 页为例):
-// - PTE: bits [14..25] = 11 bits, 2048 entries
-// - PMD: bits [25..36] = 11 bits, 2048 entries
-// - PUD: bits [36..47] = 11 bits, 2048 entries
-// - PGD: bits [47..58] = 11 bits, 2048 entries
+// 4级页表配置 (以 4KB 页为例):
+// - PTE: bits [12..21] = 9 bits, 512 entries
+// - PMD: bits [21..30] = 9 bits, 512 entries
+// - PUD: bits [30..39] = 9 bits, 512 entries
+// - PGD: bits [39..48] = 9 bits, 512 entries
 
-/// PMD 偏移 (16KB 页: 25)
+/// PMD 偏移 (4KB 页: 21)
 pub const PMD_SHIFT: usize = PAGE_SHIFT + PTE_INDEX_BITS;
-/// PUD 偏移 (16KB 页: 36)
+/// PUD 偏移 (4KB 页: 30)
 pub const PUD_SHIFT: usize = PMD_SHIFT + PTE_INDEX_BITS;
-/// PGD 偏移 (16KB 页: 47)
+/// PGD 偏移 (4KB 页: 39)
 pub const PGDIR_SHIFT: usize = PUD_SHIFT + PTE_INDEX_BITS;
 
 // ============================================================================
@@ -938,7 +938,7 @@ impl TableGeneric for Generic {
     const PAGE_SIZE: usize = PAGE_SIZE;
 
     /// 各级索引位数数组 (从最高级到最低级: PGD -> PUD -> PMD -> PTE)
-    /// 对于 16KB 页: 每级 11 位
+    /// 对于 4KB 页: 每级 9 位
     const LEVEL_BITS: &[usize] = &[
         PTE_INDEX_BITS, // Level 3 (PGD)
         PTE_INDEX_BITS, // Level 2 (PUD)
