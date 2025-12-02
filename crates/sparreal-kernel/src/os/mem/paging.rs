@@ -8,6 +8,7 @@ pub fn init() {
     let mut pt = memory::page_table_new();
     map_regions(&mut pt);
     let pt_addr = pt.addr();
+    debug!("Setting kernel page table to {pt_addr:?}");
     memory::set_kernel_page_table(pt_addr);
     memory::enable_paging();
 }
@@ -16,6 +17,12 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
     for region in memory::memory_map() {
         let phys = PhysAddr::from(region.physical_start);
         let virt = VirtAddr::from(phys);
+        debug!(
+            "Mapping region: {:#x} - {:#x} (size: {:#x})",
+            virt.raw(),
+            (virt.raw() + region.size_in_bytes),
+            region.size_in_bytes
+        );
         pt.map(
             virt.raw().into(),
             phys.raw().into(),
