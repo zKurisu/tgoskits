@@ -3,6 +3,12 @@ use core::ptr::NonNull;
 use crate::hal::al;
 pub use crate::hal::al::{PhysAddr, VirtAddr};
 
+impl VirtAddr {
+    pub fn as_mut_ptr<T>(&self) -> *mut T {
+        self.raw() as _
+    }
+}
+
 impl<T> From<VirtAddr> for *const T {
     fn from(value: VirtAddr) -> Self {
         value.raw() as _

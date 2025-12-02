@@ -1,5 +1,8 @@
+use alloc::boxed::Box;
 use core::time::Duration;
-use sparreal_kernel::{hal::al::*, impl_trait};
+
+use somehal::{MemConfig, mem::PageTableEntry};
+use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KAlloc};
 
 struct InitImpl;
 
@@ -39,7 +42,53 @@ impl Memory for MemoryImpl {
     fn memory_map() -> StackVec<MemoryDescriptor, 64> {
         somehal::mem::memory_map()
     }
+
+    fn page_table_new() -> Box<dyn PageTable> {
+        Box::new( PageTableImpl( somehal::mem::new_page_table(KAlloc)))
+    }
+
+    fn kernel_page_table() -> (PhysAddr, Asid) {
+       
+    }
+
+    fn set_kernel_page_table(pt: PhysAddr, asid: Asid) {
+       
+    }
 }
+}
+
+pub struct PageTableImpl(somehal::mem::PageTable<KAlloc>);
+
+impl PageTable for PageTableImpl {
+    fn addr(&self) -> PhysAddr {
+        PhysAddr::new(self.0.root_paddr().raw())
+    }
+
+    fn map(
+        &mut self,
+        virt_start: VirtAddr,
+        phys_start: PhysAddr,
+        size: usize,
+        settings: MemConfig,
+        flush: bool,
+    ) -> Result<(), PagingError> {
+        let mut pte = somehal::mem::Pte::empty();
+        pte.set_valid(true);
+        pte.set_mem_config(settings);
+
+        self.0.map(&somehal::mem::MapConfig {
+            vaddr: virt_start.raw().into(),
+            paddr: phys_start.raw().into(),
+            size,
+            pte,
+            allow_huge: true,
+            flush,
+        })
+    }
+
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PagingError> {
+        self.0.unmap(virt_start.raw().into(), size)
+    }
 }
 
 struct CpuImpl;

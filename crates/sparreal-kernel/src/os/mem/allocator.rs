@@ -4,16 +4,51 @@ use core::{
 };
 
 use buddy_system_allocator::Heap;
+use page_table_generic::FrameAllocator;
 use spin::Mutex;
 
-use crate::os::{
-    irq::NoIrqGuard,
-    mem::address::{PhysAddr, VirtAddr},
+use crate::{
+    hal::al::memory::page_size,
+    os::{
+        irq::NoIrqGuard,
+        mem::address::{PhysAddr, VirtAddr},
+    },
 };
 
 #[cfg(target_os = "none")]
 #[global_allocator]
 pub(super) static ALLOCATOR: KAllocator = KAllocator::new();
+
+fn page_layout() -> core::alloc::Layout {
+    core::alloc::Layout::from_size_align(page_size(), page_size()).unwrap()
+}
+
+#[derive(Clone, Copy)]
+pub struct KAlloc;
+
+impl FrameAllocator for KAlloc {
+    fn alloc_frame(&self) -> Option<page_table_generic::PhysAddr> {
+        ALLOCATOR.lock_heap32().alloc(page_layout()).ok().map(|nn| {
+            let virt = VirtAddr::from(nn);
+            let phys: PhysAddr = virt.into();
+            page_table_generic::PhysAddr::new(phys.raw())
+        })
+    }
+
+    fn dealloc_frame(&self, frame: page_table_generic::PhysAddr) {
+        let phys = PhysAddr::new(frame.raw());
+        let virt: VirtAddr = phys.into();
+        let ptr = virt.as_mut_ptr();
+        let nn = unsafe { NonNull::new_unchecked(ptr) };
+        ALLOCATOR.lock_heap32().dealloc(nn, page_layout());
+    }
+
+    fn phys_to_virt(&self, paddr: page_table_generic::PhysAddr) -> *mut u8 {
+        let phys = PhysAddr::new(paddr.raw());
+        let virt: VirtAddr = phys.into();
+        virt.as_mut_ptr()
+    }
+}
 
 pub struct KAllocator {
     frame32: Mutex<Heap<32>>,

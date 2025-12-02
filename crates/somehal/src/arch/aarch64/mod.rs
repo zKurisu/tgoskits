@@ -23,6 +23,8 @@ use crate::ArchTrait;
 pub struct Arch;
 
 impl ArchTrait for Arch {
+    type PT = paging::Generic;
+
     fn post_allocator() {}
 
     fn kernel_code() -> &'static [u8] {
@@ -85,6 +87,25 @@ impl ArchTrait for Arch {
     }
 
     fn irq_all_set_enable(enable: bool) {
+        todo!()
+    }
+
+    fn set_kernel_page_table<A: page_table_generic::FrameAllocator>(
+        pt: page_table_generic::PageTable<Self::PT, A>,
+    ) {
+        todo!()
+    }
+
+    fn get_kernel_page_table<A: page_table_generic::FrameAllocator>()
+    -> page_table_generic::PageTable<Self::PT, A> {
+        todo!()
+    }
+
+    fn irq_is_enabled(crate::irq: crate::irq::SoftIrqId) -> bool {
+        todo!()
+    }
+
+    fn irq_set_enable(crate::irq: crate::irq::SoftIrqId, enable: bool) {
         todo!()
     }
 }

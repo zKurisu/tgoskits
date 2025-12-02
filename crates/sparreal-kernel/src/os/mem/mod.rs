@@ -3,6 +3,8 @@ use kernutil::memory::MemoryDescriptor;
 
 use crate::os::mem::address::{PhysAddr, VirtAddr};
 
+pub use allocator::KAlloc;
+
 mod address;
 mod allocator;
 

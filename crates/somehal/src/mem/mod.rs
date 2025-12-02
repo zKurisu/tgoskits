@@ -10,6 +10,10 @@ pub(crate) mod address;
 pub(crate) mod ram;
 pub(crate) mod region;
 
+pub use crate::arch::Pte;
+pub use page_table_generic::*;
+pub type PageTable<A> = crate::arch::PT<A>;
+
 static mut MMU_ENABLED: bool = false;
 static MEMORY_RAM: StaticCell<heapless::Vec<MemoryDescriptor, 32>> =
     StaticCell::new(Some(heapless::Vec::new()));
@@ -76,6 +80,10 @@ pub fn page_size() -> usize {
         static PAGE_SIZE: usize;
     }
     core::ptr::addr_of!(PAGE_SIZE) as usize
+}
+
+pub fn new_page_table<A: FrameAllocator>(allocator: A) -> PageTable<A> {
+    crate::arch::Arch::create_page_table(allocator)
 }
 
 fn rsv_memories() -> heapless::Vec<MemoryDescriptor, 32> {

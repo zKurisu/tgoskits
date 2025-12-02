@@ -47,4 +47,6 @@ pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
     fn set_valid(&mut self, valid: bool);
     fn is_huge(&self) -> bool;
     fn set_is_huge(&mut self, b: bool);
+    fn set_mem_config(&mut self, config: MemConfig);
+    fn mem_config(&self) -> MemConfig;
 }

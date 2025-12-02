@@ -219,3 +219,25 @@ impl core::fmt::Debug for PagingError {
         }
     }
 }
+bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub struct AccessFlags: usize {
+        const READ = 1;
+        const WRITE = 1<<2;
+        const EXECUTE = 1<<3;
+        const LOWER = 1<<4;
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum MemAttributes {
+    Normal,
+    Device,
+    Uncached,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MemConfig {
+    pub access: AccessFlags,
+    pub attrs: MemAttributes,
+}

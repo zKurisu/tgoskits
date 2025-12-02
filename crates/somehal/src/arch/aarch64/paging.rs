@@ -4,20 +4,22 @@ use num_align::NumAlign;
 use page_table_generic::{GB, MapConfig, PageTable};
 
 use crate::{
-    arch::elx::{Pte, Table, set_table, setup_sctlr, setup_table_regs},
+    arch::elx::{Pte, set_table, setup_sctlr, setup_table_regs},
     consts::KERNEL_LINER_OFFSET,
     mem::{page_size, ram::Ram},
     prime_entry,
 };
 
-static BOOT_TABLE: spin::Once<PageTable<Table, Ram>> = spin::Once::new();
+pub use super::elx::Generic;
+
+static BOOT_TABLE: spin::Once<PageTable<Generic, Ram>> = spin::Once::new();
 
 pub fn enable_mmu() -> ! {
     println!("Mapping early memory regions...");
 
     let k_start = crate::mem::kernel_range().start;
 
-    let mut table = PageTable::<Table, _>::new(Ram).unwrap();
+    let mut table = PageTable::<Generic, _>::new(Ram).unwrap();
 
     let start = k_start.align_down(GB);
     let size = GB;

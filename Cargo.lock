@@ -995,6 +995,7 @@ dependencies = [
  "heapless 0.9.1",
  "kernutil",
  "log",
+ "page-table-generic",
  "rgb",
  "sparreal-macros",
  "spin 0.10.0",

@@ -58,6 +58,7 @@ trait ArchTrait {
     fn _io(paddr: usize) -> *mut u8;
     fn ioremap(paddr: usize, size: usize) -> *mut u8;
 
+    fn create_page_table<A: FrameAllocator>(allocator: A) -> PageTable<Self::PT, A>;
     fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>);
     fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A>;
 

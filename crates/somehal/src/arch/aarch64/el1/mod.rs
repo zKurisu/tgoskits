@@ -222,9 +222,9 @@ impl core::fmt::Debug for Pte {
 }
 
 #[derive(Clone, Copy)]
-pub struct Table;
+pub struct Generic;
 
-impl TableGeneric for Table {
+impl TableGeneric for Generic {
     type P = Pte;
 
     const PAGE_SIZE: usize = 0x1000;

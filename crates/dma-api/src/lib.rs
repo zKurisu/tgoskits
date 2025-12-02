@@ -125,12 +125,14 @@ fn flush(addr: NonNull<u8>, size: usize) {
     get_osal().flush(addr, size)
 }
 
-fn alloc(dma_mask: u64, layout: core::alloc::Layout) -> DmaHandle {
+/// 分配 DMA 可访问内存
+pub fn alloc(dma_mask: u64, layout: core::alloc::Layout) -> DmaHandle {
     unsafe { get_osal().alloc(dma_mask, layout) }
 }
 
+/// 释放 DMA 内存
 #[allow(dead_code)]
-fn dealloc(h: DmaHandle) {
+pub fn dealloc(h: DmaHandle) {
     unsafe { get_osal().dealloc(h) }
 }
 

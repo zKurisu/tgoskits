@@ -844,6 +844,14 @@ impl PageTableEntry for Entry {
     fn set_is_huge(&mut self, b: bool) {
         self.set_huge(b);
     }
+    
+    fn set_mem_config(&mut self, config: page_table_generic::MemConfig) {
+        todo!()
+    }
+    
+    fn mem_config(&self) -> page_table_generic::MemConfig {
+        todo!()
+    }
 }
 
 impl core::fmt::Debug for Entry {

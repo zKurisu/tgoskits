@@ -16,11 +16,14 @@ use loongArch64::{
     time::{Time, get_timer_freq},
 };
 use page_table_generic::{FrameAllocator, PageTable};
+pub use paging::Entry as Pte;
 pub use relocate::relocate;
 
 use crate::{ArchTrait, arch::register::irq::TI, irq::SoftIrqId};
 
 const MIN_TICKS: usize = 4;
+
+pub type PT<A> = page_table_generic::PageTable<paging::Generic, A>;
 
 pub struct Arch;
 
@@ -185,5 +188,9 @@ impl ArchTrait for Arch {
             let pt = core::mem::ManuallyDrop::new(pt_ref);
             core::ptr::read(&pt as *const _ as *const PageTable<Self::PT, A>)
         }
+    }
+
+    fn create_page_table<A: FrameAllocator>(allocator: A) -> PageTable<Self::PT, A> {
+        PageTable::<Self::PT, A>::new(allocator).unwrap()
     }
 }

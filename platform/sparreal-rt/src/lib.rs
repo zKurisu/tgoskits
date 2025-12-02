@@ -2,6 +2,7 @@
 #![no_main]
 #![cfg(not(any(windows, unix)))]
 
+extern crate alloc;
 extern crate somehal;
 
 pub use sparreal_kernel::entry;
@@ -14,4 +15,3 @@ fn main() -> ! {
     somehal::println!("Starting Sparreal OS kernel...");
     sparreal_kernel::hal::setup::start_kernel()
 }
-

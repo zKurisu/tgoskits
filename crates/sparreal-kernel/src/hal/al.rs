@@ -1,8 +1,10 @@
-use core::{ptr::NonNull, time::Duration};
+use core::time::Duration;
 
+use alloc::boxed::Box;
 pub use heapless::Vec as StackVec;
 use kernutil::define_type;
 pub use kernutil::memory::MemoryDescriptor;
+pub use page_table_generic::{AccessFlags, MemAttributes, MemConfig, PagingError};
 
 #[trait_ffi::def_extern_trait(mod_path = "hal::al")]
 pub trait Memory {
@@ -12,12 +14,10 @@ pub trait Memory {
     fn page_size() -> usize;
     fn memory_map() -> StackVec<MemoryDescriptor, 64>;
 
-    // fn page_table_new_base() -> PageTabeAddr;
-    // fn page_table_drop(addr: PageTabeAddr);
-    // fn page_table_clone(addr: PageTabeAddr) -> PageTabeAddr;
+    fn page_table_new() -> Box<dyn PageTable>;
 
-    // fn kernel_page_table() -> PageTabeAddr;
-    // fn set_kernel_page_table(addr: PageTabeAddr);
+    fn kernel_page_table() -> (PhysAddr, Asid);
+    fn set_kernel_page_table(pt: PhysAddr, asid: Asid);
 }
 
 #[trait_ffi::def_extern_trait(not_def_impl, mod_path = "hal::al")]
@@ -51,49 +51,17 @@ pub fn handle_irq(irq: IrqId) {
     crate::os::irq::handle_irq(irq);
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum PageError {
-    #[error("Invalid Address")]
-    InvalidAddress,
-    #[error("Out of Memory")]
-    OutOfMemory,
-    #[error("Page Already Exists")]
-    Exist,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct MapSettings {
-    pub access: AccessFlags,
-    pub mem_attributes: MemAttributes,
-}
-
-bitflags::bitflags! {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct AccessFlags: usize {
-        const READ = 1;
-        const WRITE = 1<<2;
-        const EXECUTE = 1<<3;
-        const LOWER = 1<<4;
-    }
-
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub struct MemAttributes: usize {
-        const NORMAL = 0;
-        const DEVICE = 1<<0;
-        const UNCACHED = 1<<1;
-    }
-}
-
-pub trait PageTable {
+pub trait PageTable: Send + 'static {
     fn addr(&self) -> PhysAddr;
     fn map(
         &mut self,
-        phys_start: PhysAddr,
         virt_start: VirtAddr,
+        phys_start: PhysAddr,
         size: usize,
-        settings: MapSettings,
-    ) -> Result<(), PageError>;
-    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PageError>;
+        settings: MemConfig,
+        flush: bool,
+    ) -> Result<(), PagingError>;
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PagingError>;
 }
 
 define_type! {
@@ -103,4 +71,6 @@ define_type! {
     PhysAddr(usize),
     /// Virtual Address
     VirtAddr(usize),
+    ///
+    Asid(usize),
 }
