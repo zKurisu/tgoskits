@@ -6,6 +6,7 @@ pub fn start_kernel() -> ! {
 
     crate::os::mem::init_heap(&al::memory::memory_map());
     al::platform::post_allocator();
+    crate::os::mem::paging::init();
     timer::init();
 
     al::cpu::irq_local_set_enable(true);

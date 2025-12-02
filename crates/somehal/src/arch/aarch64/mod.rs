@@ -121,6 +121,8 @@ impl ArchTrait for Arch {
         }
     }
 
+    fn mmu_setup() {}
+
     fn create_page_table<A: page_table_generic::FrameAllocator>(
         allocator: A,
     ) -> page_table_generic::PageTable<Self::PT, A> {

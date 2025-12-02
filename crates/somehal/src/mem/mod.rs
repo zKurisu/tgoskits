@@ -38,6 +38,10 @@ pub(crate) fn is_mmu_enabled() -> bool {
     unsafe { MMU_ENABLED }
 }
 
+pub fn mmu_setup() {
+    crate::arch::Arch::mmu_setup();
+}
+
 pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     if is_mmu_enabled() {
         crate::arch::Arch::_va(paddr)

@@ -173,6 +173,10 @@ impl ArchTrait for Arch {
     fn set_kernel_page_table(val: crate::mem::PageTableInfo) {
         todo!()
     }
+
+    fn mmu_setup() {
+        todo!()
+    }
 }
 
 // 导出公开的页表相关函数供外部使用

@@ -16,6 +16,7 @@ pub trait Memory {
 
     fn page_table_new() -> Box<dyn PageTable>;
 
+    fn mmu_setup();
     fn kernel_page_table() -> PhysAddr;
     fn set_kernel_page_table(pt: PhysAddr);
 }

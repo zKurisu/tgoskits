@@ -47,6 +47,10 @@ impl Memory for MemoryImpl {
         Box::new( PageTableImpl( somehal::mem::new_page_table(KAlloc)))
     }
 
+    fn mmu_setup() {
+        somehal::mem::mmu_setup();
+    }
+
     fn kernel_page_table() -> PhysAddr {
         let paddr = somehal::kernel_page_table_paddr();
         PhysAddr::new(paddr)

@@ -7,6 +7,7 @@ pub use allocator::KAlloc;
 
 mod address;
 mod allocator;
+pub(crate) mod paging;
 
 pub fn page_size() -> usize {
     crate::hal::al::memory::page_size()
