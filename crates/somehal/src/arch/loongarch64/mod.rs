@@ -66,10 +66,17 @@ impl ArchTrait for Arch {
         tcfg::set_en(true);
     }
 
-    fn systimer_disable() {
+    fn systimer_irq_enable() {
+        tcfg::set_en(true);
+    }
+
+    fn systimer_irq_disable() {
         tcfg::set_en(false);
     }
 
+    fn systimer_irq_is_enabled() -> bool {
+        tcfg::read().en()
+    }
     fn systimer_set_interval(ticks: usize) {
         let ticks = ticks.max(MIN_TICKS);
         // Ensure the value is aligned to a multiple of 4 as required by TCFG
@@ -155,60 +162,16 @@ impl ArchTrait for Arch {
         }
     }
 
-    fn set_kernel_page_table<A: FrameAllocator>(pt: PageTable<Self::PT, A>) {
-        // 获取页表的根物理地址
-        let root_paddr = pt.root_paddr().raw();
-
-        // 设置 PGDH (高地址空间页表基地址，用于内核空间)
-        paging::write_csr_pgdh(root_paddr as u64);
-
-        // 刷新 TLB
-        paging::local_flush_tlb_all();
-
-        // 将页表存储起来以便后续获取
-        // 注意：这里我们使用 forget 来防止页表被释放
-        core::mem::forget(pt);
-    }
-
-    fn get_kernel_page_table<A: FrameAllocator>() -> PageTable<Self::PT, A> {
-        // 从 PGDH 寄存器读取当前内核页表的根地址
-        let root_paddr = paging::read_csr_pgdh() as usize;
-
-        // 创建 PageTableRef，然后包装成 PageTable
-        // 注意：这里假设 A 实现了 Default trait
-        let allocator: A = unsafe { core::mem::zeroed() };
-        let pt_ref = page_table_generic::PageTableRef::<Self::PT, A>::from_paddr(
-            root_paddr.into(),
-            allocator,
-        );
-
-        // 手动构造 PageTable
-        // SAFETY: PageTable 只是 PageTableRef 的包装，内存布局兼容
-        unsafe {
-            let pt = core::mem::ManuallyDrop::new(pt_ref);
-            core::ptr::read(&pt as *const _ as *const PageTable<Self::PT, A>)
-        }
-    }
-
     fn create_page_table<A: FrameAllocator>(allocator: A) -> PageTable<Self::PT, A> {
         PageTable::<Self::PT, A>::new(allocator).unwrap()
     }
 
-    fn kernel_page_table_paddr_asid() -> (usize, usize) {
-        let pt_paddr = paging::read_csr_pgdh() as usize;
-        let asid = (paging::read_csr_asid() & 0x3FF) as usize; // ASID 为低 10 位
-        (pt_paddr, asid)
+    fn kernel_page_table() -> crate::mem::PageTableInfo {
+        todo!()
     }
 
-    fn set_kernel_page_table_paddr_asid(paddr: usize, asid: usize) {
-        // 设置 PGDH (高地址空间页表基地址，用于内核空间)
-        paging::write_csr_pgdh(paddr as u64);
-
-        // 设置 ASID
-        paging::write_csr_asid(asid as u64);
-
-        // 刷新 TLB
-        paging::local_flush_tlb_all();
+    fn set_kernel_page_table(val: crate::mem::PageTableInfo) {
+        todo!()
     }
 }
 

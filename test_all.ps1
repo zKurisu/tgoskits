@@ -1,1 +1,2 @@
-ostool run -c ./test-suit/timer/loongarch64.toml qemu -q ./test-suit/timer/qemu-la64.toml
+.\test_aarch64.ps1
+.\test_la64.ps1

@@ -4,10 +4,7 @@ use num_align::NumAlign;
 use page_table_generic::{GB, MapConfig, PageTable};
 
 use crate::{
-    arch::elx::{
-        Pte, flush_tlb, get_kernal_table, set_kernal_table, set_user_table, setup_sctlr,
-        setup_table_regs,
-    },
+    arch::elx::{Pte, flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
     consts::KERNEL_LINER_OFFSET,
     mem::{PageTableInfo, page_size, ram::Ram},
     prime_entry,
