@@ -15,7 +15,7 @@ pub const fn to_cache(addr: usize) -> usize {
 }
 
 pub const fn to_uncache(addr: usize) -> usize {
-    to_phys(addr)
+    to_phys(addr) | UNCACHE_BASE
 }
 
 pub const DMW_DA_BITS: usize = PABITS;

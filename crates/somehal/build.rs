@@ -2,6 +2,8 @@ use std::{fs, io::Write, path::PathBuf};
 
 fn main() {
     println!("cargo::rustc-check-cfg=cfg(efi)");
+    println!("cargo::rustc-check-cfg=cfg(page_size_4k)");
+    println!("cargo::rustc-check-cfg=cfg(page_size_16k)");
 
     let target = std::env::var("TARGET").unwrap();
 
@@ -27,9 +29,16 @@ fn main() {
         kernel_liner_offset: 0,
         uspace,
         hv,
+        page_size: 4096,
     };
 
     build.prepare();
+
+    if build.page_size == 4096 {
+        println!("cargo:rustc-cfg=page_size_4k");
+    } else if build.page_size == 16384 {
+        println!("cargo:rustc-cfg=page_size_16k");
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -57,6 +66,7 @@ struct Build {
     kernel_liner_offset: u64,
     uspace: bool,
     hv: bool,
+    page_size: usize,
 }
 
 impl Build {

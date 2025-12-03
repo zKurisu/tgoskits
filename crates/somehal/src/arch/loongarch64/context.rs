@@ -1,5 +1,3 @@
-use core::arch::naked_asm;
-
 const EXCEPTION_KS0: usize = 0x30;
 const EXCEPTION_KS1: usize = 0x31;
 const EXCEPTION_KS2: usize = 0x32;

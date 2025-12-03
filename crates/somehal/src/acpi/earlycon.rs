@@ -37,12 +37,15 @@ fn deal_with_spsr(spsr: &PhysicalMapping<impl Handler, Spcr>) -> Option<()> {
     if let Some(freq) = spsr.uart_clock_frequency() {
         clock = freq.into();
     }
+    let mut vaddr = core::ptr::null_mut();
 
     match spsr.interface_type() {
         acpi::sdt::spcr::SpcrInterfaceType::Full16550
         | acpi::sdt::spcr::SpcrInterfaceType::Generic16550 => {
+            vaddr = _fixmap_io(base_address.address as _);
+
             let mut uart = Ns16550::new_mmio(
-                NonNull::new(_fixmap_io(base_address.address as _)).unwrap(),
+                NonNull::new(vaddr).unwrap(),
                 clock,
                 base_address.access_size as _,
             );
@@ -56,6 +59,8 @@ fn deal_with_spsr(spsr: &PhysicalMapping<impl Handler, Spcr>) -> Option<()> {
     }
 
     unsafe { crate::console::set_out(&SENDER) };
+
+    println!("Early console initialized at vaddr {:#x}", vaddr as usize);
 
     Some(())
 }

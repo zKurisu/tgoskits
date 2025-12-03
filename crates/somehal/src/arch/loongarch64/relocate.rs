@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use core::{arch::asm, sync::atomic::AtomicBool};
+use core::arch::asm;
 
 use super::addrspace::VMLINUX_LOAD_ADDRESS;
 
@@ -34,13 +34,6 @@ pub fn get_load_offset() -> i64 {
 
 /// 早期重定位入口点
 pub fn relocate() {
-    #[unsafe(link_section = ".data")]
-    static INIT: AtomicBool = AtomicBool::new(false);
-
-    if INIT.swap(true, core::sync::atomic::Ordering::Relaxed) {
-        return;
-    }
-
     unsafe {
         crate::elf::apply_reloc(
             get_load_offset(),

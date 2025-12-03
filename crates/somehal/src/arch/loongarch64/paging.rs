@@ -7,6 +7,8 @@
 
 use page_table_generic::{PageTableEntry, PhysAddr, TableGeneric, VirtAddr};
 
+use crate::consts::PAGE_SIZE;
+
 // ============================================================================
 // CSR 寄存器地址定义
 // 参考: Linux arch/loongarch/include/asm/loongarch.h
@@ -178,9 +180,6 @@ pub const PS_1G: u64 = 0x1e;
 
 /// 默认页大小 (4KB = 0x0c)
 pub const PS_DEFAULT_SIZE: u64 = PS_4K;
-
-/// 默认页面大小 (字节) - 4KB
-pub const PAGE_SIZE: usize = 4096;
 
 /// 页内偏移位数
 pub const PAGE_SHIFT: usize = PAGE_SIZE.trailing_zeros() as usize;
@@ -931,11 +930,12 @@ impl core::fmt::Debug for Entry {
 #[derive(Clone, Copy)]
 pub struct Generic;
 
+#[cfg(page_size_4k)]
 impl TableGeneric for Generic {
     type P = Entry;
 
     /// 页面大小
-    const PAGE_SIZE: usize = PAGE_SIZE;
+    const PAGE_SIZE: usize = 0x1000; // 4KB
 
     /// 各级索引位数数组 (从最高级到最低级: PGD -> PUD -> PMD -> PTE)
     /// 对于 4KB 页: 每级 9 位
