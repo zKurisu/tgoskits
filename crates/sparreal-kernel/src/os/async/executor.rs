@@ -20,12 +20,12 @@ use crate::os::sync::spinlock::IrqSpinlock;
 
 use super::task::{TaskHandle, TaskId, TaskMetadata, TaskPriority, TaskRef};
 
-/// 全局唤醒队列
-static WAKE_QUEUE: IrqSpinlock<VecDeque<TaskId>> = IrqSpinlock::new(VecDeque::new());
+/// 全局任务唤醒队列
+static GLOBAL_WAKEUP_QUEUE: IrqSpinlock<VecDeque<TaskId>> = IrqSpinlock::new(VecDeque::new());
 
-/// 将任务ID添加到唤醒队列
-pub fn enqueue_wakeup(task_id: TaskId) {
-    let mut queue = WAKE_QUEUE.lock();
+/// 将任务ID添加到全局唤醒队列
+pub fn enqueue_task_wakeup(task_id: TaskId) {
+    let mut queue = GLOBAL_WAKEUP_QUEUE.lock();
     if !queue.contains(&task_id) {
         queue.push_back(task_id);
     }
@@ -34,53 +34,53 @@ pub fn enqueue_wakeup(task_id: TaskId) {
 /// 单CPU异步执行器
 pub struct SingleCpuExecutor {
     /// 任务优先级队列
-    task_queue: IrqSpinlock<BinaryHeap<OrderedTask>>,
+    priority_task_queue: IrqSpinlock<BinaryHeap<PriorityTaskWrapper>>,
     /// 任务注册表（ID -> TaskRef）
-    task_registry: IrqSpinlock<alloc::collections::BTreeMap<TaskId, Arc<TaskRef>>>,
-    /// 是否正在运行
-    is_running: IrqSpinlock<bool>,
-    /// 超时阈值（毫秒）
-    timeout_ms: u64,
+    active_task_registry: IrqSpinlock<alloc::collections::BTreeMap<TaskId, Arc<TaskRef>>>,
+    /// 执行器运行状态
+    executor_running: IrqSpinlock<bool>,
+    /// 任务超时阈值（毫秒）
+    task_timeout_milliseconds: u64,
 }
 
-/// 有序任务包装器，用于优先级队列
+/// 优先级任务包装器，用于优先级队列
 #[derive(Debug)]
-struct OrderedTask {
-    /// 任务优先级
-    priority: TaskPriority,
+struct PriorityTaskWrapper {
+    /// 任务优先级信息
+    task_priority: TaskPriority,
     /// 任务引用
-    task_ref: Arc<TaskRef>,
+    task_reference: Arc<TaskRef>,
 }
 
-impl OrderedTask {
-    /// 创建新的有序任务
+impl PriorityTaskWrapper {
+    /// 创建新的优先级任务包装器
     fn new(task_ref: Arc<TaskRef>) -> Self {
         Self {
-            priority: task_ref.priority(),
-            task_ref,
+            task_priority: task_ref.priority(),
+            task_reference: task_ref,
         }
     }
 }
 
 // 实现排序：优先级高的在前，时间戳小的在前，ID小的在前
-impl PartialEq for OrderedTask {
+impl PartialEq for PriorityTaskWrapper {
     fn eq(&self, other: &Self) -> bool {
-        self.priority == other.priority
+        self.task_priority == other.task_priority
     }
 }
 
-impl Eq for OrderedTask {}
+impl Eq for PriorityTaskWrapper {}
 
-impl PartialOrd for OrderedTask {
+impl PartialOrd for PriorityTaskWrapper {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for OrderedTask {
+impl Ord for PriorityTaskWrapper {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         // 注意：BinaryHeap是最大堆，所以需要反向比较
-        other.priority.cmp(&self.priority)
+        other.task_priority.cmp(&self.task_priority)
     }
 }
 
@@ -93,10 +93,10 @@ impl SingleCpuExecutor {
     /// 使用自定义超时时间创建执行器
     pub fn with_timeout(timeout: Duration) -> Self {
         Self {
-            task_queue: IrqSpinlock::new(BinaryHeap::new()),
-            task_registry: IrqSpinlock::new(BTreeMap::new()),
-            is_running: IrqSpinlock::new(false),
-            timeout_ms: timeout.as_millis() as u64,
+            priority_task_queue: IrqSpinlock::new(BinaryHeap::new()),
+            active_task_registry: IrqSpinlock::new(BTreeMap::new()),
+            executor_running: IrqSpinlock::new(false),
+            task_timeout_milliseconds: timeout.as_millis() as u64,
         }
     }
 
@@ -150,7 +150,7 @@ impl SingleCpuExecutor {
 
         // 注册任务
         {
-            let mut registry = self.task_registry.lock();
+            let mut registry = self.active_task_registry.lock();
             registry.insert(task_id, task_ref);
         }
 
@@ -163,17 +163,17 @@ impl SingleCpuExecutor {
 
     /// 添加任务到调度队列
     fn add_task_to_queue(&self, task_id: TaskId) {
-        let registry = self.task_registry.lock();
+        let registry = self.active_task_registry.lock();
         if let Some(task_ref) = registry.get(&task_id) {
-            let ordered_task = OrderedTask::new(task_ref.clone());
-            let mut queue = self.task_queue.lock();
-            queue.push(ordered_task);
+            let priority_task = PriorityTaskWrapper::new(task_ref.clone());
+            let mut queue = self.priority_task_queue.lock();
+            queue.push(priority_task);
         }
     }
 
     /// 唤醒指定任务
     pub fn wake_by_id(&self, task_id: TaskId) -> bool {
-        let registry = self.task_registry.lock();
+        let registry = self.active_task_registry.lock();
         if let Some(task_ref) = registry.get(&task_id) {
             task_ref.metadata.lock().mark_woken();
             self.add_task_to_queue(task_id);
@@ -185,19 +185,19 @@ impl SingleCpuExecutor {
 
     /// 处理单个任务
     fn process_one_task(&self) -> bool {
-        let ordered_task = {
-            let mut queue = self.task_queue.lock();
+        let priority_task = {
+            let mut queue = self.priority_task_queue.lock();
             queue.pop()
         };
 
-        if let Some(ordered_task) = ordered_task {
-            let task_ref = ordered_task.task_ref.clone();
+        if let Some(priority_task) = priority_task {
+            let task_ref = priority_task.task_reference.clone();
             let task_id = task_ref.id();
 
             // 检查任务是否已完成
             if task_ref.is_completed() {
                 // 清理已完成的任务
-                let mut registry = self.task_registry.lock();
+                let mut registry = self.active_task_registry.lock();
                 registry.remove(&task_id);
                 debug!("Task {task_id:?} completed and cleaned up");
                 return true;
@@ -210,7 +210,7 @@ impl SingleCpuExecutor {
                 // 唤醒状态的任务直接执行
                 if metadata.state == super::task::TaskState::Woken {
                     true
-                } else if metadata.is_expired(self.timeout_ms) {
+                } else if metadata.is_expired(self.task_timeout_milliseconds) {
                     // 超时的任务提升优先级并执行
                     metadata.mark_woken();
                     debug!("Task {task_id:?} expired, promoting priority");
@@ -234,7 +234,7 @@ impl SingleCpuExecutor {
             match task_ref.poll(&waker) {
                 core::task::Poll::Ready(()) => {
                     // 任务已完成，清理注册表
-                    let mut registry = self.task_registry.lock();
+                    let mut registry = self.active_task_registry.lock();
                     registry.remove(&task_id);
                     debug!("Task {task_id:?} completed");
                     true
@@ -273,18 +273,18 @@ impl SingleCpuExecutor {
     fn process_wake_queue(&self) {
         loop {
             let task_id = {
-                let mut queue = WAKE_QUEUE.lock();
+                let mut queue = GLOBAL_WAKEUP_QUEUE.lock();
                 queue.pop_front()
             };
 
             if let Some(task_id) = task_id {
                 // 标记任务为唤醒状态并加入调度队列
-                let registry = self.task_registry.lock();
+                let registry = self.active_task_registry.lock();
                 if let Some(task_ref) = registry.get(&task_id) {
                     task_ref.metadata.lock().mark_woken();
-                    let ordered_task = OrderedTask::new(task_ref.clone());
-                    let mut queue = self.task_queue.lock();
-                    queue.push(ordered_task);
+                    let priority_task = PriorityTaskWrapper::new(task_ref.clone());
+                    let mut queue = self.priority_task_queue.lock();
+                    queue.push(priority_task);
                 }
             } else {
                 break;
@@ -294,7 +294,7 @@ impl SingleCpuExecutor {
 
     /// 运行直到所有任务完成
     pub fn run_until_completion(&self) {
-        *self.is_running.lock() = true;
+        *self.executor_running.lock() = true;
 
         debug!("Executor started, running until completion");
 
@@ -307,38 +307,38 @@ impl SingleCpuExecutor {
             }
         }
 
-        *self.is_running.lock() = false;
+        *self.executor_running.lock() = false;
         debug!("Executor finished, all tasks completed");
     }
 
     /// 检查是否有待处理的任务
     pub fn has_pending_tasks(&self) -> bool {
         // 检查唤醒队列
-        if !WAKE_QUEUE.lock().is_empty() {
+        if !GLOBAL_WAKEUP_QUEUE.lock().is_empty() {
             return true;
         }
         // 检查任务队列
-        if !self.task_queue.lock().is_empty() {
+        if !self.priority_task_queue.lock().is_empty() {
             return true;
         }
         // 检查是否有未完成的任务（可能在等待被唤醒）
-        let registry = self.task_registry.lock();
+        let registry = self.active_task_registry.lock();
         !registry.is_empty()
     }
 
     /// 获取当前任务数量
     pub fn task_count(&self) -> usize {
-        self.task_registry.lock().len()
+        self.active_task_registry.lock().len()
     }
 
     /// 获取队列中的任务数量
     pub fn queued_task_count(&self) -> usize {
-        self.task_queue.lock().len()
+        self.priority_task_queue.lock().len()
     }
 
     /// 检查执行器是否正在运行
     pub fn is_running(&self) -> bool {
-        *self.is_running.lock()
+        *self.executor_running.lock()
     }
 }
 
@@ -405,10 +405,10 @@ impl ExecutorWaker {
 
 impl alloc::task::Wake for ExecutorWaker {
     fn wake(self: Arc<Self>) {
-        enqueue_wakeup(self.task_id);
+        enqueue_task_wakeup(self.task_id);
     }
 
     fn wake_by_ref(self: &Arc<Self>) {
-        enqueue_wakeup(self.task_id);
+        enqueue_task_wakeup(self.task_id);
     }
 }

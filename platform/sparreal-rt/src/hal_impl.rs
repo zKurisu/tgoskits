@@ -2,7 +2,7 @@ use alloc::boxed::Box;
 use core::time::Duration;
 
 use somehal::{MemConfig, mem::PageTableEntry};
-use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KAlloc};
+use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KernelAllocator};
 
 struct InitImpl;
 
@@ -44,7 +44,7 @@ impl Memory for MemoryImpl {
     }
 
     fn page_table_new() -> Box<dyn PageTable> {
-        Box::new( PageTableImpl( somehal::mem::new_page_table(KAlloc)))
+        Box::new( PageTableImpl( somehal::mem::new_page_table(KernelAllocator)))
     }
 
     fn enable_paging() {
@@ -62,7 +62,7 @@ impl Memory for MemoryImpl {
 }
 }
 
-pub struct PageTableImpl(somehal::mem::PageTable<KAlloc>);
+pub struct PageTableImpl(somehal::mem::PageTable<KernelAllocator>);
 
 impl PageTable for PageTableImpl {
     fn addr(&self) -> PhysAddr {

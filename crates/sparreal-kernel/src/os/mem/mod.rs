@@ -3,7 +3,7 @@ use kernutil::memory::MemoryDescriptor;
 
 use crate::os::mem::address::{PhysAddr, VirtAddr};
 
-pub use allocator::KAlloc;
+pub use allocator::{KernelAllocator, KernelMemoryAllocator, kernel_memory_allocator};
 
 mod address;
 mod allocator;
@@ -37,7 +37,7 @@ pub(crate) fn init_heap(regions: &[MemoryDescriptor]) {
             {
                 let memory = unsafe { core::slice::from_raw_parts_mut(start.into(), size) };
 
-                allocator::ALLOCATOR.add_to_frame(memory);
+                allocator::kernel_memory_allocator().add_memory_region(memory);
             }
         }
     }
