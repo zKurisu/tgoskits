@@ -12,7 +12,7 @@ pub fn setup_memory_map() -> Option<()> {
             let region = region.ok()?;
 
             add_memory_descriptor(MemoryDescriptor {
-                name: "Ram",
+                name: "RAM",
                 physical_start: region.address as usize,
                 size_in_bytes: region.size,
                 memory_type: MemoryType::Free,
@@ -23,7 +23,7 @@ pub fn setup_memory_map() -> Option<()> {
 
     for reserved in fdt.memory_reservation_blocks() {
         add_memory_descriptor(MemoryDescriptor::new_aligned(
-            "FDT Reserved",
+            "Reserved Block",
             reserved.address as usize,
             reserved.size,
             MemoryType::Reserved,

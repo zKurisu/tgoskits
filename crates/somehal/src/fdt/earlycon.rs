@@ -24,7 +24,7 @@ fn set_by_stdout() -> Option<()> {
     let chosen = fdt.chosen().ok()?;
     let stdout = chosen.stdout().ok()?;
     let reg = stdout.reg().ok()?.next()?;
-    let addr = NonNull::new(_fixmap_io(reg.address as usize))?;
+    let addr = NonNull::new(_fixmap_io("Early Debug", reg.address as usize, 100))?;
     let clock = stdout.clock_frequency().unwrap_or(0);
 
     for com in stdout.compatibles_flatten().ok()? {

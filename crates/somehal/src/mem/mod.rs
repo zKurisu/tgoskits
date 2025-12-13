@@ -70,7 +70,16 @@ pub fn ioremap(paddr: usize, size: usize) -> *mut u8 {
     crate::arch::Arch::ioremap(paddr, size)
 }
 
-pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
+pub(crate) fn _fixmap_io(name: &'static str, paddr: usize, size: usize) -> *mut u8 {
+    add_memory_descriptor(MemoryDescriptor::new_aligned(
+        name,
+        paddr,
+        size,
+        MemoryType::Mmio,
+        page_size(),
+    ))
+    .unwrap();
+
     if is_mmu_enabled() {
         crate::arch::Arch::_io(paddr)
     } else {

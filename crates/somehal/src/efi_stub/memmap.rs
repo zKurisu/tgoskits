@@ -1,6 +1,9 @@
 use uefi::boot::{MemoryDescriptor, MemoryType};
 
-use crate::mem::{add_memory_descriptors, page_size};
+use crate::{
+    consts::PAGE_SIZE,
+    mem::{add_memory_descriptors, page_size},
+};
 
 pub fn setup_memory_map<'a>(
     mems: impl Iterator<Item = &'a MemoryDescriptor>,
@@ -16,18 +19,22 @@ pub fn setup_memory_map<'a>(
             size_in_bytes: memory.page_count as usize * page_size(),
             memory_type: crate::mem::MemoryType::Free,
         },
-        MemoryType::MMIO | MemoryType::MMIO_PORT_SPACE => crate::mem::MemoryDescriptor {
-            name: memty_str(&memory.ty),
-            physical_start: memory.phys_start as _,
-            size_in_bytes: memory.page_count as usize * page_size(),
-            memory_type: crate::mem::MemoryType::Mmio,
-        },
-        t => crate::mem::MemoryDescriptor {
-            name: memty_str(&t),
-            physical_start: memory.phys_start as _,
-            size_in_bytes: memory.page_count as usize * page_size(),
-            memory_type: crate::mem::MemoryType::Reserved,
-        },
+        MemoryType::MMIO | MemoryType::MMIO_PORT_SPACE => {
+            crate::mem::MemoryDescriptor::new_aligned(
+                memty_str(&memory.ty),
+                memory.phys_start as _,
+                memory.page_count as usize * page_size(),
+                crate::mem::MemoryType::Mmio,
+                PAGE_SIZE,
+            )
+        }
+        t => crate::mem::MemoryDescriptor::new_aligned(
+            memty_str(&t),
+            memory.phys_start as _,
+            memory.page_count as usize * page_size(),
+            crate::mem::MemoryType::Reserved,
+            PAGE_SIZE,
+        ),
     }))?;
 
     Ok(())
