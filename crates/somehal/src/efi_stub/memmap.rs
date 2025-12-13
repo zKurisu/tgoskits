@@ -1,4 +1,4 @@
-use uefi_raw::table::boot::{MemoryDescriptor, MemoryType};
+use uefi::boot::{MemoryDescriptor, MemoryType};
 
 use crate::mem::{add_memory_descriptor, page_size};
 

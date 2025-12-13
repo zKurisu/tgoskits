@@ -1,18 +1,19 @@
-use core::{ffi::c_void, fmt::Write, ptr::null, sync::atomic::AtomicBool};
+use core::{fmt::Write, ptr::null, sync::atomic::AtomicBool};
 
 use uefi::{
-    Result, mem::memory_map::MemoryMap, prelude::*, proto::loaded_image::LoadedImage,
-    system::with_config_table, table::cfg::ConfigTableEntry,
+    Result, boot,
+    mem::memory_map::MemoryMap,
+    prelude::*,
+    proto::loaded_image::LoadedImage,
+    system::with_config_table,
+    table::{self, cfg::ConfigTableEntry},
 };
-use uefi_raw::table::system::SystemTable;
 
 use crate::{acpi::set_rsdp, arch::relocate};
 
 mod acpi_handle;
 pub(crate) mod memmap;
 pub mod pe;
-mod system;
-mod table;
 
 /// EFI PE 入口点 - 符合 EFI ABI 的汇编包装
 /// 参数: a0 = image_handle, a1 = system_table
@@ -20,15 +21,12 @@ mod table;
 #[unsafe(link_section = ".text")]
 pub unsafe extern "C" fn efi_pe_entry(
     image_handle: Handle,
-    system_table: *const SystemTable,
+    system_table: *const ::core::ffi::c_void,
 ) -> Status {
     unsafe {
         relocate();
-        ::uefi::boot::set_image_handle(image_handle);
-        ::uefi::table::set_system_table(system_table);
-        table::set_system_table_ptr(system_table as usize as _);
-
-        // crate::efi_stub::system::stdout().write_str("test 我要 123\r\n");
+        boot::set_image_handle(image_handle);
+        table::set_system_table(system_table.cast());
 
         crate::console::set_out(&UefiPrinter);
 
@@ -45,7 +43,7 @@ pub unsafe extern "C" fn efi_pe_entry(
         println!("Exited boot services, owned memory map obtained.");
         memmap::setup_memory_map(mem_map.entries()).unwrap();
 
-        crate::arch::entry::kernel_entry(1, null(), system_table as *const c_void);
+        crate::arch::entry::kernel_entry(1, null(), system_table);
     }
 }
 
