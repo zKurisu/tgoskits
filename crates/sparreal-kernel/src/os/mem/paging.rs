@@ -1,4 +1,6 @@
 use alloc::boxed::Box;
+use byte_unit::{Byte, UnitType};
+use kernutil::memory::MemoryType;
 
 use crate::hal::al::*;
 
@@ -17,20 +19,33 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
     for region in memory::memory_map() {
         let phys = PhysAddr::from(region.physical_start);
         let virt = VirtAddr::from(phys);
+        let fmt = Byte::from(region.size_in_bytes).get_appropriate_unit(UnitType::Binary);
+        let config = match region.memory_type {
+            MemoryType::Mmio => MemConfig {
+                access: AccessFlags::READ | AccessFlags::WRITE,
+                attrs: MemAttributes::Device,
+            },
+            _ => MemConfig {
+                access: AccessFlags::READ | AccessFlags::WRITE | AccessFlags::EXECUTE,
+                attrs: MemAttributes::Normal,
+            },
+        };
+
         debug!(
-            "Mapping region: {:#x} - {:#x} (size: {:#x})",
+            "Mapping `{:<16}`: [{:>#016x}, {:>#016x}) -> [{:>#016x}, {:>#016x}) {} ({:#.2})",
+            region.name,
             virt.raw(),
             (virt.raw() + region.size_in_bytes),
-            region.size_in_bytes
+            phys.raw(),
+            (phys.raw() + region.size_in_bytes),
+            config,
+            fmt
         );
         pt.map(
             virt.raw().into(),
             phys.raw().into(),
             region.size_in_bytes,
-            MemConfig {
-                access: AccessFlags::READ | AccessFlags::WRITE | AccessFlags::EXECUTE,
-                attrs: MemAttributes::Normal,
-            },
+            config,
             false,
         )
         .expect("Failed to map memory region");

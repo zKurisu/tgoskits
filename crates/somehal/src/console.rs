@@ -22,8 +22,8 @@ macro_rules! print {
 
 #[macro_export]
 macro_rules! println {
-    () => ($crate::print!("\r\n"));
-    ($($arg:tt)*) => ($crate::console::_print(core::format_args!("{}{}", core::format_args!($($arg)*), "\r\n")));
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::console::_print(core::format_args!("{}{}", core::format_args!($($arg)*), "\n")));
 }
 
 // macro_rules! pr_range {
@@ -53,7 +53,19 @@ struct ConFmt {}
 
 impl Write for ConFmt {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        con().write_str(s);
+        let mut remaining = s;
+        while let Some(pos) = remaining.find('\n') {
+            // 打印 '\n' 之前的部分
+            con().write_str(&remaining[..pos]);
+            // 打印 "\r\n"
+            con().write_str("\r\n");
+            // 继续处理剩余部分
+            remaining = &remaining[pos + 1..];
+        }
+        // 打印最后剩余的部分（如果有的话）
+        if !remaining.is_empty() {
+            con().write_str(remaining);
+        }
         Ok(())
     }
 }
@@ -113,7 +125,6 @@ pub fn set_earlycon_reciever(reciever: Reciever) {
 }
 
 #[allow(dead_code)]
-#[unsafe(link_section = ".data")]
 static EARLYCON_SENDER: EarlyconSenderCell = EarlyconSenderCell(UnsafeCell::new(None));
 
 #[allow(dead_code)]

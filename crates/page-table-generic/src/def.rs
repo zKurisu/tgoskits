@@ -241,3 +241,33 @@ pub struct MemConfig {
     pub access: AccessFlags,
     pub attrs: MemAttributes,
 }
+
+impl core::fmt::Display for MemConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "{}{}{}{}|{:?}",
+            if self.access.contains(AccessFlags::READ) {
+                "R"
+            } else {
+                "-"
+            },
+            if self.access.contains(AccessFlags::WRITE) {
+                "W"
+            } else {
+                "-"
+            },
+            if self.access.contains(AccessFlags::EXECUTE) {
+                "X"
+            } else {
+                "-"
+            },
+            if self.access.contains(AccessFlags::LOWER) {
+                "L"
+            } else {
+                "-"
+            },
+            self.attrs
+        )
+    }
+}
