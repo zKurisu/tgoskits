@@ -1,10 +1,11 @@
 [package]
 name = "simple-sdmmc"
 version = "0.1.0"
-description = "A simple SD/MMC driver based on SDIO."
+description = "A simple SD/MMC driver."
 edition = "2024"
-authors = ["Asakura Mizu <asakuramizu111@gmail.com>"]
-publish = ["crates-io"]
+authors = ["朝倉水希 <asakuramizu111@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Starry-OS/simple-sdmmc"
 
 [dependencies]
 bitfield-struct = "0.11.0"
