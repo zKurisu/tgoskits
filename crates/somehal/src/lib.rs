@@ -115,8 +115,8 @@ fn prime_entry() -> ! {
     arch::Arch::relocate_kernel_to_vm_code()
 }
 
-fn after_finally_relocate(offset: i64) -> ! {
-    arch::relocate_with_offset(offset);
+fn after_finally_relocate() -> ! {
+    // arch::relocate_kernel_to_vm_code();
     mem::memory_map_setup();
     mem::print_memory_map();
 

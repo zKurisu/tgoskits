@@ -18,7 +18,7 @@ use loongArch64::{
 use page_table_generic::{FrameAllocator, MapConfig, PageTable};
 pub use paging::Entry as Pte;
 pub use relocate::relocate;
-pub use relocate::relocate_with_offset;
+pub use relocate::relocate_kernel_to_vm_code;
 
 use crate::{ArchTrait, PageTableOp, arch::register::irq::TI, irq::SoftIrqId};
 

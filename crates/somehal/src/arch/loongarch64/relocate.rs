@@ -2,6 +2,8 @@
 
 use core::arch::asm;
 
+use crate::arch::addrspace::VM_CODE_START;
+
 use super::addrspace::VMLINUX_LOAD_ADDRESS;
 
 const R_LARCH_RELATIVE: u32 = 3;
@@ -35,6 +37,10 @@ pub fn get_load_offset() -> i64 {
 /// 早期重定位入口点
 pub fn relocate() {
     relocate_with_offset(get_load_offset());
+}
+
+pub fn relocate_kernel_to_vm_code() {
+    relocate_with_offset(0);
 }
 
 pub fn relocate_with_offset(offset: i64) {

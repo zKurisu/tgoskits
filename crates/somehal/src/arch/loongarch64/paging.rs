@@ -10,7 +10,6 @@ use core::arch::naked_asm;
 use kernutil::StaticCell;
 use num_align::NumAlign;
 use page_table_generic::{MapConfig, MemConfig, PageTableEntry, PhysAddr, TableGeneric, VirtAddr};
-use uefi::table;
 
 use crate::{
     ArchTrait,
@@ -991,55 +990,72 @@ pub fn cpu_has_ptw() -> bool {
 }
 
 pub fn relocate_kernel_to_vm_code() -> ! {
-    let mut table = page_table_generic::PageTable::<Generic, _>::new(Ram).unwrap();
-    let table_addr = table.root_paddr().raw();
-    let kernel_start_phys = virt_to_phys(Arch::kernel_code().as_ptr());
-    let size = Arch::kernel_code().len().align_up(page_size());
-    let kernel_start_virt = super::addrspace::VM_CODE_START;
-    println!(
-        "Relocating kernel from phys addr: {:#x} -> {:#x}, size: {:#x}, table: {:#x}",
-        kernel_start_phys, kernel_start_virt, size, table_addr
-    );
-    let mut pte = Entry::empty();
-    pte.set_valid(true);
-    pte.set_mem_config(MemConfig {
-        access: page_table_generic::AccessFlags::READ
-            | page_table_generic::AccessFlags::WRITE
-            | page_table_generic::AccessFlags::EXECUTE,
-        attrs: page_table_generic::MemAttributes::Normal,
-    });
+    crate::after_finally_relocate()
+    // let mut table = page_table_generic::PageTable::<Generic, _>::new(Ram).unwrap();
+    // let table_addr = table.root_paddr().raw();
+    // let kernel_start_phys = virt_to_phys(Arch::kernel_code().as_ptr());
+    // let size = Arch::kernel_code().len().align_up(page_size());
+    // let kernel_start_virt = super::addrspace::VM_CODE_START;
+    // println!(
+    //     "Relocating kernel from phys addr: {:#x} -> {:#x}, size: {:#x}, table: {:#x}",
+    //     kernel_start_phys, kernel_start_virt, size, table_addr
+    // );
+    // let mut pte = Entry::empty();
+    // pte.set_valid(true);
+    // pte.set_mem_config(MemConfig {
+    //     access: page_table_generic::AccessFlags::READ
+    //         | page_table_generic::AccessFlags::WRITE
+    //         | page_table_generic::AccessFlags::EXECUTE,
+    //     attrs: page_table_generic::MemAttributes::Normal,
+    // });
 
-    table
-        .map(&MapConfig {
-            vaddr: kernel_start_virt.into(),
-            paddr: kernel_start_phys.into(),
-            size,
-            pte,
-            allow_huge: true,
-            flush: false,
-        })
-        .unwrap();
+    // table
+    //     .map(&MapConfig {
+    //         vaddr: kernel_start_virt.into(),
+    //         paddr: kernel_start_phys.into(),
+    //         size,
+    //         pte,
+    //         allow_huge: true,
+    //         flush: false,
+    //     })
+    //     .unwrap();
 
-    BOOT_TABLE.init(table);
-    super::Arch::set_kernel_page_table(PageTableInfo {
-        asid: 0,
-        addr: table_addr,
-    });
+    // BOOT_TABLE.init(table);
+    // super::Arch::set_kernel_page_table(PageTableInfo {
+    //     asid: 0,
+    //     addr: table_addr,
+    // });
 
-    let offset = kernel_start_virt - kernel_start_phys;
-    let entry = virt_to_phys(crate::after_finally_relocate as _) + offset;
-    println!(
-        "Relocate kernel: table at {:#x}, offset {:#x}, entry {:#x}",
-        table_addr, offset, entry
-    );
-    set_table_and_relocate_kernel(offset, entry)
+    // let offset = kernel_start_virt - kernel_start_phys;
+    // let entry = virt_to_phys(crate::after_finally_relocate as _) + offset;
+    // println!(
+    //     "Relocate kernel: table at {:#x}, offset {:#x}, entry {:#x}",
+    //     table_addr, offset, entry
+    // );
+    // unsafe {
+    //     let ptr2 = crate::after_finally_relocate as *const u64;
+    //     let a2 = ptr2.read();
+    //     println!("Original entry point data: {:#x}", a2);
+
+    //     let ptr = entry as *mut u64;
+    //     let a1 = ptr.read();
+    //     println!("Relocated entry point data: {:#x}", a1);
+
+    //     assert_eq!(
+    //         a1, a2,
+    //         "Relocated entry point does not match expected address!"
+    //     );
+    //     println!("Entry point check passed.");
+    // }
+
+    // relocate_kernel(crate::after_finally_relocate as *const () as _)
 }
 
-#[unsafe(naked)]
-extern "C" fn set_table_and_relocate_kernel(offset: usize, entry: usize) -> ! {
-    naked_asm!(
-        "
-        
-        ",
-    )
-}
+// #[unsafe(naked)]
+// extern "C" fn relocate_kernel(entry: usize) -> ! {
+//     naked_asm!(
+//         "
+//         jr $a0
+//         ",
+//     )
+// }
