@@ -92,7 +92,6 @@ fn rust_main() -> ! {
         println!("{cmdline}");
     }
 
-    crate::mem::early_init();
 
     prime_entry()
 }

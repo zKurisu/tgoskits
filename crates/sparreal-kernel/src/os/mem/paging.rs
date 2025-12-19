@@ -31,7 +31,7 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
                 pt.ioremap(phys.raw().into(), region.size_in_bytes, false)
                     .expect("Failed to map mmio");
             }
-            _ => {
+            MemoryType::Free => {
                 let virt = VirtAddr::from(phys);
                 let config = MemConfig {
                     access: AccessFlags::READ | AccessFlags::WRITE | AccessFlags::EXECUTE,
@@ -56,6 +56,7 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
                 )
                 .expect("Failed to map memory region");
             }
+            _ => {}
         };
     }
 }

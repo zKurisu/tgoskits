@@ -49,7 +49,7 @@ trait ArchTrait {
     type PT<A: FrameAllocator>: PageTableOp<A>;
 
     fn kernel_code() -> &'static [u8];
-    fn relocate_kernel_to_vm_code();
+    fn relocate_kernel_to_vm_code() -> !;
     fn post_allocator();
 
     fn per_cpu_trap_init(is_primary: bool);
@@ -107,13 +107,16 @@ pub fn set_kernel_page_table_paddr(paddr: usize) {
 
 fn prime_entry() -> ! {
     mem::set_mmu_enabled();
+    mem::early_init();
     arch::Arch::per_cpu_trap_init(true);
     fdt::setup_earlycon();
-    arch::Arch::relocate_kernel_to_vm_code();
-
     fdt::setup_memory_map();
     let _ = acpi::earlycon::acpi_setup_earlycon();
+    arch::Arch::relocate_kernel_to_vm_code()
+}
 
+fn after_finally_relocate(offset: i64) -> ! {
+    arch::relocate_with_offset(offset);
     mem::memory_map_setup();
     mem::print_memory_map();
 

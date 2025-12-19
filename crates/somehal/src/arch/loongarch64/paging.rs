@@ -5,9 +5,19 @@
 
 #![allow(dead_code)]
 
-use page_table_generic::{PageTableEntry, PhysAddr, TableGeneric, VirtAddr};
+use core::arch::naked_asm;
 
-use crate::{ArchTrait, consts::PAGE_SIZE};
+use num_align::NumAlign;
+use page_table_generic::{
+    MapConfig, MemConfig, PageTable, PageTableEntry, PhysAddr, TableGeneric, VirtAddr,
+};
+
+use crate::{
+    ArchTrait,
+    arch::{Arch, PT},
+    consts::PAGE_SIZE,
+    mem::{page_size, ram::Ram, virt_to_phys},
+};
 
 // ============================================================================
 // CSR 寄存器地址定义
@@ -978,6 +988,52 @@ pub fn cpu_has_ptw() -> bool {
     (cfg1 & (1 << 24)) != 0
 }
 
-pub fn relocate_kernel_to_vm_code() {
-    // TODO: 实现内核搬迁到虚拟内存的代码
+pub fn relocate_kernel_to_vm_code() -> ! {
+    let mut table = page_table_generic::PageTable::<Generic, _>::new(Ram).unwrap();
+    let kernel_start_phys = virt_to_phys(Arch::kernel_code().as_ptr());
+    let size = Arch::kernel_code().len().align_up(page_size());
+    let kernel_start_virt = super::addrspace::VM_CODE_START;
+    println!(
+        "Relocating kernel from phys addr: {:#x} -> {:#x}",
+        kernel_start_phys, kernel_start_virt
+    );
+    let mut pte = Entry::empty();
+    pte.set_valid(true);
+    pte.set_mem_config(MemConfig {
+        access: page_table_generic::AccessFlags::READ
+            | page_table_generic::AccessFlags::WRITE
+            | page_table_generic::AccessFlags::EXECUTE,
+        attrs: page_table_generic::MemAttributes::Normal,
+    });
+
+    table
+        .map(&MapConfig {
+            vaddr: kernel_start_virt.into(),
+            paddr: kernel_start_phys.into(),
+            size,
+            pte,
+            allow_huge: true,
+            flush: false,
+        })
+        .unwrap();
+
+    let table_addr = table.root_paddr();
+    let offset = kernel_start_virt - kernel_start_phys;
+    let entry = virt_to_phys(crate::after_finally_relocate as _) + offset;
+    println!(
+        "Relocate kernel: table at {:#x}, offset {:#x}, entry {:#x}",
+        table_addr.raw(),
+        offset,
+        entry
+    );
+    set_table_and_relocate_kernel(table_addr.raw(), offset, entry)
+}
+
+#[unsafe(naked)]
+extern "C" fn set_table_and_relocate_kernel(table: usize, offset: usize, entry: usize) -> ! {
+    naked_asm!(
+        "
+        
+        ",
+    )
 }

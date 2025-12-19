@@ -4,7 +4,10 @@ use kernutil::memory::{MemoryDescriptor, MemoryType};
 use num_align::NumAlign;
 use page_table_generic::FrameAllocator;
 
-use crate::{ArchTrait, mem::{page_size, virt_to_phys}};
+use crate::{
+    ArchTrait,
+    mem::{page_size, virt_to_phys},
+};
 
 struct SimpleAllocator {
     start: usize,
@@ -63,7 +66,7 @@ impl FrameAllocator for Ram {
     fn dealloc_frame(&self, _frame: page_table_generic::PhysAddr) {}
 
     fn phys_to_virt(&self, paddr: page_table_generic::PhysAddr) -> *mut u8 {
-        paddr.raw() as *mut u8
+        super::phys_to_virt(paddr.raw())
     }
 }
 

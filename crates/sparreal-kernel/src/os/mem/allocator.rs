@@ -3,7 +3,6 @@ use core::{
     ptr::{NonNull, null_mut},
 };
 
-use alloc::boxed::Box;
 use buddy_system_allocator::Heap;
 use page_table_generic::FrameAllocator;
 use spin::Mutex;
@@ -168,6 +167,12 @@ impl KernelMemoryAllocator {
     fn pointer_fits_in_32bit(ptr: *mut u8) -> bool {
         let phys = PhysAddr::from(VirtAddr::from(ptr as usize));
         phys <= PhysAddr::from(u32::MAX as usize)
+    }
+}
+
+impl Default for KernelMemoryAllocator {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

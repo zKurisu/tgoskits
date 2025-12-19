@@ -34,9 +34,13 @@ pub fn get_load_offset() -> i64 {
 
 /// 早期重定位入口点
 pub fn relocate() {
+    relocate_with_offset(get_load_offset());
+}
+
+pub fn relocate_with_offset(offset: i64) {
     unsafe {
         crate::elf::apply_reloc(
-            get_load_offset(),
+            offset,
             sym_lma!(__rela_dyn_begin) as _,
             sym_lma!(__rela_dyn_end) as _,
             R_LARCH_RELATIVE,
