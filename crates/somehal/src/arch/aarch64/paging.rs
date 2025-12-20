@@ -11,6 +11,7 @@ use crate::{
 };
 
 pub use super::elx::Generic;
+pub use super::elx::Pte as Entry;  // 导出统一的 Entry 类型
 
 static BOOT_TABLE: spin::Once<PageTable<Generic, Ram>> = spin::Once::new();
 

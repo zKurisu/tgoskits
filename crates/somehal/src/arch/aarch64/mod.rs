@@ -12,12 +12,13 @@ mod elx;
 mod context;
 mod entry;
 mod head;
-mod paging;
+pub mod paging;
 mod relocate;
 mod trap;
 
 use aarch64_cpu::registers::*;
 pub use elx::Pte;
+pub use elx::Pte as Entry;  // 导出统一的 Entry 类型
 use elx::*;
 
 use crate::{ArchTrait, mem::PageTableInfo};
@@ -25,12 +26,38 @@ use crate::{ArchTrait, mem::PageTableInfo};
 // ARM Generic Timer IRQ number (PPI 30)
 const TIMER_IRQ: usize = 30;
 
-pub type PT<A> = page_table_generic::PageTable<paging::Generic, A>;
+pub struct PT<A: page_table_generic::FrameAllocator> {
+    inner: page_table_generic::PageTable<paging::Generic, A>,
+}
+
+impl<A: page_table_generic::FrameAllocator> crate::PageTableOp<A> for PT<A> {
+    fn map(&mut self, config: &page_table_generic::MapConfig<paging::Entry>) -> Result<(), page_table_generic::PagingError> {
+        self.inner.map(config)
+    }
+
+    fn unmap(&mut self, virt_start: page_table_generic::VirtAddr, size: usize) -> Result<(), page_table_generic::PagingError> {
+        self.inner.unmap(virt_start, size)
+    }
+
+    fn ioremap(&mut self, phys_start: page_table_generic::PhysAddr, _size: usize, _flush: bool) -> Result<page_table_generic::VirtAddr, page_table_generic::PagingError> {
+        let virt = Arch::_io(phys_start.raw());
+        Ok(virt.into())
+    }
+
+    fn iounmap(&mut self, _io_addr: page_table_generic::VirtAddr, _size: usize) -> Result<(), page_table_generic::PagingError> {
+        // 对于直接映射的 I/O 内存，不需要实际操作
+        Ok(())
+    }
+
+    fn root_paddr(&self) -> page_table_generic::PhysAddr {
+        self.inner.root_paddr()
+    }
+}
 
 pub struct Arch;
 
 impl ArchTrait for Arch {
-    type PT = paging::Generic;
+    type PT<A: page_table_generic::FrameAllocator> = PT<A>;
 
     fn post_allocator() {}
 
@@ -123,8 +150,10 @@ impl ArchTrait for Arch {
 
     fn create_page_table<A: page_table_generic::FrameAllocator>(
         allocator: A,
-    ) -> page_table_generic::PageTable<Self::PT, A> {
-        page_table_generic::PageTable::<Self::PT, A>::new(allocator).unwrap()
+    ) -> Self::PT<A> {
+        PT {
+            inner: page_table_generic::PageTable::<paging::Generic, A>::new(allocator).unwrap(),
+        }
     }
 
     fn kernel_page_table() -> PageTableInfo {
@@ -153,4 +182,9 @@ impl ArchTrait for Arch {
     }
 
     fn enable_paging() {}
+
+    fn relocate_kernel_to_vm_code() -> ! {
+        relocate::apply();
+        crate::after_finally_relocate()
+    }
 }
