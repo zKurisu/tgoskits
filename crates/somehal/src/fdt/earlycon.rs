@@ -48,7 +48,7 @@ fn set_by_stdout() -> Option<()> {
         }
     }
     unsafe {
-        DEBUG_BASE = addr.as_ptr() as usize;
+        DEBUG_BASE = address as usize;
     }
     Some(())
 }

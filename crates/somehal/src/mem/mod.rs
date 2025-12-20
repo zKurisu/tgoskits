@@ -7,7 +7,7 @@ use ranges_ext::RangeError;
 pub(crate) mod ram;
 pub(crate) mod region;
 
-use crate::{ArchTrait, mem::ram::Ram};
+use crate::ArchTrait;
 
 pub use crate::arch::Pte;
 pub use page_table_generic::*;
@@ -120,6 +120,10 @@ pub(crate) fn memory_map_setup() {
     let desc = MemoryDescriptor::new_with_range("Kernel", kernel_range, MemoryType::Reserved);
 
     add_memory_descriptor(desc).unwrap();
+
+    if let Some(desc) = crate::console::debug_to_memory_desc() {
+        add_memory_descriptor(desc).unwrap();
+    }
 }
 
 pub fn print_memory_map() {

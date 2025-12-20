@@ -1,12 +1,28 @@
 use byte_unit::{Byte, UnitType};
 use core::fmt::Write;
 use core::{cell::UnsafeCell, ptr::NonNull};
+use kernutil::memory::{MemoryDescriptor, MemoryType};
 use some_serial::*;
 
 use crate::cmdline::EarlyconConfig;
-use crate::mem::_fixmap_io;
+use crate::mem::{_fixmap_io, page_size};
 
 pub(crate) static mut DEBUG_BASE: usize = 0;
+
+pub(crate) fn debug_to_memory_desc() -> Option<MemoryDescriptor> {
+    let debug_base = unsafe { DEBUG_BASE };
+    if debug_base == 0 {
+        return None;
+    }
+
+    Some(MemoryDescriptor::new_aligned(
+        "Debug Console",
+        debug_base,
+        100,
+        MemoryType::Mmio,
+        page_size(),
+    ))
+}
 
 pub fn _print(args: core::fmt::Arguments) {
     let _ = ConFmt {}.write_fmt(args);

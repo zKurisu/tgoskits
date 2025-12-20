@@ -21,9 +21,14 @@ use aarch64_cpu::registers::*;
 pub use elx::Pte;
 pub use elx::Pte as Entry; // 导出统一的 Entry 类型
 use elx::*;
+use num_align::NumAlign;
+use page_table_generic::{AccessFlags, MemAttributes, MemConfig, PageTableEntry, PagingError};
 
 use crate::{
-    ArchTrait, arch::addrspace::LINER_OFFSET, consts::VM_LOAD_ADDRESS, mem::PageTableInfo,
+    ArchTrait,
+    arch::addrspace::LINER_OFFSET,
+    consts::VM_LOAD_ADDRESS,
+    mem::{_fixmap_io, PageTableInfo, page_size},
 };
 
 // ARM Generic Timer IRQ number (PPI 30)
@@ -52,10 +57,40 @@ impl<A: page_table_generic::FrameAllocator> crate::PageTableOp<A> for PT<A> {
     fn ioremap(
         &mut self,
         phys_start: page_table_generic::PhysAddr,
-        _size: usize,
+        size: usize,
         _flush: bool,
     ) -> Result<page_table_generic::VirtAddr, page_table_generic::PagingError> {
         let virt = Arch::_io(phys_start.raw());
+        let end = virt as usize + size;
+        let vaddr = (virt as usize).align_down(page_size());
+        let paddr = phys_start.raw().align_down(page_size());
+        let end = end.align_up(page_size());
+        let size = end - vaddr;
+        debug!(
+            "ioremap: phys=0x{:x}, virt=0x{:x}, size=0x{:x}",
+            paddr, vaddr, size
+        );
+        let config = page_table_generic::MapConfig {
+            vaddr: vaddr.into(),
+            paddr: paddr.into(),
+            size,
+            pte: {
+                let mut pte = paging::Entry::empty();
+                pte.set_valid(true);
+                pte.set_mem_config(MemConfig {
+                    access: AccessFlags::READ | AccessFlags::WRITE,
+                    attrs: MemAttributes::Device,
+                });
+                pte
+            },
+            allow_huge: true,
+            flush: true,
+        };
+
+        match self.inner.map(&config) {
+            Ok(()) | Err(PagingError::MappingConflict { .. }) => {}
+            Err(e) => return Err(e),
+        }
         Ok(virt.into())
     }
 
@@ -96,7 +131,7 @@ impl ArchTrait for Arch {
     }
 
     fn ioremap(paddr: usize, _size: usize) -> *mut u8 {
-        if crate::mem::is_mmu_enabled() {
+        if is_mmu_enabled() {
             todo!()
         } else {
             paddr as *mut u8
@@ -205,7 +240,7 @@ impl ArchTrait for Arch {
             if vaddr as usize >= VM_LOAD_ADDRESS {
                 paging::_pa(vaddr)
             } else {
-                vaddr as usize - LINER_OFFSET
+                vaddr as usize & 0xffff_ffff_ffff
             }
         } else {
             vaddr as usize

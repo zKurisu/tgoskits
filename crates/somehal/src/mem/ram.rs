@@ -1,6 +1,5 @@
 use core::{alloc::Layout, cell::UnsafeCell};
 
-use kernutil::memory::{MemoryDescriptor, MemoryType};
 use num_align::NumAlign;
 use page_table_generic::FrameAllocator;
 
