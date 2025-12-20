@@ -29,7 +29,7 @@ SECTIONS
         *(.init.text)
         *(.fixup)
         *(.gnu.warning)
-    } :text = 0
+    }
     . = ALIGN(PAGE_SIZE);
     _etext = .;
     _srodata = .; 
