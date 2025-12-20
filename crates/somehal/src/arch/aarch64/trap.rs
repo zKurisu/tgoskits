@@ -87,13 +87,7 @@ global_asm!(
 );
 
 pub fn setup() {
-    let addr: usize;
-    unsafe {
-        asm!(
-            "adr {0}, __vector_table",
-            out(reg) addr,
-        );
-    }
+    let addr = ext_sym_addr!(__vector_table);
 
     match CurrentEL.read(CurrentEL::EL) {
         1 => unsafe {
