@@ -1,3 +1,4 @@
+use byte_unit::{Byte, UnitType};
 use core::fmt::Write;
 use core::{cell::UnsafeCell, ptr::NonNull};
 use some_serial::*;
@@ -47,6 +48,19 @@ macro_rules! pr_range {
             core::format_args!($($arg)*)
         );
     };
+}
+
+pub fn print_mapping(name: &str, virt: usize, phys: usize, size: usize) {
+    let fmt = Byte::from(size).get_appropriate_unit(UnitType::Binary);
+    println!(
+        "{:<20}: [0x{:0>16x}, 0x{:0>16x}) -> [0x{:0>16x}, 0x{:0>16x}) ({:#.2})",
+        name,
+        virt,
+        virt + size,
+        phys,
+        phys + size,
+        fmt
+    );
 }
 
 #[allow(dead_code)]
@@ -189,8 +203,8 @@ fn set_pl011(config: &EarlyconConfig) -> Result<(), &'static str> {
     let base_addr = config
         .base_addr
         .ok_or("No base address specified for pl011 earlycon")?;
-    let base_addr = NonNull::new(_fixmap_io("Early Debug", base_addr, 100))
-        .ok_or("Invalid base address for pl011 earlycon")?;
+    let base_addr =
+        NonNull::new(_fixmap_io(base_addr)).ok_or("Invalid base address for pl011 earlycon")?;
 
     let mut serial = pl011::Pl011::new(base_addr, 0);
     let tx = serial.take_tx().ok_or("no tx")?;
@@ -206,8 +220,8 @@ fn set_16550_mmio(config: &EarlyconConfig) -> Result<(), &'static str> {
     let base_addr = config
         .base_addr
         .ok_or("No base address specified for ns16550 earlycon")?;
-    let base_addr = NonNull::new(_fixmap_io("Early Debug", base_addr, 100))
-        .ok_or("Invalid base address for ns16550 earlycon")?;
+    let base_addr =
+        NonNull::new(_fixmap_io(base_addr)).ok_or("Invalid base address for ns16550 earlycon")?;
     let width = match config.io_type {
         "mmio" => 1,
         "mmio16" => 2,

@@ -1,11 +1,12 @@
 use core::arch::asm;
 
 use num_align::NumAlign;
-use page_table_generic::{GB, MapConfig, PageTable};
+use page_table_generic::{MapConfig, PageTable};
 
 use crate::{
     ArchTrait,
     arch::elx::{Pte, flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
+    console::print_mapping,
     mem::{PageTableInfo, page_size, ram::Ram, vm_load_offset},
     prime_entry,
 };
@@ -15,41 +16,41 @@ pub use super::elx::Pte as Entry; // 导出统一的 Entry 类型
 
 static BOOT_TABLE: spin::Once<PageTable<Generic, Ram>> = spin::Once::new();
 
+pub(crate) fn _pa(vaddr: *const u8) -> usize {
+    (vaddr as usize as isize + vm_load_offset()) as usize
+}
+
 pub fn enable_mmu() -> ! {
     println!("Mapping early memory regions...");
 
-    let k_start = crate::mem::kernel_range().start;
+    let k_start = crate::mem::kimage_range().start;
 
     let mut table = PageTable::<Generic, _>::new(Ram).unwrap();
 
-    let start = k_start.align_down(GB);
-    let size = GB;
     let mut pte = Pte::new_valid();
     pte.set_mair_idx(1);
 
-    pr_range!("Kernel", start, size);
+    for memory in crate::fdt::memories() {
+        let start = memory.start;
+        let size = memory.len();
 
-    table
-        .map(&MapConfig {
-            vaddr: start.into(),
-            paddr: start.into(),
-            size,
-            pte,
-            allow_huge: true,
-            flush: false,
-        })
-        .unwrap();
+        print_mapping("Ram", super::Arch::_io(start) as _, start, size);
 
+        table
+            .map(&MapConfig {
+                vaddr: start.into(),
+                paddr: start.into(),
+                size,
+                pte,
+                allow_huge: true,
+                flush: false,
+            })
+            .unwrap();
+    }
     let v_start = super::Arch::_va(k_start);
-    let size = crate::mem::kernel_range().len().align_up(page_size());
+    let size = crate::mem::kimage_range().len().align_up(page_size());
 
-    println!(
-        "map                 : [{:#x}, {:#x}) -> [{:#x}, {:#x})",
-        v_start as usize,
-        v_start as usize + size,
-        k_start,
-        k_start + size
-    );
+    print_mapping("KImage", v_start as _, k_start, size);
 
     table
         .map(&MapConfig {
@@ -69,7 +70,7 @@ pub fn enable_mmu() -> ! {
         let mut pte = Pte::new_valid();
         pte.set_mair_idx(0);
 
-        pr_range!("Debug UART", start, size);
+        print_mapping("Debug serial", super::Arch::_io(start) as _, start, size);
 
         table
             .map(&MapConfig {
@@ -99,8 +100,8 @@ pub fn enable_mmu() -> ! {
     set_user_table(tb);
     flush_tlb(None);
 
-    let v_sp = (ext_sym_addr!(__cpu0_stack_top) as isize - vm_load_offset()) as usize;
-    let v_entry = (mmu_entry_phys as isize - vm_load_offset()) as usize;
+    let v_sp = super::Arch::_va(ext_sym_addr!(__cpu0_stack_top)) as usize;
+    let v_entry = super::Arch::_va(mmu_entry_phys) as usize;
 
     println!("Enabling MMU...");
     setup_sctlr();

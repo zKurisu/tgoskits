@@ -39,3 +39,8 @@ pub fn switch_to_elx() {
     // Call el_entry directly if we're already in EL2
     el_entry();
 }
+
+#[inline(always)]
+pub fn is_mmu_enabled() -> bool {
+    
+}

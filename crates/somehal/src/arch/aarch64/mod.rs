@@ -9,11 +9,12 @@ mod elx;
 #[path = "el1/mod.rs"]
 mod elx;
 
+mod addrspace;
 mod context;
 mod entry;
 mod head;
 pub mod paging;
-mod relocate;
+pub mod relocate;
 mod trap;
 
 use aarch64_cpu::registers::*;
@@ -21,7 +22,9 @@ pub use elx::Pte;
 pub use elx::Pte as Entry; // 导出统一的 Entry 类型
 use elx::*;
 
-use crate::{ArchTrait, mem::PageTableInfo};
+use crate::{
+    ArchTrait, arch::addrspace::LINER_OFFSET, consts::VM_LOAD_ADDRESS, mem::PageTableInfo,
+};
 
 // ARM Generic Timer IRQ number (PPI 30)
 const TIMER_IRQ: usize = 30;
@@ -84,12 +87,12 @@ impl ArchTrait for Arch {
         unsafe { core::slice::from_raw_parts(start as *const u8, size) }
     }
 
-    fn _pa(vaddr: *const u8) -> usize {
-        (vaddr as usize as isize + crate::mem::vm_load_offset()) as usize
-    }
-
     fn _va(paddr: usize) -> *mut u8 {
         (paddr as isize - crate::mem::vm_load_offset()) as usize as *mut u8
+    }
+
+    fn is_mmu_enabled() -> bool {
+        elx::is_mmu_enabled()
     }
 
     fn ioremap(paddr: usize, _size: usize) -> *mut u8 {
@@ -101,7 +104,7 @@ impl ArchTrait for Arch {
     }
 
     fn _io(paddr: usize) -> *mut u8 {
-        Self::_va(paddr)
+        (paddr + addrspace::LINER_OFFSET) as *mut u8
     }
 
     fn per_cpu_trap_init(_is_primary: bool) {
@@ -197,8 +200,15 @@ impl ArchTrait for Arch {
 
     fn enable_paging() {}
 
-    fn relocate_kernel_to_vm_code() -> ! {
-        relocate::apply();
-        crate::after_finally_relocate()
+    fn virt_to_phys(vaddr: *const u8) -> usize {
+        if is_mmu_enabled() {
+            if vaddr as usize >= VM_LOAD_ADDRESS {
+                paging::_pa(vaddr)
+            } else {
+                vaddr as usize - LINER_OFFSET
+            }
+        } else {
+            vaddr as usize
+        }
     }
 }

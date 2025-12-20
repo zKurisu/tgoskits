@@ -1,16 +1,14 @@
-use fdt_parser::base;
-
 mod earlycon;
 mod memory;
 
 pub use earlycon::setup_earlycon;
-pub use memory::setup_memory_map;
+pub use memory::{init_memory_map, memories};
 
 use crate::mem::phys_to_virt;
 
 pub static mut FDT_ADDR: usize = 0;
 
-fn fdt_addr() -> Option<*mut u8> {
+pub fn fdt_addr() -> Option<*mut u8> {
     let fdt_addr = unsafe { FDT_ADDR };
     if fdt_addr == 0 {
         return None;
@@ -18,16 +16,16 @@ fn fdt_addr() -> Option<*mut u8> {
     Some(phys_to_virt(fdt_addr))
 }
 
-fn fdt_base() -> Option<base::Fdt<'static>> {
+fn fdt_base() -> Option<fdt_raw::Fdt<'static>> {
     let fdt_addr = fdt_addr()?;
-    let fdt = unsafe { base::Fdt::from_ptr(fdt_addr).ok()? };
+    let fdt = unsafe { fdt_raw::Fdt::from_ptr(fdt_addr).ok()? };
     Some(fdt)
 }
 
 pub fn set_cmdline() -> Option<()> {
     let fdt = fdt_base()?;
-    let chosen = fdt.chosen().ok()?;
-    let cmdline = chosen.bootargs().ok()?;
+    let chosen = fdt.chosen()?;
+    let cmdline = chosen.bootargs()?;
     crate::cmdline::set_cmdline(cmdline);
     Some(())
 }
@@ -37,7 +35,7 @@ pub(crate) fn save_fdt() {
         return;
     };
 
-    let size = fdt.total_size();
+    let size = fdt.header().totalsize as usize;
     let slice = unsafe { core::slice::from_raw_parts(FDT_ADDR as *const u8, size) };
 
     let fdt_buff = crate::mem::ram::Ram

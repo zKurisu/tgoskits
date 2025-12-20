@@ -406,6 +406,11 @@ pub fn get_user_table() -> PageTableInfo {
 }
 
 #[inline(always)]
+pub fn is_mmu_enabled() -> bool {
+    SCTLR_EL1.is_set(SCTLR_EL1::M)
+}
+
+#[inline(always)]
 pub fn setup_sctlr() {
     SCTLR_EL1.modify(SCTLR_EL1::M::Enable + SCTLR_EL1::C::Cacheable + SCTLR_EL1::I::Cacheable);
     flush_tlb(None);

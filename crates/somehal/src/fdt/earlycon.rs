@@ -21,16 +21,19 @@ pub fn setup_earlycon() -> Option<()> {
 fn set_by_stdout() -> Option<()> {
     let fdt = crate::fdt::fdt_base()?;
 
-    let chosen = fdt.chosen().ok()?;
-    let stdout = chosen.stdout().ok()?;
-    let reg = stdout.reg().ok()?.next()?;
-    let addr = NonNull::new(_fixmap_io("Early Debug", reg.address as usize, 100))?;
-    let clock = stdout.clock_frequency().unwrap_or(0);
+    let chosen = fdt.chosen()?;
+    let stdout = chosen.stdout_path()?;
+    let node = fdt.find_by_path(stdout)?;
+    let reg = node.reg()?.next()?;
+    let address = fdt.translate_address(stdout, reg.address);
 
-    for com in stdout.compatibles_flatten().ok()? {
+    let addr = NonNull::new(_fixmap_io(address as usize))?;
+    // let clock = stdout.clock_frequency().unwrap_or(0);
+
+    for com in node.compatibles() {
         match com {
             "arm,pl011" | "arm,primecell" => {
-                let mut serial = pl011::Pl011::new(addr, clock);
+                let mut serial = pl011::Pl011::new(addr, 0);
                 serial.open();
                 let tx = serial.take_tx()?;
                 let rx = serial.take_rx()?;

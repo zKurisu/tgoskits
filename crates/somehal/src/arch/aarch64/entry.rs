@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{ArchTrait, consts::VM_LOAD_ADDRESS, mem::set_vm_load_offset};
+use crate::{ArchTrait, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
 
 use super::switch_to_elx;
 
@@ -43,7 +43,7 @@ pub fn el_entry() -> ! {
         println!("{cmdline}");
     }
     println!("VM Load Offset: {:#x}", crate::mem::vm_load_offset());
-
+    fdt::init_memory_map();
     crate::mem::early_init();
     crate::arch::paging::enable_mmu()
 }

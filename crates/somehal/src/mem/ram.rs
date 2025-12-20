@@ -81,14 +81,3 @@ pub fn init() {
 pub fn current() -> *mut u8 {
     Ram {}.current() as _
 }
-
-pub fn to_rsvd_memory_descriptor() -> MemoryDescriptor {
-    let start = unsafe { RAM_ALLOC.0.get().as_ref().unwrap().start };
-
-    MemoryDescriptor {
-        name: "SomeHal Reserved",
-        physical_start: start,
-        size_in_bytes: current() as usize - start,
-        memory_type: MemoryType::Reserved,
-    }
-}

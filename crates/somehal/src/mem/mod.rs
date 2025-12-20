@@ -7,7 +7,7 @@ use ranges_ext::RangeError;
 pub(crate) mod ram;
 pub(crate) mod region;
 
-use crate::ArchTrait;
+use crate::{ArchTrait, mem::ram::Ram};
 
 pub use crate::arch::Pte;
 pub use page_table_generic::*;
@@ -17,7 +17,7 @@ pub const MB: usize = 1024 * KB;
 pub const GB: usize = 1024 * MB;
 
 static mut VM_LOAD_OFFSET: isize = 0;
-static mut MMU_ENABLED: bool = false;
+
 static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
 
 pub type PageTable<A> = crate::arch::PT<A>;
@@ -43,14 +43,9 @@ pub fn memory_map() -> &'static [MemoryDescriptor] {
     MEMORY_MAP.as_slice()
 }
 
-pub(crate) fn set_mmu_enabled() {
-    unsafe {
-        MMU_ENABLED = true;
-    }
-}
-
+#[inline(always)]
 pub(crate) fn is_mmu_enabled() -> bool {
-    unsafe { MMU_ENABLED }
+    crate::arch::Arch::is_mmu_enabled()
 }
 
 pub fn enable_paging() {
@@ -59,18 +54,18 @@ pub fn enable_paging() {
 
 pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     if is_mmu_enabled() {
-        crate::arch::Arch::_va(paddr)
+        if kimage_range().contains(&paddr) {
+            crate::arch::Arch::_va(paddr)
+        } else {
+            crate::arch::Arch::_io(paddr)
+        }
     } else {
         paddr as *mut u8
     }
 }
 
 pub fn virt_to_phys(vaddr: *const u8) -> usize {
-    if is_mmu_enabled() {
-        crate::arch::Arch::_pa(vaddr)
-    } else {
-        vaddr as usize
-    }
+    crate::arch::Arch::virt_to_phys(vaddr)
 }
 
 pub fn ioremap(paddr: usize, size: usize) -> *mut u8 {
@@ -80,16 +75,7 @@ pub fn ioremap(paddr: usize, size: usize) -> *mut u8 {
     crate::arch::Arch::ioremap(paddr, size)
 }
 
-pub(crate) fn _fixmap_io(name: &'static str, paddr: usize, size: usize) -> *mut u8 {
-    add_memory_descriptor(MemoryDescriptor::new_aligned(
-        name,
-        paddr,
-        size,
-        MemoryType::Mmio,
-        page_size(),
-    ))
-    .unwrap();
-
+pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
     if is_mmu_enabled() {
         crate::arch::Arch::_io(paddr)
     } else {
@@ -98,14 +84,23 @@ pub(crate) fn _fixmap_io(name: &'static str, paddr: usize, size: usize) -> *mut 
 }
 
 pub(crate) fn early_init() {
+    static mut INITIALIZED: bool = false;
+    if unsafe { INITIALIZED } {
+        return;
+    }
+
     ram::init();
     crate::fdt::save_fdt();
+    unsafe {
+        INITIALIZED = true;
+    }
 }
 
-pub(crate) fn kernel_range() -> core::ops::Range<usize> {
+/// Get the physical range of the kernel image
+pub(crate) fn kimage_range() -> core::ops::Range<usize> {
     let kernel = crate::arch::Arch::kernel_code().as_ptr_range();
     let start = virt_to_phys(kernel.start);
-    let end = virt_to_phys(kernel.end);
+    let end = ram::current() as _;
     start..end
 }
 
@@ -121,12 +116,9 @@ pub fn new_page_table<A: FrameAllocator>(allocator: A) -> PageTable<A> {
 }
 
 pub(crate) fn memory_map_setup() {
-    let kernel_range = kernel_range();
+    let kernel_range = kimage_range();
     let desc = MemoryDescriptor::new_with_range("Kernel", kernel_range, MemoryType::Reserved);
 
-    add_memory_descriptor(desc).unwrap();
-
-    let desc = ram::to_rsvd_memory_descriptor();
     add_memory_descriptor(desc).unwrap();
 }
 

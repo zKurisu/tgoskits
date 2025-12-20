@@ -42,11 +42,7 @@ fn deal_with_spsr(spsr: &PhysicalMapping<impl Handler, Spcr>) -> Option<()> {
     match spsr.interface_type() {
         acpi::sdt::spcr::SpcrInterfaceType::Full16550
         | acpi::sdt::spcr::SpcrInterfaceType::Generic16550 => {
-            vaddr = _fixmap_io(
-                "Early Debug",
-                base_address.address as _,
-                base_address.access_size as _,
-            );
+            vaddr = _fixmap_io(base_address.address as _);
 
             let mut uart = Ns16550::new_mmio(
                 NonNull::new(vaddr).unwrap(),

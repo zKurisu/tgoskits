@@ -392,10 +392,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "fdt-parser"
-version = "0.5.1"
+name = "fdt-raw"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac31c65bf27abc963061bd20741543f422e413f7cce0145fff1750bb73dadabe"
+checksum = "538a91a4738b2a9a685d7904083695e780a6baa5e8885794465bcb92e7af0df2"
 dependencies = [
  "heapless",
  "log",
@@ -945,7 +945,7 @@ dependencies = [
  "bitflags 2.10.0",
  "buddy_system_allocator",
  "byte-unit",
- "fdt-parser",
+ "fdt-raw",
  "heapless",
  "kasm-aarch64",
  "kernutil",

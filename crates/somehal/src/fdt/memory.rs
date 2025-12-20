@@ -1,31 +1,33 @@
+use core::ops::Range;
+
+use heapless::Vec;
+
 use crate::{
     consts::PAGE_SIZE,
+    fdt::fdt_base,
     mem::{MemoryDescriptor, MemoryType, add_memory_descriptor},
 };
 
-pub fn setup_memory_map() -> Option<()> {
+pub fn init_memory_map() -> Option<()> {
     let fdt = super::fdt_base()?;
 
     for memory in fdt.memory() {
-        let memory = memory.ok()?;
         for region in memory.regions() {
-            let region = region.ok()?;
-
             add_memory_descriptor(MemoryDescriptor {
                 name: "RAM",
                 physical_start: region.address as usize,
-                size_in_bytes: region.size,
+                size_in_bytes: region.size as _,
                 memory_type: MemoryType::Free,
             })
             .unwrap();
         }
     }
 
-    for reserved in fdt.memory_reservation_blocks() {
+    for reserved in fdt.memory_reservations() {
         add_memory_descriptor(MemoryDescriptor::new_aligned(
             "Reserved Block",
             reserved.address as usize,
-            reserved.size,
+            reserved.size as usize,
             MemoryType::Reserved,
             PAGE_SIZE,
         ))
@@ -48,4 +50,17 @@ pub fn setup_memory_map() -> Option<()> {
     // }
 
     Some(())
+}
+
+pub fn memories() -> impl Iterator<Item = Range<usize>> {
+    let mut res = Vec::<_, 128>::new();
+    if let Some(fdt) = fdt_base() {
+        for memory in fdt.memory() {
+            for region in memory.regions() {
+                res.push(region.address as usize..(region.address + region.size) as usize)
+                    .ok();
+            }
+        }
+    }
+    res.into_iter()
 }
