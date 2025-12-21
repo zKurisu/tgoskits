@@ -41,7 +41,7 @@ SECTIONS
     . = ALIGN(PAGE_SIZE);
     _erodata = .;
     _sdata = .;
-    .got : ALIGN(16) { 
+    /* .got : ALIGN(16) { 
         *(.got) 
     }
     .plt : ALIGN(16) { 
@@ -49,7 +49,7 @@ SECTIONS
     }
     .got.plt : ALIGN(16) { 
         *(.got.plt)
-    }
+    } */
     .data : ALIGN(16) { 
         *(.data .data.*)
         *(.init.data)

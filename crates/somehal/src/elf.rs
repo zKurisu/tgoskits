@@ -20,6 +20,9 @@ pub unsafe fn apply_reloc(load_offset: i64, start: *mut u8, end: *const u8, r_ty
     if load_offset == 0 {
         return;
     }
+    unsafe {
+        OFFSET = load_offset;
+    }
 
     let num_entries = (end as usize - start as usize) / size_of::<Rela>();
     let relocations = unsafe { core::slice::from_raw_parts_mut(start as *mut Rela, num_entries) };
@@ -27,7 +30,36 @@ pub unsafe fn apply_reloc(load_offset: i64, start: *mut u8, end: *const u8, r_ty
     for reloc in relocations {
         if reloc.r_type_raw() == r_type {
             let addr = (reloc.r_offset as i64 + load_offset) as usize as *mut usize;
-            unsafe { *addr = (reloc.r_addend + load_offset) as usize };
+            let (val, _) = (reloc.r_addend as u64).overflowing_add(load_offset as u64);
+            unsafe { *addr = val as usize };
+        }
+    }
+}
+
+static mut OFFSET: i64 = 0;
+
+pub(crate) fn get_reloc_offset() -> i64 {
+    unsafe { OFFSET }
+}
+
+/// 应用 .rela.dyn 重定位
+/// # Safety
+/// 此函数操作裸指针，调用者必须确保传入的指针范围有效且指向合法的 RELA 重定位表。
+pub unsafe fn reset(r_type: u32) {
+    unsafe extern "C" {
+        fn __rela_dyn_begin();
+        fn __rela_dyn_end();
+    }
+    let start = __rela_dyn_begin as *mut u8;
+    let end = __rela_dyn_end as *const u8;
+    
+    let num_entries = (end as usize - start as usize) / size_of::<Rela>();
+    let relocations = unsafe { core::slice::from_raw_parts_mut(start as *mut Rela, num_entries) };
+
+    for reloc in relocations {
+        if reloc.r_type_raw() == r_type {
+            let addr = reloc.r_offset as usize as *mut usize;
+            unsafe { *addr = reloc.r_addend as u64 as usize };
         }
     }
 }

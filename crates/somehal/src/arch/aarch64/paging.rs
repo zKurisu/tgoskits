@@ -110,10 +110,12 @@ pub fn enable_mmu() -> ! {
 
     let v_sp = super::Arch::_va(ext_sym_addr!(__cpu0_stack_top)) as usize;
     let v_entry = super::Arch::_va(mmu_entry_phys) as usize;
+    let offset = crate::elf::get_reloc_offset();
 
     println!("Enabling MMU...");
     setup_sctlr();
-    println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}");
+    println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}, offset={offset:#x}");
+    
 
     // Jump to mmu_entry using physical address
     unsafe {
@@ -121,11 +123,14 @@ pub fn enable_mmu() -> ! {
             "
             mov x8, {0}
             mov x9, {1}
+            mov x10, {2}
             mov sp, x9
+            mov x0, x10
             br x8
         ",
             in(reg) v_entry,
             in(reg) v_sp,
+            in(reg) offset,
             options(noreturn, nostack)
         )
     }

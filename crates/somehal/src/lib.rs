@@ -107,23 +107,11 @@ pub fn set_kernel_page_table_paddr(paddr: usize) {
 }
 
 fn prime_entry() -> ! {
-    arch::relocate::apply();
+    arch::relocate::reset();
     fdt::setup_earlycon();
-    arch::relocate::print_reloc_info();
-    console::print_con_info();
-
     mem::early_init();
 
     arch::Arch::per_cpu_trap_init(true);
-
-    unsafe{
-        let ptr = 0xffff000009000000usize as *mut u8;
-        ptr.write_volatile(b'A');
-        ptr.write_volatile(b'\r');
-        ptr.write_volatile(b'\n');
-    }
-
-    println!("A");
 
     let _ = acpi::earlycon::acpi_setup_earlycon();
     mem::memory_map_setup();

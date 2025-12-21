@@ -35,8 +35,14 @@ pub(crate) fn set_vm_load_offset(offset: isize) {
     }
 }
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 pub(crate) fn vm_load_offset() -> isize {
     unsafe { VM_LOAD_OFFSET }
+}
+
+pub fn print_vm_load_offset_addr() {
+    println!("VM_LOAD_OFFSET ptr: {:p}", &raw const VM_LOAD_OFFSET);
 }
 
 pub fn memory_map() -> &'static [MemoryDescriptor] {

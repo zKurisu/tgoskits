@@ -1,5 +1,7 @@
 use byte_unit::{Byte, UnitType};
+use core::arch::asm;
 use core::fmt::Write;
+use core::sync::atomic::compiler_fence;
 use core::{cell::UnsafeCell, ptr::NonNull};
 use kernutil::memory::{MemoryDescriptor, MemoryType};
 use some_serial::*;
@@ -101,9 +103,14 @@ impl Write for ConFmt {
     }
 }
 
+// #[allow(dead_code)]
+// fn con() -> &'static dyn Con {
+//     unsafe { CON }
+// }
+
 #[allow(dead_code)]
-fn con() -> &'static dyn Con {
-    unsafe { CON }
+fn con() -> &'static EarlyconSenderCell {
+    &EARLYCON_SENDER
 }
 
 #[allow(dead_code)]
@@ -132,18 +139,37 @@ impl Con for NoCon {
     }
 }
 
-#[allow(dead_code)]
 static mut CON: &dyn Con = &NoCon;
+// static mut CON2: &dyn Con = &NoCon;
 
+#[inline(never)]
+#[unsafe(no_mangle)]
 pub(crate) fn print_con_info() {
-    unsafe {
-        let ptr = &raw const CON;
-        println!("Console at {:p}", ptr);
+    // // Print current PC
+    // let pc: usize;
+    // unsafe {
+    //     core::arch::asm!("adr {}, .", out(reg) pc);
+    // }
+    // println!("Current PC: 0x{:x}", pc);
 
-    }
+    let ptr = &raw const CON;
+    println!("Console at {:p}", ptr);
+    // let ptr = &raw const EARLYCON_SENDER;
+    // println!("Console at {:p}", ptr);
+    // println!("Console ptr as usize: 0x{:x}", ptr as usize);
+    // let ptr = &raw const CON2;
+    // println!("Console at {:p}", ptr);
+
+    // The &raw const generates adr instruction which cannot be relocated
+    // So we demonstrate the issue first
+    let ptr1 = core::ptr::addr_of!(DEBUG_BASE);
+
+    println!(
+        "DEBUG_BASE 1: {:p} (WRONG! adr instruction, not relocated)",
+        ptr1
+    );
 }
 
-#[allow(dead_code)]
 pub(crate) unsafe fn set_out(v: &'static dyn Con) {
     unsafe {
         CON = v;
@@ -152,8 +178,10 @@ pub(crate) unsafe fn set_out(v: &'static dyn Con) {
 
 pub fn set_earlycon_sender(sender: Sender) {
     unsafe {
+        println!("Sender {:#p}", &sender);
+
         *EARLYCON_SENDER.0.get() = Some(sender);
-        set_out(&EARLYCON_SENDER);
+        // set_out(&EARLYCON_SENDER);
     }
 }
 
@@ -163,10 +191,8 @@ pub fn set_earlycon_reciever(reciever: Reciever) {
     }
 }
 
-#[allow(dead_code)]
 static EARLYCON_SENDER: EarlyconSenderCell = EarlyconSenderCell(UnsafeCell::new(None));
 
-#[allow(dead_code)]
 struct EarlyconSenderCell(UnsafeCell<Option<Sender>>);
 
 unsafe impl Sync for EarlyconSenderCell {}

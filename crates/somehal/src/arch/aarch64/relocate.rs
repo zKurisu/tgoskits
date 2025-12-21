@@ -1,5 +1,7 @@
 use crate::arch::head::_head;
+use crate::arch::paging::_pa;
 use crate::consts::VM_LOAD_ADDRESS;
+use crate::mem::phys_to_virt;
 
 // AArch64 重定位类型常量
 const R_AARCH64_RELATIVE: u32 = 1027;
@@ -9,15 +11,24 @@ fn get_load_offset() -> i64 {
     sym_addr!(_head) as i64 - VM_LOAD_ADDRESS as i64
 }
 
+static mut OFFSET: i64 = 0;
+
 /// 应用 .rela.dyn 重定位
 pub fn apply() {
     unsafe {
+        OFFSET = get_load_offset();
         crate::elf::apply_reloc(
-            get_load_offset(),
+            OFFSET,
             ext_sym_addr!(__rela_dyn_begin) as _,
             ext_sym_addr!(__rela_dyn_end) as _,
             R_AARCH64_RELATIVE,
         );
+    }
+}
+
+pub fn reset() {
+    unsafe {
+        crate::elf::reset(R_AARCH64_RELATIVE);
     }
 }
 
@@ -32,15 +43,16 @@ pub(crate) fn print_reloc_info() {
             rela_start, rela_end, rela_count
         );
 
-        let rela_slice = core::slice::from_raw_parts(
-            rela_start as *const crate::elf::Rela,
-            rela_count,
-        );
+        let rela_slice =
+            core::slice::from_raw_parts(rela_start as *const crate::elf::Rela, rela_count);
 
         for (i, rela) in rela_slice.iter().enumerate() {
             println!(
-                "Reloc[{}]: offset={:#x}, info={:#x}, addend={:#x}",
-                i, rela.r_offset, rela.r_info, rela.r_addend
+                "Reloc[{}]: offset={:#x}, val={:#x}, addend={:#x}",
+                i,
+                rela.r_offset,
+                (rela.r_offset as usize as *const u64).read(),
+                rela.r_addend
             );
         }
     }

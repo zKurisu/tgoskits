@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{ArchTrait, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
+use crate::{ArchTrait, arch::relocate::print_reloc_info, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
 
 use super::switch_to_elx;
 
