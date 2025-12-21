@@ -179,14 +179,14 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
         }
 
         // 检查虚拟地址是否页对齐
-        if start_vaddr.raw() % T::PAGE_SIZE != 0 {
+        if !start_vaddr.raw().is_multiple_of(T::PAGE_SIZE) {
             return Err(PagingError::alignment_error(
                 "Start virtual address not page aligned in unmap",
             ));
         }
 
         // 检查大小是否页对齐
-        if size % T::PAGE_SIZE != 0 {
+        if !size.is_multiple_of(T::PAGE_SIZE) {
             return Err(PagingError::alignment_error(
                 "Size not page aligned in unmap",
             ));
@@ -196,7 +196,7 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
     }
 
     /// 创建页表遍历迭代器
-    pub fn walk_all(&self, config: WalkConfig) -> PageTableWalker<T, A> {
+    pub fn walk_all(&self, config: WalkConfig) -> PageTableWalker<'_, T, A> {
         PageTableWalker::new(self, config)
     }
 
