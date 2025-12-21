@@ -89,3 +89,10 @@ impl ranges_ext::RangeInfo for MemoryDescriptor {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub struct PageTableInfo {
+    pub asid: usize,
+    pub addr: usize,
+}

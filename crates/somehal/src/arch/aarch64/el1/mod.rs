@@ -237,14 +237,12 @@ impl PageTableEntry for Pte {
                 // AP = 00: 内核态可读写 (AP_EL0=0, AP_RO=0)
                 0
             }
+        } else if user {
+            // AP = 11: 用户态只读 (AP_EL0=1, AP_RO=1)
+            (PteFlags::AP_EL0 | PteFlags::AP_RO).bits()
         } else {
-            if user {
-                // AP = 11: 用户态只读 (AP_EL0=1, AP_RO=1)
-                (PteFlags::AP_EL0 | PteFlags::AP_RO).bits()
-            } else {
-                // AP = 10: 内核态只读 (AP_EL0=0, AP_RO=1)
-                PteFlags::AP_RO.bits()
-            }
+            // AP = 10: 内核态只读 (AP_EL0=0, AP_RO=1)
+            PteFlags::AP_RO.bits()
         };
 
         // 清除旧的 AP 位并设置新的

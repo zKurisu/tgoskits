@@ -59,6 +59,14 @@ impl Memory for MemoryImpl {
     fn set_kernel_page_table(pt: PhysAddr) {
         somehal::set_kernel_page_table_paddr(pt.raw());
     }
+
+    fn user_page_table() -> PageTableInfo {
+        somehal::user_page_table()
+    }
+
+    fn set_user_page_table(pt: PageTableInfo) {
+        somehal::set_user_page_table(pt);
+    }
 }
 }
 

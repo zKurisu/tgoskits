@@ -1,6 +1,6 @@
 use byte_unit::{Byte, UnitType};
 use kernutil::StaticCell;
-pub use kernutil::memory::{MemoryDescriptor, MemoryType};
+pub use kernutil::memory::{MemoryDescriptor, MemoryType, PageTableInfo};
 use num_align::NumAlign;
 use ranges_ext::RangeError;
 
@@ -22,12 +22,6 @@ static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
 
 pub type PageTable<A> = crate::arch::PT<A>;
 pub type MemoryMap = ranges_ext::RangeSet<MemoryDescriptor>;
-
-#[derive(Debug, Clone, Copy)]
-pub struct PageTableInfo {
-    pub asid: usize,
-    pub addr: usize,
-}
 
 pub(crate) fn set_vm_load_offset(offset: isize) {
     unsafe {
@@ -160,11 +154,11 @@ pub(crate) fn add_memory_descriptor(
     unsafe { MEMORY_MAP.update(|mem| mem.add(desc)) }
 }
 
-pub(crate) fn add_memory_descriptors(
-    descs: impl Iterator<Item = MemoryDescriptor>,
-) -> Result<(), RangeError<MemoryDescriptor>> {
-    for desc in descs {
-        add_memory_descriptor(desc)?;
-    }
-    Ok(())
-}
+// pub(crate) fn add_memory_descriptors(
+//     descs: impl Iterator<Item = MemoryDescriptor>,
+// ) -> Result<(), RangeError<MemoryDescriptor>> {
+//     for desc in descs {
+//         add_memory_descriptor(desc)?;
+//     }
+//     Ok(())
+// }

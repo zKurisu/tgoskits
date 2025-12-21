@@ -1,7 +1,5 @@
 use byte_unit::{Byte, UnitType};
-use core::arch::asm;
 use core::fmt::Write;
-use core::sync::atomic::compiler_fence;
 use core::{cell::UnsafeCell, ptr::NonNull};
 use kernutil::memory::{MemoryDescriptor, MemoryType};
 use some_serial::*;

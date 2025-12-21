@@ -3,7 +3,7 @@ use core::time::Duration;
 use alloc::boxed::Box;
 pub use heapless::Vec as StackVec;
 use kernutil::define_type;
-pub use kernutil::memory::MemoryDescriptor;
+pub use kernutil::memory::{MemoryDescriptor, PageTableInfo};
 pub use page_table_generic::{AccessFlags, MemAttributes, MemConfig, PagingError};
 
 #[trait_ffi::def_extern_trait(mod_path = "hal::al")]
@@ -19,6 +19,8 @@ pub trait Memory {
     fn enable_paging();
     fn kernel_page_table() -> PhysAddr;
     fn set_kernel_page_table(pt: PhysAddr);
+    fn user_page_table() -> PageTableInfo;
+    fn set_user_page_table(pt: PageTableInfo);
 }
 
 #[trait_ffi::def_extern_trait(not_def_impl, mod_path = "hal::al")]

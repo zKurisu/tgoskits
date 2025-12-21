@@ -221,6 +221,15 @@ impl ArchTrait for Arch {
         elx::flush_tlb(None);
     }
 
+    fn user_page_table() -> PageTableInfo {
+        elx::get_user_table()
+    }
+
+    fn set_user_page_table(val: PageTableInfo) {
+        elx::set_user_table(val);
+        elx::flush_tlb(None);
+    }
+
     fn irq_is_enabled(_irq: crate::irq::SoftIrqId) -> bool {
         // For now, return false (can be extended with GIC support)
         false

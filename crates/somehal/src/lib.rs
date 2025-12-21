@@ -64,6 +64,8 @@ trait ArchTrait {
     fn create_page_table<A: FrameAllocator>(allocator: A) -> Self::PT<A>;
     fn kernel_page_table() -> PageTableInfo;
     fn set_kernel_page_table(val: PageTableInfo);
+    fn user_page_table() -> PageTableInfo;
+    fn set_user_page_table(val: PageTableInfo);
 
     fn systimer_irq() -> usize;
     fn shutdown() -> !;
@@ -105,6 +107,14 @@ pub fn set_kernel_page_table_paddr(paddr: usize) {
         asid: 0,
         addr: paddr,
     });
+}
+
+pub fn user_page_table() -> PageTableInfo {
+    arch::Arch::user_page_table()
+}
+
+pub fn set_user_page_table(pt: PageTableInfo) {
+    arch::Arch::set_user_page_table(pt);
 }
 
 fn prime_entry() -> ! {
