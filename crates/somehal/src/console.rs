@@ -176,7 +176,6 @@ impl Con for EarlyconSenderCell {
     }
 }
 
-#[unsafe(link_section = ".data")]
 static EARLYCON_RECIEVER: EarlyconRecieverCell = EarlyconRecieverCell(UnsafeCell::new(None));
 
 #[allow(dead_code)]

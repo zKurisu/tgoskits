@@ -9,19 +9,19 @@
             "name": "KDebug lldb",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/target/kernel.elf",
+            "program": "${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/test-suit-timer",
             "initCommands": [
                 "platform select remote-gdb-server"
             ],
             "targetCreateCommands": [
-                "target create ${workspaceFolder}/target/kernel.elf"
+                "target create ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/test-suit-timer"
             ],
             "processCreateCommands": [
                 "gdb-remote localhost:1234" // Connect to the GDB Server
             ],
             "preLaunchTask": "qemu debug",
             "preRunCommands": [
-                "target modules load --file ${workspaceFolder}/target/kernel.elf .head.text 0x40200000",
+                "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/test-suit-timer .head.text 0xFFFF900000200000",
             ]
         },
         {

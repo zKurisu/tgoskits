@@ -7,8 +7,12 @@
             "command": "ostool",
             "args": [
                 "run",
+                "-c",
+                "./test-suit/timer/aarch64.toml",
                 "qemu",
-                "-d"
+                "-q",
+                "./test-suit/timer/qemu-aarch64.toml",
+                "--debug",
             ],
             
             "options": {
