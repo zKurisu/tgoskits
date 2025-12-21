@@ -89,6 +89,7 @@ trait ArchTrait {
 }
 
 pub fn post_allocator() {
+    fdt::init_with_alloc();
     debug!("Setup after allocator");
     arch::Arch::post_allocator();
 }
@@ -109,7 +110,7 @@ pub fn set_kernel_page_table_paddr(paddr: usize) {
 fn prime_entry() -> ! {
     fdt::setup_earlycon();
     let _ = acpi::earlycon::acpi_setup_earlycon();
-    
+
     mem::init_after_mmu();
 
     arch::Arch::per_cpu_trap_init(true);

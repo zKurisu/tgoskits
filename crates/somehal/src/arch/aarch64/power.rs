@@ -1,0 +1,60 @@
+use core::fmt::Display;
+
+use aarch64_cpu::asm::wfi;
+use kernutil::StaticCell;
+use smccc::{Hvc, Smc, psci};
+
+static METHOD: StaticCell<Method> = StaticCell::uninit();
+
+pub(crate) fn init() {
+    let fdt = crate::fdt::fdt().unwrap();
+
+    let nodes = fdt.find_compatible(&["arm,psci-1.0", "arm,psci-0.2", "arm,psci"]);
+
+    let method: Method = nodes[0]
+        .find_property("method")
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .into();
+
+    METHOD.init(method);
+    info!("Power management method : {method}");
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Method {
+    Smc,
+    Hvc,
+}
+impl From<&str> for Method {
+    fn from(value: &str) -> Self {
+        match value {
+            "smc" => Method::Smc,
+            "hvc" => Method::Hvc,
+            _ => {
+                panic!("Unsupported power method: {}", value);
+            }
+        }
+    }
+}
+impl Display for Method {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Method::Smc => write!(f, "SMC"),
+            Method::Hvc => write!(f, "HVC"),
+        }
+    }
+}
+
+// Shutdown the system
+pub fn shutdown() -> ! {
+    match *METHOD {
+        Method::Smc => psci::system_off::<Smc>(),
+        Method::Hvc => psci::system_off::<Hvc>(),
+    }
+    .unwrap();
+    loop {
+        wfi();
+    }
+}

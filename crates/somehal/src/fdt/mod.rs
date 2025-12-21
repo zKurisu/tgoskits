@@ -2,11 +2,13 @@ mod earlycon;
 mod memory;
 
 pub use earlycon::setup_earlycon;
+use kernutil::StaticCell;
 pub use memory::{init_memory_map, memories};
 
 use crate::mem::phys_to_virt;
 
 pub static mut FDT_ADDR: usize = 0;
+static FDT: StaticCell<fdt_edit::Fdt> = StaticCell::uninit();
 
 pub fn fdt_addr() -> Option<*mut u8> {
     let fdt_addr = unsafe { FDT_ADDR };
@@ -20,6 +22,17 @@ fn fdt_base() -> Option<fdt_raw::Fdt<'static>> {
     let fdt_addr = fdt_addr()?;
     let fdt = unsafe { fdt_raw::Fdt::from_ptr(fdt_addr).ok()? };
     Some(fdt)
+}
+
+pub(crate) fn init_with_alloc() -> Option<()> {
+    let fdt_addr = fdt_addr()?;
+    let fdt = unsafe { fdt_edit::Fdt::from_ptr(fdt_addr).ok()? };
+    FDT.init(fdt);
+    Some(())
+}
+pub(crate) fn fdt() -> Option<&'static fdt_edit::Fdt> {
+    fdt_addr()?;
+    Some(&FDT)
 }
 
 pub fn set_cmdline() -> Option<()> {

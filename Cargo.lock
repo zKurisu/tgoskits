@@ -392,6 +392,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fdt-edit"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b0f564fda6b9389cec0b258a98483b974b6ed37cf4e771222fb49cabe1e260f"
+dependencies = [
+ "enum_dispatch",
+ "fdt-raw",
+ "log",
+]
+
+[[package]]
 name = "fdt-raw"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -913,6 +924,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "smccc"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c73e0ca8c566478040487791c9f488f86c5aec846ca1ab18484be8a1d8c55cd"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "some-serial"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -945,6 +965,7 @@ dependencies = [
  "bitflags 2.10.0",
  "buddy_system_allocator",
  "byte-unit",
+ "fdt-edit",
  "fdt-raw",
  "heapless",
  "kasm-aarch64",
@@ -958,6 +979,7 @@ dependencies = [
  "quote",
  "ranges-ext",
  "rgb",
+ "smccc",
  "some-serial",
  "somehal-macros",
  "spin 0.10.0",

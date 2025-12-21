@@ -14,6 +14,7 @@ mod context;
 mod entry;
 mod head;
 pub mod paging;
+mod power;
 pub mod relocate;
 mod trap;
 
@@ -112,7 +113,9 @@ pub struct Arch;
 impl ArchTrait for Arch {
     type PT<A: page_table_generic::FrameAllocator> = PT<A>;
 
-    fn post_allocator() {}
+    fn post_allocator() {
+        power::init();
+    }
 
     fn kernel_code() -> &'static [u8] {
         let start = ext_sym_addr!(_head);
@@ -178,7 +181,7 @@ impl ArchTrait for Arch {
     }
 
     fn shutdown() -> ! {
-        todo!()
+        power::shutdown()
     }
 
     fn irq_all_is_enabled() -> bool {
