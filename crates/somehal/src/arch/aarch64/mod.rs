@@ -23,7 +23,9 @@ pub use elx::Pte;
 pub use elx::Pte as Entry; // 导出统一的 Entry 类型
 use elx::*;
 use num_align::NumAlign;
-use page_table_generic::{AccessFlags, MemAttributes, MemConfig, PageTableEntry, PagingError};
+use page_table_generic::{
+    AccessFlags, MemAttributes, MemConfig, PageTableEntry, PageTableRef, PagingError,
+};
 
 use crate::{
     ArchTrait,
@@ -75,8 +77,7 @@ impl<A: page_table_generic::FrameAllocator> crate::PageTableOp<A> for PT<A> {
             paddr: paddr.into(),
             size,
             pte: {
-                let mut pte = paging::Entry::empty();
-                pte.set_valid(true);
+                let mut pte = paging::Entry::new_valid();
                 pte.set_mem_config(MemConfig {
                     access: AccessFlags::READ | AccessFlags::WRITE,
                     attrs: MemAttributes::Device,
@@ -219,6 +220,7 @@ impl ArchTrait for Arch {
 
     fn set_kernel_page_table(val: PageTableInfo) {
         elx::set_kernal_table(val);
+        elx::flush_tlb(None);
     }
 
     fn irq_is_enabled(_irq: crate::irq::SoftIrqId) -> bool {

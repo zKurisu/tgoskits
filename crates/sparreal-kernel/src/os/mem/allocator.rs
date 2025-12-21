@@ -35,6 +35,7 @@ impl FrameAllocator for KernelAllocator {
             .map(|nn| {
                 let virt = VirtAddr::from(nn);
                 let phys: PhysAddr = virt.into();
+                // debug!("alloc_frame: virt={:?}, phys={:?}", virt, phys);
                 phys.raw().into()
             })
     }

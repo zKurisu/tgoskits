@@ -1,8 +1,11 @@
 use alloc::boxed::Box;
 use byte_unit::{Byte, UnitType};
 use kernutil::memory::MemoryType;
+use spin::Mutex;
 
 use crate::hal::al::*;
+
+static KERNEL_TABLE: Mutex<Option<Box<dyn PageTable>>> = Mutex::new(None);
 
 pub fn init() {
     info!("Setting up MMU and page tables");
@@ -10,7 +13,12 @@ pub fn init() {
     let mut pt = memory::page_table_new();
     map_regions(&mut pt);
     let pt_addr = pt.addr();
+    {
+        let mut g = KERNEL_TABLE.lock();
+        *g = Some(pt);
+    }
     debug!("Setting kernel page table to {pt_addr:?}");
+    // let pt_addr = memory::kernel_page_table();
     memory::set_kernel_page_table(pt_addr);
     memory::enable_paging();
 }
