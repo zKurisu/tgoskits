@@ -3,6 +3,7 @@ use core::ptr::{NonNull, slice_from_raw_parts};
 use core::sync::atomic::{AtomicUsize, Ordering};
 use fdt_parser::Fdt;
 use memory_addr::MemoryAddr;
+use ranges_ext::RangeSetHeapless;
 use somehal::mem::page_size;
 use somehal::{BootInfo, MemoryRegionKind};
 use sparreal_kernel::mem::mmu::*;
@@ -22,17 +23,31 @@ pub fn setup_boot_args(args: &BootInfo) {
     unsafe {
         VA_OFFSET = args.kcode_offset();
     }
-    let mut regions = heapless::Vec::<BootRegion, 64>::new();
+    let mut regions = RangeSetHeapless::<BootRegion, 64>::new(heapless::Vec::new());
 
     for region in args.memory_regions.iter() {
+        if region.kind == MemoryRegionKind::Ram {
+            regions
+                .add(BootRegion::new(
+                    Phys::from(region.start)..Phys::from(region.end),
+                    c"ram",
+                    AccessSetting::ReadWriteExecute,
+                    CacheSetting::Normal,
+                    BootMemoryKind::Ram,
+                ))
+                .unwrap();
+        }
+    }
+
+    for region in args.memory_regions.iter() {
+        if region.kind == MemoryRegionKind::Ram {
+            continue;
+        }
+
         let name;
         let kind;
 
         match region.kind {
-            MemoryRegionKind::Ram => {
-                name = c"ram";
-                kind = BootMemoryKind::Ram;
-            }
             MemoryRegionKind::Reserved => {
                 name = c"reserved";
                 kind = BootMemoryKind::Reserved;
@@ -54,27 +69,29 @@ pub fn setup_boot_args(args: &BootInfo) {
                 kind = BootMemoryKind::Reserved;
             }
         }
+
         regions
-            .push(BootRegion::new(
-                Phys::from(region.start)..Phys::from(region.end),
+            .add(BootRegion::new(
+                Phys::from(region.start).align_down(page_size())
+                    ..Phys::from(region.end).align_up(page_size()),
                 name,
                 AccessSetting::ReadWriteExecute,
                 CacheSetting::Normal,
                 kind,
             ))
-            .expect("boot regions overflow");
+            .unwrap();
     }
 
     for region in this_boot_region() {
-        regions.push(region).expect("boot regions overflow");
+        regions.add(region).expect("boot regions overflow");
     }
 
     if let Some(debug) = &args.debug_console {
         let start = debug.base_phys.align_down(page_size());
-        let end = (debug.base_phys + 0x1000).align_up(page_size());
+        let end = (debug.base_phys + 0x10).align_up(page_size());
 
         regions
-            .push(BootRegion::new(
+            .add(BootRegion::new(
                 start.into()..end.into(),
                 c"debug",
                 AccessSetting::ReadWrite,
@@ -83,10 +100,75 @@ pub fn setup_boot_args(args: &BootInfo) {
             ))
             .expect("boot regions overflow");
     }
+    let regions = heapless::Vec::from_slice(regions.as_slice()).unwrap();
 
-    regions.sort_by(|a, b| a.range.start.raw().cmp(&b.range.start.raw()));
+    unsafe {
+        BOOT_REGIONS.set(regions);
+    };
 
-    unsafe { OnceStatic::set(&BOOT_REGIONS, regions) };
+    // for region in args.memory_regions.iter() {
+    //     let name;
+    //     let kind;
+
+    //     match region.kind {
+    //         MemoryRegionKind::Ram => {
+    //             name = c"ram";
+    //             kind = BootMemoryKind::Ram;
+    //         }
+    //         MemoryRegionKind::Reserved => {
+    //             name = c"reserved";
+    //             kind = BootMemoryKind::Reserved;
+    //         }
+    //         MemoryRegionKind::Bootloader => {
+    //             name = c"embedded loader";
+    //             kind = BootMemoryKind::KImage;
+    //         }
+    //         MemoryRegionKind::UnknownUefi(_) => {
+    //             name = c"uefi";
+    //             kind = BootMemoryKind::Reserved;
+    //         }
+    //         MemoryRegionKind::UnknownBios(_) => {
+    //             name = c"bios";
+    //             kind = BootMemoryKind::Reserved;
+    //         }
+    //         _ => {
+    //             name = c"reserved";
+    //             kind = BootMemoryKind::Reserved;
+    //         }
+    //     }
+    //     regions
+    //         .push(BootRegion::new(
+    //             Phys::from(region.start)..Phys::from(region.end),
+    //             name,
+    //             AccessSetting::ReadWriteExecute,
+    //             CacheSetting::Normal,
+    //             kind,
+    //         ))
+    //         .expect("boot regions overflow");
+    // }
+
+    // for region in this_boot_region() {
+    //     regions.push(region).expect("boot regions overflow");
+    // }
+
+    // if let Some(debug) = &args.debug_console {
+    //     let start = debug.base_phys.align_down(page_size());
+    //     let end = (debug.base_phys + 0x1000).align_up(page_size());
+
+    //     regions
+    //         .push(BootRegion::new(
+    //             start.into()..end.into(),
+    //             c"debug",
+    //             AccessSetting::ReadWrite,
+    //             CacheSetting::Device,
+    //             BootMemoryKind::Mmio,
+    //         ))
+    //         .expect("boot regions overflow");
+    // }
+
+    // regions.sort_by(|a, b| a.range.start.raw().cmp(&b.range.start.raw()));
+
+    // unsafe { OnceStatic::set(&BOOT_REGIONS, regions) };
 
     somehal::println!("boot regions:");
 
@@ -296,5 +378,10 @@ pub fn driver_registers() -> &'static [u8] {
         fn _edriver();
     }
 
-    unsafe { &*slice_from_raw_parts(_sdriver as *const u8, _edriver as usize - _sdriver as usize) }
+    unsafe {
+        &*slice_from_raw_parts(
+            _sdriver as *const u8,
+            _edriver as *const () as usize - _sdriver as *const () as usize,
+        )
+    }
 }

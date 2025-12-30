@@ -1367,9 +1367,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.28"
+version = "0.4.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
+checksum = "5e5032e24019045c762d3c0f28f5b6b8bbf38563a65908389bf7978758920897"
 
 [[package]]
 name = "memchr"
@@ -1772,6 +1772,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
+]
+
+[[package]]
+name = "ranges-ext"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8216cb33a0cabaf50627fe218f667878644ade84950f0aed208b3297e9423801"
+dependencies = [
+ "heapless 0.9.1",
+ "thiserror 2.0.16",
 ]
 
 [[package]]
@@ -2328,9 +2338,9 @@ dependencies = [
 
 [[package]]
 name = "somehal"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a9b180e1abae1127bd99ecee566c3906d8c0f854cb1c442b945afe911e6eb71"
+checksum = "13b5f763b9ab0ce9efd2d8eba9e5b457f93f6426ede68435fe9567cf7681f29d"
 dependencies = [
  "aarch64-cpu",
  "aarch64-cpu-ext",
@@ -2357,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.12.2"
+version = "0.12.3"
 dependencies = [
  "ansi_rgb",
  "anyhow",
@@ -2374,6 +2384,7 @@ dependencies = [
  "memory_addr",
  "page-table-generic",
  "pasts",
+ "ranges-ext",
  "rdif-intc",
  "rdif-power",
  "rdif-systick",
@@ -2399,7 +2410,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-rt"
-version = "0.12.1"
+version = "0.12.2"
 dependencies = [
  "aarch64-cpu",
  "aarch64-cpu-ext",
@@ -2413,6 +2424,7 @@ dependencies = [
  "log",
  "memory_addr",
  "numeric-enum-macro",
+ "ranges-ext",
  "rdif-intc",
  "rdif-power",
  "rdif-systick",

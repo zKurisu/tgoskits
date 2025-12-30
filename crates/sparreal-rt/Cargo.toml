@@ -7,7 +7,7 @@ keywords = ["os"]
 license = "MPL-2.0"
 name = "sparreal-rt"
 repository = "https://github.com/ZR233/sparreal-os"
-version = "0.12.1"
+version = "0.12.2"
 
 [features]
 default = ["early-print"]
@@ -28,6 +28,7 @@ sparreal-kernel = {workspace = true, features = ["mmu"]}
 sparreal-macros = {workspace = true}
 spin = "0.10"
 heapless = "0.9"
+ranges-ext = "0.4"
 
 rdif-intc = "0.12.1"
 rdif-systick = "0.5.1"

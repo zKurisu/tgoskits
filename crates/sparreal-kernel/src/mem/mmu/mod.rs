@@ -11,6 +11,7 @@ pub use arrayvec::ArrayVec;
 use buddy_system_allocator::Heap;
 use memory_addr::MemoryAddr;
 use page_table_generic::{Access, PagingError};
+use ranges_ext::RangeInfo;
 use spin::MutexGuard;
 
 pub use crate::hal_al::mmu::{AccessSetting, CacheSetting};
@@ -148,8 +149,47 @@ impl BootRegion {
     // }
 }
 
+impl RangeInfo for BootRegion {
+    type Kind = KindWrapper;
+
+    type Type = PhysAddr;
+
+    fn range(&self) -> Range<Self::Type> {
+        self.range.to_range()
+    }
+
+    fn kind(&self) -> Self::Kind {
+        KindWrapper {
+            kind: self.kind,
+            cache: self.cache,
+            access: self.access,
+        }
+    }
+
+    fn overwritable(&self) -> bool {
+        self.kind == BootMemoryKind::Ram
+    }
+
+    fn clone_with_range(&self, range: Range<Self::Type>) -> Self {
+        Self {
+            range: range.into(),
+            name: self.name,
+            access: self.access,
+            cache: self.cache,
+            kind: self.kind,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KindWrapper {
+    kind: BootMemoryKind,
+    cache: CacheSetting,
+    access: AccessSetting,
+}
+
 #[repr(u8)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BootMemoryKind {
     /// map offset as kv_offset
     KImage,
@@ -195,12 +235,45 @@ fn new_table_with_access(access: &mut dyn Access) -> Result<PageTableRef, &'stat
     let table = platform::mmu::new_table(access).unwrap();
 
     println!("map boot regions...");
-
     for region in platform::boot_regions() {
         let offset = match region.kind {
             BootMemoryKind::KImage => platform::mmu::kimage_va_offset(),
-            _ => LINER_OFFSET,
+            _ => continue,
         };
+
+        let pa_start = region.range.start.align_down(page_size());
+        let va_start: Virt<u8> = (pa_start + offset).raw().into();
+        let pa_end = region.range.end.align_up(page_size());
+
+        let size = pa_end - pa_start;
+        println!(
+            "  [{:<16}] [{:#x}, {:#x}) -> [{:#x}, {:#x}),\t{:?},\t{:?}",
+            region.name(),
+            va_start.raw(),
+            va_start.raw() + size,
+            pa_start.raw(),
+            pa_start.raw() + size,
+            region.access,
+            region.cache
+        );
+
+        if let Err(e) = platform::mmu::table_map(
+            table,
+            access,
+            &MapConfig {
+                name: region.name(),
+                va_start,
+                pa_start,
+                size,
+                access: region.access,
+                cache: region.cache,
+            },
+        ) {
+            println!("map error: {e:?}");
+        }
+    }
+    for region in platform::boot_regions() {
+        let offset = LINER_OFFSET;
 
         let pa_start = region.range.start.align_down(page_size());
         let va_start: Virt<u8> = (pa_start + offset).raw().into();

@@ -65,7 +65,7 @@ impl Sub<usize> for Address {
 macro_rules! def_addr {
     ($name:ident, $t:ty) => {
         #[repr(transparent)]
-        #[derive(Clone, Copy, PartialEq, PartialOrd)]
+        #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
         pub struct $name<T>($t, core::marker::PhantomData<T>);
 
         impl<T> $name<T> {
