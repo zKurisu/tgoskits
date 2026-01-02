@@ -55,10 +55,17 @@ impl core::fmt::Display for DmaError {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DmaHandle {
     pub virt_addr: NonNull<u8>,
     pub dma_addr: DmaAddr,
     pub layout: core::alloc::Layout,
+}
+
+impl DmaHandle {
+    pub fn size(&self) -> usize {
+        self.layout.size()
+    }
 }
 
 /// 操作系统抽象层 trait
