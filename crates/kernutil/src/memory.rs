@@ -72,8 +72,8 @@ impl ranges_ext::RangeInfo for MemoryDescriptor {
         self.physical_start..(self.physical_start + self.size_in_bytes)
     }
 
-    fn kind(&self) -> &Self::Kind {
-        &self.memory_type
+    fn kind(&self) -> Self::Kind {
+        self.memory_type
     }
 
     fn overwritable(&self) -> bool {

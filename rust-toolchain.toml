@@ -1,6 +1,7 @@
 [toolchain]
 # channel = "nightly-2025-05-20"
-channel = "nightly-2025-12-10"
+# channel = "nightly-2025-12-10"
+channel = "nightly"
 # channel = "stage1"
 components = ["rust-src", "llvm-tools", "rustfmt", "clippy"]
 targets = [

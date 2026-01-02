@@ -17,10 +17,10 @@ pub const GB: usize = 1024 * MB;
 
 static mut VM_LOAD_OFFSET: isize = 0;
 
-static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
+static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new(heapless::Vec::new()));
 
 pub type PageTable<A> = crate::arch::PT<A>;
-pub type MemoryMap = ranges_ext::RangeSet<MemoryDescriptor>;
+pub type MemoryMap = ranges_ext::RangeSetHeapless<MemoryDescriptor>;
 
 pub(crate) fn set_vm_load_offset(offset: isize) {
     unsafe {

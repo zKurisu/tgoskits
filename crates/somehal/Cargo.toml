@@ -41,7 +41,7 @@ ranges-ext = {workspace = true}
 
 [target.'cfg(target_arch = "loongarch64")'.dependencies]
 loongArch64 = "0.2"
-uefi = {git = "https://github.com/ZR233/uefi-rs.git", branch = "la"}
+uefi.workspace = true
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "11"
