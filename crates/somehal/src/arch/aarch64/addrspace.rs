@@ -1,4 +1,4 @@
 #[cfg(not(feature = "hv"))]
-pub const LINER_OFFSET: usize = 0xffff_0000_0000_0000;
+pub const PAGE_OFFSET: usize = 0xffff_0000_0000_0000;
 #[cfg(feature = "hv")]
-pub const LINER_OFFSET: usize = 0;
+pub const PAGE_OFFSET: usize = 0;

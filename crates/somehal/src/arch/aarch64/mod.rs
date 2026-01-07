@@ -26,8 +26,9 @@ pub use paging::Entry;
 
 use crate::{
     ArchTrait,
+    arch::addrspace::PAGE_OFFSET,
     consts::VM_LOAD_ADDRESS,
-    mem::{PageTableInfo, page_size},
+    mem::{__va, PageTableInfo, page_size},
 };
 
 // ARM Generic Timer IRQ number (PPI 30)
@@ -65,7 +66,7 @@ impl<A: page_table_generic::FrameAllocator> crate::PageTableOp<A> for PT<A> {
         size: usize,
         _flush: bool,
     ) -> Result<page_table_generic::VirtAddr, page_table_generic::PagingError> {
-        let virt = Arch::_io(phys_start.raw());
+        let virt = __va(phys_start.raw());
         let end = virt as usize + size;
         let vaddr = (virt as usize).align_down(page_size());
         let paddr = phys_start.raw().align_down(page_size());
@@ -117,6 +118,8 @@ pub struct Arch;
 impl ArchTrait for Arch {
     type PT<A: page_table_generic::FrameAllocator> = PT<A>;
 
+    const PAGE_OFFSET: usize = PAGE_OFFSET;
+
     fn post_allocator() {
         power::init();
     }
@@ -128,9 +131,9 @@ impl ArchTrait for Arch {
         unsafe { core::slice::from_raw_parts(start as *const u8, size) }
     }
 
-    fn _va(paddr: usize) -> *mut u8 {
-        (paddr as isize - crate::mem::vm_load_offset()) as usize as *mut u8
-    }
+    // fn _va(paddr: usize) -> *mut u8 {
+    //     (paddr as isize - crate::mem::vm_load_offset()) as usize as *mut u8
+    // }
 
     fn is_mmu_enabled() -> bool {
         elx::is_mmu_enabled()
@@ -144,9 +147,9 @@ impl ArchTrait for Arch {
         }
     }
 
-    fn _io(paddr: usize) -> *mut u8 {
-        (paddr + addrspace::LINER_OFFSET) as *mut u8
-    }
+    // fn _io(paddr: usize) -> *mut u8 {
+    //     (paddr + addrspace::PAGE_OFFSET) as *mut u8
+    // }
 
     fn per_cpu_trap_init(_is_primary: bool) {
         trap::setup();

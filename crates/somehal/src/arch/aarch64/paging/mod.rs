@@ -6,10 +6,9 @@ use page_table_generic::{
 };
 
 use crate::{
-    ArchTrait,
     arch::elx::{flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
     console::print_mapping,
-    mem::{MB, PageTableInfo, page_size, ram::Ram, vm_load_offset},
+    mem::{__kimage_va, __va, MB, PageTableInfo, page_size, ram::Ram, vm_load_offset},
 };
 
 mod pte;
@@ -40,7 +39,7 @@ pub fn enable_mmu() -> ! {
         let start = memory.start;
         let size = memory.len();
 
-        print_mapping("Ram", super::Arch::_io(start) as _, start, size);
+        print_mapping("Ram", __va(start) as _, start, size);
 
         table
             .map(&MapConfig {
@@ -53,7 +52,7 @@ pub fn enable_mmu() -> ! {
             })
             .unwrap();
     }
-    let v_start = super::Arch::_va(k_start);
+    let v_start = __kimage_va(k_start);
     let size = crate::mem::kimage_range().len().align_up(2 * MB);
 
     print_mapping("KImage", v_start as _, k_start, size);
@@ -79,7 +78,7 @@ pub fn enable_mmu() -> ! {
             attrs: MemAttributes::Device,
         });
 
-        print_mapping("Debug serial", super::Arch::_io(start) as _, start, size);
+        print_mapping("Debug serial", __va(start) as _, start, size);
 
         table
             .map(&MapConfig {
@@ -109,8 +108,8 @@ pub fn enable_mmu() -> ! {
     set_user_table(tb);
     flush_tlb(None);
 
-    let v_sp = super::Arch::_va(ext_sym_addr!(__cpu0_stack_top)) as usize;
-    let v_entry = super::Arch::_va(mmu_entry_phys) as usize;
+    let v_sp = __kimage_va(ext_sym_addr!(__cpu0_stack_top)) as usize;
+    let v_entry = __kimage_va(mmu_entry_phys) as usize;
 
     println!("Enabling MMU...");
     setup_sctlr();

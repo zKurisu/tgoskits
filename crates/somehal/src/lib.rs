@@ -45,16 +45,17 @@ pub use somehal_macros::{entry, secondary_entry};
 
 use crate::{irq::SoftIrqId, mem::PageTableInfo};
 
+#[allow(unused)]
 trait ArchTrait {
     type PT<A: FrameAllocator>: PageTableOp<A>;
+
+    /// RAM 与内核虚拟地址空间的偏移
+    const PAGE_OFFSET: usize;
 
     fn kernel_code() -> &'static [u8];
     fn post_allocator();
 
     fn per_cpu_trap_init(is_primary: bool);
-
-    fn _va(paddr: usize) -> *mut u8;
-    fn _io(paddr: usize) -> *mut u8;
 
     fn virt_to_phys(vaddr: *const u8) -> usize;
     fn ioremap(paddr: usize, size: usize) -> *mut u8;

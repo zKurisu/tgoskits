@@ -2,7 +2,7 @@ use byte_unit::{Byte, UnitType};
 use kernutil::StaticCell;
 pub use kernutil::memory::{MemoryDescriptor, MemoryType, PageTableInfo};
 use num_align::NumAlign;
-use ranges_ext::{RangeError, RangeExtBaseOps, RangeVecOps};
+use ranges_ext::{RangeError, RangeVecOps};
 
 pub(crate) mod ram;
 pub(crate) mod region;
@@ -15,27 +15,38 @@ pub const KB: usize = 1024;
 pub const MB: usize = 1024 * KB;
 pub const GB: usize = 1024 * MB;
 
+/// Offset between virtual address and physical address of the loaded kernel image
 static mut VM_LOAD_OFFSET: isize = 0;
-
 static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
 
 pub type PageTable<A> = crate::arch::PT<A>;
 pub type MemoryMap = heapless::Vec<MemoryDescriptor, 128>;
 
+/// Set the offset between virtual address and physical address of the loaded kernel image
 pub(crate) fn set_vm_load_offset(offset: isize) {
     unsafe {
         VM_LOAD_OFFSET = offset;
     }
 }
 
-#[inline(never)]
-#[unsafe(no_mangle)]
+/// Get the offset between virtual address and physical address of the loaded kernel image
 pub(crate) fn vm_load_offset() -> isize {
     unsafe { VM_LOAD_OFFSET }
 }
 
-pub fn print_vm_load_offset_addr() {
-    println!("VM_LOAD_OFFSET ptr: {:p}", &raw const VM_LOAD_OFFSET);
+/// RAM 物理地址转换为内核虚拟地址
+pub(crate) fn __va(paddr: usize) -> *mut u8 {
+    (paddr + crate::arch::Arch::PAGE_OFFSET) as *mut u8
+}
+
+/// 内核虚拟地址转换为 RAM 物理地址
+pub(crate) fn __pa(vaddr: *const u8) -> usize {
+    vaddr as usize - crate::arch::Arch::PAGE_OFFSET
+}
+
+/// kernel image 物理地址转换为内核虚拟地址
+pub(crate) fn __kimage_va(paddr: usize) -> *mut u8 {
+    (paddr as isize - vm_load_offset()) as usize as *mut u8
 }
 
 pub fn memory_map() -> &'static [MemoryDescriptor] {
@@ -54,9 +65,9 @@ pub fn enable_paging() {
 pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     if is_mmu_enabled() {
         if kimage_range().contains(&paddr) {
-            crate::arch::Arch::_va(paddr)
+            __kimage_va(paddr)
         } else {
-            crate::arch::Arch::_io(paddr)
+            __va(paddr)
         }
     } else {
         paddr as *mut u8
@@ -76,7 +87,7 @@ pub fn ioremap(paddr: usize, size: usize) -> *mut u8 {
 
 pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
     if is_mmu_enabled() {
-        crate::arch::Arch::_io(paddr)
+        __va(paddr)
     } else {
         paddr as *mut u8
     }

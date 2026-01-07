@@ -6,7 +6,7 @@ use super::switch_to_elx;
 
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) -> ! {
+pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) {
     naked_asm!(
         "mov  x9,  x0",
 
@@ -30,6 +30,7 @@ pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) -> ! {
         "bl {switch_to_elx}",
         fdt = sym crate::fdt::FDT_ADDR,
         switch_to_elx = sym switch_to_elx,
+
     )
 }
 
