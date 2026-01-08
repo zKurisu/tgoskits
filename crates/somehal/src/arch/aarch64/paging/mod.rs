@@ -27,7 +27,7 @@ pub fn enable_mmu() -> ! {
 
     let k_start = crate::mem::kimage_range().start;
 
-    let mut table = PageTable::<Generic, _>::new(Ram).unwrap();
+    let mut table = crate::mem::mmu::new_boot_table();
 
     let mut pte = Entry::new_valid();
     pte.set_mem_config(MemConfig {

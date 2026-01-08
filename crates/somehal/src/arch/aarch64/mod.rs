@@ -118,6 +118,8 @@ pub struct Arch;
 impl ArchTrait for Arch {
     type PT<A: page_table_generic::FrameAllocator> = PT<A>;
 
+    type P = paging::Generic;
+
     const PAGE_OFFSET: usize = PAGE_OFFSET;
 
     fn post_allocator() {

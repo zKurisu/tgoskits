@@ -172,8 +172,8 @@ impl PageTableEntry for Entry {
 
         // 设置内存属性索引
         let attr_index = match config.attrs {
-            MemAttributes::Normal => 0,   // AttrIndx = 0: Normal memory (cached)
-            MemAttributes::Device => 1,   // AttrIndx = 1: Device memory
+            MemAttributes::Normal | MemAttributes::PerCpu => 0, // AttrIndx = 0: Normal memory (cached)
+            MemAttributes::Device => 1,                         // AttrIndx = 1: Device memory
             MemAttributes::Uncached => 2, // AttrIndx = 2: Normal memory (non-cacheable)
         };
 
@@ -214,6 +214,73 @@ impl PageTableEntry for Entry {
 
         page_table_generic::MemConfig { access, attrs }
     }
+
+    fn new_valid() -> Self {
+        let flags = PteFlags::empty()
+            | PteFlags::AF
+            | PteFlags::VALID
+            | PteFlags::NON_BLOCK
+            | PteFlags::UXN;
+
+        Self(flags.bits())
+    }
+
+    fn is_writable(&self) -> bool {
+        let flags = self.as_flags();
+        flags.contains(PteFlags::VALID) && (!flags.contains(PteFlags::AP_RO))
+    }
+
+    fn set_writable(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn is_executable(&self) -> bool {
+        todo!()
+    }
+
+    fn set_executable(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn is_lower_access(&self) -> bool {
+        todo!()
+    }
+
+    fn set_lower_access(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn is_global(&self) -> bool {
+        todo!()
+    }
+
+    fn set_global(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn is_accessed(&self) -> bool {
+        todo!()
+    }
+
+    fn set_accessed(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn is_dirty(&self) -> bool {
+        todo!()
+    }
+
+    fn set_dirty(&mut self, b: bool) {
+        todo!()
+    }
+
+    fn mem_attr(&self) -> page_table_generic::MemAttributes {
+        todo!()
+    }
+
+    fn set_mem_attr(&mut self, attr: page_table_generic::MemAttributes) {
+        todo!()
+    }
 }
 
 impl core::fmt::Debug for Entry {
@@ -222,6 +289,7 @@ impl core::fmt::Debug for Entry {
     }
 }
 
+#[cfg(page_size_4k)]
 #[derive(Clone, Copy)]
 pub struct Generic;
 

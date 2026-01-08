@@ -232,6 +232,7 @@ bitflags::bitflags! {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MemAttributes {
     Normal,
+    PerCpu,
     Device,
     Uncached,
 }
@@ -270,4 +271,16 @@ impl core::fmt::Display for MemConfig {
             self.attrs
         )
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PteConfig {
+    pub valid: bool,
+    pub writable: bool,
+    pub executable: bool,
+    pub lower: bool,
+    pub accessed: bool,
+    pub dirty: bool,
+    pub global: bool,
+    pub mem_attr: MemAttributes,
 }

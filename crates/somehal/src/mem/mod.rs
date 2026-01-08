@@ -6,6 +6,7 @@ use ranges_ext::{RangeError, RangeVecOps};
 
 pub(crate) mod ram;
 pub(crate) mod region;
+pub mod mmu;
 
 use crate::{ArchTrait, mem::ram::Ram};
 

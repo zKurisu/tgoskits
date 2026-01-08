@@ -41,12 +41,38 @@ pub trait TableGeneric: Sync + Send + Clone + Copy + 'static {
 }
 
 pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
+    fn new_valid() -> Self;
+
     fn valid(&self) -> bool;
+    fn set_valid(&mut self, valid: bool);
+
     fn paddr(&self) -> PhysAddr;
     fn set_paddr(&mut self, paddr: PhysAddr);
-    fn set_valid(&mut self, valid: bool);
+
     fn is_huge(&self) -> bool;
     fn set_is_huge(&mut self, b: bool);
-    fn set_mem_config(&mut self, config: MemConfig);
-    fn mem_config(&self) -> MemConfig;
+
+    fn is_writable(&self) -> bool;
+    fn set_writable(&mut self, b: bool);
+
+    fn is_executable(&self) -> bool;
+    fn set_executable(&mut self, b: bool);
+
+    fn is_lower_access(&self) -> bool;
+    fn set_lower_access(&mut self, b: bool);
+
+    fn is_global(&self) -> bool;
+    fn set_global(&mut self, b: bool);
+
+    fn is_accessed(&self) -> bool;
+    fn set_accessed(&mut self, b: bool);
+
+    fn is_dirty(&self) -> bool;
+    fn set_dirty(&mut self, b: bool);
+
+    fn mem_attr(&self) -> MemAttributes;
+    fn set_mem_attr(&mut self, attr: MemAttributes);
+
+    // fn set_mem_config(&mut self, config: MemConfig);
+    // fn mem_config(&self) -> MemConfig;
 }
