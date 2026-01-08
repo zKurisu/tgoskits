@@ -207,6 +207,20 @@ where
     /// - `Ok(T::P)`: 找到的页表项
     /// - `Err(PagingError)`: 查找失败
     pub fn translate_recursive(&self, vaddr: VirtAddr, level: usize) -> PagingResult<T::P> {
+        let (pte, _) = self.translate_recursive_with_level(vaddr, level)?;
+        Ok(pte)
+    }
+
+    /// 递归查找虚拟地址对应的页表项，同时返回该PTE所在的级别
+    ///
+    /// # 参数
+    /// - `vaddr`: 要查找的虚拟地址
+    /// - `level`: 当前页表级别
+    ///
+    /// # 返回值
+    /// - `Ok((T::P, usize))`: 找到的页表项及其所在的级别
+    /// - `Err(PagingError)`: 查找失败
+    pub fn translate_recursive_with_level(&self, vaddr: VirtAddr, level: usize) -> PagingResult<(T::P, usize)> {
         // 计算当前级别的页表索引
         let index = Self::virt_to_index(vaddr, level);
 
@@ -219,15 +233,15 @@ where
             return Err(PagingError::not_mapped());
         }
 
-        // 如果是大页映射或叶子级别，直接返回页表项
+        // 如果是大页映射或叶子级别，直接返回页表项及其级别
         if pte.is_huge() || level == 1 {
-            return Ok(pte);
+            return Ok((pte, level));
         }
 
         // 否则，继续递归到下一级页表
         if level > 1 {
             let child_frame: Frame<T, A> = Frame::from_pte(&pte, self.allocator.clone());
-            return child_frame.translate_recursive(vaddr, level - 1);
+            return child_frame.translate_recursive_with_level(vaddr, level - 1);
         }
 
         // 不应该到达这里

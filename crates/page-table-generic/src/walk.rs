@@ -58,7 +58,7 @@ impl<'a, T: TableGeneric, A: FrameAllocator> PageTableWalker<'a, T, A> {
         };
 
         // 初始化栈，从根页表开始
-        if !walker.config.start_vaddr.ge(&walker.config.end_vaddr) {
+        if walker.config.start_vaddr < walker.config.end_vaddr {
             let root_state = WalkState {
                 frame: Frame::from_paddr(page_table.root.paddr, page_table.root.allocator.clone()),
                 level: Frame::<T, A>::PT_LEVEL,

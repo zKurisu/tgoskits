@@ -48,6 +48,7 @@ use crate::{irq::SoftIrqId, mem::PageTableInfo};
 #[allow(unused)]
 trait ArchTrait {
     type PT<A: FrameAllocator>: PageTableOp<A>;
+    // type P: TableGeneric;
 
     /// RAM 与内核虚拟地址空间的偏移
     const PAGE_OFFSET: usize;

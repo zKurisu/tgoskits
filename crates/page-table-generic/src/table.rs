@@ -319,14 +319,14 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
     ///   - 页表层次结构错误
     ///
     pub fn translate(&self, vaddr: VirtAddr) -> PagingResult<(PhysAddr, T::P)> {
-        let pte = self
+        let (pte, level) = self
             .root
-            .translate_recursive(vaddr, Frame::<T, A>::PT_LEVEL)?;
+            .translate_recursive_with_level(vaddr, Frame::<T, A>::PT_LEVEL)?;
 
         // 根据页表项类型计算正确的偏移
         let (phys_addr, _) = if pte.is_huge() {
-            // 大页映射：需要使用大页大小计算偏移
-            let level_size = Frame::<T, A>::level_size(T::MAX_BLOCK_LEVEL);
+            // 大页映射：需要使用实际级别的大小来计算偏移
+            let level_size = Frame::<T, A>::level_size(level);
             let offset_in_page = vaddr.raw() % level_size;
             (
                 PhysAddr::new(pte.paddr().raw() + offset_in_page),

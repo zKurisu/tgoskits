@@ -90,6 +90,48 @@ impl PageTableEntry for PteImpl {
             PTE64::BLOCK::CLEAR
         });
     }
+
+    fn set_mem_config(&mut self, config: MemConfig) {
+        // 设置访问权限
+        self.reg().modify(
+            PTE64::READ.val(if config.access.contains(AccessFlags::READ) { 1 } else { 0 })
+                + PTE64::WRITE.val(if config.access.contains(AccessFlags::WRITE) { 1 } else { 0 })
+                + PTE64::USER_EXECUTE.val(if config.access.contains(AccessFlags::EXECUTE) { 1 } else { 0 })
+                + PTE64::USER_ACCESS.val(if config.access.contains(AccessFlags::LOWER) { 1 } else { 0 })
+        );
+        
+        // 设置缓存属性
+        let cache_val = match config.attrs {
+            MemAttributes::Normal => 1,
+            MemAttributes::Device => 2,
+            MemAttributes::Uncached => 0,
+        };
+        self.reg().modify(PTE64::CACHE.val(cache_val));
+    }
+
+    fn mem_config(&self) -> MemConfig {
+        let mut access = AccessFlags::empty();
+        if self.reg().is_set(PTE64::READ) {
+            access |= AccessFlags::READ;
+        }
+        if self.reg().is_set(PTE64::WRITE) {
+            access |= AccessFlags::WRITE;
+        }
+        if self.reg().is_set(PTE64::USER_EXECUTE) {
+            access |= AccessFlags::EXECUTE;
+        }
+        if self.reg().is_set(PTE64::USER_ACCESS) {
+            access |= AccessFlags::LOWER;
+        }
+
+        let attrs = match self.reg().read(PTE64::CACHE) {
+            1 => MemAttributes::Normal,
+            2 => MemAttributes::Device,
+            _ => MemAttributes::Uncached,
+        };
+
+        MemConfig { access, attrs }
+    }
 }
 
 // Flag 构造和操作方法

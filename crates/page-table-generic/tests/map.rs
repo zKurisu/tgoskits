@@ -34,10 +34,7 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
     println!("table page size: {:#x}", T::PAGE_SIZE);
     println!("valid bits: {}", pg.valid_bits());
     println!("=== {test_name} 映前状态 - walk_all (遍历所有项) ===");
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
         println!(
             "l: {}, va: {:?}, pte: {:?}, final: {}",
             p.level, p.vaddr, p.pte, p.is_final_mapping
@@ -71,10 +68,7 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
         "\n=== {} 映后状态 - 显示完整层次（所有有效项） ===",
         test_name
     );
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
         println!(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
@@ -219,10 +213,7 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     let mut normal_pages = 0;
     let mut mappings = Vec::new();
 
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
         println!(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
@@ -301,10 +292,7 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
     let mut normal_pages = 0;
     let mut mappings = Vec::new();
 
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
         println!(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
@@ -430,10 +418,7 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     let mut normal_pages = 0;
     let mut mappings = Vec::new();
 
-    for p in pg.walk(WalkConfig {
-        start_vaddr: VirtAddr::new(0),
-        end_vaddr: VirtAddr::new(usize::MAX),
-    }) {
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
         println!(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,

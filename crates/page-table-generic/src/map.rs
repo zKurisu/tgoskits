@@ -203,8 +203,8 @@ where
             // 检查当前页表项是否有效
             if !pte_ref.valid() {
                 // 页表项无效，直接跳过
+                // 注意：无效项不影响can_reclaim，因为我们只关心是否还有有效项
                 vaddr += level_size.min(remaining_size);
-                can_reclaim = false; // 有无效项，不能回收此帧
                 continue;
             }
 
