@@ -15,10 +15,10 @@ impl Platform for InitImpl {
         somehal::power::shutdown()
     }
     fn irq_is_enabled(irq: IrqId) -> bool {
-        somehal::irq::irq_is_enabled(irq.into())
+        somehal::irq::irq_is_enabled(irq.raw().into())
     }
     fn irq_set_enabled(irq: IrqId, enable: bool) {
-        somehal::irq::irq_set_enable(irq.into(), enable);
+        somehal::irq::irq_set_enable(irq.raw().into(), enable);
     }
 }
 }
@@ -134,9 +134,8 @@ impl Cpu for CpuImpl {
         somehal::irq::irq_local_set_enable(enable);
     }
 
-
     fn systimer_irq() -> IrqId {
-        somehal::irq::systimer_irq().into()
+        somehal::irq::systimer_irq().raw().into()
     }
 
     fn systimer_enable() {

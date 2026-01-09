@@ -72,7 +72,4 @@ pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
 
     fn mem_attr(&self) -> MemAttributes;
     fn set_mem_attr(&mut self, attr: MemAttributes);
-
-    // fn set_mem_config(&mut self, config: MemConfig);
-    // fn mem_config(&self) -> MemConfig;
 }

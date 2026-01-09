@@ -43,7 +43,7 @@ pub mod timer;
 pub use page_table_generic::*;
 pub use somehal_macros::{entry, secondary_entry};
 
-use crate::{irq::SoftIrqId, mem::PageTableInfo};
+use crate::{irq::IrqId, mem::PageTableInfo};
 
 #[allow(unused)]
 pub trait ArchTrait {
@@ -66,7 +66,7 @@ pub trait ArchTrait {
     fn user_page_table() -> PageTableInfo;
     fn set_user_page_table(val: PageTableInfo);
 
-    fn systimer_irq() -> usize;
+    fn systimer_irq() -> IrqId;
     fn shutdown() -> !;
 
     fn systimer_enable();
@@ -85,8 +85,8 @@ pub trait ArchTrait {
     fn irq_all_is_enabled() -> bool;
     fn irq_all_set_enable(enable: bool);
 
-    fn irq_is_enabled(irq: SoftIrqId) -> bool;
-    fn irq_set_enable(irq: SoftIrqId, enable: bool);
+    fn irq_is_enabled(irq: IrqId) -> bool;
+    fn irq_set_enable(irq: IrqId, enable: bool);
 }
 
 pub fn post_allocator() {

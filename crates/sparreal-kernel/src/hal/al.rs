@@ -101,29 +101,8 @@ pub trait PageTable: Send + 'static {
             flush,
         )?;
 
-        // let config = page_table_generic::MapConfig {
-        //     vaddr: vaddr.raw().into(),
-        //     paddr: paddr.raw().into(),
-        //     size,
-        //     pte: {
-        //         let mut pte = paging::Entry::new_valid();
-        //         pte.set_writable(true);
-        //         pte.set_executable(false);
-        //         pte.set_mem_attr(MemAttributes::Device);
-        //         pte
-        //     },
-        //     allow_huge: true,
-        //     flush: true,
-        // };
-
-        // match self.inner.map(&config) {
-        //     Ok(()) | Err(PagingError::MappingConflict { .. }) => {}
-        //     Err(e) => return Err(e),
-        // }
         Ok(virt.raw().into())
     }
-
-    // fn iounmap(&mut self, io_addr: IoMemAddr, size: usize) -> Result<(), PagingError>;
 }
 
 define_type! {

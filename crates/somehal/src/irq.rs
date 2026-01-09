@@ -1,6 +1,6 @@
 use crate::ArchTrait;
 
-pub fn systimer_irq() -> usize {
+pub fn systimer_irq() -> IrqId {
     crate::arch::Arch::systimer_irq()
 }
 
@@ -12,24 +12,37 @@ pub fn irq_local_set_enable(enabled: bool) {
     crate::arch::Arch::irq_all_set_enable(enabled);
 }
 
-pub fn irq_is_enabled(irq: usize) -> bool {
-    crate::arch::Arch::irq_is_enabled(SoftIrqId(irq))
+pub fn irq_is_enabled(irq: IrqId) -> bool {
+    crate::arch::Arch::irq_is_enabled(irq)
 }
 
-pub fn irq_set_enable(irq: usize, enable: bool) {
-    crate::arch::Arch::irq_set_enable(SoftIrqId(irq), enable);
+pub fn irq_set_enable(irq: IrqId, enable: bool) {
+    crate::arch::Arch::irq_set_enable(irq, enable);
 }
 
+/// 全局唯一的软件中断号，平台自行转换为本地硬件中断号或外部中断号
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct SoftIrqId(usize);
+pub struct IrqId(usize);
 
-impl SoftIrqId {
+impl IrqId {
     pub const fn new(id: usize) -> Self {
-        SoftIrqId(id)
+        IrqId(id)
     }
 
     pub const fn raw(&self) -> usize {
         self.0
+    }
+}
+
+impl From<usize> for IrqId {
+    fn from(value: usize) -> Self {
+        IrqId(value)
+    }
+}
+
+impl From<u32> for IrqId {
+    fn from(value: u32) -> Self {
+        IrqId(value as usize)
     }
 }

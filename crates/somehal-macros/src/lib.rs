@@ -1,6 +1,7 @@
 use proc_macro::TokenStream;
 
 mod entry;
+mod trap;
 
 /// Attribute to declare the entry point of the program
 ///
@@ -58,3 +59,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn secondary_entry(args: TokenStream, input: TokenStream) -> TokenStream {
     entry::entry(args, input, "__somehal_secondary")
 }
+
+
+// #[proc_macro_attribute]
+// pub fn irq_handler()

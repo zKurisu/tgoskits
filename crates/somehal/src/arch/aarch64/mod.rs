@@ -22,7 +22,10 @@ use aarch64_cpu::registers::*;
 use elx::*;
 pub use paging::Entry;
 
-use crate::{ArchTrait, arch::addrspace::PAGE_OFFSET, consts::VM_LOAD_ADDRESS, mem::PageTableInfo};
+use crate::{
+    ArchTrait, arch::addrspace::PAGE_OFFSET, consts::VM_LOAD_ADDRESS, irq::IrqId,
+    mem::PageTableInfo,
+};
 
 // ARM Generic Timer IRQ number (PPI 30)
 const TIMER_IRQ: usize = 30;
@@ -56,8 +59,8 @@ impl ArchTrait for Arch {
         elx::flush_tlb(None);
     }
 
-    fn systimer_irq() -> usize {
-        TIMER_IRQ
+    fn systimer_irq() -> IrqId {
+        TIMER_IRQ.into()
     }
 
     fn systimer_enable() {
@@ -130,12 +133,12 @@ impl ArchTrait for Arch {
         elx::flush_tlb(None);
     }
 
-    fn irq_is_enabled(_irq: crate::irq::SoftIrqId) -> bool {
+    fn irq_is_enabled(_irq: crate::irq::IrqId) -> bool {
         // For now, return false (can be extended with GIC support)
         false
     }
 
-    fn irq_set_enable(_irq: crate::irq::SoftIrqId, _enable: bool) {
+    fn irq_set_enable(_irq: crate::irq::IrqId, _enable: bool) {
         // For now, do nothing (can be extended with GIC support)
     }
 
