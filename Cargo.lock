@@ -1039,7 +1039,6 @@ version = "0.13.0"
 dependencies = [
  "log",
  "somehal",
- "somehal-macros",
  "sparreal-kernel",
 ]
 

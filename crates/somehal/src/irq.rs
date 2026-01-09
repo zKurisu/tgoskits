@@ -46,3 +46,12 @@ impl From<u32> for IrqId {
         IrqId(value as usize)
     }
 }
+
+pub(crate) fn handle_irq(hwirq: IrqId) {
+    unsafe extern "Rust" {
+        fn _somehal_handle_irq(hwirq: IrqId);
+    }
+    unsafe {
+        _somehal_handle_irq(hwirq);
+    }
+}

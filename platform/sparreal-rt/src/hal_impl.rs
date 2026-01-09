@@ -1,8 +1,7 @@
 use alloc::boxed::Box;
 use core::time::Duration;
 
-use somehal::{MemConfig, mem::PageTableEntry};
-use somehal_macros::irq_handler;
+use somehal::{MemConfig, irq_handler, mem::PageTableEntry};
 use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KernelAllocator};
 
 struct InitImpl;
@@ -182,6 +181,6 @@ impl Console for ConsoleImpl {
 }
 
 #[irq_handler]
-fn _somehal_handle_irq(hwirq: IrqId) {
-    handle_irq(hwirq);
+fn somehal_handle_irq(irq: somehal::irq::IrqId) {
+    handle_irq(irq.raw().into());
 }

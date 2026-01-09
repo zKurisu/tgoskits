@@ -6,7 +6,9 @@ use log::*;
 use super::context::Context;
 
 #[aarch64_trap_handler(kind = "irq")]
-fn handle_irq(_ctx: &Context) {}
+fn handle_irq(_ctx: &Context) {
+    crate::irq::handle_irq(crate::irq::IrqId::new(0));
+}
 
 #[aarch64_trap_handler(kind = "fiq")]
 fn handle_fiq(_ctx: &Context) {}
