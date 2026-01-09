@@ -3,6 +3,8 @@ mod memory;
 
 pub use earlycon::setup_earlycon;
 use kernutil::StaticCell;
+
+#[allow(unused)]
 pub use memory::{init_memory_map, memories};
 
 use crate::mem::phys_to_virt;

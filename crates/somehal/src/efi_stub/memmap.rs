@@ -1,41 +1,70 @@
 use uefi::boot::{MemoryDescriptor, MemoryType};
 
-use crate::{
-    consts::PAGE_SIZE,
-    mem::{add_memory_descriptors, page_size},
-};
+use crate::{consts::PAGE_SIZE, mem::{add_memory_descriptor, page_size}};
 
 pub fn setup_memory_map<'a>(
     mems: impl Iterator<Item = &'a MemoryDescriptor>,
 ) -> anyhow::Result<()> {
-    add_memory_descriptors(mems.map(|memory| match memory.ty {
-        MemoryType::CONVENTIONAL
-        | MemoryType::BOOT_SERVICES_CODE
-        | MemoryType::BOOT_SERVICES_DATA
-        | MemoryType::LOADER_CODE
-        | MemoryType::LOADER_DATA => crate::mem::MemoryDescriptor {
-            name: "RAM",
-            physical_start: memory.phys_start as _,
-            size_in_bytes: memory.page_count as usize * page_size(),
-            memory_type: crate::mem::MemoryType::Free,
-        },
-        MemoryType::MMIO | MemoryType::MMIO_PORT_SPACE => {
-            crate::mem::MemoryDescriptor::new_aligned(
-                memty_str(&memory.ty),
+    for memory in mems {
+        let desc = match memory.ty {
+            MemoryType::CONVENTIONAL
+            | MemoryType::BOOT_SERVICES_CODE
+            | MemoryType::BOOT_SERVICES_DATA
+            | MemoryType::LOADER_CODE
+            | MemoryType::LOADER_DATA => crate::mem::MemoryDescriptor {
+                name: "RAM",
+                physical_start: memory.phys_start as _,
+                size_in_bytes: memory.page_count as usize * page_size(),
+                memory_type: crate::mem::MemoryType::Free,
+            },
+            MemoryType::MMIO | MemoryType::MMIO_PORT_SPACE => {
+                crate::mem::MemoryDescriptor::new_aligned(
+                    memty_str(&memory.ty),
+                    memory.phys_start as _,
+                    memory.page_count as usize * page_size(),
+                    crate::mem::MemoryType::Mmio,
+                    PAGE_SIZE,
+                )
+            }
+            t => crate::mem::MemoryDescriptor::new_aligned(
+                memty_str(&t),
                 memory.phys_start as _,
                 memory.page_count as usize * page_size(),
-                crate::mem::MemoryType::Mmio,
+                crate::mem::MemoryType::Reserved,
                 PAGE_SIZE,
-            )
-        }
-        t => crate::mem::MemoryDescriptor::new_aligned(
-            memty_str(&t),
-            memory.phys_start as _,
-            memory.page_count as usize * page_size(),
-            crate::mem::MemoryType::Reserved,
-            PAGE_SIZE,
-        ),
-    }))?;
+            ),
+        };
+        add_memory_descriptor(desc)?;
+    }
+
+    // add_memory_descriptors(mems.map(|memory| match memory.ty {
+    //     MemoryType::CONVENTIONAL
+    //     | MemoryType::BOOT_SERVICES_CODE
+    //     | MemoryType::BOOT_SERVICES_DATA
+    //     | MemoryType::LOADER_CODE
+    //     | MemoryType::LOADER_DATA => crate::mem::MemoryDescriptor {
+    //         name: "RAM",
+    //         physical_start: memory.phys_start as _,
+    //         size_in_bytes: memory.page_count as usize * page_size(),
+    //         memory_type: crate::mem::MemoryType::Free,
+    //     },
+    //     MemoryType::MMIO | MemoryType::MMIO_PORT_SPACE => {
+    //         crate::mem::MemoryDescriptor::new_aligned(
+    //             memty_str(&memory.ty),
+    //             memory.phys_start as _,
+    //             memory.page_count as usize * page_size(),
+    //             crate::mem::MemoryType::Mmio,
+    //             PAGE_SIZE,
+    //         )
+    //     }
+    //     t => crate::mem::MemoryDescriptor::new_aligned(
+    //         memty_str(&t),
+    //         memory.phys_start as _,
+    //         memory.page_count as usize * page_size(),
+    //         crate::mem::MemoryType::Reserved,
+    //         PAGE_SIZE,
+    //     ),
+    // }))?;
 
     Ok(())
 }

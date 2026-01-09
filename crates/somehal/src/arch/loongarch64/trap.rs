@@ -7,7 +7,7 @@ use loongArch64::register::{
 
 use crate::{
     arch::{context::TrapFrame, register::csr},
-    irq::SoftIrqId,
+    irq::IrqId,
 };
 
 /// LoongArch Exception Codes
@@ -101,7 +101,7 @@ impl IrqKind {
     }
 }
 
-impl SoftIrqId {
+impl IrqId {
     /// 创建 CPU 私有中断号
     /// hwirq: 硬件中断号 (0-14)
     pub fn private_irq(hwirq: usize) -> Self {
