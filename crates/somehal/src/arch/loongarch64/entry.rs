@@ -12,7 +12,7 @@ pub unsafe extern "C" fn kernel_entry(
     efi_boot: usize,
     cmdline: *const u8,
     systemtable: *const c_void,
-) -> ! {
+) {
     naked_asm!(
         // SETUP_DMWINS
 "

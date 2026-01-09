@@ -1,9 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{
-    parse_macro_input, spanned::Spanned, FnArg, ItemFn, ReturnType, Type, Visibility,
-};
+use syn::{FnArg, ItemFn, ReturnType, Type, Visibility, parse_macro_input, spanned::Spanned};
 
 pub fn irq_handler(args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as ItemFn);

@@ -1,6 +1,7 @@
 args = ["-nographic"]
 fail_regex = [
   "Panicked:",
+  "!!!! Can't find image information. !!!!",
 ]
 success_regex = [
   "All async tests passed!",

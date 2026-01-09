@@ -43,6 +43,7 @@ pub unsafe extern "C" fn efi_pe_entry(
         memmap::setup_memory_map(mem_map.entries()).unwrap();
 
         crate::arch::entry::kernel_entry(1, null(), system_table);
+        unreachable!()
     }
 }
 
