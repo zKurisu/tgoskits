@@ -23,13 +23,6 @@ pub unsafe extern "C" fn kernel_entry(
         li.d        $t0, {CSR_DMW2_INIT} // 0x9
         csrwr       $t0, {LOONGARCH_CSR_DMW2}
 ",
-    // JUMP_TO_VIRT_ADDR
-"
-        li.d        $t0, {CACHE_BASE}
-        pcaddi      $t1, 0
-	bstrins.d   $t0, $t1, ({DMW_PABITS} - 1), 0
-        jirl        $zero, $t0, 0xc
-",
     // Enable PG
 "
         li.w		$t0, 0xb0		    // PLV=0, IE=0, PG=1
@@ -39,6 +32,14 @@ pub unsafe extern "C" fn kernel_entry(
         li.w		$r12, 0x00		    // FPE=0, SXE=0, ASXE=0, BTE=0
         csrwr		$t0, {LOONGARCH_CSR_EUEN}
 ",
+    // JUMP_TO_VIRT_ADDR
+"
+        li.d        $t0, {CACHE_BASE}
+        pcaddi      $t1, 0
+	    bstrins.d   $t0, $t1, ({DMW_PABITS} - 1), 0
+        jirl        $zero, $t0, 0xc
+",
+
 "
 	la.pcrel	$t0, __bss_start		# clear .bss
 	st.d		$zero, $t0, 0
@@ -103,6 +104,14 @@ fn rust_main() -> ! {
 
     crate::mem::early_init(crate::mem::kimage_range().end);
     crate::mem::mmu::set_mmu_enabled();
+    super::trap::per_cpu_trap_init(true);
+
+    println!("Trap enabled.");
+
+    // 应当异常
+    unsafe {
+        (0x1000000000000000usize as *mut usize).write_volatile(0x1234567890abcdef);
+    }
 
     println!("Rust main.");
 

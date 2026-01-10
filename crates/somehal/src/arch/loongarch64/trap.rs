@@ -6,7 +6,7 @@ use loongArch64::register::{
 };
 
 use crate::{
-    arch::{context::TrapFrame, register::csr},
+    arch::{addrspace::to_phys, context::TrapFrame, register::csr},
     irq::IrqId,
 };
 
@@ -137,15 +137,15 @@ impl IrqId {
 
 // 从链接脚本获取异常向量表地址
 unsafe extern "C" {
-    static __exception_vectors: u8;
+    fn __exception_vectors();
 }
 
 fn eentry_addr() -> usize {
-    unsafe { &__exception_vectors as *const _ as usize }
+    __exception_vectors as *const () as usize
 }
 
 fn tlbrentry_addr() -> usize {
-    eentry_addr() + 80 * VECSIZE
+    to_phys(eentry_addr() + 80 * VECSIZE)
 }
 
 pub fn per_cpu_trap_init(_is_primary: bool) {
@@ -160,8 +160,15 @@ fn setup_vint_size() {
 
 /// 配置异常向量
 fn configure_exception_vector() {
-    eentry::set_eentry(eentry_addr());
-    tlbrentry::set_tlbrentry(tlbrentry_addr());
+    let eentry_addr = eentry_addr();
+    println!("Setting EENTRY to {:#x}", eentry_addr);
+    eentry::set_eentry(eentry_addr);
+    let val = eentry::read().eentry();
+    println!("EENTRY set to {:#x}", val);
+
+    let tlbrentry_addr = tlbrentry_addr();
+    println!("Setting TLBRENTRY to {:#x}", tlbrentry_addr);
+    tlbrentry::set_tlbrentry(tlbrentry_addr);
 }
 
 /// 处理向量中断
