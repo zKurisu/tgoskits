@@ -609,37 +609,18 @@ global_asm!(
     ".balign VECSIZE",
     ".global handle_tlb_refill",
     "handle_tlb_refill:",
-    // 使用 KS0/KS1 保存 t0/t1 (TLB Refill 时这是安全的)
-    "csrwr   $t0, CSR_KS0",
-    "csrwr   $t1, CSR_KS1",
-
-    // 保存原始 SP 到 t0
-    "move    $t0, $sp",
-    // 分配栈帧
-    "addi.d  $sp, $sp, -FRAME_SIZE",
-
-    // 保存通用寄存器 (除了 t0, t1)
-    "SAVE_REGS_EXCEPT_T0T1",
-
-    // 保存原始 SP
-    "st.d    $t0, $sp, TF_SP",
-
-    // 恢复并保存 t0, t1
-    "csrrd   $t0, CSR_KS0",
-    "csrrd   $t1, CSR_KS1",
-    "st.d    $t0, $sp, TF_T0",
-    "st.d    $t1, $sp, TF_T1",
-
-    // TLB Refill 使用 TLBRPRMD 和 TLBRERA (不是普通的 PRMD/ERA)
-    "csrrd   $t0, CSR_TLBRPRMD",
-    "st.d    $t0, $sp, TF_PRMD",
-    "csrrd   $t0, CSR_TLBRERA",
-    "st.d    $t0, $sp, TF_ERA",
-
-    // 调用 do_tlb_refill(tf, address)
-    "move    $a0, $sp",             // TrapFrame 指针
-    "csrrd   $a1, CSR_TLBRBADV",    // 错误地址
-    "bl      do_tlb_refill",
+    "
+    csrwr   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV
+    csrrd   $t0, 0x1b  // LA_CSR_PGD
+    lddir   $t0, $t0, 3
+    lddir   $t0, $t0, 2
+    lddir   $t0, $t0, 1
+    ldpte   $t0, 0
+    ldpte   $t0, 1
+    tlbfill
+    csrrd   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV
+    ertn   
+    ",
     // do_tlb_refill 是 noreturn，不会返回
 
     // 填充到 128 个向量 (81-127) - 使用 .rept 宏简化
