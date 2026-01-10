@@ -163,6 +163,16 @@ fn test_new_l4() {
 }
 
 #[test]
+fn test_new_l4_ffff() {
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
+    test_high_huge_not_align::<T4kL4, Fram4k>(PteImpl(0), Fram4k);
+}
+
+#[test]
 fn test_new_l3() {
     let _ = env_logger::builder()
         .is_test(true)
@@ -366,6 +376,59 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
         has_range_coverage,
         "映射应该覆盖[{:#x}, {:#x})范围",
         start_addr, requested_end
+    );
+}
+
+fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+    let mut pg = PageTable::<T, A>::new(alloc).unwrap();
+
+    pg.map(&MapConfig {
+        vaddr: 0xffffffff80000000usize.into(),
+        paddr: 0x0000000005380000usize.into(),
+        size: 2 * MB,
+        pte,
+        allow_huge: true,
+        flush: false,
+    })
+    .unwrap();
+
+    println!("\n=== Huge Page 映后状态 - 显示完整层次（所有有效项） ===");
+
+    let mut huge_pages = 0;
+    let mut normal_pages = 0;
+    let mut mappings = Vec::new();
+
+    for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {
+        println!(
+            "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
+            p.level,
+            p.vaddr,
+            p.pte.paddr(),
+            p.pte.is_huge(),
+            p.is_final_mapping
+        );
+
+        if p.is_final_mapping {
+            mappings.push((p.vaddr.raw(), p.pte.paddr().raw(), p.pte.is_huge(), p.level));
+            if p.pte.is_huge() {
+                huge_pages += 1;
+            } else {
+                normal_pages += 1;
+            }
+        }
+    }
+
+    // 验证总映射数量正确
+    let total_mappings = huge_pages + normal_pages;
+    assert!(total_mappings > 0, "应该有至少一个映射");
+
+    // 验证高地址映射存在
+    let high_mapping = mappings
+        .iter()
+        .find(|(vaddr, _, _, _)| *vaddr == 0xffffffff80000000);
+    assert!(
+        high_mapping.is_some(),
+        "应该有从0xffffffff80000000开始的映射"
     );
 }
 
