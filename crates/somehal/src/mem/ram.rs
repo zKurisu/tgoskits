@@ -62,7 +62,7 @@ impl FrameAllocator for Ram {
     fn dealloc_frame(&self, _frame: page_table_generic::PhysAddr) {}
 
     fn phys_to_virt(&self, paddr: page_table_generic::PhysAddr) -> *mut u8 {
-        super::phys_to_virt(paddr.raw())
+        super::__va(paddr.raw())
     }
 }
 
