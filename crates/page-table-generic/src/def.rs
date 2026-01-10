@@ -276,12 +276,15 @@ impl core::fmt::Display for MemConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PteConfig {
+    pub paddr: PhysAddr,
     pub valid: bool,
+    pub read: bool,
     pub writable: bool,
     pub executable: bool,
     pub lower: bool,
-    pub accessed: bool,
     pub dirty: bool,
     pub global: bool,
+    pub is_dir: bool,
+    pub huge: bool,
     pub mem_attr: MemAttributes,
 }

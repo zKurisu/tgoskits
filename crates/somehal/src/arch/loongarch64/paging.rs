@@ -650,15 +650,14 @@ pub fn setup() {
     /// | 24       | 0                               |     0 |
     /// | 24       | HPTW_En(CPUCFG.2.HPTW(bit24)=1) |     0 |
     /// | 31:25    | 0                               |     0 |
-    const PWCH_VALUE: u32 = 39 | (9 << 6);
+    const PWCH_VALUE: u32 = 39 | (9 << 6) | 1 << 24;
     // Configure page table walking
 
     write_csr_pwctl0(PWCL_VALUE as u64);
     write_csr_pwctl1(PWCH_VALUE as u64);
 
-    // Enable mapped address translation mode
-    crmd::set_pg(true);
-    crmd::set_da(false);
+    // // Enable mapped address translation mode
+    // crmd::set_pg(true);
     local_flush_tlb_all();
 }
 
@@ -870,6 +869,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
     // 配置页大小并启用 MMU
     setup();
 
+
     // 打印寄存器状态
     print_registers();
 
@@ -896,6 +896,7 @@ fn print_registers() {
 
     // 1. CRMD 寄存器 (0x0)
     let crmd_val = crmd::read();
+
     let crmd_raw = csr_read!(0x0u32);
     println!("CRMD (0x0) 控制模式寄存器:");
     println!("  原始值: {:#018x}", crmd_raw);
@@ -982,6 +983,7 @@ fn print_registers() {
         "  STLBPS.PS (0x1e) STLB页大小: {:#04x} (期望: {:#04x}=4KB)",
         ps_stlb, PS_4K
     );
+
     let tlbrehi_val = tlbrehi::read();
     let ps_tlbrefill = tlbrehi_val.ps() as usize;
     println!(
