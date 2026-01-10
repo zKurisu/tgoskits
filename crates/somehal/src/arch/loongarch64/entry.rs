@@ -109,11 +109,6 @@ fn rust_main() -> ! {
 
     println!("Trap enabled.");
 
-    // 应当异常
-    unsafe {
-        (0x1000000000000000usize as *mut usize).write_volatile(0x1234567890abcdef);
-    }
-
     println!("Rust main.");
 
     if let Some(cmdline) = crate::cmdline::cmdline() {

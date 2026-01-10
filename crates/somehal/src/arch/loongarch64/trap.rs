@@ -688,6 +688,7 @@ global_asm!(
 /// 保留异常处理函数
 #[unsafe(no_mangle)]
 extern "C" fn do_reserved_exception(tf: &TrapFrame) -> ! {
+    println!("*** do_reserved_exception 被调用 ***");
     let estat = estat::read();
     let ecode = estat.ecode();
     let esubcode = estat.esubcode();
@@ -706,6 +707,10 @@ extern "C" fn do_reserved_exception(tf: &TrapFrame) -> ! {
 }
 
 /// 地址错误异常处理函数 (ADF/ADE - Address Error)
+///
+/// LoongArch 中 ADF 和 ADE 都使用 Ecode 0x8
+/// ADF: Address Error - Fetch (取指时地址错误)
+/// ADE: Address Error - Memory access (内存访问时地址错误)
 #[unsafe(no_mangle)]
 extern "C" fn do_address_error(tf: &TrapFrame, badv: usize) -> ! {
     println!("\n*** do_address_error 被调用 ***");
@@ -719,11 +724,10 @@ extern "C" fn do_address_error(tf: &TrapFrame, badv: usize) -> ! {
     println!("ESTAT.ESUBCODE: {:#x}", esubcode);
     println!("ERA (PC): {:#x}", tf.era);
 
-    let fault_type = match ecode {
-        exccode::ADF => "Address Error - Fetch",
-        exccode::ADE => "Address Error - Memory access",
-        _ => "Unknown Address Error",
-    };
+    // ADF 和 ADE 都使用 Ecode 0x8，这里统一处理
+    // 根据子码或其他信息区分具体类型（如果需要）
+    let fault_type = "Address Error";
+    let _ = ecode; // 避免未使用警告
 
     println!("异常类型: {}", fault_type);
     println!("*** 开始 panic ***\n");
