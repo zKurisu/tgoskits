@@ -16,7 +16,7 @@ impl Rela {
 /// 应用 .rela.dyn 重定位
 /// # Safety
 /// 此函数操作裸指针，调用者必须确保传入的指针范围有效且指向合法的 RELA 重定位表。
-pub unsafe fn apply_reloc(load_offset: i64, start: *mut u8, end: *const u8, r_type: u32) {
+pub unsafe fn apply_reloc(load_offset: i128, start: *mut u8, end: *const u8, r_type: u32) {
     if load_offset == 0 {
         return;
     }
@@ -26,9 +26,14 @@ pub unsafe fn apply_reloc(load_offset: i64, start: *mut u8, end: *const u8, r_ty
 
     for reloc in relocations {
         if reloc.r_type_raw() == r_type {
-            let addr = (reloc.r_offset as i64 + load_offset) as usize as *mut usize;
-            let (val, _) = (reloc.r_addend as u64).overflowing_add(load_offset as u64);
-            unsafe { *addr = val as usize };
+            // unsafe {
+            //     ((reloc.r_offset as i128 + load_offset) as usize as *mut usize).read_volatile();
+            //     // 用读错误地址的方式，获取运行时 get_load_offset() 的值，进行调试
+            //     ((reloc.r_addend as i128 + load_offset) as usize as *const u8).read_volatile();
+            // }
+            let addr = (reloc.r_offset as i128 + load_offset) as usize as *mut usize;
+            let val = (reloc.r_addend as i128 + load_offset) as usize;
+            unsafe { *addr = val };
         }
     }
 }

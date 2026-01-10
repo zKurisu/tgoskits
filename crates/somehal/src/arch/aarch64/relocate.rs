@@ -5,11 +5,11 @@ use crate::consts::VM_LOAD_ADDRESS;
 const R_AARCH64_RELATIVE: u32 = 1027;
 
 /// 计算加载偏移量 (实际地址 - 链接地址)
-fn get_load_offset() -> i64 {
-    sym_addr!(_head) as i64 - VM_LOAD_ADDRESS as i64
+fn get_load_offset() -> i128 {
+    sym_addr!(_head) as i128 - VM_LOAD_ADDRESS as i128
 }
 
-static mut OFFSET: i64 = 0;
+static mut OFFSET: i128 = 0;
 
 /// 应用 .rela.dyn 重定位
 pub fn apply() {

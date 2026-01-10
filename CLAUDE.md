@@ -44,7 +44,7 @@ ostool build -c ./build-config/loongarch64.toml
 
 需要执行 `cargo fmt --all` 格式化代码。
 
-### 测试特定应用/套件
+### 运行对应平台测试的方法
 
 项目使用配置文件系统，每个应用或测试套件都有自己的 `.toml` 配置：
 
@@ -53,10 +53,8 @@ ostool build -c ./build-config/loongarch64.toml
 ostool run -c ./test-suit/timer/aarch64.toml qemu -q ./test-suit/timer/qemu-aarch64.toml
 
 # 测试 LoongArch64 async 套件
-ostool run -c ./test-suit/async/loongarch64.toml qemu -q ./test-suit/async/qemu-la64.toml
-
-# 测试 helloworld 应用
-ostool run -c ./apps/helloworld/aarch64.toml qemu -q ./apps/helloworld/qemu-aarch64.toml
+# ostool run -c ./test-suit/async/loongarch64.toml qemu -q ./test-suit/async/qemu-la64.toml
+ostool run -c ./test-suit/timer/loongarch64.toml qemu -q ./test-suit/timer/qemu-la64.toml
 ```
 
 ### VS Code 调试

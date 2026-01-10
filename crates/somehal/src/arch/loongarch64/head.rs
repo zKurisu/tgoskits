@@ -11,7 +11,7 @@ use crate::{
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".head.text")]
-pub unsafe extern "C" fn _head() -> ! {
+pub unsafe extern "C" fn _head() {
     naked_asm!(
         // EFI header following Linux kernel format
         ".word {dos_signature}",        // "MZ", MS-DOS header

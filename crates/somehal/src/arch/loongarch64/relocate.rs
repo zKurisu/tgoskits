@@ -30,8 +30,8 @@ unsafe extern "C" {
 }
 
 /// 计算加载偏移量 (实际地址 - 链接地址)
-pub fn get_load_offset() -> i64 {
-    sym_lma!(_head) as i64 - VM_LOAD_ADDRESS as i64
+pub fn get_load_offset() -> i128 {
+    sym_lma!(_head) as i128 - VM_LOAD_ADDRESS as i128
 }
 
 /// 早期重定位入口点
@@ -43,7 +43,7 @@ pub fn relocate_kernel_to_vm_code() {
     relocate_with_offset(0);
 }
 
-pub fn relocate_with_offset(offset: i64) {
+pub fn relocate_with_offset(offset: i128) {
     unsafe {
         crate::elf::apply_reloc(
             offset,
