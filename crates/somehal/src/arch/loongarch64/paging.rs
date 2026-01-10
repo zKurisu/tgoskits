@@ -7,7 +7,7 @@
 
 use core::arch::naked_asm;
 
-use kernutil::{StaticCell, memory::MemoryType};
+use kernutil::StaticCell;
 use num_align::NumAlign;
 use page_table_generic::{
     MapConfig, MemAttributes, PageTableEntry, PhysAddr, TableGeneric, VirtAddr,
@@ -15,10 +15,10 @@ use page_table_generic::{
 
 use crate::{
     ArchTrait,
-    arch::{Arch, addrspace::to_phys},
+    arch::addrspace::to_phys,
     console::print_mapping,
     consts::PAGE_SIZE,
-    mem::{__kimage_va, __va, MB, PageTableInfo, page_size, ram::Ram, virt_to_phys},
+    mem::{__kimage_va, __va, MB, PageTableInfo, ram::Ram},
 };
 
 static BOOT_TABLE: StaticCell<page_table_generic::PageTable<Generic, Ram>> = StaticCell::uninit();
@@ -1055,6 +1055,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
     let v_entry = __kimage_va(mmu_entry_phys) as usize;
 
     println!("Enabling MMU...");
+    setup();
     super::Arch::set_kernel_page_table(tb);
 
     println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}");
