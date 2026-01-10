@@ -46,8 +46,20 @@ pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
     fn valid(&self) -> bool;
     fn set_valid(&mut self, valid: bool);
 
-    fn paddr(&self) -> PhysAddr;
-    fn set_paddr(&mut self, paddr: PhysAddr);
+    /// 获取物理地址
+    ///
+    /// # 参数
+    /// - `is_dir`: 是否为目录项（影响地址布局）
+    fn paddr(&self, is_dir: bool) -> PhysAddr;
+
+    /// 设置物理地址
+    ///
+    /// # 参数
+    /// - `paddr`: 物理地址
+    /// - `is_dir`: 是否为目录项
+    ///   - true（目录项）：可能包含大页，使用 PTE_DIR 格式
+    ///   - false（页表项）：基本页，使用 PTE 格式
+    fn set_paddr(&mut self, paddr: PhysAddr, is_dir: bool);
 
     /// 检查是否为大页映射
     ///

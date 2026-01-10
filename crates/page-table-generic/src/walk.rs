@@ -122,7 +122,8 @@ impl<'a, T: TableGeneric, A: FrameAllocator> PageTableWalker<'a, T, A> {
 
             // 如果是有效的子页表项（中间级别的页表指针），需要深入下一级
             if pte.valid() && !pte.is_huge(state.level > 1) && state.level > 1 {
-                let child_frame = Frame::from_paddr(pte.paddr(), state.frame.allocator.clone());
+                let child_frame =
+                    Frame::from_paddr(pte.paddr(state.level > 1), state.frame.allocator.clone());
 
                 // 计算子页表的基地址：当前条目的虚拟地址就是子页表覆盖的地址范围起点
                 let child_base_vaddr = current_vaddr;

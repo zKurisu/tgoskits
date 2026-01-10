@@ -54,8 +54,8 @@ where
     }
 
     /// 从PTE创建子Frame（用于遍历子页表）
-    pub fn from_pte(pte: &T::P, allocator: A) -> Self {
-        Self::from_paddr(pte.paddr(), allocator)
+    pub fn from_pte(pte: &T::P, level: usize, allocator: A) -> Self {
+        Self::from_paddr(pte.paddr(level > 1), allocator)
     }
 
     /// 获取页表项的可变切片
@@ -169,7 +169,11 @@ where
                 let entries = self.as_slice();
                 if i < entries.len() {
                     let entry = &entries[i];
-                    (entry.valid(), entry.is_huge(level > 1), entry.paddr())
+                    (
+                        entry.valid(),
+                        entry.is_huge(level > 1),
+                        entry.paddr(level > 1),
+                    )
                 } else {
                     (false, false, crate::PhysAddr::new(0))
                 }
@@ -244,7 +248,7 @@ where
 
         // 否则，继续递归到下一级页表
         if level > 1 {
-            let child_frame: Frame<T, A> = Frame::from_pte(&pte, self.allocator.clone());
+            let child_frame: Frame<T, A> = Frame::from_pte(&pte, level, self.allocator.clone());
             return child_frame.translate_recursive_with_level(vaddr, level - 1);
         }
 
@@ -274,7 +278,7 @@ where
 
         if entry.valid() && !entry.is_huge(level > 1) {
             // 递归释放子帧（子帧的级别是 level - 1）
-            let mut child_frame = Frame::<T, A>::from_pte(entry, self.allocator.clone());
+            let mut child_frame = Frame::<T, A>::from_pte(entry, level, self.allocator.clone());
             child_frame.deallocate_recursive(level - 1);
 
             // 将当前PTE设为invalid

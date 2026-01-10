@@ -56,11 +56,13 @@ impl PageTableEntry for Entry {
         self.as_typed().is_set(PTE::VALID)
     }
 
-    fn paddr(&self) -> page_table_generic::PhysAddr {
+    fn paddr(&self, _is_dir: bool) -> page_table_generic::PhysAddr {
+        // AArch64 的目录项和页表项地址布局相同
         (self.as_typed().read(PTE::PHYS_ADDR) << 12).into()
     }
 
-    fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr) {
+    fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr, _is_dir: bool) {
+        // AArch64：两种类型使用相同的地址布局
         self.as_typed()
             .modify(PTE::PHYS_ADDR.val(paddr.raw() as u64 >> 12));
     }
@@ -197,7 +199,8 @@ impl PageTableEntry for Entry {
 
 impl core::fmt::Debug for Entry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "PTE {:?}", self.paddr())
+        // Debug 输出默认使用页表项格式（is_dir=false）
+        write!(f, "PTE {:?}", self.paddr(false))
     }
 }
 

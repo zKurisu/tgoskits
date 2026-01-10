@@ -172,13 +172,31 @@ impl PageTableEntry for Entry {
         self.as_base().is_set(PTE::VALID)
     }
 
-    fn paddr(&self) -> page_table_generic::PhysAddr {
-        (self.as_base().read(PTE::PHYS_ADDR) << 12).into()
+    fn paddr(&self, is_dir: bool) -> page_table_generic::PhysAddr {
+        if is_dir {
+            // 目录项：使用 PTE_DIR 格式
+            // 注意：这里读取的是 bits [51:13]，物理地址需要 << 13
+            // ⚠️ 当前定义假设 2MB 大页，实际硬件根据页大小动态提取 [51:log2PageSize]
+            let raw_val = self.as_dir().read(PTE_DIR::PHYS_ADDR);
+            (raw_val << 13).into()
+        } else {
+            // 页表项：使用 PTE 格式，bits [51:12]
+            let raw_val = self.as_base().read(PTE::PHYS_ADDR);
+            (raw_val << 12).into()
+        }
     }
 
-    fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr) {
-        self.as_base()
-            .modify(PTE::PHYS_ADDR.val(paddr.raw() as u64 >> 12));
+    fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr, is_dir: bool) {
+        if is_dir {
+            // 目录项：使用 PTE_DIR 格式
+            // ⚠️ 当前定义假设 2MB 大页（OFFSET 13）
+            let ppn = (paddr.raw() as u64) >> 13;
+            self.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
+        } else {
+            // 页表项：使用 PTE 格式
+            let ppn = (paddr.raw() as u64) >> 12;
+            self.as_base().modify(PTE::PHYS_ADDR.val(ppn));
+        }
     }
 
     fn set_valid(&mut self, valid: bool) {
@@ -445,7 +463,7 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
 
         if entry.is_huge(is_dir) {
             println!("  -> 检测到大页！");
-            let phys_base = entry.paddr().raw() & !PAGE_MASK;
+            let phys_base = entry.paddr(is_dir).raw() & !PAGE_MASK;
             let offset_mask = (1 << base) - 1;
             let offset = vaddr & offset_mask;
             let final_paddr = phys_base + offset;
@@ -465,7 +483,7 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
         }
 
         // 获取下一级页表的物理地址
-        table_paddr = entry.paddr().raw() & !PAGE_MASK;
+        table_paddr = entry.paddr(is_dir).raw() & !PAGE_MASK;
         println!("  -> 下一级页表物理地址: {:#018x}", table_paddr);
     }
 

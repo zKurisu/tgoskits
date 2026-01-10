@@ -329,14 +329,14 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
             let level_size = Frame::<T, A>::level_size(level);
             let offset_in_page = vaddr.raw() % level_size;
             (
-                PhysAddr::new(pte.paddr().raw() + offset_in_page),
+                PhysAddr::new(pte.paddr(level > 1).raw() + offset_in_page),
                 level_size,
             )
         } else {
             // 普通页面映射：使用页面大小
             let offset_in_page = vaddr.raw() % T::PAGE_SIZE;
             (
-                PhysAddr::new(pte.paddr().raw() + offset_in_page),
+                PhysAddr::new(pte.paddr(level > 1).raw() + offset_in_page),
                 T::PAGE_SIZE,
             )
         };

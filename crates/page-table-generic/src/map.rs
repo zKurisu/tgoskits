@@ -86,13 +86,13 @@ where
                 let entries = self.as_slice_mut();
                 let pte_ref = &mut entries[index];
                 if pte_ref.valid() {
-                    return Err(PagingError::mapping_conflict(vaddr, pte_ref.paddr()));
+                    return Err(PagingError::mapping_conflict(vaddr, pte_ref.paddr(true)));
                 }
 
                 let mut new_pte = config.pte_template;
                 // 目录项（config.level > 1）可以是大页
                 new_pte.set_is_huge(true, true); // is_dir = true
-                new_pte.set_paddr(paddr); // 然后设置物理地址
+                new_pte.set_paddr(paddr, true); // 目录项设置物理地址
                 new_pte.set_valid(true); // 最后设置有效标志
                 *pte_ref = new_pte;
 
@@ -112,13 +112,13 @@ where
                 let entries = self.as_slice_mut();
                 let pte_ref = &mut entries[index];
                 if pte_ref.valid() {
-                    return Err(PagingError::mapping_conflict(vaddr, pte_ref.paddr()));
+                    return Err(PagingError::mapping_conflict(vaddr, pte_ref.paddr(false)));
                 }
 
                 let mut new_pte = config.pte_template;
                 // 页表项（config.level == 1）不是大页
                 new_pte.set_is_huge(false, false); // is_dir = false
-                new_pte.set_paddr(paddr); // 设置物理地址
+                new_pte.set_paddr(paddr, false); // 页表项设置物理地址
                 new_pte.set_valid(true); // 设置有效标志
                 *pte_ref = new_pte;
 
@@ -145,7 +145,7 @@ where
                 }
 
                 // 子页表已存在，获取它
-                Frame::from_paddr(current_pte.paddr(), allocator)
+                Frame::from_paddr(current_pte.paddr(true), allocator)
             } else {
                 // 需要创建新的子页表
                 let new_frame = Frame::<T, A>::new(allocator)?;
@@ -157,7 +157,7 @@ where
                 let mut new_pte = config.pte_template;
                 // 子页表指针（目录项）不是大页
                 new_pte.set_is_huge(false, true); // is_dir = true
-                new_pte.set_paddr(new_frame_paddr); // 设置指向子页表的物理地址
+                new_pte.set_paddr(new_frame_paddr, true); // 目录项设置指向子页表的物理地址
                 new_pte.set_valid(true); // 设置有效标志
                 *pte_ref = new_pte;
 
@@ -236,7 +236,7 @@ where
 
             // 中间级别：递归处理子页表
             // 需要在修改pte_ref之前获取所需信息
-            let child_paddr = pte_ref.paddr();
+            let child_paddr = pte_ref.paddr(true);
 
             // 计算当前页表条目对应的范围结束地址
             let current_entry_end = ((vaddr.raw() / level_size) + 1) * level_size;
