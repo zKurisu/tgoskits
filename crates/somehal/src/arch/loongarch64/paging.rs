@@ -798,7 +798,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
                 println!("PUD[510] points to PMD table at: {:#x}", pmd_table_addr);
 
                 // 验证 PMD 级别 - 索引 0
-                let pmd_entry_addr = pmd_table_addr + 0 * 8;
+                let pmd_entry_addr = pmd_table_addr;
                 let pmd_entry: u64 =
                     unsafe { core::ptr::read_volatile(pmd_entry_addr as *const u64) };
                 println!("PMD[0] = {:#x}", pmd_entry);

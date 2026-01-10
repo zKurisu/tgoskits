@@ -3,6 +3,8 @@
 //! 使用 tock-registers 风格定义页表项，提供类型安全的寄存器访问
 //! 参考: LoongArch64 参考手册 Vol. 1 - 5.4.2 节
 
+use core::fmt::Debug;
+
 use loongArch64::register::asid;
 use page_table_generic::{MemAttributes, PageTableEntry};
 use tock_registers::interfaces::*;
@@ -11,6 +13,56 @@ use tock_registers::registers::*;
 
 // LoongArch64 页表项寄存器位域定义
 register_bitfields![u64,
+    /// LoongArch64 单页页表项 (Page Table Entry)
+    ///
+    /// 布局参考 LoongArch64 参考手册 5.4.2 节
+    PTE_DIR [
+        /// V - 有效位 (bit 0)
+        VALID OFFSET(0) NUMBITS(1) [],
+
+        /// D - 脏位 (bit 1)
+        DIRTY OFFSET(1) NUMBITS(1) [],
+
+        /// PLV - 特权级 (bits 2-3)
+        PLV OFFSET(2) NUMBITS(2) [
+            PLV0 = 0b00,  // 内核态
+            PLV1 = 0b01,  // 特权级1
+            PLV2 = 0b10,  // 特权级2
+            PLV3 = 0b11   // 用户态
+        ],
+
+        /// 缓存属性 (bits 4-5)
+        CACHE OFFSET(4) NUMBITS(2) [
+            SUC = 0b00,  // 强序非缓存 (Strongly-ordered UnCached)
+            CC  = 0b01,  // 一致性缓存 (Coherent Cached)
+            WUC = 0b10   // 弱序非缓存 (Weakly-ordered UnCached)
+        ],
+
+        /// H/G - 共享位（bit 6）
+        /// 在目录项中：H=1 表示大页映射
+        /// 在页表项中：G=1 表示全局映射（此时 H 必须为 0）
+        /// 注意：根据上下文区分是 H 位还是 G 位，不能同时为 1
+        H OFFSET(6) NUMBITS(1) [],
+
+        /// P - 存在位 (bit 7)
+        PRESENT OFFSET(7) NUMBITS(1) [],
+
+        /// W - 写位 (bit 8)
+        WRITE OFFSET(8) NUMBITS(1) [],
+
+        G OFFSET(12) NUMBITS(1) [],
+
+        PHYS_ADDR OFFSET(13) NUMBITS(39) [],
+
+        /// NR - 禁止读位 (bit 61)
+        NO_READ OFFSET(61) NUMBITS(1) [],
+
+        /// NX - 禁止执行位 (bit 62)
+        NO_EXEC OFFSET(62) NUMBITS(1) [],
+
+        /// RPLV (bit 63)
+        RPLV OFFSET(63) NUMBITS(1) [],
+    ],
     /// LoongArch64 单页页表项 (Page Table Entry)
     ///
     /// 布局参考 LoongArch64 参考手册 5.4.2 节
@@ -40,25 +92,13 @@ register_bitfields![u64,
         /// 在目录项中：H=1 表示大页映射
         /// 在页表项中：G=1 表示全局映射（此时 H 必须为 0）
         /// 注意：根据上下文区分是 H 位还是 G 位，不能同时为 1
-        HG_BIT OFFSET(6) NUMBITS(1) [],
+        G OFFSET(6) NUMBITS(1) [],
 
         /// P - 存在位 (bit 7)
         PRESENT OFFSET(7) NUMBITS(1) [],
 
         /// W - 写位 (bit 8)
         WRITE OFFSET(8) NUMBITS(1) [],
-
-        /// M - 修改位 (bit 9)
-        MODIFIED OFFSET(9) NUMBITS(1) [],
-
-        /// PROTNONE (bit 10)
-        PROTNONE OFFSET(10) NUMBITS(1) [],
-
-        /// SPECIAL (bit 11)
-        SPECIAL OFFSET(11) NUMBITS(1) [],
-
-        /// HGLOBAL - 巨页全局位 (bit 12, PMD 用)
-        HGLOBAL OFFSET(12) NUMBITS(1) [],
 
         /// 物理页帧号 (bits 12-51)
         /// 注意: 根据 PDF, PPN 占据 bits [51:12]
@@ -84,21 +124,40 @@ type PteRegister = ReadWrite<u64, PTE::Register>;
 pub struct Entry(u64);
 
 impl Entry {
-    /// 获取类型化的寄存器访问接口
     #[inline(always)]
-    fn as_typed(&self) -> &PteRegister {
+    fn as_base(&self) -> &PteRegister {
         unsafe { &*(self as *const Self as *const PteRegister) }
     }
 
-    /// 获取可变类型化的寄存器访问接口
     #[inline(always)]
-    fn as_typed_mut(&mut self) -> &mut PteRegister {
-        unsafe { &mut *(self as *mut Self as *mut PteRegister) }
+    fn as_dir(&self) -> &ReadWrite<u64, PTE_DIR::Register> {
+        unsafe { &*(self as *const Self as *const _) }
     }
 
     /// 创建空页表项
     pub const fn empty() -> Self {
         Self(0)
+    }
+
+    pub(crate) fn debug(
+        &self,
+        is_dir: bool,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        if is_dir {
+            self.as_dir().debug().fmt(f)
+        } else {
+            self.as_base().debug().fmt(f)
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct EntryDebug(Entry, bool);
+
+impl Debug for EntryDebug {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.0.debug(self.1, f)
     }
 }
 
@@ -110,20 +169,20 @@ impl PageTableEntry for Entry {
     }
 
     fn valid(&self) -> bool {
-        self.as_typed().is_set(PTE::VALID)
+        self.as_base().is_set(PTE::VALID)
     }
 
     fn paddr(&self) -> page_table_generic::PhysAddr {
-        (self.as_typed().read(PTE::PHYS_ADDR) << 12).into()
+        (self.as_base().read(PTE::PHYS_ADDR) << 12).into()
     }
 
     fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr) {
-        self.as_typed_mut()
+        self.as_base()
             .modify(PTE::PHYS_ADDR.val(paddr.raw() as u64 >> 12));
     }
 
     fn set_valid(&mut self, valid: bool) {
-        self.as_typed_mut().modify(if valid {
+        self.as_base().modify(if valid {
             PTE::VALID::SET + PTE::PRESENT::SET
         } else {
             PTE::VALID::CLEAR + PTE::PRESENT::CLEAR
@@ -133,7 +192,7 @@ impl PageTableEntry for Entry {
     fn is_huge(&self, is_dir: bool) -> bool {
         if is_dir {
             // 目录项：检查 H 位（bit 6）
-            self.as_typed().is_set(PTE::HG_BIT)
+            self.as_dir().is_set(PTE_DIR::H)
         } else {
             // 页表项：不可能是大页
             false
@@ -146,21 +205,19 @@ impl PageTableEntry for Entry {
             return;
         }
 
-        // 目录项：设置 H 位（bit 6）
-        // 注意：设置 H 位时，保持 HGLOBAL 不变（由 set_global 管理）
         if b {
-            self.as_typed_mut().modify(PTE::HG_BIT::SET);
+            self.as_dir().modify(PTE_DIR::H::SET);
         } else {
-            self.as_typed_mut().modify(PTE::HG_BIT::CLEAR);
+            self.as_dir().modify(PTE_DIR::H::CLEAR);
         }
     }
 
     fn is_writable(&self) -> bool {
-        self.as_typed().is_set(PTE::WRITE)
+        self.as_base().is_set(PTE::WRITE)
     }
 
     fn set_writable(&mut self, b: bool) {
-        self.as_typed_mut().modify(if b {
+        self.as_base().modify(if b {
             PTE::WRITE::SET + PTE::DIRTY::SET
         } else {
             PTE::WRITE::CLEAR
@@ -168,11 +225,11 @@ impl PageTableEntry for Entry {
     }
 
     fn is_executable(&self) -> bool {
-        !self.as_typed().is_set(PTE::NO_EXEC)
+        !self.as_base().is_set(PTE::NO_EXEC)
     }
 
     fn set_executable(&mut self, b: bool) {
-        self.as_typed_mut().modify(if b {
+        self.as_base().modify(if b {
             PTE::NO_EXEC::CLEAR
         } else {
             PTE::NO_EXEC::SET
@@ -181,43 +238,36 @@ impl PageTableEntry for Entry {
 
     fn is_lower_access(&self) -> bool {
         matches!(
-            self.as_typed().read_as_enum(PTE::PLV),
+            self.as_base().read_as_enum(PTE::PLV),
             Some(PTE::PLV::Value::PLV3)
         )
     }
 
     fn set_lower_access(&mut self, b: bool) {
         let plv = if b { PTE::PLV::PLV3 } else { PTE::PLV::PLV0 }; // PLV3 或 PLV0
-        self.as_typed_mut().modify(plv);
+        self.as_base().modify(plv);
     }
 
     fn is_global(&self, is_dir: bool) -> bool {
         if is_dir {
             // 目录项：检查 HGLOBAL（bit 12），且必须是 H=1 的大页
-            self.as_typed().is_set(PTE::HG_BIT) && self.as_typed().is_set(PTE::HGLOBAL)
+            self.as_dir().is_set(PTE_DIR::G)
         } else {
             // 页表项：检查 GLOBAL（bit 6）
-            self.as_typed().is_set(PTE::HG_BIT)
+            self.as_base().is_set(PTE::G)
         }
     }
 
     fn set_global(&mut self, b: bool, is_dir: bool) {
         if is_dir {
-            // 目录项：设置 HGLOBAL（bit 12），同时设置 H 位
-            if b {
-                self.as_typed_mut()
-                    .modify(PTE::HG_BIT::SET + PTE::HGLOBAL::SET);
+            self.as_dir().modify(if b {
+                PTE_DIR::G::SET
             } else {
-                self.as_typed_mut().modify(PTE::HGLOBAL::CLEAR);
-                // 注意：不清除 H 位，因为可能有其他用途
-            }
+                PTE_DIR::G::CLEAR
+            });
         } else {
-            // 页表项：设置 GLOBAL（bit 6）
-            if b {
-                self.as_typed_mut().modify(PTE::HG_BIT::SET);
-            } else {
-                self.as_typed_mut().modify(PTE::HG_BIT::CLEAR);
-            }
+            self.as_base()
+                .modify(if b { PTE::G::SET } else { PTE::G::CLEAR });
         }
     }
 
@@ -231,11 +281,11 @@ impl PageTableEntry for Entry {
     }
 
     fn is_dirty(&self) -> bool {
-        self.as_typed().is_set(PTE::DIRTY)
+        self.as_base().is_set(PTE::DIRTY)
     }
 
     fn set_dirty(&mut self, b: bool) {
-        self.as_typed_mut().modify(if b {
+        self.as_base().modify(if b {
             PTE::DIRTY::SET
         } else {
             PTE::DIRTY::CLEAR
@@ -243,7 +293,7 @@ impl PageTableEntry for Entry {
     }
 
     fn mem_attr(&self) -> MemAttributes {
-        match self.as_typed().read_as_enum(PTE::CACHE) {
+        match self.as_base().read_as_enum(PTE::CACHE) {
             Some(PTE::CACHE::Value::SUC) => MemAttributes::Device,
             Some(PTE::CACHE::Value::CC) => MemAttributes::Normal,
             Some(PTE::CACHE::Value::WUC) => MemAttributes::Uncached,
@@ -257,13 +307,13 @@ impl PageTableEntry for Entry {
             MemAttributes::Normal | MemAttributes::PerCpu => 0b01, // CC
             MemAttributes::Uncached => 0b10,                       // WUC
         };
-        self.as_typed_mut().modify(PTE::CACHE.val(cache));
+        self.as_base().modify(PTE::CACHE.val(cache));
     }
 }
 
 impl core::fmt::Debug for Entry {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let d = self.as_typed().debug();
+        let d = self.as_base().debug();
         d.fmt(f)
     }
 }
@@ -370,7 +420,6 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
         println!("  表虚拟地址: {:#018x}", table_vaddr);
         println!("  条目[{}] 地址: {:#018x}", index, entry_ptr as usize);
         println!("  条目[{}] 原始值: {:#018x}", index, entry_val);
-        println!("  条目[{}] 详情: {:#x?}", index, entry);
 
         // 检查有效性 (V bit 0)
         if !entry.valid() {
@@ -391,6 +440,9 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
         // 检查是否是大页 (H bit 6)
         // 只检查目录项（Dir3/Dir2/Dir1/Dir0），页表项（PT）不可能是大页
         let is_dir = !level_name.contains("PT");
+
+        println!("  条目[{}] 详情: {:#x?}", index, EntryDebug(entry, is_dir));
+
         if entry.is_huge(is_dir) {
             println!("  -> 检测到大页！");
             let phys_base = entry.paddr().raw() & !PAGE_MASK;
