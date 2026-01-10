@@ -21,7 +21,7 @@
             ],
             "preLaunchTask": "qemu debug",
             "preRunCommands": [
-                "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/test-suit-timer .head.text 0xFFFF900000200000",
+                "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/test-suit-timer .head.text 0xffffffff80000000",
             ]
         },
         {
