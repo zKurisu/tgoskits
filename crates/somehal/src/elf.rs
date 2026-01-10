@@ -27,9 +27,7 @@ pub unsafe fn apply_reloc(load_offset: i128, start: *mut u8, end: *const u8, r_t
     for reloc in relocations {
         if reloc.r_type_raw() == r_type {
             let addr = (reloc.r_offset as i128 + load_offset) as usize as *mut usize;
-
             let val = (reloc.r_addend as i128 + load_offset) as usize;
-
             unsafe { *addr = val };
         }
     }

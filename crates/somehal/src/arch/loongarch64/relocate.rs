@@ -27,6 +27,10 @@ unsafe extern "C" {
     fn __rela_dyn_end();
 }
 
+pub fn _head_lma() -> usize {
+    sym_lma!(_head)
+}
+
 /// 计算加载偏移量 (实际地址 - 链接地址)
 pub fn get_load_offset() -> i128 {
     sym_lma!(_head) as i128 - VM_LOAD_ADDRESS as i128

@@ -2,7 +2,10 @@ use core::{arch::naked_asm, ffi::c_void};
 
 use crate::{
     ArchTrait,
-    arch::{addrspace::*, relocate::get_load_offset},
+    arch::{
+        addrspace::*,
+        relocate::{_head_lma, get_load_offset},
+    },
     mem::set_vm_load_offset,
     prime_entry,
 };
@@ -91,21 +94,14 @@ pub unsafe extern "C" fn kernel_entry(
 
 fn rust_main() -> ! {
     println!("LoongArch64 Rust kernel entry.");
-    unsafe { crate::console::reset_out() };
     // 执行重定位，将所有地址从物理地址转换为虚拟地址
     super::relocate();
-
+    set_vm_load_offset(_head_lma() as isize - CACHE_BASE as isize);
     crate::mem::mmu::set_mmu_enabled();
-
-    let _ = crate::acpi::earlycon::acpi_setup_earlycon();
 
     println!("Kernel relocated.");
 
-    //     // 设置虚拟内存加载偏移量
-    //     // kernel_code_phys 已经是物理地址，不需要再次转换
-    //     // VM_LOAD_ADDRESS 是虚拟地址
-    //     let offset = kernel_code_phys - VM_LOAD_ADDRESS as isize;
-    //     set_vm_load_offset(offset);
+    let _ = crate::acpi::earlycon::acpi_setup_earlycon();
 
     println!("Rust main.");
 

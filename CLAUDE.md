@@ -100,6 +100,8 @@ ostool run -c ./test-suit/timer/loongarch64.toml qemu -q ./test-suit/timer/qemu-
 
 ### 启动流程
 
+loongarch64 入口不同，使用 uefi，入口在 crates\somehal\src\efi_stub\mod.rs efi_pe_entry 。
+
 1. **引导入口**: `platform/sparreal-rt/src/lib.rs` 的 `main()` 函数（通过 `#[somehal::entry]` 宏）
 2. **内核启动**: 调用 `sparreal_kernel::run_kernel()`
 3. **HAL 初始化**: `sparreal-kernel/src/hal/setup.rs` 的 `start_kernel()`

@@ -71,6 +71,7 @@ pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     } else {
         paddr as *mut u8
     }
+    // paddr as *mut u8
 }
 
 pub fn virt_to_phys(vaddr: *const u8) -> usize {
@@ -83,6 +84,7 @@ pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
     } else {
         paddr as *mut u8
     }
+    // paddr as *mut u8
 }
 
 pub(crate) fn early_init() {

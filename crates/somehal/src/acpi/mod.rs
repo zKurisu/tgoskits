@@ -31,7 +31,14 @@ fn rsdp() -> Option<NonNull<u8>> {
 }
 
 pub fn tables() -> Result<AcpiTables<AcpiHandle>, acpi::AcpiError> {
-    let ptr = rsdp().ok_or(acpi::AcpiError::NoValidRsdp)?;
-    let h = AcpiHandle;
-    unsafe { ::acpi::AcpiTables::from_rsdp(h, ptr.as_ptr() as usize) }
+    unsafe {
+        let rsdp = if RSDP == 0 {
+            return Err(acpi::AcpiError::NoValidRsdp);
+        } else {
+            RSDP
+        };
+
+        let h = AcpiHandle;
+        ::acpi::AcpiTables::from_rsdp(h, rsdp)
+    }
 }
