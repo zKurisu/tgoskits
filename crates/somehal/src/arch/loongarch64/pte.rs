@@ -302,6 +302,10 @@ impl PageTableEntry for Entry {
             mem_attr,
         }
     }
+
+    fn valid(&self) -> bool {
+        self.as_base().is_set(PTE::VALID)
+    }
 }
 
 impl core::fmt::Debug for Entry {

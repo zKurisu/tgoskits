@@ -60,4 +60,6 @@ pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
     /// # 返回
     /// 包含当前页表项所有状态的 PteConfig
     fn to_config(&self, is_dir: bool) -> PteConfig;
+
+    fn valid(&self) -> bool;
 }

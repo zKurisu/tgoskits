@@ -168,6 +168,10 @@ impl PageTableEntry for Entry {
             },
         }
     }
+
+    fn valid(&self) -> bool {
+        self.as_typed().is_set(PTE::VALID)
+    }
 }
 
 impl core::fmt::Debug for Entry {

@@ -85,9 +85,8 @@ where
                 // 创建大页映射
                 let entries = self.as_slice_mut();
                 let pte_ref = &mut entries[index];
-                let existing_config = pte_ref.to_config(true);
-                if existing_config.valid {
-                    return Err(PagingError::mapping_conflict(vaddr, existing_config.paddr));
+                if pte_ref.valid() {
+                    return Err(PagingError::mapping_conflict(vaddr, paddr));
                 }
 
                 let pte_config = PteConfig {
@@ -114,9 +113,8 @@ where
                 // 创建普通页面映射
                 let entries = self.as_slice_mut();
                 let pte_ref = &mut entries[index];
-                let existing_config = pte_ref.to_config(false);
-                if existing_config.valid {
-                    return Err(PagingError::mapping_conflict(vaddr, existing_config.paddr));
+                if pte_ref.valid() {
+                    return Err(PagingError::mapping_conflict(vaddr, paddr));
                 }
 
                 let pte_config = PteConfig {
@@ -141,10 +139,10 @@ where
             // 检查当前页表项状态并决定如何处理
             let allocator = self.allocator.clone();
             let current_pte = self.as_slice()[index];
+            let current_config = current_pte.to_config(true);
 
-            let child_frame = if current_pte.to_config(true).valid {
+            let child_frame = if current_config.valid {
                 // 目录项（config.level > 1）可能有大页
-                let current_config = current_pte.to_config(true);
                 if current_config.huge {
                     return Err(PagingError::hierarchy_error(
                         "Cannot create page table under huge page",

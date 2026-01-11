@@ -1,7 +1,7 @@
 use core::arch::asm;
 
 use num_align::NumAlign;
-use page_table_generic::{MapConfig, MemAttributes, PageTableEntry, PteConfig};
+use page_table_generic::{MapConfig, MemAttributes, PteConfig};
 
 use crate::{
     arch::elx::{flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
