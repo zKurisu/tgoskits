@@ -119,11 +119,11 @@ impl PageTableEntry for Entry {
         // 设置内存属性
         match config.mem_attr {
             MemAttributes::Device => {
-                entry.set_mair_idx(1);
+                entry.set_mair_idx(0);
                 entry.as_typed().modify(PTE::SHAREABLE::OUTER);
             }
             MemAttributes::Normal | MemAttributes::PerCpu => {
-                entry.set_mair_idx(0);
+                entry.set_mair_idx(1);
                 if matches!(config.mem_attr, MemAttributes::PerCpu) {
                     entry.as_typed().modify(PTE::SHAREABLE::NON);
                 } else {
@@ -153,8 +153,8 @@ impl PageTableEntry for Entry {
             huge: !self.as_typed().is_set(PTE::NON_BLOCK),
             mem_attr: {
                 let mut attr = match self.as_typed().read(PTE::MAIR) {
-                    0 => MemAttributes::Normal,
-                    1 => MemAttributes::Device,
+                    0 => MemAttributes::Device,
+                    1 => MemAttributes::Normal,
                     2 => MemAttributes::Uncached,
                     _ => MemAttributes::Normal,
                 };
