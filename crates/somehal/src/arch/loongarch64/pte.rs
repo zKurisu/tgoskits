@@ -162,170 +162,129 @@ impl Debug for EntryDebug {
 }
 
 impl PageTableEntry for Entry {
-    fn new_valid() -> Self {
+    fn from_config(config: page_table_generic::PteConfig) -> Self {
         let mut entry = Self::empty();
-        entry.set_valid(true);
-        entry
-    }
 
-    fn valid(&self) -> bool {
-        self.as_base().is_set(PTE::VALID)
-    }
+        // 设置有效位和存在位
+        if config.valid {
+            entry.as_base().modify(PTE::VALID::SET + PTE::PRESENT::SET);
+        }
 
-    fn paddr(&self, is_dir: bool) -> page_table_generic::PhysAddr {
-        if is_dir {
-            // 目录项：使用 PTE_DIR 格式
-            // 注意：这里读取的是 bits [51:13]，物理地址需要 << 13
-            // ⚠️ 当前定义假设 2MB 大页，实际硬件根据页大小动态提取 [51:log2PageSize]
-            let raw_val = self.as_dir().read(PTE_DIR::PHYS_ADDR);
-            (raw_val << 13).into()
+        // 设置可写标志和脏位
+        if config.writable {
+            entry.as_base().modify(PTE::WRITE::SET + PTE::DIRTY::SET);
+        }
+
+        // 设置可执行标志
+        if config.executable {
+            entry.as_base().modify(PTE::NO_EXEC::CLEAR);
+        } else {
+            entry.as_base().modify(PTE::NO_EXEC::SET);
+        }
+
+        // 设置用户访问标志（PLV3 表示用户态）
+        if config.lower {
+            entry.as_base().modify(PTE::PLV::PLV3);
+        } else {
+            entry.as_base().modify(PTE::PLV::PLV0);
+        }
+
+        // 设置脏位
+        if config.dirty {
+            entry.as_base().modify(PTE::DIRTY::SET);
+        }
+
+        // 设置物理地址（关键：根据 is_dir 选择不同的布局）
+        if config.is_dir {
+            // 目录项：使用 PTE_DIR 格式，bits [51:13]
+            let ppn = (config.paddr.raw() as u64) >> 13;
+            entry.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
+
+            // 设置全局标志（目录项使用 G 位，bit 12）
+            if config.global {
+                entry.as_dir().modify(PTE_DIR::G::SET);
+            }
+
+            // 设置大页标志（仅目录项，H 位 bit 6）
+            if config.huge {
+                entry.as_dir().modify(PTE_DIR::H::SET);
+            }
         } else {
             // 页表项：使用 PTE 格式，bits [51:12]
-            let raw_val = self.as_base().read(PTE::PHYS_ADDR);
-            (raw_val << 12).into()
-        }
-    }
+            let ppn = (config.paddr.raw() as u64) >> 12;
+            entry.as_base().modify(PTE::PHYS_ADDR.val(ppn));
 
-    fn set_paddr(&mut self, paddr: page_table_generic::PhysAddr, is_dir: bool) {
-        if is_dir {
-            // 目录项：使用 PTE_DIR 格式
-            // ⚠️ 当前定义假设 2MB 大页（OFFSET 13）
-            let ppn = (paddr.raw() as u64) >> 13;
-            self.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
-        } else {
-            // 页表项：使用 PTE 格式
-            let ppn = (paddr.raw() as u64) >> 12;
-            self.as_base().modify(PTE::PHYS_ADDR.val(ppn));
-        }
-    }
+            // 设置全局标志（页表项使用 G 位，bit 6）
+            if config.global {
+                entry.as_base().modify(PTE::G::SET);
+            }
 
-    fn set_valid(&mut self, valid: bool) {
-        self.as_base().modify(if valid {
-            PTE::VALID::SET + PTE::PRESENT::SET
-        } else {
-            PTE::VALID::CLEAR + PTE::PRESENT::CLEAR
-        });
-    }
-
-    fn is_huge(&self, is_dir: bool) -> bool {
-        if is_dir {
-            // 目录项：检查 H 位（bit 6）
-            self.as_dir().is_set(PTE_DIR::H)
-        } else {
-            // 页表项：不可能是大页
-            false
-        }
-    }
-
-    fn set_is_huge(&mut self, b: bool, is_dir: bool) {
-        if !is_dir {
-            // 页表项不能设置为大页
-            return;
+            // 页表项不能是大页，huge 标志被忽略
         }
 
-        if b {
-            self.as_dir().modify(PTE_DIR::H::SET);
-        } else {
-            self.as_dir().modify(PTE_DIR::H::CLEAR);
-        }
-    }
-
-    fn is_writable(&self) -> bool {
-        self.as_base().is_set(PTE::WRITE)
-    }
-
-    fn set_writable(&mut self, b: bool) {
-        self.as_base().modify(if b {
-            PTE::WRITE::SET + PTE::DIRTY::SET
-        } else {
-            PTE::WRITE::CLEAR
-        });
-    }
-
-    fn is_executable(&self) -> bool {
-        !self.as_base().is_set(PTE::NO_EXEC)
-    }
-
-    fn set_executable(&mut self, b: bool) {
-        self.as_base().modify(if b {
-            PTE::NO_EXEC::CLEAR
-        } else {
-            PTE::NO_EXEC::SET
-        });
-    }
-
-    fn is_lower_access(&self) -> bool {
-        matches!(
-            self.as_base().read_as_enum(PTE::PLV),
-            Some(PTE::PLV::Value::PLV3)
-        )
-    }
-
-    fn set_lower_access(&mut self, b: bool) {
-        let plv = if b { PTE::PLV::PLV3 } else { PTE::PLV::PLV0 }; // PLV3 或 PLV0
-        self.as_base().modify(plv);
-    }
-
-    fn is_global(&self, is_dir: bool) -> bool {
-        if is_dir {
-            // 目录项：检查 HGLOBAL（bit 12），且必须是 H=1 的大页
-            self.as_dir().is_set(PTE_DIR::G)
-        } else {
-            // 页表项：检查 GLOBAL（bit 6）
-            self.as_base().is_set(PTE::G)
-        }
-    }
-
-    fn set_global(&mut self, b: bool, is_dir: bool) {
-        if is_dir {
-            self.as_dir().modify(if b {
-                PTE_DIR::G::SET
-            } else {
-                PTE_DIR::G::CLEAR
-            });
-        } else {
-            self.as_base()
-                .modify(if b { PTE::G::SET } else { PTE::G::CLEAR });
-        }
-    }
-
-    fn is_accessed(&self) -> bool {
-        // LoongArch64 无硬件 accessed 位
-        false
-    }
-
-    fn set_accessed(&mut self, _b: bool) {
-        // LoongArch64 不支持软件 accessed 位
-    }
-
-    fn is_dirty(&self) -> bool {
-        self.as_base().is_set(PTE::DIRTY)
-    }
-
-    fn set_dirty(&mut self, b: bool) {
-        self.as_base().modify(if b {
-            PTE::DIRTY::SET
-        } else {
-            PTE::DIRTY::CLEAR
-        });
-    }
-
-    fn mem_attr(&self) -> MemAttributes {
-        match self.as_base().read_as_enum(PTE::CACHE) {
-            Some(PTE::CACHE::Value::SUC) => MemAttributes::Device,
-            Some(PTE::CACHE::Value::CC) => MemAttributes::Normal,
-            Some(PTE::CACHE::Value::WUC) => MemAttributes::Uncached,
-            _ => MemAttributes::Normal,
-        }
-    }
-
-    fn set_mem_attr(&mut self, attr: MemAttributes) {
-        let cache = match attr {
+        // 设置内存属性
+        let cache = match config.mem_attr {
             MemAttributes::Device => 0b00,                         // SUC
             MemAttributes::Normal | MemAttributes::PerCpu => 0b01, // CC
             MemAttributes::Uncached => 0b10,                       // WUC
         };
-        self.as_base().modify(PTE::CACHE.val(cache));
+        entry.as_base().modify(PTE::CACHE.val(cache));
+
+        entry
+    }
+
+    fn to_config(&self, is_dir: bool) -> page_table_generic::PteConfig {
+        let valid = self.as_base().is_set(PTE::VALID);
+
+        // 获取物理地址（关键：根据 is_dir 选择不同的布局）
+        let paddr = if is_dir {
+            // 目录项：使用 PTE_DIR 格式，bits [51:13]
+            let raw_val = self.as_dir().read(PTE_DIR::PHYS_ADDR);
+            (raw_val << 13) as usize
+        } else {
+            // 页表项：使用 PTE 格式，bits [51:12]
+            let raw_val = self.as_base().read(PTE::PHYS_ADDR);
+            (raw_val << 12) as usize
+        };
+
+        // 检查是否为大页（仅目录项）
+        let huge = if is_dir {
+            self.as_dir().is_set(PTE_DIR::H)
+        } else {
+            false
+        };
+
+        // 检查全局标志（根据 is_dir 选择不同的位）
+        let global = if is_dir {
+            self.as_dir().is_set(PTE_DIR::G)
+        } else {
+            self.as_base().is_set(PTE::G)
+        };
+
+        // 内存属性
+        let mem_attr = match self.as_base().read_as_enum(PTE::CACHE) {
+            Some(PTE::CACHE::Value::SUC) => MemAttributes::Device,
+            Some(PTE::CACHE::Value::CC) => MemAttributes::Normal,
+            Some(PTE::CACHE::Value::WUC) => MemAttributes::Uncached,
+            _ => MemAttributes::Normal,
+        };
+
+        page_table_generic::PteConfig {
+            paddr: paddr.into(),
+            valid,
+            read: valid, // LoongArch64: 假设有效项可读
+            writable: self.as_base().is_set(PTE::WRITE),
+            executable: !self.as_base().is_set(PTE::NO_EXEC),
+            lower: matches!(
+                self.as_base().read_as_enum(PTE::PLV),
+                Some(PTE::PLV::Value::PLV3)
+            ),
+            dirty: self.as_base().is_set(PTE::DIRTY),
+            global,
+            is_dir,
+            huge,
+            mem_attr,
+        }
     }
 }
 

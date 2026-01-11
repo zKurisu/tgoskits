@@ -31,7 +31,7 @@ fn test_huge_page_offset_calculation() {
     .unwrap();
 
     // 验证大页映射存在
-    let has_huge = pg.walk_valid().any(|p| p.pte.is_huge());
+    let has_huge = pg.walk_valid().any(|p| p.pte.to_config(false).huge);
     assert!(has_huge, "应该有大页映射");
 
     // 测试大页内不同偏移的地址翻译
@@ -41,7 +41,7 @@ fn test_huge_page_offset_calculation() {
 
         let (translated_paddr, pte) = pg.translate(test_vaddr.into()).unwrap();
 
-        assert!(pte.is_huge(), "应该是大页映射");
+        assert!(pte.to_config(false).huge, "应该是大页映射");
         assert_eq!(
             translated_paddr.raw(),
             expected_paddr,
@@ -90,13 +90,13 @@ fn test_multi_level_huge_pages() {
 
     // 测试Level 2大页的翻译
     let (paddr, pte) = pg.translate((vaddr1 + 0x80000).into()).unwrap();
-    if pte.is_huge() {
+    if pte.to_config(false).huge {
         assert_eq!(paddr.raw(), paddr1 + 0x80000, "Level 2大页偏移计算错误");
     }
 
     // 测试Level 3大页的翻译
     let (paddr, pte) = pg.translate((vaddr2 + 16 * MB).into()).unwrap();
-    if pte.is_huge() {
+    if pte.to_config(false).huge {
         assert_eq!(paddr.raw(), paddr2 + 16 * MB, "Level 3大页偏移计算错误");
     }
 
@@ -218,7 +218,10 @@ fn test_unmap_mixed_entries() {
 #[test]
 fn test_mem_config_implementation() {
     let mut pte = PteImpl::new();
-    pte.set_valid(true);
+    pte = PteImpl::from_config(PteConfig {
+        valid: true,
+        ..pte.to_config(false)
+    });
 
     // 测试设置和获取MemConfig
     let config = MemConfig {
@@ -347,13 +350,16 @@ fn test_mixed_huge_and_normal_pages() {
 
     // 验证大页翻译
     let (paddr1, pte1) = pg.translate(0x100000.into()).unwrap();
-    if pte1.is_huge() {
+    if pte1.to_config(false).huge {
         assert_eq!(paddr1.raw(), 0x100000, "大页偏移应该正确");
     }
 
     // 验证普通页翻译
     let (paddr2, pte2) = pg.translate((2 * MB + 0x1000).into()).unwrap();
-    assert!(!pte2.is_huge() || pte2.is_huge(), "可能是大页或普通页");
+    assert!(
+        !pte2.to_config(false).huge || pte2.to_config(false).huge,
+        "可能是大页或普通页"
+    );
     assert_eq!(paddr2.raw(), 2 * MB + 0x1000, "普通页偏移应该正确");
 
     println!("✅ 混合大页和普通页测试通过！");

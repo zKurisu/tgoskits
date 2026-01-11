@@ -10,7 +10,7 @@ use core::arch::naked_asm;
 use kernutil::StaticCell;
 use loongArch64::register::{crmd, stlbps, tlbidx, tlbrehi};
 use num_align::NumAlign;
-use page_table_generic::{MapConfig, MemAttributes, PageTableEntry, TableGeneric, VirtAddr};
+use page_table_generic::{MapConfig, MemAttributes, PageTableEntry, PteConfig, TableGeneric, VirtAddr};
 use uefi::table::cfg;
 
 // 导入 tock-registers 风格的页表项
@@ -722,11 +722,15 @@ pub fn relocate_kernel_to_vm_code() -> ! {
 
     let mut table = crate::mem::mmu::new_boot_table();
 
-    let mut pte = Entry::new_valid();
-    pte.set_writable(true);
-    pte.set_executable(true);
-    pte.set_mem_attr(MemAttributes::Normal);
-    pte.set_global(true, false); // 设置全局位（页表项，is_dir = false）
+    let pte = Entry::from_config(PteConfig {
+        valid: true,
+        read: true,
+        writable: true,
+        executable: true,
+        mem_attr: MemAttributes::Normal,
+        global: true,
+        ..Default::default()
+    });
 
     println!("Page table entry flags: {:?}", pte);
 
@@ -868,7 +872,6 @@ pub fn relocate_kernel_to_vm_code() -> ! {
     println!("Enabling MMU...");
     // 配置页大小并启用 MMU
     setup();
-
 
     // 打印寄存器状态
     print_registers();

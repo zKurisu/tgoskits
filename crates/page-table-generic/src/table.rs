@@ -1,7 +1,8 @@
 use core::ops::{Deref, DerefMut};
 
 use crate::{
-    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, TableGeneric, VirtAddr,
+    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableGeneric,
+    VirtAddr,
     frame::Frame,
     map::{MapConfig, MapRecursiveConfig, UnmapConfig, UnmapRecursiveConfig},
     walk::{PageTableWalker, WalkConfig},
@@ -209,13 +210,15 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
             start_vaddr,
             end_vaddr,
         };
-        PageTableWalker::new(self, config).filter(|p| p.pte.valid())
+        PageTableWalker::new(self, config).filter(|p| p.pte.to_config(false).valid)
     }
 
     /// 遍历所有有效的最终映射页表项（过滤掉无效项和中间级别的页表指针）
     pub fn walk_valid(&self) -> impl Iterator<Item = crate::walk::PteInfo<T::P>> + '_ {
-        self.walk(0.into(), usize::MAX.into())
-            .filter(|p| p.pte.valid() && p.is_final_mapping)
+        self.walk(0.into(), usize::MAX.into()).filter(|p| {
+            let config = p.pte.to_config(false);
+            config.valid && p.is_final_mapping
+        })
     }
 
     /// 验证映射配置的有效性
@@ -323,20 +326,22 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
             .root
             .translate_recursive_with_level(vaddr, Frame::<T, A>::PT_LEVEL)?;
 
+        let pte_config = pte.to_config(level > 1);
+
         // 根据页表项类型计算正确的偏移
-        let (phys_addr, _) = if pte.is_huge(level > 1) {
+        let (phys_addr, _) = if pte_config.huge {
             // 大页映射：需要使用实际级别的大小来计算偏移
             let level_size = Frame::<T, A>::level_size(level);
             let offset_in_page = vaddr.raw() % level_size;
             (
-                PhysAddr::new(pte.paddr(level > 1).raw() + offset_in_page),
+                PhysAddr::new(pte_config.paddr.raw() + offset_in_page),
                 level_size,
             )
         } else {
             // 普通页面映射：使用页面大小
             let offset_in_page = vaddr.raw() % T::PAGE_SIZE;
             (
-                PhysAddr::new(pte.paddr(level > 1).raw() + offset_in_page),
+                PhysAddr::new(pte_config.paddr.raw() + offset_in_page),
                 T::PAGE_SIZE,
             )
         };

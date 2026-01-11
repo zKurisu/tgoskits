@@ -1,4 +1,6 @@
-use crate::{FrameAllocator, PageTableEntry, PageTableRef, TableGeneric, VirtAddr, frame::Frame};
+use crate::{
+    FrameAllocator, PageTableEntry, PageTableRef, PteConfig, TableGeneric, VirtAddr, frame::Frame,
+};
 
 use heapless::Vec;
 
@@ -117,13 +119,13 @@ impl<'a, T: TableGeneric, A: FrameAllocator> PageTableWalker<'a, T, A> {
             // - 有效且是大页：是最终映射
             // - 有效且在叶子级别（level == 1）：是最终映射
             // - 有效但在中间级别且不是大页：不是最终映射（页表指针）
-            let is_final_mapping =
-                pte.valid() && (pte.is_huge(state.level > 1) || state.level == 1);
+            let pte_config = pte.to_config(state.level > 1);
+            let is_final_mapping = pte_config.valid && (pte_config.huge || state.level == 1);
 
             // 如果是有效的子页表项（中间级别的页表指针），需要深入下一级
-            if pte.valid() && !pte.is_huge(state.level > 1) && state.level > 1 {
+            if pte_config.valid && !pte_config.huge && state.level > 1 {
                 let child_frame =
-                    Frame::from_paddr(pte.paddr(state.level > 1), state.frame.allocator.clone());
+                    Frame::from_paddr(pte_config.paddr, state.frame.allocator.clone());
 
                 // 计算子页表的基地址：当前条目的虚拟地址就是子页表覆盖的地址范围起点
                 let child_base_vaddr = current_vaddr;

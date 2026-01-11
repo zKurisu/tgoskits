@@ -34,10 +34,11 @@ cargo install ostool
 修改完代码后，确保可以编译通过，编译命令
 
 ```bash
-
+# 项目根目录
 # aarch64
 ostool build -c ./build-config/aarch64.toml
 
+# 项目根目录
 # loongarch64
 ostool build -c ./build-config/loongarch64.toml
 ```

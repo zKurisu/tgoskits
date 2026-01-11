@@ -103,8 +103,8 @@ fn test_loongarch64_kernel_code_mapping() {
         "起始地址翻译: VA={:#x} -> PA={:#x}, Huge={}, Valid={}",
         kernel_virt_start,
         translated_paddr.raw(),
-        pte.is_huge(),
-        pte.valid()
+        pte.to_config(false).huge,
+        pte.to_config(false).valid
     );
 
     assert_eq!(
@@ -114,7 +114,7 @@ fn test_loongarch64_kernel_code_mapping() {
     );
 
     // 验证大页映射（如果使用了）
-    if pte.is_huge() {
+    if pte.to_config(false).huge {
         println!("✓ 使用了 2MB 巨页映射");
     }
 
@@ -186,8 +186,8 @@ fn test_loongarch64_boundary_conditions() {
                 "  VA={:#x} -> PA={:#x}, Huge={}, Valid={}",
                 base_vaddr,
                 pa.raw(),
-                pte.is_huge(),
-                pte.valid()
+                pte.to_config(false).huge,
+                pte.to_config(false).valid
             );
         }
     }
@@ -306,7 +306,7 @@ fn test_loongarch64_unaligned_mapping() {
     if let Ok((_, pte)) = pg.translate(kernel_virt_start.into()) {
         println!(
             "使用的映射类型: {}",
-            if pte.is_huge() {
+            if pte.to_config(false).huge {
                 "大页（2MB）"
             } else {
                 "普通页（4KB）"
@@ -369,7 +369,7 @@ fn test_loongarch64_large_region_mapping() {
     // 验证是否使用了大页
     let mut huge_page_count = 0;
     for entry in pg.walk_valid() {
-        if entry.pte.is_huge() {
+        if entry.pte.to_config(false).huge {
             huge_page_count += 1;
         }
     }

@@ -33,8 +33,12 @@ fn test_translate_basic() {
 
     // 测试新的translate方法返回页表项
     let (_, pte) = pg.translate(0x1000usize.into()).unwrap();
-    assert!(pte.valid(), "翻译的页表项应该有效");
-    assert_eq!(pte.paddr(), 0x2000usize.into(), "页表项的物理地址应该正确");
+    assert!(pte.to_config(false).valid, "翻译的页表项应该有效");
+    assert_eq!(
+        pte.to_config(false).paddr,
+        0x2000usize.into(),
+        "页表项的物理地址应该正确"
+    );
 }
 
 #[test]
@@ -80,15 +84,15 @@ fn test_translate_huge_page() {
 
         // 同时测试新的translate方法返回页表项
         let (_, pte) = pg.translate((vaddr as usize).into()).unwrap();
-        assert!(pte.valid(), "大页页表项应该有效");
-        assert!(pte.is_huge(), "大页页表项应该设置huge标志");
+        assert!(pte.to_config(false).valid, "大页页表项应该有效");
+        assert!(pte.to_config(false).huge, "大页页表项应该设置huge标志");
 
         // 调试：查看PTE中的物理地址
         if vaddr == 0x1000 {
             println!(
                 "DEBUG: vaddr=0x{:x}, PTE paddr=0x{:x}",
                 vaddr,
-                pte.paddr().raw()
+                pte.to_config(false).paddr.raw()
             );
         }
     }
@@ -151,11 +155,11 @@ fn test_translate_multiple_mappings() {
     let (_, pte) = pg.translate(0x200000usize.into()).unwrap();
 
     // 验证翻译结果的正确性
-    if pte.is_huge() {
-        let expected = pte.paddr().raw() + (0x200000 % (2 * MB));
+    if pte.to_config(false).huge {
+        let expected = pte.to_config(false).paddr.raw() + (0x200000 % (2 * MB));
         assert_eq!(result.raw(), expected);
     } else {
-        let expected = pte.paddr().raw() + (0x200000 % 0x1000);
+        let expected = pte.to_config(false).paddr.raw() + (0x200000 % 0x1000);
         assert_eq!(result.raw(), expected);
     }
 
@@ -164,20 +168,20 @@ fn test_translate_multiple_mappings() {
     let (_, pte) = pg.translate(0x250000usize.into()).unwrap();
 
     // 根据PTE类型验证翻译结果
-    if pte.is_huge() {
-        let expected = pte.paddr().raw() + (0x250000 % (2 * MB));
+    if pte.to_config(false).huge {
+        let expected = pte.to_config(false).paddr.raw() + (0x250000 % (2 * MB));
         assert_eq!(result.raw(), expected);
     } else {
-        let expected = pte.paddr().raw() + (0x250000 % 0x1000);
+        let expected = pte.to_config(false).paddr.raw() + (0x250000 % 0x1000);
         assert_eq!(result.raw(), expected);
     }
 
     // 测试新的translate方法返回页表项
     let (_, pte1) = pg.translate(0x1000usize.into()).unwrap();
-    assert!(pte1.valid() && !pte1.is_huge());
+    assert!(pte1.to_config(false).valid && !pte1.to_config(false).huge);
 
     let (_, pte2) = pg.translate(0x200000usize.into()).unwrap();
-    assert!(pte2.valid());
+    assert!(pte2.to_config(false).valid);
     // 注意：是否为大页取决于实际实现，不强制要求
 
     // 测试未映射的地址
@@ -241,7 +245,10 @@ fn test_translate_complex_layout() {
 
         // 测试页表项
         let (_, pte) = pg.translate(vaddr.into()).unwrap();
-        assert!(pte.valid() && pte.is_huge(), "大页区域应该返回大页页表项");
+        assert!(
+            pte.to_config(false).valid && pte.to_config(false).huge,
+            "大页区域应该返回大页页表项"
+        );
     }
 
     // 测试额外的3个4KB页面
@@ -253,9 +260,9 @@ fn test_translate_complex_layout() {
         let (_, pte) = pg.translate(vaddr.into()).unwrap();
 
         // 验证翻译的正确性，而不是假设特定的映射类型
-        if pte.is_huge() {
+        if pte.to_config(false).huge {
             // 大页映射：验证大页偏移计算
-            let expected = pte.paddr().raw() + (vaddr % (2 * MB));
+            let expected = pte.to_config(false).paddr.raw() + (vaddr % (2 * MB));
             assert_eq!(
                 translated.raw(),
                 expected,
@@ -266,7 +273,7 @@ fn test_translate_complex_layout() {
             );
         } else {
             // 普通页面映射：验证页面偏移计算
-            let expected = pte.paddr().raw() + (vaddr % 0x1000);
+            let expected = pte.to_config(false).paddr.raw() + (vaddr % 0x1000);
             assert_eq!(
                 translated.raw(),
                 expected,
@@ -354,6 +361,6 @@ fn test_translate_performance() {
 
         // 同时测试新的translate方法
         let (_, pte) = pg.translate(vaddr.into()).unwrap();
-        assert!(pte.valid(), "页表项应该有效");
+        assert!(pte.to_config(false).valid, "页表项应该有效");
     }
 }

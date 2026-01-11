@@ -1,7 +1,8 @@
 use alloc::boxed::Box;
 use core::time::Duration;
 
-use somehal::{MemConfig, irq_handler, mem::PageTableEntry};
+use somehal::{MemConfig, irq_handler, mem::PageTableEntry, mem::PteConfig};
+use sparreal_kernel::hal::al::AccessFlags;
 use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KernelAllocator};
 
 struct InitImpl;
@@ -96,15 +97,14 @@ impl PageTable for PageTableImpl {
         settings: MemConfig,
         flush: bool,
     ) -> Result<(), PagingError> {
-        let mut pte = somehal::mem::mmu::ArchPte::new_valid();
-
-        pte.set_mem_attr(settings.attrs);
-        if settings.access.contains(AccessFlags::WRITE) {
-            pte.set_writable(true);
-        }
-        if settings.access.contains(AccessFlags::EXECUTE) {
-            pte.set_executable(true);
-        }
+        let pte = somehal::mem::mmu::ArchPte::from_config(PteConfig {
+            valid: true,
+            read: true,
+            writable: settings.access.contains(AccessFlags::WRITE),
+            executable: settings.access.contains(AccessFlags::EXECUTE),
+            mem_attr: settings.attrs,
+            ..Default::default()
+        });
 
         self.0.map(&somehal::mem::MapConfig {
             vaddr: virt_start.raw().into(),

@@ -41,63 +41,23 @@ pub trait TableGeneric: Sync + Send + Clone + Copy + 'static {
 }
 
 pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
-    fn new_valid() -> Self;
-
-    fn valid(&self) -> bool;
-    fn set_valid(&mut self, valid: bool);
-
-    /// 获取物理地址
+    /// 从 PteConfig 创建页表项
     ///
     /// # 参数
-    /// - `is_dir`: 是否为目录项（影响地址布局）
-    fn paddr(&self, is_dir: bool) -> PhysAddr;
+    /// - `config`: 包含所有页表项配置的结构
+    ///
+    /// # 返回
+    /// 新的页表项实例
+    fn from_config(config: PteConfig) -> Self;
 
-    /// 设置物理地址
+    /// 将页表项转换为 PteConfig
     ///
     /// # 参数
-    /// - `paddr`: 物理地址
-    /// - `is_dir`: 是否为目录项
-    ///   - true（目录项）：可能包含大页，使用 PTE_DIR 格式
-    ///   - false（页表项）：基本页，使用 PTE 格式
-    fn set_paddr(&mut self, paddr: PhysAddr, is_dir: bool);
-
-    /// 检查是否为大页映射
+    /// - `is_dir`: 是否为目录项（影响物理地址布局解析）
+    ///   - true: 目录项（可能包含大页映射或子页表指针）
+    ///   - false: 页表项（叶子级别，基本页映射）
     ///
-    /// # 参数
-    /// - `is_dir`: 是否为目录项（只有目录项才能是大页）
-    fn is_huge(&self, is_dir: bool) -> bool;
-    /// 设置大页标志
-    ///
-    /// # 参数
-    /// - `is_dir`: 是否为目录项
-    fn set_is_huge(&mut self, b: bool, is_dir: bool);
-
-    fn is_writable(&self) -> bool;
-    fn set_writable(&mut self, b: bool);
-
-    fn is_executable(&self) -> bool;
-    fn set_executable(&mut self, b: bool);
-
-    fn is_lower_access(&self) -> bool;
-    fn set_lower_access(&mut self, b: bool);
-
-    /// 检查是否为全局映射
-    ///
-    /// # 参数
-    /// - `is_dir`: 是否为目录项（PMD/PUD/PGD）
-    fn is_global(&self, is_dir: bool) -> bool;
-    /// 设置全局映射标志
-    ///
-    /// # 参数
-    /// - `is_dir`: 是否为目录项
-    fn set_global(&mut self, b: bool, is_dir: bool);
-
-    fn is_accessed(&self) -> bool;
-    fn set_accessed(&mut self, b: bool);
-
-    fn is_dirty(&self) -> bool;
-    fn set_dirty(&mut self, b: bool);
-
-    fn mem_attr(&self) -> MemAttributes;
-    fn set_mem_attr(&mut self, attr: MemAttributes);
+    /// # 返回
+    /// 包含当前页表项所有状态的 PteConfig
+    fn to_config(&self, is_dir: bool) -> PteConfig;
 }

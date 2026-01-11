@@ -13,12 +13,18 @@ use mocks::*;
 #[test]
 fn test_pte() {
     let mut want = PteImpl(0);
-    want.set_valid(true);
-    assert!(want.valid());
+    want = PteImpl::from_config(PteConfig {
+        valid: true,
+        ..want.to_config(false)
+    });
+    assert!(want.to_config(false).valid);
 
     let addr = PhysAddr::from(0xff123456000usize);
-    want.set_paddr(addr);
-    assert_eq!(want.paddr(), addr);
+    want = PteImpl::from_config(PteConfig {
+        paddr: addr,
+        ..want.to_config(false)
+    });
+    assert_eq!(want.to_config(false).paddr, addr);
 }
 
 fn test_high<T: TableGeneric, A: FrameAllocator>(
@@ -73,8 +79,8 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
     }
@@ -102,16 +108,24 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
         );
 
         // 验证页表项是有效的
-        assert!(pte.valid(), "{} 页表项应该是有效的", test_name);
+        assert!(
+            pte.to_config(false).valid,
+            "{} 页表项应该是有效的",
+            test_name
+        );
 
         // 验证不是大页（因为allow_huge=false且页面大小为4KB）
-        assert!(!pte.is_huge(), "{} 页表项不应该是大页", test_name);
+        assert!(
+            !pte.to_config(false).huge,
+            "{} 页表项不应该是大页",
+            test_name
+        );
 
         // 物理地址偏移验证：由于内存分配的随机性，我们只验证相对关系
 
         // 注意：由于内存分配的随机性，我们只验证物理地址的偏移部分
         // 实际的物理基地址可能不同，但偏移应该是固定的
-        let actual_paddr = pte.paddr();
+        let actual_paddr = pte.to_config(false).paddr;
         let actual_offset = actual_paddr.raw() % 0x1000; // 页内偏移
         assert_eq!(
             actual_offset, 0,
@@ -122,7 +136,7 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
         // 验证两个页表项的物理地址相差0x1000（4KB）
         if i > 0 {
             let prev_pte = &valid_entries[i - 1].1;
-            let prev_paddr = prev_pte.paddr();
+            let prev_paddr = prev_pte.to_config(false).paddr;
             let addr_diff = actual_paddr.raw().saturating_sub(prev_paddr.raw());
             assert_eq!(
                 addr_diff, 0x1000,
@@ -138,8 +152,8 @@ fn test_high<T: TableGeneric, A: FrameAllocator>(
             vaddr,
             actual_paddr,
             level,
-            pte.valid(),
-            pte.is_huge()
+            pte.to_config(false).valid,
+            pte.to_config(false).huge
         );
     }
 
@@ -228,14 +242,19 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
 
         if p.is_final_mapping {
-            mappings.push((p.vaddr.raw(), p.pte.paddr().raw(), p.pte.is_huge(), p.level));
-            if p.pte.is_huge() {
+            mappings.push((
+                p.vaddr.raw(),
+                p.pte.to_config(false).paddr.raw(),
+                p.pte.to_config(false).huge,
+                p.level,
+            ));
+            if p.pte.to_config(false).huge {
                 huge_pages += 1;
             } else {
                 normal_pages += 1;
@@ -307,14 +326,19 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
 
         if p.is_final_mapping {
-            mappings.push((p.vaddr.raw(), p.pte.paddr().raw(), p.pte.is_huge(), p.level));
-            if p.pte.is_huge() {
+            mappings.push((
+                p.vaddr.raw(),
+                p.pte.to_config(false).paddr.raw(),
+                p.pte.to_config(false).huge,
+                p.level,
+            ));
+            if p.pte.to_config(false).huge {
                 huge_pages += 1;
             } else {
                 normal_pages += 1;
@@ -430,14 +454,19 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
 
         if p.is_final_mapping {
-            mappings.push((p.vaddr.raw(), p.pte.paddr().raw(), p.pte.is_huge(), p.level));
-            if p.pte.is_huge() {
+            mappings.push((
+                p.vaddr.raw(),
+                p.pte.to_config(false).paddr.raw(),
+                p.pte.to_config(false).huge,
+                p.level,
+            ));
+            if p.pte.to_config(false).huge {
                 huge_pages += 1;
             } else {
                 normal_pages += 1;
@@ -546,7 +575,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc
             "✓ 起始地址翻译正确: VA {:#x} -> PA {:#x}, Huge={}",
             start_addr,
             trans_pa.raw(),
-            trans_pte.is_huge()
+            trans_pte.to_config(false).huge
         );
     }
 
@@ -572,7 +601,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc
             "✓ 中间地址翻译正确: VA {:#x} -> PA {:#x}, Huge={}",
             mid_addr,
             trans_pa.raw(),
-            trans_pte.is_huge()
+            trans_pte.to_config(false).huge
         );
     }
 
@@ -598,7 +627,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc
             "✓ 结束地址翻译正确: VA {:#x} -> PA {:#x}, Huge={}",
             last_addr,
             trans_pa.raw(),
-            trans_pte.is_huge()
+            trans_pte.to_config(false).huge
         );
     }
 
@@ -669,14 +698,19 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
 
         if p.is_final_mapping {
-            mappings.push((p.vaddr.raw(), p.pte.paddr().raw(), p.pte.is_huge(), p.level));
-            if p.pte.is_huge() {
+            mappings.push((
+                p.vaddr.raw(),
+                p.pte.to_config(false).paddr.raw(),
+                p.pte.to_config(false).huge,
+                p.level,
+            ));
+            if p.pte.to_config(false).huge {
                 huge_pages += 1;
             } else {
                 normal_pages += 1;
@@ -869,7 +903,7 @@ fn test_unmap_huge_pages() {
     assert!(mapped_count >= 1, "应该至少有1个大页映射");
 
     // 检查是否真的有大页
-    let has_huge = pg.walk_valid().any(|p| p.pte.is_huge());
+    let has_huge = pg.walk_valid().any(|p| p.pte.to_config(false).huge);
     assert!(has_huge, "应该有大页映射");
 
     println!("=== 大页取消映射前的状态 ===");
@@ -879,7 +913,7 @@ fn test_unmap_huge_pages() {
             p.level,
             p.vaddr,
             p.pte,
-            p.pte.is_huge()
+            p.pte.to_config(false).huge
         );
     }
 
@@ -893,7 +927,7 @@ fn test_unmap_huge_pages() {
             p.level,
             p.vaddr,
             p.pte,
-            p.pte.is_huge()
+            p.pte.to_config(false).huge
         );
     }
 

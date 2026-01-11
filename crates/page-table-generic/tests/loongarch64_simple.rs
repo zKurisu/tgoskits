@@ -78,7 +78,7 @@ fn test_loongarch64_kernel_code_mapping() {
         "起始地址翻译: VA={:#x} -> PA={:#x}, Huge={}",
         kernel_virt_start,
         translated_paddr.raw(),
-        pte.is_huge()
+        pte.to_config(false).huge
     );
 
     assert_eq!(

@@ -1,5 +1,6 @@
 use crate::{
-    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, TableGeneric, VirtAddr,
+    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableGeneric,
+    VirtAddr,
 };
 
 /// 页表帧，代表一个物理页面上的页表
@@ -55,7 +56,8 @@ where
 
     /// 从PTE创建子Frame（用于遍历子页表）
     pub fn from_pte(pte: &T::P, level: usize, allocator: A) -> Self {
-        Self::from_paddr(pte.paddr(level > 1), allocator)
+        let config = pte.to_config(level > 1);
+        Self::from_paddr(config.paddr, allocator)
     }
 
     /// 获取页表项的可变切片
@@ -168,12 +170,8 @@ where
             let entry_info = {
                 let entries = self.as_slice();
                 if i < entries.len() {
-                    let entry = &entries[i];
-                    (
-                        entry.valid(),
-                        entry.is_huge(level > 1),
-                        entry.paddr(level > 1),
-                    )
+                    let config = entries[i].to_config(level > 1);
+                    (config.valid, config.huge, config.paddr)
                 } else {
                     (false, false, crate::PhysAddr::new(0))
                 }
@@ -196,7 +194,11 @@ where
 
                 // 子页表帧已释放，清除PTE
                 let entries_mut = self.as_slice_mut();
-                entries_mut[i].set_valid(false);
+                let invalid_config = PteConfig {
+                    valid: false,
+                    ..Default::default()
+                };
+                entries_mut[i] = T::P::from_config(invalid_config);
             }
         }
     }
@@ -237,12 +239,13 @@ where
         let pte = entries[index];
 
         // 检查页表项是否有效
-        if !pte.valid() {
+        let config = pte.to_config(level > 1);
+        if !config.valid {
             return Err(PagingError::not_mapped());
         }
 
         // 如果是大页映射或叶子级别，直接返回页表项及其级别
-        if pte.is_huge(level > 1) || level == 1 {
+        if config.huge || level == 1 {
             return Ok((pte, level));
         }
 
@@ -275,15 +278,20 @@ where
 
         let entries = self.as_slice();
         let entry = &entries[index];
+        let config = entry.to_config(level > 1);
 
-        if entry.valid() && !entry.is_huge(level > 1) {
+        if config.valid && !config.huge {
             // 递归释放子帧（子帧的级别是 level - 1）
             let mut child_frame = Frame::<T, A>::from_pte(entry, level, self.allocator.clone());
             child_frame.deallocate_recursive(level - 1);
 
             // 将当前PTE设为invalid
             let entries_mut = self.as_slice_mut();
-            entries_mut[index].set_valid(false);
+            let invalid_config = PteConfig {
+                valid: false,
+                ..Default::default()
+            };
+            entries_mut[index] = T::P::from_config(invalid_config);
 
             true
         } else {

@@ -1,7 +1,7 @@
 use core::arch::asm;
 
 use num_align::NumAlign;
-use page_table_generic::{MapConfig, MemAttributes, PageTableEntry};
+use page_table_generic::{MapConfig, MemAttributes, PageTableEntry, PteConfig};
 
 use crate::{
     arch::elx::{flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
@@ -25,10 +25,14 @@ pub fn enable_mmu() -> ! {
 
     let mut table = crate::mem::mmu::new_boot_table();
 
-    let mut pte = Entry::new_valid();
-    pte.set_writable(true);
-    pte.set_executable(true);
-    pte.set_mem_attr(MemAttributes::Normal);
+    let pte = Entry::from_config(PteConfig {
+        valid: true,
+        read: true,
+        writable: true,
+        executable: true,
+        mem_attr: MemAttributes::Normal,
+        ..Default::default()
+    });
 
     for memory in crate::fdt::memories() {
         let start = memory.start;
@@ -67,10 +71,14 @@ pub fn enable_mmu() -> ! {
     if debug_base != 0 {
         let start = debug_base.align_down(page_size());
         let size = page_size();
-        let mut pte = Entry::new_valid();
-        pte.set_writable(true);
-        pte.set_executable(false);
-        pte.set_mem_attr(MemAttributes::Device);
+        let pte = Entry::from_config(PteConfig {
+            valid: true,
+            read: true,
+            writable: true,
+            executable: false,
+            mem_attr: MemAttributes::Device,
+            ..Default::default()
+        });
 
         print_mapping("Debug serial", __va(start) as _, start, size);
 

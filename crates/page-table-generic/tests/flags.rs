@@ -8,64 +8,64 @@ use mocks::*;
 fn test_pte() {
     let pte = PteImpl::new();
     println!("PTE: {:?}", pte);
-    assert!(!pte.valid());
-    assert!(!pte.is_huge());
+    assert!(!pte.to_config(false).valid);
+    assert!(!pte.to_config(false).huge);
     println!("✓ Empty PTE test passed");
 }
 
 #[test]
 fn test_pte_read_only() {
     let pte = PteImpl::read_only();
-    assert!(pte.valid());
+    assert!(pte.to_config(false).valid);
     assert!(pte.is_readable());
     assert!(!pte.is_writable());
     assert!(!pte.is_user_executable());
     assert!(!pte.is_user_accessible());
     assert!(!pte.is_privilege_executable());
     assert_eq!(pte.cache_mode(), 1); // normal cache
-    assert!(!pte.is_huge());
+    assert!(!pte.to_config(false).huge);
     println!("✓ ReadOnly PTE test passed");
 }
 
 #[test]
 fn test_pte_user_mode() {
     let pte = PteImpl::user_mode();
-    assert!(pte.valid());
+    assert!(pte.to_config(false).valid);
     assert!(pte.is_readable());
     assert!(pte.is_writable());
     assert!(pte.is_user_executable());
     assert!(pte.is_user_accessible());
     assert!(!pte.is_privilege_executable());
     assert_eq!(pte.cache_mode(), 1); // normal cache
-    assert!(!pte.is_huge());
+    assert!(!pte.to_config(false).huge);
     println!("✓ UserMode PTE test passed");
 }
 
 #[test]
 fn test_pte_kernel_mode() {
     let pte = PteImpl::kernel_mode();
-    assert!(pte.valid());
+    assert!(pte.to_config(false).valid);
     assert!(pte.is_readable());
     assert!(pte.is_writable());
     assert!(!pte.is_user_executable());
     assert!(!pte.is_user_accessible());
     assert!(pte.is_privilege_executable());
     assert_eq!(pte.cache_mode(), 1); // normal cache
-    assert!(!pte.is_huge());
+    assert!(!pte.to_config(false).huge);
     println!("✓ KernelMode PTE test passed");
 }
 
 #[test]
 fn test_pte_device_memory() {
     let pte = PteImpl::device_memory();
-    assert!(pte.valid());
+    assert!(pte.to_config(false).valid);
     assert!(pte.is_readable());
     assert!(pte.is_writable());
     assert!(!pte.is_user_executable());
     assert!(!pte.is_user_accessible());
     assert!(!pte.is_privilege_executable());
     assert_eq!(pte.cache_mode(), 2); // device cache
-    assert!(pte.is_huge());
+    assert!(pte.to_config(false).huge);
     println!("✓ DeviceMemory PTE test passed");
 }
 
@@ -93,10 +93,10 @@ fn test_pte_complex_mapping() {
 
     // 测试新的translate方法返回页表项
     let (_, pte) = pg.translate(0usize.into()).unwrap();
-    assert!(pte.valid());
+    assert!(pte.to_config(false).valid);
     // 注意：是否为大页取决于实际的映射实现，可能是大页也可能是普通页
     // 如果是大页，验证其属性
-    if pte.is_huge() {
+    if pte.to_config(false).huge {
         println!("✓ 创建了大页映射");
     } else {
         println!("✓ 创建了普通页映射");
@@ -174,12 +174,12 @@ fn assert_pte_flags(
     );
 
     assert_eq!(
-        pte.is_huge(),
+        pte.to_config(false).huge,
         expected_huge,
         "{} 大页属性不匹配，期望 {}，实际 {}",
         test_name,
         expected_huge,
-        pte.is_huge()
+        pte.to_config(false).huge
     );
 }
 
@@ -194,8 +194,8 @@ fn print_pte_flags(pte: &PteImpl, test_name: &str) {
         pte.is_user_accessible(),
         pte.is_privilege_executable(),
         pte.cache_mode(),
-        pte.is_huge(),
-        pte.valid()
+        pte.to_config(false).huge,
+        pte.to_config(false).valid
     );
 }
 
@@ -261,8 +261,8 @@ fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
             "l: {}, va: {:?}, c: PTE PA: {:?} Block: {}, Final: {}",
             p.level,
             p.vaddr,
-            p.pte.paddr(),
-            p.pte.is_huge(),
+            p.pte.to_config(false).paddr,
+            p.pte.to_config(false).huge,
             p.is_final_mapping
         );
     }
@@ -290,13 +290,21 @@ fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
         );
 
         // 验证页表项是有效的
-        assert!(pte.valid(), "{} 页表项应该是有效的", test_name);
+        assert!(
+            pte.to_config(false).valid,
+            "{} 页表项应该是有效的",
+            test_name
+        );
 
         // 验证不是大页（因为allow_huge=false且页面大小为4KB）
-        assert!(!pte.is_huge(), "{} 页表项不应该是大页", test_name);
+        assert!(
+            !pte.to_config(false).huge,
+            "{} 页表项不应该是大页",
+            test_name
+        );
 
         // 物理地址偏移验证
-        let actual_paddr = pte.paddr();
+        let actual_paddr = pte.to_config(false).paddr;
         let actual_offset = actual_paddr.raw() % 0x1000; // 页内偏移
         assert_eq!(
             actual_offset, 0,
@@ -307,7 +315,7 @@ fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
         // 验证两个页表项的物理地址相差0x1000（4KB）
         if i > 0 {
             let prev_pte = &valid_entries[i - 1].1;
-            let prev_paddr = prev_pte.paddr();
+            let prev_paddr = prev_pte.to_config(false).paddr;
             let addr_diff = actual_paddr.raw().saturating_sub(prev_paddr.raw());
             assert_eq!(
                 addr_diff, 0x1000,
