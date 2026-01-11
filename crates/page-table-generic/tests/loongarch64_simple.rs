@@ -19,7 +19,7 @@ impl TableGeneric for LoongArch64Generic {
 
     const LEVEL_BITS: &[usize] = &[9, 9, 9, 9];
 
-    const MAX_BLOCK_LEVEL: usize = 1; // 仅 PMD 支持 2MB 巨页
+    const MAX_BLOCK_LEVEL: usize = 2; // PUD (level 2) 支持 2MB 巨页
 
     fn flush(vaddr: Option<VirtAddr>) {
         let _ = vaddr;

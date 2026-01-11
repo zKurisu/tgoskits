@@ -25,14 +25,14 @@ pub fn enable_mmu() -> ! {
 
     let mut table = crate::mem::mmu::new_boot_table();
 
-    let pte = Entry::from_config(PteConfig {
+    let pte = PteConfig {
         valid: true,
         read: true,
         writable: true,
         executable: true,
         mem_attr: MemAttributes::Normal,
         ..Default::default()
-    });
+    };
 
     for memory in crate::fdt::memories() {
         let start = memory.start;
@@ -71,14 +71,14 @@ pub fn enable_mmu() -> ! {
     if debug_base != 0 {
         let start = debug_base.align_down(page_size());
         let size = page_size();
-        let pte = Entry::from_config(PteConfig {
+        let pte = PteConfig {
             valid: true,
             read: true,
             writable: true,
             executable: false,
             mem_attr: MemAttributes::Device,
             ..Default::default()
-        });
+        };
 
         print_mapping("Debug serial", __va(start) as _, start, size);
 

@@ -218,7 +218,7 @@ fn test_new_l5() {
     );
 }
 
-fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let mut pg = PageTable::<T, A>::new(alloc).unwrap();
 
     pg.map(&MapConfig {
@@ -300,7 +300,7 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
     assert!(has_full_coverage, "映射应该覆盖到地址{:#x}", end_vaddr);
 }
 
-fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let mut pg = PageTable::<T, A>::new(alloc).unwrap();
 
     let addr = 2 * MB - 0x1000usize;
@@ -651,7 +651,7 @@ fn test_huge_not_align_l3() {
         .filter_level(log::LevelFilter::Trace)
         .try_init();
 
-    test_huge_not_align::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+    test_huge_not_align::<T4kL3, Fram4k>(PteImpl::user_mode_config(), Fram4k);
 }
 
 #[test]
@@ -661,10 +661,10 @@ fn test_huge_not_align_l4() {
         .filter_level(log::LevelFilter::Trace)
         .try_init();
 
-    test_huge_not_align::<T4kL4, Fram4k>(PteImpl::user_mode(), Fram4k);
+    test_huge_not_align::<T4kL4, Fram4k>(PteImpl::user_mode_config(), Fram4k);
 }
 
-fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let mut pg = PageTable::<T, A>::new(alloc).unwrap();
 
     pg.map(&MapConfig {
@@ -779,7 +779,7 @@ fn test_huge_l3() {
         .filter_level(log::LevelFilter::Trace)
         .try_init();
 
-    test_huge::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+    test_huge::<T4kL3, Fram4k>(PteImpl::user_mode_config(), Fram4k);
 }
 
 #[test]
@@ -789,15 +789,15 @@ fn test_huge_big_l3() {
         .filter_level(log::LevelFilter::Trace)
         .try_init();
 
-    test_huge_big::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+    test_huge_big::<T4kL3, Fram4k>(PteImpl::user_mode_config(), Fram4k);
 }
 
 #[test]
 fn test_v_p_not_align_l3() {
-    test_v_p_not_align::<T4kL3, Fram4k>(PteImpl::user_mode(), Fram4k);
+    test_v_p_not_align::<T4kL3, Fram4k>(PteImpl::user_mode_config(), Fram4k);
 }
 
-fn test_v_p_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+fn test_v_p_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let _ = env_logger::builder()
         .is_test(true)
         .filter_level(log::LevelFilter::Trace)

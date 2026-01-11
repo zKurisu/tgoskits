@@ -10,7 +10,9 @@ use core::arch::naked_asm;
 use kernutil::StaticCell;
 use loongArch64::register::{crmd, stlbps, tlbidx, tlbrehi};
 use num_align::NumAlign;
-use page_table_generic::{MapConfig, MemAttributes, PageTableEntry, PteConfig, TableGeneric, VirtAddr};
+use page_table_generic::{
+    MapConfig, MemAttributes, PageTableEntry, PteConfig, TableGeneric, VirtAddr,
+};
 use uefi::table::cfg;
 
 // 导入 tock-registers 风格的页表项
@@ -722,7 +724,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
 
     let mut table = crate::mem::mmu::new_boot_table();
 
-    let pte = Entry::from_config(PteConfig {
+    let pte = PteConfig {
         valid: true,
         read: true,
         writable: true,
@@ -730,7 +732,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
         mem_attr: MemAttributes::Normal,
         global: true,
         ..Default::default()
-    });
+    };
 
     println!("Page table entry flags: {:?}", pte);
 

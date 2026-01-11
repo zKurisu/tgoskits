@@ -36,7 +36,7 @@ impl TableGeneric for LoongArch64Generic {
 
     /// 大页最高支持级别 (PMD 级别，即 Level 1)
     /// 这与 LoongArch64 实际配置一致：仅支持 2MB 巨页
-    const MAX_BLOCK_LEVEL: usize = 1;
+    const MAX_BLOCK_LEVEL: usize = 2; // PUD (level 2) 支持 2MB 巨页
 
     fn flush(vaddr: Option<VirtAddr>) {
         let _ = vaddr;
@@ -153,22 +153,50 @@ fn test_loongarch64_boundary_conditions() {
 
     // 测试边界条件：跨页表项边界的映射
     // 这些地址位于各级页表的边界上
+    // 注意：由于允许大页，需要确保每个测试映射不重叠
+    // Test 3 使用不同的 PUD 条目，避免在大页范围内创建子页表
     let boundary_cases = [
-        (0x9000_0000_0000usize, "PGD边界（Level 3）"),
-        (0x9000_1000_0000usize, "PUD边界（Level 2）"),
-        (0x9000_1010_0000usize, "PMD边界（Level 1）"),
-        (0x9000_1010_1000usize, "PTE边界（Level 0）"),
+        (
+            0x9000_0000_0000usize,
+            0usize,
+            2 * MB,
+            true,
+            "PGD边界（Level 3）",
+        ),
+        (
+            0x9000_2000_0000usize,
+            1 * 1024 * MB,
+            2 * MB,
+            true,
+            "PUD边界（Level 2）",
+        ),
+        (
+            0x9000_2020_0000usize,
+            1 * 1024 * MB + 2 * MB,
+            2 * MB,
+            true,
+            "PMD边界（Level 1）",
+        ),
+        // Test 3 使用新的 PUD 条目，避免在大页下创建子页表
+        (
+            0x9000_3000_0000usize,
+            1 * 1024 * MB + 4 * MB,
+            4 * KB,
+            false,
+            "PTE边界（Level 0）",
+        ),
     ];
 
-    for (i, &(base_vaddr, desc)) in boundary_cases.iter().enumerate() {
+    for (i, &(base_vaddr, base_paddr, size, allow_huge, desc)) in boundary_cases.iter().enumerate()
+    {
         println!("=== 测试 {}: {} ===", i, desc);
 
         let result = pg.map(&MapConfig {
             vaddr: base_vaddr.into(),
-            paddr: (i * MB).into(),
-            size: 2 * MB,
+            paddr: base_paddr.into(),
+            size,
             pte: PteImpl::kernel_mode_config(),
-            allow_huge: true,
+            allow_huge,
             flush: false,
         });
 

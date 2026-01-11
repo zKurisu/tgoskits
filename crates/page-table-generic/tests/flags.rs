@@ -221,7 +221,8 @@ fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
     println!("valid bits: {}", PageTableRef::<T, A>::valid_bits());
 
     // 显示要使用的PTE flag信息
-    print_pte_flags(&pte, &format!("{} - 输入PTE", test_name));
+    let pte_impl = T::P::from_config(pte);
+    print_pte_flags(&pte_impl, &format!("{} - 输入PTE", test_name));
 
     println!("\n=== {test_name} 映前状态 - walk_all (遍历所有项) ===");
     for p in pg.walk(VirtAddr::new(0), VirtAddr::new(usize::MAX)) {

@@ -97,14 +97,14 @@ impl PageTable for PageTableImpl {
         settings: MemConfig,
         flush: bool,
     ) -> Result<(), PagingError> {
-        let pte = somehal::mem::mmu::ArchPte::from_config(PteConfig {
+        let pte = PteConfig {
             valid: true,
             read: true,
             writable: settings.access.contains(AccessFlags::WRITE),
             executable: settings.access.contains(AccessFlags::EXECUTE),
             mem_attr: settings.attrs,
             ..Default::default()
-        });
+        };
 
         self.0.map(&somehal::mem::MapConfig {
             vaddr: virt_start.raw().into(),

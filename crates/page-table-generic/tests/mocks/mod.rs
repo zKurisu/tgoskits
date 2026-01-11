@@ -163,28 +163,30 @@ impl PteImpl {
 
     /// 用户权限模式：可读、可写、可执行、用户可访问
     pub fn user_mode() -> Self {
-        Self::from_config(PteConfig {
-            valid: true,
-            read: true,
-            writable: true,
-            executable: true,
-            lower: true,
-            mem_attr: MemAttributes::Normal,
-            ..Default::default()
-        })
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            true,  // user_execute
+            true,  // user_access
+            false, // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
     }
 
     /// 内核权限模式：可读、可写、特权执行
     pub fn kernel_mode() -> Self {
-        Self::from_config(PteConfig {
-            valid: true,
-            read: true,
-            writable: true,
-            executable: true,
-            lower: false,
-            mem_attr: MemAttributes::Normal,
-            ..Default::default()
-        })
+        Self::new_with_flags(
+            true,  // read
+            true,  // write
+            false, // user_execute
+            false, // user_access
+            true,  // privilege_execute
+            1,     // normal cache
+            true,  // valid
+            false, // not block
+        )
     }
 
     /// 用户权限模式的 PteConfig
@@ -411,6 +413,20 @@ impl PteImpl {
         )
     }
 
+    /// 复杂用户映射配置：全部权限 + 大页
+    pub fn complex_user_mapping_config() -> PteConfig {
+        PteConfig {
+            valid: true,
+            read: true,
+            writable: true,
+            executable: true,
+            lower: true,
+            huge: true,
+            mem_attr: MemAttributes::Normal,
+            ..Default::default()
+        }
+    }
+
     /// 复杂内核映射：读写 + 特权执行，非大页
     pub fn complex_kernel_mapping() -> Self {
         Self::new_with_flags(
@@ -423,6 +439,20 @@ impl PteImpl {
             true,  // valid
             false, // not block
         )
+    }
+
+    /// 复杂内核映射配置：读写 + 特权执行，非大页
+    pub fn complex_kernel_mapping_config() -> PteConfig {
+        PteConfig {
+            valid: true,
+            read: true,
+            writable: true,
+            executable: true,
+            lower: false,
+            huge: false,
+            mem_attr: MemAttributes::Normal,
+            ..Default::default()
+        }
     }
 
     /// 获取页表项的内存配置
