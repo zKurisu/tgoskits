@@ -90,9 +90,9 @@ impl PageTableEntry for Entry {
 
         // 设置可执行标志（PXN=0 表示可执行）
         if config.executable {
-            entry.as_typed().modify(PTE::PXN::CLEAR);
+            entry.as_typed().modify(PTE::PXN::CLEAR + PTE::UXN::CLEAR);
         } else {
-            entry.as_typed().modify(PTE::PXN::SET);
+            entry.as_typed().modify(PTE::PXN::SET + PTE::UXN::SET);
         }
 
         // 设置用户访问标志（AP_EL0=1 表示用户可访问）
