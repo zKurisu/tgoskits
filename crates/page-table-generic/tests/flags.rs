@@ -78,7 +78,7 @@ fn test_pte_complex_mapping() {
         vaddr: 0usize.into(),
         paddr: 0usize.into(), // 两个地址都2MB对齐
         size: 2 * MB,
-        pte: PteImpl::complex_user_mapping(),
+        pte: PteImpl::complex_user_mapping_config(),
         allow_huge: true,
         flush: false,
     })
@@ -201,7 +201,7 @@ fn print_pte_flags(pte: &PteImpl, test_name: &str) {
 
 /// 带有flag验证的高级测试函数
 fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
-    pte: PteImpl,
+    pte: PteConfig,
     alloc: A,
     test_vaddr: VirtAddr,
     expected_leaf_level: usize,

@@ -83,7 +83,7 @@ fn test_loongarch64_kernel_code_mapping() {
         vaddr: kernel_virt_start.into(),
         paddr: kernel_phys_start.into(),
         size: kernel_size,
-        pte: PteImpl::kernel_mode(),
+        pte: PteImpl::kernel_mode_config(),
         allow_huge: true, // 允许 2MB 巨页
         flush: false,
     });
@@ -167,7 +167,7 @@ fn test_loongarch64_boundary_conditions() {
             vaddr: base_vaddr.into(),
             paddr: (i * MB).into(),
             size: 2 * MB,
-            pte: PteImpl::kernel_mode(),
+            pte: PteImpl::kernel_mode_config(),
             allow_huge: true,
             flush: false,
         });
@@ -228,7 +228,7 @@ fn test_loongarch64_multi_range_mapping() {
             vaddr: vaddr.into(),
             paddr: paddr.into(),
             size: 2 * MB,
-            pte: PteImpl::kernel_mode(),
+            pte: PteImpl::kernel_mode_config(),
             allow_huge: true,
             flush: false,
         });
@@ -292,7 +292,7 @@ fn test_loongarch64_unaligned_mapping() {
         vaddr: kernel_virt_start.into(),
         paddr: kernel_phys_start.into(),
         size: kernel_size,
-        pte: PteImpl::kernel_mode(),
+        pte: PteImpl::kernel_mode_config(),
         allow_huge: true, // 允许巨页，但由于不对齐应该不会使用
         flush: false,
     });
@@ -343,7 +343,7 @@ fn test_loongarch64_large_region_mapping() {
         vaddr: kernel_virt_start.into(),
         paddr: kernel_phys_start.into(),
         size: kernel_size,
-        pte: PteImpl::kernel_mode(),
+        pte: PteImpl::kernel_mode_config(),
         allow_huge: true,
         flush: false,
     });

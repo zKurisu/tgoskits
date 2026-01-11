@@ -53,14 +53,12 @@ fn test_loongarch64_kernel_code_mapping() {
     println!("虚拟起始: {:#x}", kernel_virt_start);
     println!("大小: {:#x} ({} MB)", kernel_size, kernel_size / MB);
 
-    // 创建一个基本的页表项
-    let mut pte = mocks::PteImpl::kernel_mode();
-
+    // 创建一个基本的页表项配置
     let result = pg.map(&MapConfig {
         vaddr: kernel_virt_start.into(),
         paddr: kernel_phys_start.into(),
         size: kernel_size,
-        pte,
+        pte: mocks::PteImpl::kernel_mode_config(),
         allow_huge: true,
         flush: false,
     });

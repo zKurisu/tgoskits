@@ -6,28 +6,28 @@ use crate::{
 /// 页表映射配置
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct MapConfig<P: PageTableEntry> {
+pub struct MapConfig {
     pub vaddr: VirtAddr,
     pub paddr: PhysAddr,
     pub size: usize,
-    /// Page Table Entry
+    /// Page Table Entry 配置模板
     ///
-    /// All pte will be set as this value, except the address bits
-    pub pte: P,
+    /// 所有页表项将使用此配置创建（除了物理地址位）
+    pub pte: PteConfig,
     pub allow_huge: bool,
     pub flush: bool,
 }
 
 /// 内部映射递归配置
 #[derive(Clone, Copy)]
-pub struct MapRecursiveConfig<P: PageTableEntry> {
+pub struct MapRecursiveConfig {
     pub start_vaddr: VirtAddr,
     pub start_paddr: PhysAddr,
     pub end_vaddr: VirtAddr,
     pub level: usize,
     pub allow_huge: bool,
     pub flush: bool,
-    pub pte_template: P,
+    pub pte_template: PteConfig,
 }
 
 /// 取消映射配置
@@ -47,7 +47,7 @@ pub struct UnmapRecursiveConfig {
     pub flush: bool,
 }
 
-impl<P: PageTableEntry> core::fmt::Debug for MapConfig<P> {
+impl core::fmt::Debug for MapConfig {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("MapConfig")
             .field("vaddr", &format_args!("{:#x}", self.vaddr.raw()))
@@ -65,7 +65,7 @@ where
     A: FrameAllocator,
 {
     /// 递归映射的核心实现
-    pub fn map_range_recursive(&mut self, config: MapRecursiveConfig<T::P>) -> PagingResult<()> {
+    pub fn map_range_recursive(&mut self, config: MapRecursiveConfig) -> PagingResult<()> {
         let mut vaddr = config.start_vaddr;
         let mut paddr = config.start_paddr;
 
@@ -95,7 +95,7 @@ where
                     valid: true,
                     huge: true,
                     is_dir: true,
-                    ..config.pte_template.to_config(true)
+                    ..config.pte_template
                 };
                 *pte_ref = T::P::from_config(pte_config);
 
@@ -124,7 +124,7 @@ where
                     valid: true,
                     huge: false,
                     is_dir: false,
-                    ..config.pte_template.to_config(false)
+                    ..config.pte_template
                 };
                 *pte_ref = T::P::from_config(pte_config);
 
@@ -166,7 +166,7 @@ where
                     valid: true,
                     huge: false,
                     is_dir: true,
-                    ..config.pte_template.to_config(true)
+                    ..config.pte_template
                 };
                 *pte_ref = T::P::from_config(pte_config);
 

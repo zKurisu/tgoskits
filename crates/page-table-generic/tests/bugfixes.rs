@@ -24,7 +24,7 @@ fn test_huge_page_offset_calculation() {
         vaddr: vaddr_base.into(),
         paddr: paddr_base.into(),
         size: huge_page_size,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -69,7 +69,7 @@ fn test_multi_level_huge_pages() {
         vaddr: vaddr1.into(),
         paddr: paddr1.into(),
         size: 2 * MB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -82,7 +82,7 @@ fn test_multi_level_huge_pages() {
         vaddr: vaddr2.into(),
         paddr: paddr2.into(),
         size: GB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -146,7 +146,7 @@ fn test_unmap_reclaim_logic() {
         vaddr: base_addr.into(),
         paddr: 0x0usize.into(),
         size,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -184,7 +184,7 @@ fn test_unmap_mixed_entries() {
             vaddr: (base + i * 0x1000).into(),
             paddr: (i * 0x1000).into(),
             size: 0x1000,
-            pte: PteImpl::user_mode(),
+            pte: PteImpl::user_mode_config(),
             allow_huge: false,
             flush: false,
         })
@@ -263,7 +263,7 @@ fn test_address_overflow_handling() {
         vaddr: (max_aligned - 0x1000).into(),
         paddr: 0x0usize.into(),
         size: 0x3000, // 会导致溢出
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     });
@@ -299,7 +299,7 @@ fn test_deep_hierarchy() {
         vaddr: deep_vaddr.into(),
         paddr: 0x1000usize.into(),
         size: 0x2000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -331,7 +331,7 @@ fn test_mixed_huge_and_normal_pages() {
         vaddr: 0x0usize.into(),
         paddr: 0x0usize.into(),
         size: 2 * MB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -342,7 +342,7 @@ fn test_mixed_huge_and_normal_pages() {
         vaddr: (2 * MB).into(),
         paddr: (2 * MB).into(),
         size: 0x3000, // 3个普通页
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -380,7 +380,7 @@ fn test_stress_mapping_unmapping() {
             vaddr: vaddr.into(),
             paddr: vaddr.into(),
             size: 0x1000,
-            pte: PteImpl::user_mode(),
+            pte: PteImpl::user_mode_config(),
             allow_huge: false,
             flush: false,
         })

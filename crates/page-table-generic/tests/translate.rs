@@ -13,7 +13,7 @@ fn test_translate_basic() {
         vaddr: 0x1000usize.into(),
         paddr: 0x2000usize.into(),
         size: 0x1000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -50,7 +50,7 @@ fn test_translate_huge_page() {
         vaddr: 0usize.into(),
         paddr: 0usize.into(), // 使用相同的物理地址
         size: 2 * MB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -114,7 +114,7 @@ fn test_translate_multiple_mappings() {
         vaddr: 0x1000usize.into(),
         paddr: 0x2000usize.into(),
         size: 0x1000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -124,7 +124,7 @@ fn test_translate_multiple_mappings() {
         vaddr: 0x2000usize.into(),
         paddr: 0x4000usize.into(),
         size: 0x1000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -134,7 +134,7 @@ fn test_translate_multiple_mappings() {
         vaddr: 0x200000usize.into(), // 2MB对齐
         paddr: 0x200000usize.into(), // 2MB对齐
         size: 2 * MB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -200,7 +200,7 @@ fn test_is_mapped() {
         vaddr: 0x1000usize.into(),
         paddr: 0x2000usize.into(),
         size: 0x1000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -226,7 +226,7 @@ fn test_translate_complex_layout() {
         vaddr: 0usize.into(),
         paddr: 0usize.into(),
         size: 2 * MB + 0x1000 * 3, // 2MB + 12KB
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -314,7 +314,7 @@ fn test_translate_error_cases() {
         vaddr: 0x1000usize.into(),
         paddr: 0x2000usize.into(),
         size: 0x1000,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -345,7 +345,7 @@ fn test_translate_performance() {
             vaddr: (i * 0x10000usize).into(),
             paddr: (i * 0x10000usize).into(),
             size: 0x10000,
-            pte: PteImpl::user_mode(),
+            pte: PteImpl::user_mode_config(),
             allow_huge: false,
             flush: false,
         })

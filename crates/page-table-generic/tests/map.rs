@@ -28,7 +28,7 @@ fn test_pte() {
 }
 
 fn test_high<T: TableGeneric, A: FrameAllocator>(
-    pte: T::P,
+    pte: PteConfig,
     alloc: A,
     test_vaddr: VirtAddr,
     expected_leaf_level: usize,
@@ -168,7 +168,7 @@ fn test_new_l4() {
         .try_init();
 
     test_high::<T4kL4, Fram4k>(
-        PteImpl(0),
+        PteImpl::kernel_mode_config(),
         Fram4k,
         0x0000f00000000000usize.into(), // 高虚拟地址
         1,                              // 叶子级别
@@ -183,7 +183,7 @@ fn test_new_l4_ffff() {
         .filter_level(log::LevelFilter::Trace)
         .try_init();
 
-    test_high_huge_not_align::<T4kL4, Fram4k>(PteImpl(0), Fram4k);
+    test_high_huge_not_align::<T4kL4, Fram4k>(PteImpl::kernel_mode_config(), Fram4k);
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn test_new_l3() {
         .try_init();
 
     test_high::<T4kL3, Fram4k>(
-        PteImpl(0),
+        PteImpl::kernel_mode_config(),
         Fram4k,
         0x0000000000000000usize.into(), // 低虚拟地址
         1,                              // 叶子级别
@@ -210,7 +210,7 @@ fn test_new_l5() {
         .try_init();
 
     test_high::<T4kL5, Fram4k>(
-        PteImpl(0),
+        PteImpl::kernel_mode_config(),
         Fram4k,
         0x000f000000000000usize.into(), // 高虚拟地址
         1,                              // 叶子级别
@@ -403,7 +403,7 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) 
     );
 }
 
-fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: T::P, alloc: A) {
+fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let mut pg = PageTable::<T, A>::new(alloc).unwrap();
 
     // 注意:在48位虚拟地址空间中,0xffffffff80000000 会被截断为 0x0000ffff80000000
@@ -834,7 +834,7 @@ fn test_unmap_basic() {
         vaddr: test_vaddr.into(),
         paddr: 0x0000usize.into(),
         size: test_size,
-        pte: PteImpl(0),
+        pte: PteImpl::kernel_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -892,7 +892,7 @@ fn test_unmap_huge_pages() {
         vaddr: 0usize.into(),
         paddr: 0usize.into(),
         size: 2 * MB,
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: true,
         flush: false,
     })
@@ -954,7 +954,7 @@ fn test_unmap_partial_mapping() {
         vaddr: base_addr.into(),
         paddr: 0usize.into(),
         size: total_size,
-        pte: PteImpl(0),
+        pte: PteImpl::kernel_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -1020,7 +1020,7 @@ fn test_unmap_config_object() {
         vaddr: 0x20000000usize.into(),
         paddr: 0usize.into(),
         size: 0x3000, // 3个页面
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })
@@ -1090,7 +1090,7 @@ fn test_unmap_multi_level() {
         vaddr: high_vaddr.into(),
         paddr: 0usize.into(),
         size: 0x2000, // 2个页面，需要多级页表
-        pte: PteImpl::user_mode(),
+        pte: PteImpl::user_mode_config(),
         allow_huge: false,
         flush: false,
     })

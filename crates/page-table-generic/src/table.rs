@@ -84,7 +84,7 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
     }
 
     /// 映射虚拟地址范围到物理地址范围
-    pub fn map(&mut self, config: &MapConfig<T::P>) -> PagingResult {
+    pub fn map(&mut self, config: &MapConfig) -> PagingResult {
         // 验证输入参数
         self.validate_map_config(config)?;
 
@@ -221,7 +221,7 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
     }
 
     /// 验证映射配置的有效性
-    fn validate_map_config(&self, config: &MapConfig<T::P>) -> PagingResult {
+    fn validate_map_config(&self, config: &MapConfig) -> PagingResult {
         if config.size == 0 {
             return Err(PagingError::invalid_size("Size cannot be zero"));
         }
