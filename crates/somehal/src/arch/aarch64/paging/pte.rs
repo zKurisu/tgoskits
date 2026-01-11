@@ -126,26 +126,44 @@ impl PageTableEntry for Entry {
     }
 
     fn to_config(&self, is_dir: bool) -> page_table_generic::PteConfig {
+        let pte = self.as_typed();
+        let lower;
+        let executable;
+        #[cfg(not(feature = "hv"))]
+        {
+            lower = pte.is_set(PTE::AP_EL0);
+            if lower {
+                executable = !pte.is_set(PTE::UXN);
+            } else {
+                executable = !pte.is_set(PTE::PXN);
+            }
+        }
+        #[cfg(feature = "hv")]
+        {
+            lower = pte.is_set(PTE::AP_EL0);
+            excutable = !pte.is_set(PTE::PXN);
+        }
+
         page_table_generic::PteConfig {
-            paddr: ((self.as_typed().read(PTE::PHYS_ADDR) << 12) as usize).into(),
-            valid: self.as_typed().is_set(PTE::VALID),
-            read: self.as_typed().is_set(PTE::AF),
-            writable: !self.as_typed().is_set(PTE::AP_RO),
-            executable: !self.as_typed().is_set(PTE::PXN),
-            lower: self.as_typed().is_set(PTE::AP_EL0),
-            dirty: self.as_typed().is_set(PTE::AF),
-            global: !self.as_typed().is_set(PTE::NG),
+            paddr: ((pte.read(PTE::PHYS_ADDR) << 12) as usize).into(),
+            valid: pte.is_set(PTE::VALID),
+            read: pte.is_set(PTE::AF),
+            writable: pte.is_set(PTE::AP_RO),
+            executable,
+            lower,
+            dirty: pte.is_set(PTE::AF),
+            global: !pte.is_set(PTE::NG),
             is_dir,
-            huge: !self.as_typed().is_set(PTE::NON_BLOCK),
+            huge: !pte.is_set(PTE::NON_BLOCK),
             mem_attr: {
-                let mut attr = match self.as_typed().read(PTE::MAIR) {
+                let mut attr = match pte.read(PTE::MAIR) {
                     0 => MemAttributes::Device,
                     1 => MemAttributes::Normal,
                     2 => MemAttributes::Uncached,
                     _ => MemAttributes::Normal,
                 };
 
-                match self.as_typed().read_as_enum(PTE::SHAREABLE) {
+                match pte.read_as_enum(PTE::SHAREABLE) {
                     Some(PTE::SHAREABLE::Value::OUTER) => {}
                     _ => attr = MemAttributes::PerCpu,
                 }
