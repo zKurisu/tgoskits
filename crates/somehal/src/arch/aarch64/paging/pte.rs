@@ -40,11 +40,6 @@ impl Entry {
         unsafe { &*(self as *const Self as *const ReadWrite<u64, PTE::Register>) }
     }
 
-    #[inline(always)]
-    pub fn set_mair_idx(&mut self, idx: usize) {
-        self.as_typed().modify(PTE::MAIR.val(idx as u64));
-    }
-
     /// 创建空页表项
     pub const fn empty() -> Self {
         Self(0)
@@ -53,89 +48,80 @@ impl Entry {
 
 impl PageTableEntry for Entry {
     fn from_config(config: page_table_generic::PteConfig) -> Self {
-        let mut entry = Self::empty();
-
-        // 设置有效位
-        if config.valid {
-            entry.as_typed().modify(PTE::VALID::SET);
-        } else {
-            entry.as_typed().modify(PTE::VALID::CLEAR);
+        let entry = Entry::empty();
+        if !config.valid {
+            return entry;
         }
 
-        // 设置访问标志位（对应 read 标志）
+        let mut val = PTE::VALID::SET;
+
         if config.read {
-            entry.as_typed().modify(PTE::AF::SET);
-        } else {
-            entry.as_typed().modify(PTE::AF::CLEAR);
+            val += PTE::AF::SET;
         }
 
-        // 设置物理地址（AArch64 目录项和页表项地址布局相同）
-        entry
-            .as_typed()
-            .modify(PTE::PHYS_ADDR.val(config.paddr.raw() as u64 >> 12));
+        val += PTE::PHYS_ADDR.val((config.paddr.raw() as u64) >> 12);
 
         // 设置大页标志（NON_BLOCK=0 表示大页）
-        if config.huge && config.is_dir {
-            entry.as_typed().modify(PTE::NON_BLOCK::CLEAR);
-        } else {
-            entry.as_typed().modify(PTE::NON_BLOCK::SET);
+        if !config.huge {
+            val += PTE::NON_BLOCK::SET;
         }
 
-        // 设置可写标志（AP_RO=0 表示可写）
-        if config.writable {
-            entry.as_typed().modify(PTE::AP_RO::CLEAR);
-        } else {
-            entry.as_typed().modify(PTE::AP_RO::SET);
+        if !config.writable {
+            val += PTE::AP_RO::SET;
+        }
+
+        #[cfg(not(feature = "hv"))]
+        {
+            if config.lower {
+                val += PTE::AP_EL0::SET + PTE::PXN::SET;
+                if !config.executable {
+                    val += PTE::UXN::SET;
+                }
+            } else {
+                val += PTE::UXN::SET;
+                if !config.executable {
+                    val += PTE::PXN::SET;
+                }
+            }
+        }
+        #[cfg(feature = "hv")]
+        {
+            // 在虚拟化环境下，内核页表项对 EL2 可执行
+            if !config.executable {
+                val += PTE::PXN::SET;
+            }
         }
 
         // 设置可执行标志（PXN=0 表示可执行）
-        if config.executable {
-            entry.as_typed().modify(PTE::PXN::CLEAR + PTE::UXN::CLEAR);
-        } else {
-            entry.as_typed().modify(PTE::PXN::SET + PTE::UXN::SET);
-        }
-
-        // 设置用户访问标志（AP_EL0=1 表示用户可访问）
-        if config.lower {
-            entry.as_typed().modify(PTE::AP_EL0::SET);
-        } else {
-            entry.as_typed().modify(PTE::AP_EL0::CLEAR);
-        }
 
         // 设置全局标志（NG=0 表示全局）
-        if config.global {
-            entry.as_typed().modify(PTE::NG::CLEAR);
-        } else {
-            entry.as_typed().modify(PTE::NG::SET);
+        if !config.global {
+            val += PTE::NG::SET;
         }
 
         // 设置脏位（复用 AF 位）
         if config.dirty {
-            entry.as_typed().modify(PTE::AF::SET);
-        } else {
-            entry.as_typed().modify(PTE::AF::CLEAR);
+            val += PTE::AF::SET;
         }
 
         // 设置内存属性
         match config.mem_attr {
             MemAttributes::Device => {
-                entry.set_mair_idx(0);
-                entry.as_typed().modify(PTE::SHAREABLE::OUTER);
+                val += PTE::MAIR.val(0) + PTE::SHAREABLE::OUTER;
             }
             MemAttributes::Normal | MemAttributes::PerCpu => {
-                entry.set_mair_idx(1);
+                val += PTE::MAIR.val(1);
                 if matches!(config.mem_attr, MemAttributes::PerCpu) {
-                    entry.as_typed().modify(PTE::SHAREABLE::NON);
+                    val += PTE::SHAREABLE::NON;
                 } else {
-                    entry.as_typed().modify(PTE::SHAREABLE::OUTER);
+                    val += PTE::SHAREABLE::OUTER;
                 }
             }
             MemAttributes::Uncached => {
-                entry.set_mair_idx(2);
-                entry.as_typed().modify(PTE::SHAREABLE::OUTER);
+                val += PTE::MAIR.val(2) + PTE::SHAREABLE::OUTER;
             }
         }
-
+        entry.as_typed().write(val);
         entry
     }
 

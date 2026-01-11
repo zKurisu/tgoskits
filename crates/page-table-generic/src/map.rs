@@ -79,8 +79,8 @@ where
                 && config.level > 1
                 && config.level <= T::MAX_BLOCK_LEVEL
                 && level_size <= remaining_size
-                && vaddr.raw() % level_size == 0
-                && paddr.raw() % level_size == 0
+                && vaddr.raw().is_multiple_of(level_size)
+                && paddr.raw().is_multiple_of(level_size)
             {
                 // 创建大页映射
                 let entries = self.as_slice_mut();
@@ -88,14 +88,12 @@ where
                 if pte_ref.valid() {
                     return Err(PagingError::mapping_conflict(vaddr, paddr));
                 }
+                let mut pte_config = config.pte_template;
+                pte_config.paddr = paddr;
+                pte_config.valid = true;
+                pte_config.huge = true;
+                pte_config.is_dir = true;
 
-                let pte_config = PteConfig {
-                    paddr,
-                    valid: true,
-                    huge: true,
-                    is_dir: true,
-                    ..config.pte_template
-                };
                 *pte_ref = T::P::from_config(pte_config);
 
                 // 如果需要刷新TLB，立即执行
@@ -117,13 +115,12 @@ where
                     return Err(PagingError::mapping_conflict(vaddr, paddr));
                 }
 
-                let pte_config = PteConfig {
-                    paddr,
-                    valid: true,
-                    huge: false,
-                    is_dir: false,
-                    ..config.pte_template
-                };
+                let mut pte_config = config.pte_template;
+                pte_config.paddr = paddr;
+                pte_config.valid = true;
+                pte_config.huge = false;
+                pte_config.is_dir = false;
+
                 *pte_ref = T::P::from_config(pte_config);
 
                 // 如果需要刷新TLB，立即执行
