@@ -50,8 +50,6 @@ register_bitfields![u64,
         /// W - 写位 (bit 8)
         WRITE OFFSET(8) NUMBITS(1) [],
 
-        G OFFSET(12) NUMBITS(1) [],
-
         PHYS_ADDR OFFSET(12) NUMBITS(40) [],
 
         /// NR - 禁止读位 (bit 61)
@@ -212,14 +210,10 @@ impl PageTableEntry for Entry {
 
         // 设置物理地址（关键：根据 is_dir 选择不同的布局）
         if config.is_dir {
-            // 目录项：使用 PTE_DIR 格式，bits [51:13]
+            // 目录项：使用 PTE_DIR 格式，bits [51:12]
+            // 注意：目录项的 G 位在 bit 6，与 PHYS_ADDR 不冲突
             let ppn = (config.paddr.raw() as u64) >> 12;
             entry.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
-
-            // 设置全局标志（目录项使用 G 位，bit 12）
-            if config.global {
-                entry.as_dir().modify(PTE_DIR::G::SET);
-            }
 
             // 设置大页标志（仅目录项，H 位 bit 6）
             if config.huge {
@@ -270,9 +264,9 @@ impl PageTableEntry for Entry {
             false
         };
 
-        // 检查全局标志（根据 is_dir 选择不同的位）
+        // 检查全局标志（仅页表项有 G 位，目录项没有）
         let global = if is_dir {
-            self.as_dir().is_set(PTE_DIR::G)
+            false  // 目录项没有全局标志
         } else {
             self.as_base().is_set(PTE::G)
         };
@@ -328,8 +322,8 @@ pub struct WalkResult {
     pub huge_level: usize,
 }
 
-/// 软件页表遍历 - 按照 LoongArch64 手册伪代码实现
-/// 参考: LoongArch64 参考手册 Vol. 1 - 5.4.5 节
+/// 软件页表遍历 - 完全按照 QEMU 源码逻辑实现
+/// 参考: QEMU 10.1.0 target/loongarch/tcg/tlb_helper.c
 pub fn find_stlb(vaddr: usize) -> WalkResult {
     use super::addrspace::PAGE_OFFSET;
     use super::paging::{read_csr_pgdh, read_csr_pgdl, read_csr_pwctl0, read_csr_pwctl1};
@@ -337,36 +331,41 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
     const VALEN: usize = 48;
     const PAGE_SHIFT: usize = 12;
     const PAGE_MASK: usize = (1 << PAGE_SHIFT) - 1;
+    const TARGET_PHYS_MASK: usize = 0x0000ffffffffffff; // QEMU 使用的物理地址掩码
 
-    println!("\n========== 硬件页表遍历模拟 ==========");
+    println!("\n========== 硬件页表遍历模拟（QEMU 兼容）==========");
     println!("虚拟地址: {:#018x}", vaddr);
 
     // 读取 CSR 寄存器配置
     let pwctl0 = read_csr_pwctl0();
     let pwctl1 = read_csr_pwctl1();
     let asid = asid::read();
-    println!("ASID: {:#x}, width: {}", asid.asid(), asid.asid_width());
 
-    // 解析 PWCTL0: PTBase, PTWidth, Dir0Base, Dir0Width, Dir1Base, Dir1Width
-    let pt_base = (pwctl0 & 0x1f) as usize; // bits [4:0]
-    let pt_width = ((pwctl0 >> 5) & 0x1f) as usize; // bits [9:5]
-    let dir0_base = ((pwctl0 >> 10) & 0x1f) as usize; // bits [14:10]
-    let dir0_width = ((pwctl0 >> 15) & 0x1f) as usize; // bits [19:15]
-    let dir1_base = ((pwctl0 >> 20) & 0x1f) as usize; // bits [24:20]
-    let dir1_width = ((pwctl0 >> 25) & 0x1f) as usize; // bits [29:25]
+    // QEMU 使用 PWCL 和 PWCH 寄存器
+    // PWCL (0x1c): PTBase[4:0], PTWidth[9:5], Dir0Base[14:10], Dir0Width[19:15], Dir1Base[24:20], Dir1Width[29:25]
+    // PWCH (0x1d): Dir2Base[5:0], Dir2Width[11:6], Dir3Base[17:12], Dir3Width[23:18]
 
-    // 解析 PWCTL1: Dir2Base, Dir2Width, Dir3Base, Dir3Width
-    let dir2_base = (pwctl1 & 0x3f) as usize; // bits [5:0]
-    let dir2_width = ((pwctl1 >> 6) & 0x3f) as usize; // bits [11:6]
-    let dir3_base = ((pwctl1 >> 12) & 0x3f) as usize; // bits [17:12]
-    let dir3_width = ((pwctl1 >> 18) & 0x3f) as usize; // bits [23:18]
+    let pt_base = (pwctl0 & 0x1f) as usize;
+    let pt_width = ((pwctl0 >> 5) & 0x1f) as usize;
+    let dir0_base = ((pwctl0 >> 10) & 0x1f) as usize;
+    let dir0_width = ((pwctl0 >> 15) & 0x1f) as usize;
+    let dir1_base = ((pwctl0 >> 20) & 0x1f) as usize;
+    let dir1_width = ((pwctl0 >> 25) & 0x1f) as usize;
 
-    println!("PWCTL 配置:");
-    println!("  PT: base={}, width={}", pt_base, pt_width);
+    let dir2_base = (pwctl1 & 0x3f) as usize;
+    let dir2_width = ((pwctl1 >> 6) & 0x3f) as usize;
+    let dir3_base = ((pwctl1 >> 12) & 0x3f) as usize;
+    let dir3_width = ((pwctl1 >> 18) & 0x3f) as usize;
+
+    println!("ASID: {:#x}", asid.asid());
+    println!("PWCTL0: {:#018x}", pwctl0);
+    println!("PWCTL1: {:#018x}", pwctl1);
+    println!("页表配置:");
+    println!("  PT(PTE):  base={}, width={}", pt_base, pt_width);
     println!("  Dir0(PMD): base={}, width={}", dir0_base, dir0_width);
     println!("  Dir1(PUD): base={}, width={}", dir1_base, dir1_width);
     println!("  Dir2(PGD): base={}, width={}", dir2_base, dir2_width);
-    println!("  Dir3: base={}, width={}", dir3_base, dir3_width);
+    println!("  Dir3:     base={}, width={}", dir3_base, dir3_width);
 
     // 根据 VA[VALEN-1] 选择 PGDL 或 PGDH
     let use_high_half = (vaddr >> (VALEN - 1)) & 1 == 1;
@@ -378,103 +377,205 @@ pub fn find_stlb(vaddr: usize) -> WalkResult {
         read_csr_pgdl() as usize
     };
 
-    if table_paddr == 0 {
-        panic!("页表基地址为空");
-    }
-    println!("PGD 基址: {:#018x}", table_paddr);
+    println!("页表基址: {:#018x}", table_paddr);
 
-    // 定义页表遍历的各级配置 (从高到低: Dir3 -> Dir2 -> Dir1 -> Dir0 -> PT)
-    // 根据 PWCTL 寄存器，只有 width > 0 的级别才存在
-    let levels = [
-        ("Dir3(保留)", dir3_base, dir3_width),
-        ("Dir2(PGD)", dir2_base, dir2_width),
-        ("Dir1(PUD)", dir1_base, dir1_width),
-        ("Dir0(PMD)", dir0_base, dir0_width),
-        ("PT(PTE)", pt_base, pt_width),
+    // QEMU 的目录项遍历逻辑
+    // 从最高级开始，遍历到 PTE 级别
+    // 注意：QEMU 的 lddir 指令参数：0=PWCTL0.Dir0, 1=PWCTL0.Dir1, 2=PWCTL1.Dir2, 3=PWCTL1.Dir3
+
+    // 定义各级遍历配置，按照 QEMU 的 get_directory_entry 逻辑
+    // 硬件 TLB refill 使用：lddir 2 (PGD), lddir 1 (PUD), lddir 0 (PMD), ldpte (PTE)
+    // 使用静态数组避免在 no_std 环境中使用 vec
+    let walk_levels: [(usize, &str, usize, usize); 3] = [
+        (2, "PGD", dir2_base, dir2_width),  // lddir 2
+        (1, "PUD", dir1_base, dir1_width),  // lddir 1
+        (0, "PMD", dir0_base, dir0_width),  // lddir 0
     ];
 
-    // 循环遍历各级页表（从高到低）
-    for (level_idx, (level_name, base, width)) in levels.iter().enumerate() {
-        if *width == 0 {
-            println!("跳过 {} (width=0)", level_name);
-            continue;
-        }
+    for (hw_level, level_name, base, width) in walk_levels.iter() {
+        let base = *base;
+        let width = *width;
+        println!("\n--- {} 级别 (hw_level={}, base={}, width={}) ---",
+                 level_name, hw_level, base, width);
 
-        // 计算当前级别的索引
-        let index = (vaddr >> base) & ((1 << width) - 1);
+        // QEMU 的索引计算：index = (vaddr >> base) & ((1 << width) - 1)
+        let index = (vaddr >> base) & ((1usize << width) - 1);
+        println!("  索引计算: vaddr[{}:{}] = {:#x}",
+                 base + width - 1, base, index);
 
-        println!("\n--- {} 级别 ---", level_name);
-        println!("  Base: {}, Width: {}, Index: {}", base, width, index);
+        // QEMU 的物理地址计算：phys = base | (index << 3)
+        // 注意：这里使用 table_paddr 作为基地址
+        let entry_phys_addr = table_paddr | (index << 3);
+        println!("  目录项物理地址: base({:#x}) | (index({:#x}) << 3) = {:#x}",
+                 table_paddr, index, entry_phys_addr);
 
-        // 读取页表项
-        let table_vaddr = table_paddr + PAGE_OFFSET;
-        let entry_ptr = (table_vaddr + index * 8) as *const u64;
+        // 转换为虚拟地址读取
+        let entry_vaddr = entry_phys_addr + PAGE_OFFSET;
+        let entry_ptr = entry_vaddr as *const u64;
 
+        // 读取目录项值，并应用 TARGET_PHYS_MASK
         unsafe { core::arch::asm!("dbar 0", options(nostack, nomem)) };
-        let entry_val = unsafe { core::ptr::read_volatile(entry_ptr) };
-        let entry = Entry(entry_val);
+        let entry_val_raw = unsafe { core::ptr::read_volatile(entry_ptr) };
+        let entry_val = entry_val_raw & TARGET_PHYS_MASK as u64;
 
-        println!("  表虚拟地址: {:#018x}", table_vaddr);
-        println!("  条目[{}] 地址: {:#018x}", index, entry_ptr as usize);
-        println!("  条目[{}] 原始值: {:#018x}", index, entry_val);
+        println!("  目录项虚拟地址: {:#018x}", entry_vaddr);
+        println!("  原始读取值: {:#018x}", entry_val_raw);
+        println!("  应用物理掩码后: {:#018x}", entry_val);
 
-        // 检查是否是大页 (H bit 6)
-        // 只检查目录项（Dir3/Dir2/Dir1/Dir0），页表项（PT）不可能是大页
-        let is_dir = !level_name.contains("PT");
+        // QEMU 的页表项检查（参考 loongarch_map_tlb_entry）
+        let tlb_v = (entry_val & 0x1) != 0;  // bit 0: V (Valid)
+        let tlb_d = (entry_val & 0x2) != 0;  // bit 1: D (Dirty)
+        let tlb_plv = (entry_val >> 2) & 0x3;  // bit [2:3]: PLV
+        let tlb_nr = (entry_val >> 61) & 0x1; // bit 61: NR (No Read)
+        let tlb_nx = (entry_val >> 62) & 0x1; // bit 62: NX (No Execute)
+        let tlb_rplv = (entry_val >> 63) & 0x1; // bit 63: RPLV
 
-        // 检查有效性 (V bit 0)
-        let entry_config = entry.to_config(is_dir);
-        if !entry_config.valid {
-            panic!(
-                "{} 条目无效 (V=0): vaddr={:#018x}, index={}",
-                level_name, vaddr, index
-            );
+        println!("  页表项标志检查:");
+        println!("    V (Valid):      {} ({})", tlb_v, if tlb_v { "✓" } else { "✗ 无效" });
+        println!("    D (Dirty):      {}", tlb_d);
+        println!("    PLV (Priv):     {}", tlb_plv);
+        println!("    NR (No Read):   {}", tlb_nr);
+        println!("    NX (No Exec):   {}", tlb_nx);
+        println!("    RPLV:          {}", tlb_rplv);
+
+        // QEMU 检查 V 位
+        if !tlb_v {
+            panic!("❌ QEMU 检查失败：页表项 V=0 (无效) - 这会导致 ret 3");
         }
 
-        // 检查存在位 (P bit 7) - 用于页表遍历
-        if (entry_val & (1 << 7)) == 0 {
-            panic!(
-                "{} 条目不存在 (P=0): vaddr={:#018x}, index={}",
-                level_name, vaddr, index
-            );
+        // 检查 NX 位（No Execute）
+        if tlb_nx != 0 {
+            panic!("❌ QEMU 检查失败：页表项 NX=1 (不可执行) - 这会导致 ret 6");
         }
 
-        println!("  条目[{}] 详情: {:#x?}", index, EntryDebug(entry, is_dir));
+        // 检查 NR 位（No Read）
+        if tlb_nr != 0 {
+            panic!("❌ QEMU 检查失败：页表项 NR=1 (不可读) - 这会导致 ret 5");
+        }
 
-        if entry_config.huge {
-            println!("  -> 检测到大页！");
-            let phys_base = entry_config.paddr.raw() & !PAGE_MASK;
-            let offset_mask = (1 << base) - 1;
-            let offset = vaddr & offset_mask;
-            let final_paddr = phys_base + offset;
+        // 检查 bit 6 (HUGE 位，参考 helper_ldpte)
+        let bit6_set = (entry_val & (1 << 6)) != 0;
+        println!("    Bit 6 (HUGE):   {}", if bit6_set { "1 (大页)" } else { "0 (普通页)" });
 
-            println!("✓ {} 大页映射", level_name);
-            println!("  物理页基址: {:#018x}", phys_base);
-            println!("  页内偏移:   {:#018x}", offset);
-            println!("  最终物理地址: {:#018x}", final_paddr);
-            println!("==========================================\n");
+        // 提取物理页帧号（PPN）
+        // QEMU: PPN 在 bits [51:12]
+        let ppn = (entry_val >> 12) & ((1u64 << 40) - 1);
+        println!("    PPN (bits[51:12]): {:#x}", ppn);
 
+        // 计算下一级页表的物理地址
+        let next_table_paddr = ((ppn << 12) as usize) & TARGET_PHYS_MASK;
+        println!("  -> 下一级页表物理地址: PPN({:#x}) << 12 = {:#x}", ppn, next_table_paddr);
+
+        // 检查是否是大页（bit 6 = 1）
+        if bit6_set {
+            // 大页处理（QEMU 的 helper_ldpte 逻辑）
+            // 大页需要特殊处理：获取页大小，清除 HUGE 位，移动 HGLOBAL 到 G
+            let ps = base + width - 1; // 页大小 = base + width - 1
+            println!("  -> 检测到大页，页大小: 2^{} bytes", ps);
+
+            // 大页直接返回
+            let page_size = 1usize << ps;
+            let offset_in_page = vaddr & (page_size - 1);
+            let final_paddr = (next_table_paddr as usize) + offset_in_page;
+
+            println!("✓ 大页映射成功");
+            println!("  物理地址: {:#018x}", final_paddr);
             return WalkResult {
                 vaddr,
                 paddr: final_paddr,
                 is_huge: true,
-                huge_level: level_idx,
+                huge_level: *hw_level,
             };
         }
 
-        // 获取下一级页表的物理地址
-        table_paddr = entry_config.paddr.raw() & !PAGE_MASK;
-        println!("  -> 下一级页表物理地址: {:#018x}", table_paddr);
+        // 更新 table_paddr 为下一级页表
+        table_paddr = next_table_paddr;
     }
 
-    // 所有级别都遍历完，计算最终物理地址
-    let offset_in_page = vaddr & PAGE_MASK;
-    let final_paddr = table_paddr + offset_in_page;
+    // 最后一级：PTE (使用 ldpte 指令)
+    println!("\n--- PTE 级别 (ldpte) ---");
+    let pt_base = pt_base;
+    let pt_width = pt_width;
 
-    println!("\n✓ 基本页映射");
-    println!("  物理页基址: {:#018x}", table_paddr);
-    println!("  页内偏移:   {:#018x}", offset_in_page);
-    println!("  最终物理地址: {:#018x}", final_paddr);
+    // QEMU 的 ldpte 指令逻辑
+    let badv = vaddr;
+    let mut ptindex = (badv >> pt_base) & ((1usize << pt_width) - 1);
+    ptindex = ptindex & !0x1;  // clear bit 0
+
+    let ptoffset0 = ptindex << 3;
+    let ptoffset1 = (ptindex + 1) << 3;
+
+    println!("  PTE 索引: vaddr[{}:{}] = {:#x} (清除bit0后)",
+             pt_base + pt_width - 1, pt_base, ptindex);
+    println!("  PTE offset0: {:#x}", ptoffset0);
+    println!("  PTE offset1: {:#x}", ptoffset1);
+
+    // 读取 PTE（QEMU 读取一对页表项）
+    let pte_phys_addr0 = table_paddr | ptoffset0;
+
+    // 🔍 调试：模拟 lddir/ldpte 硬件遍历的地址计算
+    // PMD 目录项值（这是 lddir 1 返回的值）
+    let pmd_entry_val = 0x0000000005413191u64;  // 从测试输出中获取
+    println!("  🔍 硬件遍历模拟（lddir/ldpte）:");
+    println!("    PMD 目录项值 (lddir 1 返回): {:#018x}", pmd_entry_val);
+    println!("    低12位标志位: {:#03x}", pmd_entry_val & 0xFFF);
+
+    // QEMU 的 ldpte 计算：phys = base | offset
+    // 其中 base 是 lddir 返回的目录项值（包含低12位标志位）
+    let hw_pte_phys0_wrong = (pmd_entry_val as usize) | ptoffset0;
+    println!("    硬件计算（错误）: base({:#x}) | offset({:#x}) = {:#x}",
+             pmd_entry_val, ptoffset0, hw_pte_phys0_wrong);
+
+    // 正确的计算应该是：清除低12位后再 OR
+    let hw_pte_phys0_correct = ((pmd_entry_val & !0xFFF) as usize) | ptoffset0;
+    println!("    正确计算: (base & ~0xFFF) | offset = {:#x}", hw_pte_phys0_correct);
+    println!("    软件遍历: {:#x}", pte_phys_addr0);
+    println!("    差异: {:#x}", hw_pte_phys0_wrong ^ pte_phys_addr0);
+
+    let pte_vaddr0 = pte_phys_addr0 + PAGE_OFFSET;
+    let pte_ptr0 = pte_vaddr0 as *const u64;
+
+    unsafe { core::arch::asm!("dbar 0", options(nostack, nomem)) };
+    let pte_val_raw0 = unsafe { core::ptr::read_volatile(pte_ptr0) };
+    let pte_val0 = pte_val_raw0 & TARGET_PHYS_MASK as u64;
+
+    println!("  PTE[0] 物理地址: {:#x}", pte_phys_addr0);
+    println!("  PTE[0] 原始值: {:#018x}", pte_val_raw0);
+    println!("  PTE[0] 掩码后: {:#018x}", pte_val0);
+
+    // QEMU 的 PTE 检查
+    let tlb_v = (pte_val0 & 0x1) != 0;
+    let tlb_d = (pte_val0 & 0x2) != 0;
+    let tlb_plv = (pte_val0 >> 2) & 0x3;
+    let tlb_nr = (pte_val0 >> 61) & 0x1;
+    let tlb_nx = (pte_val0 >> 62) & 0x1;
+    let tlb_rplv = (pte_val0 >> 63) & 0x1;
+
+    println!("  PTE[0] 标志:");
+    println!("    V (Valid):    {}", tlb_v);
+    println!("    D (Dirty):    {}", tlb_d);
+    println!("    PLV:         {}", tlb_plv);
+    println!("    NR (No Read): {}", tlb_nr);
+    println!("    NX (No Exec): {}", tlb_nx);
+
+    if !tlb_v {
+        panic!("❌ PTE[0] V=0 - 页表项无效，这会导致 QEMU ret 3");
+    }
+
+    if tlb_nx != 0 {
+        panic!("❌ PTE[0] NX=1 - 不可执行，这会导致 QEMU ret 6");
+    }
+
+    // 提取物理地址并计算最终物理地址
+    let ppn = (pte_val0 >> 12) & ((1u64 << 40) - 1);
+    let phys_page_base = ((ppn << 12) as usize) & TARGET_PHYS_MASK;
+    let offset_in_page = vaddr & PAGE_MASK;
+    let final_paddr = phys_page_base + offset_in_page;
+
+    println!("  PPN: {:#x}", ppn);
+    println!("  物理页基址: {:#x}", phys_page_base);
+    println!("  页内偏移: {:#x}", offset_in_page);
+    println!("  最终物理地址: {:#x}", final_paddr);
     println!("==========================================\n");
 
     WalkResult {

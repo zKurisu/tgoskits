@@ -431,6 +431,79 @@ pub fn tlb_write_random() {
     }
 }
 
+/// 手动填充 TLB 条目（用于在启用 MMU 前预先填充关键映射）
+///
+/// # Safety
+/// 调用者必须确保：
+/// - 提供的虚拟地址和物理地址映射是正确的
+/// - ASID 值是有效的
+/// - 页大小值与系统配置一致
+#[inline(never)]  // 改为 inline(never) 以便调试
+pub unsafe fn tlb_fill_indexed(
+    index: u32,
+    vaddr: usize,
+    paddr: usize,
+    asid: u64,
+    ps: u64,
+    writable: bool,
+    executable: bool,
+) {
+    // 设置 ASID 寄存器（ASID 存储在独立的 CSR 寄存器中，不是 TLBEHI 的一部分）
+    write_csr_asid(asid);
+
+    // 设置 TLBIDX: 索引 (bits[11:0]) + 页大小 (bits[29:24])
+    let tlbidx_val = (index as u64) | ((ps & 0x3f) << 24);
+    csr_write!(LOONGARCH_CSR_TLBIDX, tlbidx_val);
+
+    // 设置 TLBEHI: 虚拟地址 bits[47:13] (VPPN)
+    // 注意：ASID 不包含在 TLBEHI 中，ASID 通过 CSR_ASID 寄存器设置
+    let vppn = (vaddr as u64 >> 13) & 0x7ffffffff;  // 35 位 VPPN
+    csr_write!(LOONGARCH_CSR_TLBEHI, vppn);
+
+    // 设置 TLBELO0: PPN + 标志位
+    let ppn = (paddr >> 12) & 0x3fffffffffff;
+    let mut tlbelo0_val: u64 = ppn as u64;
+
+    // bit 0: V (Valid) = 1
+    tlbelo0_val |= 1u64 << 0;
+
+    // bit 1: D (Dirty) = writable
+    if writable {
+        tlbelo0_val |= 1u64 << 1;
+    }
+
+    // bits[5:4]: MAT (Memory Attribute Type) = 0x11 (Normal memory)
+    tlbelo0_val |= 0x3 << 4;
+
+    // bit 62: NX (Not Execute) = !executable
+    if !executable {
+        tlbelo0_val |= 1u64 << 62;
+    }
+
+    csr_write!(LOONGARCH_CSR_TLBELO0, tlbelo0_val);
+
+    // 调试输出
+    println!("    TLB 寄存器值:");
+    println!("      TLBIDX: {:#018x} (index={}, ps={:#x})", tlbidx_val, index, ps);
+    println!("      TLBEHI: {:#018x} (VPPN={:#x})", vppn, vppn);
+    println!("      TLBELO0: {:#018x} (PPN={:#x}, V={}, D={}, NX={})",
+        tlbelo0_val, ppn, 1, if writable { 1 } else { 0 }, if !executable { 1 } else { 0 });
+    println!("      ASID: {:#06x}", asid);
+
+    // 写入 TLB 并添加内存屏障
+    core::arch::asm!("tlbwr", options(nomem, nostack));
+    core::arch::asm!("dbar 0", options(nomem, nostack));
+
+    // 验证：读取 TLBIDX 寄存器，确认写入成功
+    let tlbidx_read = csr_read!(LOONGARCH_CSR_TLBIDX);
+    let tlbehi_read = csr_read!(LOONGARCH_CSR_TLBEHI);
+    let tlbelo0_read = csr_read!(LOONGARCH_CSR_TLBELO0);
+    println!("    写入后读取:");
+    println!("      TLBIDX: {:#018x}", tlbidx_read);
+    println!("      TLBEHI: {:#018x}", tlbehi_read);
+    println!("      TLBELO0: {:#018x}", tlbelo0_read);
+}
+
 /// 无效化所有 TLB 条目
 #[inline(always)]
 pub fn local_flush_tlb_all() {

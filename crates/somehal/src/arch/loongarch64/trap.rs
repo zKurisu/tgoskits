@@ -605,16 +605,16 @@ global_asm!(
     ".global handle_tlb_refill",
     "handle_tlb_refill:",
     "
-    csrwr   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV
-    csrrd   $t0, 0x1b  // LA_CSR_PGD
-    lddir   $t0, $t0, 3
-    lddir   $t0, $t0, 2
-    lddir   $t0, $t0, 1
-    ldpte   $t0, 0
-    ldpte   $t0, 1
-    tlbfill
-    csrrd   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV
-    ertn   
+    csrwr   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV - 保存 $t0
+    csrrd   $t0, 0x1b  // LA_CSR_PGD - 读取页表基址
+    lddir   $t0, $t0, 3    // PGD 级别: level 3 → DIR2 (base=39)
+    lddir   $t0, $t0, 2    // PUD 级别: level 2 → DIR1 (base=30)
+    lddir   $t0, $t0, 1    // PMD 级别: level 1 → DIR0 (base=21)
+    ldpte   $t0, 0         // PTE 级别: level 0 → PT (base=12)
+    ldpte   $t0, 1         // PTE 对
+    tlbfill                 // 填充 TLB
+    csrrd   $t0, 0x8B  // LOONGARCH_CSR_TLBRSAV - 恢复 $t0
+    ertn                    // 从异常返回
     ",
     // do_tlb_refill 是 noreturn，不会返回
 
