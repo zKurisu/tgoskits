@@ -601,11 +601,6 @@ global_asm!(
     ".balign VECSIZE",
     "handle_exc_79:", "b handle_reserved_exception",
 
-    // ------------------------------------------------------------------------
-    // Vector 80: TLB Refill Handler (TLBRENTRY 指向这里)
-    // TLB Refill 使用特殊的 CSR: TLBRERA, TLBRPRMD, TLBRBADV
-    // 需要保存上下文并调用 do_page_fault
-    // ------------------------------------------------------------------------
     ".balign VECSIZE",
     ".global handle_tlb_refill",
     "handle_tlb_refill:",

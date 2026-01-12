@@ -8,7 +8,7 @@
 use core::arch::naked_asm;
 
 use kernutil::StaticCell;
-use loongArch64::register::{crmd, pwch::*, pwcl::*, stlbps, tlbidx, tlbrehi};
+use loongArch64::register::{crmd, pgdh, pgdl, pwch::*, pwcl::*, stlbps, tlbidx, tlbrehi};
 use num_align::NumAlign;
 use page_table_generic::{
     MapConfig, MemAttributes, PageTableEntry, PteConfig, TableGeneric, VirtAddr,
@@ -23,7 +23,7 @@ use crate::{
     arch::addrspace::to_phys,
     console::print_mapping,
     consts::PAGE_SIZE,
-    mem::{__kimage_va, __va, MB, PageTableInfo, ram::Ram},
+    mem::{__io, __kimage_va, __va, MB, PageTableInfo, ram::Ram},
     set_user_page_table,
 };
 
@@ -736,97 +736,12 @@ pub fn relocate_kernel_to_vm_code() -> ! {
 
     println!("Boot page table at physical address: {:#x}", tb_addr.raw());
 
-    // 验证页表内容 - 读取 PGD 索引 511
-    let pgd_vaddr = tb_addr.raw() as usize + crate::arch::addrspace::PAGE_OFFSET;
-    println!("PGD virtual address: {:#x}", pgd_vaddr);
-
-    // 读取 PGD[511] (错误地址对应的 PGD 索引)
-    let pgd_entry_addr = pgd_vaddr + 511 * 8;
-    let pgd_entry: u64 = unsafe { core::ptr::read_volatile(pgd_entry_addr as *const u64) };
-    println!("PGD[511] = {:#x}", pgd_entry);
-
-    if pgd_entry == 0 {
-        println!("ERROR: PGD[511] is zero! Page table mapping failed!");
-    } else {
-        println!(
-            "PGD[511] is valid, next level table at: {:#x}",
-            pgd_entry & 0x0000fffffffff000
-        );
-
-        // 验证 PUD 级别 - 索引 510
-        let pud_table_addr =
-            (pgd_entry & 0x0000fffffffff000) as usize + crate::arch::addrspace::PAGE_OFFSET;
-        let pud_entry_addr = pud_table_addr + 510 * 8;
-        let pud_entry: u64 = unsafe { core::ptr::read_volatile(pud_entry_addr as *const u64) };
-        println!("PUD[510] = {:#x}", pud_entry);
-
-        if pud_entry == 0 {
-            println!("ERROR: PUD[510] is zero!");
-        } else {
-            // 检查是否是大页映射 (GH 位 = bit 6)
-            let is_huge = (pud_entry & (1 << 6)) != 0;
-            println!("PUD[510] is huge page: {}", is_huge);
-
-            if is_huge {
-                // 这是一个大页映射，直接检查物理地址
-                let paddr = pud_entry & 0x0000fffffffff000;
-                println!("Huge page mapping: paddr={:#x}", paddr);
-            } else {
-                let pmd_table_addr =
-                    (pud_entry & 0x0000fffffffff000) as usize + crate::arch::addrspace::PAGE_OFFSET;
-                println!("PUD[510] points to PMD table at: {:#x}", pmd_table_addr);
-
-                // 验证 PMD 级别 - 索引 0
-                let pmd_entry_addr = pmd_table_addr;
-                let pmd_entry: u64 =
-                    unsafe { core::ptr::read_volatile(pmd_entry_addr as *const u64) };
-                println!("PMD[0] = {:#x}", pmd_entry);
-
-                if pmd_entry == 0 {
-                    println!("ERROR: PMD[0] is zero!");
-                } else {
-                    let is_huge_pmd = (pmd_entry & (1 << 6)) != 0;
-                    println!("PMD[0] is huge page: {}", is_huge_pmd);
-
-                    if is_huge_pmd {
-                        // PMD 级别的大页映射 (2MB)
-                        let paddr = pmd_entry & 0x0000fffffffff000;
-                        println!("PMD huge page mapping: paddr={:#x}", paddr);
-                    } else {
-                        let pte_table_addr = (pmd_entry & 0x0000fffffffff000) as usize
-                            + crate::arch::addrspace::PAGE_OFFSET;
-                        println!("PMD[0] points to PTE table at: {:#x}", pte_table_addr);
-
-                        // 验证 PTE 级别 - 索引 21
-                        let pte_entry_addr = pte_table_addr + 21 * 8;
-                        let pte_entry: u64 =
-                            unsafe { core::ptr::read_volatile(pte_entry_addr as *const u64) };
-                        println!("PTE[21] = {:#x}", pte_entry);
-
-                        if pte_entry == 0 {
-                            println!("ERROR: PTE[21] is zero!");
-                        } else {
-                            let paddr = pte_entry & 0x0000fffffffff000;
-                            let valid = (pte_entry & 0x1) != 0;
-                            println!("PTE[21]: paddr={:#x}, valid={}", paddr, valid);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // Use physical address to avoid virtual address mapping issues
     let mmu_entry_phys = to_phys(super::entry::mmu_entry as *const () as usize);
     println!("MMU Entry point at physical address: {:#x}", mmu_entry_phys);
 
     let v_entry = __kimage_va(mmu_entry_phys) as usize;
     println!("MMU Entry virtual address: {:#x}", v_entry);
-
-    // 验证地址转换
-    let expected_vaddr = 0xffffffff80000000 + (mmu_entry_phys - crate::mem::kimage_range().start);
-    println!("Expected virtual address: {:#x}", expected_vaddr);
-    println!("Address conversion correct: {}", v_entry == expected_vaddr);
 
     let tb = PageTableInfo {
         asid: 0,
@@ -838,7 +753,11 @@ pub fn relocate_kernel_to_vm_code() -> ! {
 
     println!("Setting up page table...");
     // 先设置页表基地址，但还没有启用 MMU
-    super::Arch::set_kernel_page_table(tb);
+    // super::Arch::set_kernel_page_table(tb);
+    // super::Arch::set_user_page_table(tb);
+    // 设置内核页表基地址到 PGDH (高地址空间)
+    pgdh::set_base(tb.addr as _);
+    pgdl::set_base(tb.addr as _);
 
     // 添加数据同步屏障，确保页表写入完成
     unsafe {
@@ -853,7 +772,7 @@ pub fn relocate_kernel_to_vm_code() -> ! {
     print_registers();
 
     println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}");
-    crate::mem::mmu::set_mmu_enabled();
+
     relocate_kernel(v_entry, v_sp);
     unreachable!()
 }

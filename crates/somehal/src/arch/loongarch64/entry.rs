@@ -99,12 +99,12 @@ fn rust_main() -> ! {
     println!("LoongArch64 Rust kernel entry.");
 
     println!("Kernel code end LMA: {:#x}", kernel_code_end_lma);
+    crate::mem::mmu::set_mmu_enabled();
 
     let _ = crate::acpi::earlycon::acpi_setup_earlycon();
     crate::efi_stub::exit_boot_services();
 
     crate::mem::early_init(crate::mem::kimage_range().end);
-    crate::mem::mmu::set_mmu_enabled();
     super::trap::per_cpu_trap_init(true);
 
     println!("Trap enabled.");
