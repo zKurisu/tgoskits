@@ -1,7 +1,7 @@
 use alloc::boxed::Box;
 use core::time::Duration;
 
-use somehal::{MemConfig, irq_handler, mem::PageTableEntry, mem::PteConfig};
+use somehal::{MemConfig, irq_handler, mem::PteConfig};
 use sparreal_kernel::hal::al::AccessFlags;
 use sparreal_kernel::{hal::al::*, impl_trait, os::mem::KernelAllocator};
 

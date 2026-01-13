@@ -124,10 +124,14 @@ fn get_osal() -> &'static dyn Osal {
     unsafe { OSAL }
 }
 
+/// DMA 缓存无效化操作（TODO: DMA 缓存一致性管理功能）
+#[allow(dead_code)]
 fn invalidate(addr: NonNull<u8>, size: usize) {
     get_osal().invalidate(addr, size)
 }
 
+/// DMA 缓存写回操作（TODO: DMA 缓存一致性管理功能）
+#[allow(dead_code)]
 fn flush(addr: NonNull<u8>, size: usize) {
     get_osal().flush(addr, size)
 }
@@ -147,6 +151,8 @@ fn map(addr: NonNull<u8>, size: usize, direction: Direction) -> DmaHandle {
     get_osal().map(addr, size, direction)
 }
 
+/// 解除 DMA 映射（TODO: DMA 缓存一致性管理功能）
+#[allow(dead_code)]
 fn unmap(h: DmaHandle) {
     get_osal().unmap(h)
 }

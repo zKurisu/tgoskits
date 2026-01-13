@@ -32,6 +32,7 @@ pub(crate) fn init_with_alloc() -> Option<()> {
     FDT.init(fdt);
     Some(())
 }
+#[allow(dead_code)]
 pub(crate) fn fdt() -> Option<&'static fdt_edit::Fdt> {
     fdt_addr()?;
     Some(&FDT)

@@ -127,6 +127,7 @@ impl Build {
     fn gen_defines(&self) {
         let kernel_load_vaddr = self.kernel_vaddr as usize;
         let defines = quote::quote! {
+            #[allow(dead_code)]
             pub const VM_LOAD_ADDRESS: usize = #kernel_load_vaddr;
         };
         let syntax_tree = syn::parse2(defines).unwrap();

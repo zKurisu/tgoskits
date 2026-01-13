@@ -50,6 +50,7 @@ fn setup_console() {
     unsafe { crate::console::set_out(&UefiPrinter) };
 }
 
+#[allow(dead_code)]
 fn efi_main() -> Result {
     find_acpi_rsdp();
 

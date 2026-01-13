@@ -1,5 +1,3 @@
-use core::sync::atomic::{Ordering, compiler_fence};
-
 // RELA 重定位结构 (参考 include/uapi/linux/elf.h)
 #[repr(C)]
 pub struct Rela {

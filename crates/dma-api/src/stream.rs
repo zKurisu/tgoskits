@@ -11,8 +11,8 @@ pub struct ScatterEntry {
 }
 
 pub struct DmaStream<'a, 'b> {
-    data: &'a [u8],
     scatter_list: &'b mut Vec<ScatterEntry>,
+    _phantom: core::marker::PhantomData<&'a ()>,
 }
 
 impl<'a, 'b> DmaStream<'a, 'b> {
@@ -42,8 +42,8 @@ impl<'a, 'b> DmaStream<'a, 'b> {
         }
 
         Self {
-            data,
             scatter_list: tmp,
+            _phantom: core::marker::PhantomData,
         }
     }
 

@@ -227,13 +227,13 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
         }
 
         // 检查虚拟地址和物理地址是否页对齐
-        if config.vaddr.raw() % T::PAGE_SIZE != 0 {
+        if !config.vaddr.raw().is_multiple_of(T::PAGE_SIZE) {
             return Err(PagingError::alignment_error(
                 "Virtual address not page aligned",
             ));
         }
 
-        if config.paddr.raw() % T::PAGE_SIZE != 0 {
+        if !config.paddr.raw().is_multiple_of(T::PAGE_SIZE) {
             return Err(PagingError::alignment_error(
                 "Physical address not page aligned",
             ));

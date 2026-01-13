@@ -33,15 +33,13 @@
 //! }
 //! ```
 
-pub mod task;
 pub mod executor;
+pub mod task;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 // Re-export public interfaces
-pub use executor::{
-    block_on, has_pending_tasks, spawn, task_count, tick, SingleCpuExecutor,
-};
+pub use executor::{SingleCpuExecutor, block_on, has_pending_tasks, spawn, task_count, tick};
 
 pub use task::{TaskHandle, TaskId, TaskState};

@@ -57,7 +57,6 @@ pub fn el_entry() -> ! {
 }
 
 pub(crate) fn mmu_entry() -> ! {
- 
     println!("Disable user page table");
     elx::set_user_table(PageTableInfo { asid: 0, addr: 0 });
     elx::flush_tlb(None);

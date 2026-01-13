@@ -6,11 +6,7 @@ use loongArch64::register::{
 };
 
 use crate::{
-    arch::{
-        addrspace::{VM_LOAD_ADDRESS, to_phys},
-        context::TrapFrame,
-        register::csr,
-    },
+    arch::{addrspace::to_phys, context::TrapFrame, register::csr},
     irq::IrqId,
 };
 

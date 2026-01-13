@@ -5,7 +5,6 @@
 
 use core::fmt::Debug;
 
-use loongArch64::register::asid;
 use page_table_generic::{MemAttributes, PageTableEntry};
 use tock_registers::interfaces::*;
 use tock_registers::register_bitfields;
@@ -139,6 +138,7 @@ impl Entry {
         Self(0)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn debug(
         &self,
         is_dir: bool,
@@ -153,6 +153,7 @@ impl Entry {
 }
 
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub(crate) struct EntryDebug(Entry, bool);
 
 impl Debug for EntryDebug {

@@ -1,5 +1,15 @@
+// ============================================================================
+// 任务上下文管理（TODO: 多任务调度功能尚未实现）
+// ============================================================================
+
+// 异常处理临时寄存器保存
+// CSR_KS0 (0x30), CSR_KS1 (0x31) 在 trap.rs 的汇编代码中使用
+// CSR_KS2 (0x32) 当前未使用，保留备用
+#[allow(dead_code)]
 const EXCEPTION_KS0: usize = 0x30;
+#[allow(dead_code)]
 const EXCEPTION_KS1: usize = 0x31;
+#[allow(dead_code)]
 const EXCEPTION_KS2: usize = 0x32;
 
 /// General registers of Loongarch64.
@@ -42,6 +52,8 @@ pub struct GeneralRegisters {
 }
 
 /// Floating-point registers of LoongArch64
+/// 浮点寄存器状态（TODO: FPU 保存/恢复功能）
+#[allow(dead_code)]
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct FpuState {
@@ -67,31 +79,38 @@ pub struct TrapFrame {
 
 impl TrapFrame {
     /// Gets the 0th syscall argument.
+    /// 获取系统调用参数（TODO: 系统调用功能）
+    #[allow(dead_code)]
     pub const fn arg0(&self) -> usize {
         self.regs.a0 as _
     }
 
     /// Gets the 1st syscall argument.
+    #[allow(dead_code)]
     pub const fn arg1(&self) -> usize {
         self.regs.a1 as _
     }
 
     /// Gets the 2nd syscall argument.
+    #[allow(dead_code)]
     pub const fn arg2(&self) -> usize {
         self.regs.a2 as _
     }
 
     /// Gets the 3rd syscall argument.
+    #[allow(dead_code)]
     pub const fn arg3(&self) -> usize {
         self.regs.a3 as _
     }
 
     /// Gets the 4th syscall argument.
+    #[allow(dead_code)]
     pub const fn arg4(&self) -> usize {
         self.regs.a4 as _
     }
 
     /// Gets the 5th syscall argument.
+    #[allow(dead_code)]
     pub const fn arg5(&self) -> usize {
         self.regs.a5 as _
     }
@@ -108,6 +127,9 @@ impl TrapFrame {
 ///
 /// On context switch, current task saves its context from CPU to memory,
 /// and the next task restores its context from memory to CPU.
+///
+/// 任务上下文（TODO: 多任务调度功能）
+#[allow(dead_code)]
 #[allow(missing_docs)]
 #[repr(C)]
 #[derive(Debug, Default)]
@@ -124,6 +146,7 @@ pub struct TaskContext {
 
 impl TaskContext {
     /// Creates a new default context for a new task.
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self::default()
     }
@@ -140,7 +163,9 @@ impl TaskContext {
     ///
     /// It first saves the current task's context from CPU to this place, and then
     /// restores the next task's context from `next_ctx` to CPU.
-    pub fn switch_to(&mut self, next_ctx: &Self) {
+    #[allow(dead_code)]
+    pub fn switch_to(&mut self, _next_ctx: &Self) {
+        // TODO: 实现任务上下文切换
         // unsafe { context_switch(self, next_ctx) }
     }
 }

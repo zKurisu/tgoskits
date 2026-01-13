@@ -2,13 +2,13 @@ use byte_unit::{Byte, UnitType};
 use kernutil::StaticCell;
 pub use kernutil::memory::{MemoryDescriptor, MemoryType, PageTableInfo};
 use num_align::NumAlign;
-use ranges_ext::{RangeError, RangeExtBaseOps, RangeVecOps};
+use ranges_ext::{RangeError, RangeExtBaseOps};
 
 pub mod mmu;
 pub(crate) mod ram;
 pub(crate) mod region;
 
-use crate::{ArchTrait, mem::ram::Ram};
+use crate::ArchTrait;
 
 pub use page_table_generic::*;
 
