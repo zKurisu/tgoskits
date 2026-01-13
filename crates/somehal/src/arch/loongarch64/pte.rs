@@ -6,9 +6,7 @@
 use core::fmt::Debug;
 
 use page_table_generic::{MemAttributes, PageTableEntry};
-use tock_registers::interfaces::*;
-use tock_registers::register_bitfields;
-use tock_registers::registers::*;
+use tock_registers::{interfaces::*, register_bitfields, registers::*};
 
 // LoongArch64 页表项寄存器位域定义
 register_bitfields![u64,
@@ -150,6 +148,103 @@ impl Entry {
             self.as_base().debug().fmt(f)
         }
     }
+
+    fn from_huge(config: page_table_generic::PteConfig) -> u64 {
+        let mut val = PTE_DIR::H::SET;
+        if config.valid {
+            val = val + PTE_DIR::VALID::SET + PTE_DIR::PRESENT::SET;
+        }
+
+        if !config.read {
+            val += PTE_DIR::NO_READ::SET;
+        }
+
+        // 设置可写标志和脏位
+        if config.writable {
+            val += PTE_DIR::WRITE::SET + PTE_DIR::DIRTY::SET;
+        }
+
+        // 设置可执行标志
+        if !config.executable {
+            val += PTE_DIR::NO_EXEC::SET;
+        }
+
+        // 设置用户访问标志（PLV3 表示用户态）
+        val += if config.lower {
+            PTE_DIR::PLV::PLV3
+        } else {
+            PTE_DIR::PLV::PLV0
+        };
+
+        // 设置物理地址
+        let ppn = (config.paddr.raw() as u64) >> 12;
+        val += PTE_DIR::PHYS_ADDR.val(ppn);
+
+        if config.global {
+            val += PTE_DIR::G::SET;
+        }
+
+        // 设置内存属性
+        val += match config.mem_attr {
+            MemAttributes::Device => PTE_DIR::CACHE::SUC, // SUC
+            MemAttributes::Normal | MemAttributes::PerCpu => PTE_DIR::CACHE::CC, // CC
+            MemAttributes::Uncached => PTE_DIR::CACHE::WUC, // WUC
+        };
+
+        val.value
+    }
+
+    fn from_dir(config: page_table_generic::PteConfig) -> u64 {
+        let paddr = config.paddr.raw();
+        PTE_DIR::PHYS_ADDR.val((paddr >> 12) as u64).value
+    }
+
+    fn from_base(config: page_table_generic::PteConfig) -> u64 {
+        let mut val = PTE::VALID::CLEAR;
+
+        // 设置有效位和存在位
+        if config.valid {
+            val = PTE::VALID::SET + PTE::PRESENT::SET;
+        }
+        if !config.read {
+            val += PTE::NO_READ::SET;
+        }
+
+        // 设置可写标志和脏位
+        if config.writable {
+            val += PTE::WRITE::SET + PTE::DIRTY::SET;
+        }
+
+        // 设置可执行标志
+        if !config.executable {
+            val += PTE::NO_EXEC::SET;
+        }
+
+        // 设置用户访问标志（PLV3 表示用户态）
+        val += if config.lower {
+            PTE::PLV::PLV3
+        } else {
+            PTE::PLV::PLV0
+        };
+
+        // 设置物理地址
+        let ppn = (config.paddr.raw() as u64) >> 12;
+        val += PTE::PHYS_ADDR.val(ppn);
+
+        // 设置全局标志（页表项使用 G 位，bit 6）
+        if config.global {
+            val += PTE::G::SET;
+        }
+
+        // 设置内存属性
+        val += match config.mem_attr {
+            MemAttributes::Device => PTE::CACHE::SUC, // SUC
+            MemAttributes::Normal | MemAttributes::PerCpu => PTE::CACHE::CC, // CC
+            MemAttributes::Uncached => PTE::CACHE::WUC, // WUC
+        };
+
+        val.value
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -164,139 +259,21 @@ impl Debug for EntryDebug {
 
 impl PageTableEntry for Entry {
     fn from_config(config: page_table_generic::PteConfig) -> Self {
-        let entry = Self::empty();
-
-        // 目录项和页表项需要不同的处理
-        if config.is_dir {
+        let val = if config.is_dir {
             if config.huge {
-                entry.as_dir().modify(PTE_DIR::H::SET);
-
-                // 页表项：设置完整的标志位和地址
-                // 设置有效位和存在位
-                if config.valid {
-                    entry
-                        .as_dir()
-                        .modify(PTE_DIR::VALID::SET + PTE_DIR::PRESENT::SET);
-                }
-
-                if !config.read {
-                    entry.as_dir().modify(PTE_DIR::NO_READ::SET);
-                }
-
-                // 设置可写标志和脏位
-                if config.writable {
-                    entry
-                        .as_dir()
-                        .modify(PTE_DIR::WRITE::SET + PTE_DIR::DIRTY::SET);
-                }
-
-                // 设置可执行标志
-                if !config.executable {
-                    entry.as_dir().modify(PTE_DIR::NO_EXEC::SET);
-                }
-
-                // 设置用户访问标志（PLV3 表示用户态）
-                if config.lower {
-                    entry.as_dir().modify(PTE_DIR::PLV::PLV3);
-                } else {
-                    entry.as_dir().modify(PTE_DIR::PLV::PLV0);
-                }
-
-                // 设置物理地址
-                let ppn = (config.paddr.raw() as u64) >> 12;
-                entry.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
-
-                if config.global {
-                    entry.as_dir().modify(PTE_DIR::G::SET);
-                }
-
-                // 设置内存属性
-                let cache = match config.mem_attr {
-                    MemAttributes::Device => PTE_DIR::CACHE::SUC, // SUC
-                    MemAttributes::Normal | MemAttributes::PerCpu => PTE_DIR::CACHE::CC, // CC
-                    MemAttributes::Uncached => PTE_DIR::CACHE::WUC, // WUC
-                };
-                entry.as_dir().modify(cache);
+                Self::from_huge(config)
             } else {
-                // 目录项：只设置地址部分，不设置标志位
-                // 目录项的 bit [11:0] 应该全是 0，以便硬件正确计算地址
-                let paddr = config.paddr.raw();
-                entry
-                    .as_dir()
-                    .write(PTE_DIR::PHYS_ADDR.val((paddr >> 12) as u64));
+                Self::from_dir(config)
             }
         } else {
-            // 页表项：设置完整的标志位和地址
-            // 设置有效位和存在位
-            if config.valid {
-                entry.as_base().modify(PTE::VALID::SET + PTE::PRESENT::SET);
-            } else {
-                entry
-                    .as_base()
-                    .modify(PTE::VALID::CLEAR + PTE::PRESENT::CLEAR);
-            }
-
-            if config.read {
-                entry.as_base().modify(PTE::NO_READ::CLEAR);
-            } else {
-                entry.as_base().modify(PTE::NO_READ::SET);
-            }
-
-            // 设置可写标志和脏位
-            if config.writable {
-                entry.as_base().modify(PTE::WRITE::SET + PTE::DIRTY::SET);
-            } else {
-                entry.as_base().modify(PTE::WRITE::CLEAR);
-            }
-
-            // 设置可执行标志
-            if config.executable {
-                entry.as_base().modify(PTE::NO_EXEC::CLEAR);
-            } else {
-                entry.as_base().modify(PTE::NO_EXEC::SET);
-            }
-
-            // 设置用户访问标志（PLV3 表示用户态）
-            if config.lower {
-                entry.as_base().modify(PTE::PLV::PLV3);
-            } else {
-                entry.as_base().modify(PTE::PLV::PLV0);
-            }
-
-            // 设置物理地址
-            let ppn = (config.paddr.raw() as u64) >> 12;
-            entry.as_base().modify(PTE::PHYS_ADDR.val(ppn));
-
-            // 设置全局标志（页表项使用 G 位，bit 6）
-            if config.global {
-                entry.as_base().modify(PTE::G::SET);
-            }
-
-            // 设置内存属性
-            let cache = match config.mem_attr {
-                MemAttributes::Device => 0b00,                         // SUC
-                MemAttributes::Normal | MemAttributes::PerCpu => 0b01, // CC
-                MemAttributes::Uncached => 0b10,                       // WUC
-            };
-            entry.as_base().modify(PTE::CACHE.val(cache));
-        }
-
-        entry
+            Self::from_base(config)
+        };
+        Self(val)
     }
 
     fn to_config(&self, is_dir: bool) -> page_table_generic::PteConfig {
         let valid = self.as_base().is_set(PTE::VALID);
-
-        // 获取物理地址（关键：根据 is_dir 选择不同的布局）
-        let paddr = if is_dir {
-            // 目录项：使用 PTE_DIR 格式，bits [51:13]
-            let raw_val = self.as_dir().read(PTE_DIR::PHYS_ADDR);
-            (raw_val << 12) as usize
-        } else {
-            // 页表项：使用 PTE 格式，bits [51:12]
-            let raw_val = self.as_base().read(PTE::PHYS_ADDR);
-            (raw_val << 12) as usize
-        };
+        let mut paddr = self.as_base().read(PTE::PHYS_ADDR) << 12;
 
         // 检查是否为大页（仅目录项）
         let huge = if is_dir {
@@ -305,9 +282,12 @@ impl PageTableEntry for Entry {
             false
         };
 
-        // 检查全局标志（仅页表项有 G 位，目录项没有）
-        let global = if is_dir {
-            false // 目录项没有全局标志
+        if huge {
+            paddr &= !0x1FFF;
+        }
+
+        let global = if huge {
+            self.as_dir().is_set(PTE_DIR::G)
         } else {
             self.as_base().is_set(PTE::G)
         };
