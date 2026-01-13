@@ -855,18 +855,8 @@ pub fn relocate_kernel_to_vm_code() -> ! {
 
     println!("MMU enabled, jumping to {v_entry:#x}, sp={v_sp:#x}");
 
-    test_print(b'A');
-
     relocate_kernel(v_entry, v_sp);
     unreachable!()
-}
-
-fn test_print(b: u8) {
-    unsafe {
-        (0x800000001fe001e0usize as *mut u8).write_volatile(b);
-        (0x800000001fe001e0usize as *mut u8).write_volatile(b'\r');
-        (0x800000001fe001e0usize as *mut u8).write_volatile(b'\n');
-    }
 }
 
 #[unsafe(naked)]
