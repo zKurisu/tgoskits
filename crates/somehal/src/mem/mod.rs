@@ -45,11 +45,6 @@ pub fn __io(paddr: usize) -> *mut u8 {
     crate::arch::Arch::_io(paddr)
 }
 
-// /// 内核虚拟地址转换为 RAM 物理地址
-// pub(crate) fn __pa(vaddr: *const u8) -> usize {
-
-// }
-
 /// kernel image 物理地址转换为内核虚拟地址
 pub(crate) fn __kimage_va(paddr: usize) -> *mut u8 {
     (paddr as isize - vm_load_offset()) as usize as *mut u8

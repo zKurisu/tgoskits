@@ -6,7 +6,11 @@ use loongArch64::register::{
 };
 
 use crate::{
-    arch::{addrspace::to_phys, context::TrapFrame, register::csr},
+    arch::{
+        addrspace::{VM_LOAD_ADDRESS, to_phys},
+        context::TrapFrame,
+        register::csr,
+    },
     irq::IrqId,
 };
 
@@ -145,7 +149,8 @@ fn eentry_addr() -> usize {
 }
 
 fn tlbrentry_addr() -> usize {
-    to_phys(eentry_addr() + 80 * VECSIZE)
+    let addr = eentry_addr() + 80 * VECSIZE;
+    to_phys(addr)
 }
 
 pub fn per_cpu_trap_init(_is_primary: bool) {

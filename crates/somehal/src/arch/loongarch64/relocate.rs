@@ -48,6 +48,7 @@ pub fn relocate_kernel_to_vm_code() {
 pub fn reset() {
     unsafe {
         crate::elf::reset(R_LARCH_RELATIVE);
+        
     }
 }
 

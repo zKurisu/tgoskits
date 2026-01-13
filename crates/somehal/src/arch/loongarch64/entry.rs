@@ -1,6 +1,6 @@
 use core::{arch::naked_asm, ffi::c_void};
 
-use crate::{arch::addrspace::*, mem::set_vm_load_offset, prime_entry};
+use crate::{arch::addrspace::*, mem::set_vm_load_offset};
 
 static mut FW_ARG0: usize = 0;
 static mut FW_ARG1: usize = 0;

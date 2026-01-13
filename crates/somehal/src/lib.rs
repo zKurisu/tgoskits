@@ -122,8 +122,6 @@ fn prime_entry() -> ! {
 
     mem::init_after_mmu();
 
-    arch::Arch::per_cpu_trap_init(true);
-
     mem::memory_map_setup();
     mem::print_memory_map();
 

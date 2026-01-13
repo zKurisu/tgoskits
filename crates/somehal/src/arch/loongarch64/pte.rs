@@ -184,7 +184,9 @@ impl PageTableEntry for Entry {
 
                 // 设置可写标志和脏位
                 if config.writable {
-                    entry.as_dir().modify(PTE_DIR::WRITE::SET);
+                    entry
+                        .as_dir()
+                        .modify(PTE_DIR::WRITE::SET + PTE_DIR::DIRTY::SET);
                 }
 
                 // 设置可执行标志
@@ -197,13 +199,6 @@ impl PageTableEntry for Entry {
                     entry.as_dir().modify(PTE_DIR::PLV::PLV3);
                 } else {
                     entry.as_dir().modify(PTE_DIR::PLV::PLV0);
-                }
-
-                // 设置脏位
-                if config.dirty {
-                    entry.as_dir().modify(PTE_DIR::DIRTY::SET);
-                } else {
-                    entry.as_dir().modify(PTE_DIR::DIRTY::CLEAR);
                 }
 
                 // 设置物理地址
@@ -248,7 +243,7 @@ impl PageTableEntry for Entry {
 
             // 设置可写标志和脏位
             if config.writable {
-                entry.as_base().modify(PTE::WRITE::SET);
+                entry.as_base().modify(PTE::WRITE::SET + PTE::DIRTY::SET);
             } else {
                 entry.as_base().modify(PTE::WRITE::CLEAR);
             }
@@ -265,13 +260,6 @@ impl PageTableEntry for Entry {
                 entry.as_base().modify(PTE::PLV::PLV3);
             } else {
                 entry.as_base().modify(PTE::PLV::PLV0);
-            }
-
-            // 设置脏位
-            if config.dirty {
-                entry.as_base().modify(PTE::DIRTY::SET);
-            } else {
-                entry.as_base().modify(PTE::DIRTY::CLEAR);
             }
 
             // 设置物理地址
