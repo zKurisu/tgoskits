@@ -1,17 +1,17 @@
 use crate::{
-    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableGeneric,
+    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableMeta,
     VirtAddr,
 };
 
 /// 页表帧，代表一个物理页面上的页表
 #[derive(Clone, Copy)]
-pub struct Frame<T: TableGeneric, A: FrameAllocator> {
+pub struct Frame<T: TableMeta, A: FrameAllocator> {
     pub paddr: PhysAddr,
     pub allocator: A,
     _marker: core::marker::PhantomData<T>,
 }
 
-impl<T: TableGeneric, A: FrameAllocator> core::fmt::Debug for Frame<T, A> {
+impl<T: TableMeta, A: FrameAllocator> core::fmt::Debug for Frame<T, A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Frame")
             .field("paddr", &format_args!("{:#x}", self.paddr.raw()))
@@ -21,7 +21,7 @@ impl<T: TableGeneric, A: FrameAllocator> core::fmt::Debug for Frame<T, A> {
 
 impl<T, A> Frame<T, A>
 where
-    T: TableGeneric,
+    T: TableMeta,
     A: FrameAllocator,
 {
     pub(crate) const PT_INDEX_SHIFT: usize = T::PAGE_SIZE.trailing_zeros() as usize;
@@ -300,7 +300,7 @@ where
     }
 }
 
-const fn cal_index_bits<T: TableGeneric>() -> usize {
+const fn cal_index_bits<T: TableMeta>() -> usize {
     let mut bits = 0;
     let len = T::LEVEL_BITS.len();
     let mut i = 0;

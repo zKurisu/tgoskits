@@ -24,7 +24,7 @@ pub trait FrameAllocator: Clone + Sync + Send + 'static {
     fn phys_to_virt(&self, paddr: PhysAddr) -> *mut u8;
 }
 
-pub trait TableGeneric: Sync + Send + Clone + Copy + 'static {
+pub trait TableMeta: Sync + Send + Clone + Copy + 'static {
     type P: PageTableEntry;
 
     /// 页面大小（支持4KB、16KB、64KB等）
@@ -62,4 +62,38 @@ pub trait PageTableEntry: Debug + Sync + Send + Clone + Copy + Sized + 'static {
     fn to_config(&self, is_dir: bool) -> PteConfig;
 
     fn valid(&self) -> bool;
+}
+
+pub trait PageTableOp: Send + 'static {
+    fn addr(&self) -> PhysAddr;
+    fn map(&mut self, config: &MapConfig) -> PagingResult;
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PagingError>;
+}
+
+impl<T: TableMeta, A: FrameAllocator> PageTableOp for PageTable<T, A> {
+    fn addr(&self) -> PhysAddr {
+        self.root_paddr()
+    }
+
+    fn map(&mut self, config: &MapConfig) -> PagingResult {
+        PageTableRef::map(self, config)
+    }
+
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> PagingResult {
+        PageTableRef::unmap(self, virt_start, size)
+    }
+}
+
+impl<T: TableMeta, A: FrameAllocator> PageTableOp for PageTableRef<T, A> {
+    fn addr(&self) -> PhysAddr {
+        self.root_paddr()
+    }
+
+    fn map(&mut self, config: &MapConfig) -> PagingResult {
+        self.map(config)
+    }
+
+    fn unmap(&mut self, virt_start: VirtAddr, size: usize) -> Result<(), PagingError> {
+        self.unmap(virt_start, size)
+    }
 }

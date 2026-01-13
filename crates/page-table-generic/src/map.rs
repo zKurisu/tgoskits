@@ -1,5 +1,5 @@
 use crate::{
-    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableGeneric,
+    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, PteConfig, TableMeta,
     VirtAddr, frame::Frame,
 };
 
@@ -61,7 +61,7 @@ impl core::fmt::Debug for MapConfig {
 
 impl<T, A> Frame<T, A>
 where
-    T: TableGeneric,
+    T: TableMeta,
     A: FrameAllocator,
 {
     /// 递归映射的核心实现

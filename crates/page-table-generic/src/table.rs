@@ -1,17 +1,17 @@
 use core::ops::{Deref, DerefMut};
 
 use crate::{
-    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, TableGeneric, VirtAddr,
+    FrameAllocator, PageTableEntry, PagingError, PagingResult, PhysAddr, TableMeta, VirtAddr,
     frame::Frame,
     map::{MapConfig, MapRecursiveConfig, UnmapConfig, UnmapRecursiveConfig},
     walk::{PageTableWalker, WalkConfig},
 };
 
-pub struct PageTable<T: TableGeneric, A: FrameAllocator> {
+pub struct PageTable<T: TableMeta, A: FrameAllocator> {
     inner: PageTableRef<T, A>,
 }
 
-impl<T: TableGeneric, A: FrameAllocator> PageTable<T, A> {
+impl<T: TableMeta, A: FrameAllocator> PageTable<T, A> {
     pub const VALID_BITS: usize = Frame::<T, A>::PT_VALID_BITS;
 
     /// 创建一个新的页表
@@ -25,7 +25,7 @@ impl<T: TableGeneric, A: FrameAllocator> PageTable<T, A> {
     }
 }
 
-impl<T: TableGeneric, A: FrameAllocator> Drop for PageTable<T, A> {
+impl<T: TableMeta, A: FrameAllocator> Drop for PageTable<T, A> {
     fn drop(&mut self) {
         unsafe {
             // 释放所有页表帧，但不释放映射的物理页
@@ -34,7 +34,7 @@ impl<T: TableGeneric, A: FrameAllocator> Drop for PageTable<T, A> {
     }
 }
 
-impl<T: TableGeneric, A: FrameAllocator> Deref for PageTable<T, A> {
+impl<T: TableMeta, A: FrameAllocator> Deref for PageTable<T, A> {
     type Target = PageTableRef<T, A>;
 
     fn deref(&self) -> &Self::Target {
@@ -42,18 +42,18 @@ impl<T: TableGeneric, A: FrameAllocator> Deref for PageTable<T, A> {
     }
 }
 
-impl<T: TableGeneric, A: FrameAllocator> DerefMut for PageTable<T, A> {
+impl<T: TableMeta, A: FrameAllocator> DerefMut for PageTable<T, A> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
 #[derive(Clone, Copy)]
-pub struct PageTableRef<T: TableGeneric, A: FrameAllocator> {
+pub struct PageTableRef<T: TableMeta, A: FrameAllocator> {
     pub root: Frame<T, A>,
 }
 
-impl<T: TableGeneric, A: FrameAllocator> core::fmt::Debug for PageTableRef<T, A>
+impl<T: TableMeta, A: FrameAllocator> core::fmt::Debug for PageTableRef<T, A>
 where
     T::P: core::fmt::Debug,
 {
@@ -67,7 +67,7 @@ where
     }
 }
 
-impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
+impl<T: TableMeta, A: FrameAllocator> PageTableRef<T, A> {
     /// 创建一个新的页表
     ///
     /// # Safety
@@ -130,7 +130,7 @@ impl<T: TableGeneric, A: FrameAllocator> PageTableRef<T, A> {
         self.validate_unmap_params(start_vaddr, size)?;
 
         // 检查大小溢出
-        let end_vaddr = match start_vaddr.raw().checked_add(size) {
+        let end_vaddr: VirtAddr = match start_vaddr.raw().checked_add(size) {
             Some(end) => VirtAddr::new(end),
             None => {
                 return Err(PagingError::address_overflow(

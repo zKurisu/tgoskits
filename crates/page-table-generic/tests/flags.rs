@@ -200,7 +200,7 @@ fn print_pte_flags(pte: &PteImpl, test_name: &str) {
 }
 
 /// 带有flag验证的高级测试函数
-fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
+fn test_high_with_flags<T: TableMeta, A: FrameAllocator>(
     pte: PteConfig,
     alloc: A,
     test_vaddr: VirtAddr,
@@ -214,7 +214,7 @@ fn test_high_with_flags<T: TableGeneric, A: FrameAllocator>(
     expected_cache_mode: u64,
     expected_huge: bool,
 ) where
-    T: TableGeneric<P = PteImpl>,
+    T: TableMeta<P = PteImpl>,
 {
     let mut pg = unsafe { PageTableRef::<T, A>::new(alloc).unwrap() };
     println!("table page size: {:#x}", T::PAGE_SIZE);

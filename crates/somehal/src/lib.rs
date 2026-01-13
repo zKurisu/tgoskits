@@ -47,7 +47,7 @@ use crate::{irq::IrqId, mem::PageTableInfo};
 
 #[allow(unused)]
 pub trait ArchTrait {
-    type P: TableGeneric;
+    type P: TableMeta;
 
     fn _va(paddr: usize) -> *mut u8;
     fn _io(paddr: usize) -> *mut u8 {

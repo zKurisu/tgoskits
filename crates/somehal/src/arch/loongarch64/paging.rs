@@ -7,7 +7,7 @@ use core::arch::naked_asm;
 
 use loongArch64::register::{pgdh, pgdl, pwch::*, pwcl::*, stlbps};
 use num_align::NumAlign;
-use page_table_generic::{MapConfig, MemAttributes, PteConfig, TableGeneric, VirtAddr};
+use page_table_generic::{MapConfig, MemAttributes, PteConfig, TableMeta, VirtAddr};
 
 // 导入 tock-registers 风格的页表项
 pub use super::pte::Entry;
@@ -111,7 +111,7 @@ pub fn setup() {
 pub struct Generic;
 
 #[cfg(page_size_4k)]
-impl TableGeneric for Generic {
+impl TableMeta for Generic {
     type P = Entry;
 
     /// 页面大小

@@ -1,4 +1,4 @@
-use crate::{FrameAllocator, PageTableEntry, PageTableRef, TableGeneric, VirtAddr, frame::Frame};
+use crate::{FrameAllocator, PageTableEntry, PageTableRef, TableMeta, VirtAddr, frame::Frame};
 
 use heapless::Vec;
 
@@ -30,7 +30,7 @@ pub struct WalkConfig {
 }
 
 /// 页表遍历迭代器
-pub struct PageTableWalker<'a, T: TableGeneric, A: FrameAllocator> {
+pub struct PageTableWalker<'a, T: TableMeta, A: FrameAllocator> {
     _phantom: core::marker::PhantomData<&'a ()>,
     config: WalkConfig,
     // 内部状态管理 - 使用heapless::Vec
@@ -40,14 +40,14 @@ pub struct PageTableWalker<'a, T: TableGeneric, A: FrameAllocator> {
 
 /// 遍历状态
 #[derive(Clone, Copy)]
-struct WalkState<T: TableGeneric, A: FrameAllocator> {
+struct WalkState<T: TableMeta, A: FrameAllocator> {
     frame: Frame<T, A>,
     level: usize,
     index: usize,
     base_vaddr: VirtAddr,
 }
 
-impl<'a, T: TableGeneric, A: FrameAllocator> PageTableWalker<'a, T, A> {
+impl<'a, T: TableMeta, A: FrameAllocator> PageTableWalker<'a, T, A> {
     /// 创建新的页表遍历器
     pub fn new(page_table: &'a PageTableRef<T, A>, config: WalkConfig) -> Self {
         let mut walker = Self {
@@ -161,7 +161,7 @@ impl<'a, T: TableGeneric, A: FrameAllocator> PageTableWalker<'a, T, A> {
     }
 }
 
-impl<'a, T: TableGeneric, A: FrameAllocator> Iterator for PageTableWalker<'a, T, A> {
+impl<'a, T: TableMeta, A: FrameAllocator> Iterator for PageTableWalker<'a, T, A> {
     type Item = PteInfo<T::P>;
 
     fn next(&mut self) -> Option<Self::Item> {
