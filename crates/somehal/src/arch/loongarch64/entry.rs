@@ -115,7 +115,6 @@ fn rust_main() -> ! {
         println!("{cmdline}");
     }
 
-    //     prime_entry()
     super::paging::relocate_kernel_to_vm_code()
 }
 

@@ -179,17 +179,17 @@ impl PageTableEntry for Entry {
                 }
 
                 if !config.read {
-                    entry.as_base().modify(PTE::NO_READ::SET);
+                    entry.as_dir().modify(PTE_DIR::NO_READ::SET);
                 }
 
                 // 设置可写标志和脏位
                 if config.writable {
-                    entry.as_base().modify(PTE::WRITE::SET);
+                    entry.as_dir().modify(PTE_DIR::WRITE::SET);
                 }
 
                 // 设置可执行标志
                 if !config.executable {
-                    entry.as_base().modify(PTE::NO_EXEC::SET);
+                    entry.as_dir().modify(PTE_DIR::NO_EXEC::SET);
                 }
 
                 // 设置用户访问标志（PLV3 表示用户态）
@@ -201,14 +201,14 @@ impl PageTableEntry for Entry {
 
                 // 设置脏位
                 if config.dirty {
-                    entry.as_base().modify(PTE::DIRTY::SET);
+                    entry.as_dir().modify(PTE_DIR::DIRTY::SET);
                 } else {
-                    entry.as_base().modify(PTE::DIRTY::CLEAR);
+                    entry.as_dir().modify(PTE_DIR::DIRTY::CLEAR);
                 }
 
                 // 设置物理地址
                 let ppn = (config.paddr.raw() as u64) >> 12;
-                entry.as_base().modify(PTE::PHYS_ADDR.val(ppn));
+                entry.as_dir().modify(PTE_DIR::PHYS_ADDR.val(ppn));
 
                 if config.global {
                     entry.as_dir().modify(PTE_DIR::G::SET);
@@ -216,11 +216,11 @@ impl PageTableEntry for Entry {
 
                 // 设置内存属性
                 let cache = match config.mem_attr {
-                    MemAttributes::Device => 0b00,                         // SUC
-                    MemAttributes::Normal | MemAttributes::PerCpu => 0b01, // CC
-                    MemAttributes::Uncached => 0b10,                       // WUC
+                    MemAttributes::Device => PTE_DIR::CACHE::SUC, // SUC
+                    MemAttributes::Normal | MemAttributes::PerCpu => PTE_DIR::CACHE::CC, // CC
+                    MemAttributes::Uncached => PTE_DIR::CACHE::WUC, // WUC
                 };
-                entry.as_base().modify(PTE::CACHE.val(cache));
+                entry.as_dir().modify(cache);
             } else {
                 // 目录项：只设置地址部分，不设置标志位
                 // 目录项的 bit [11:0] 应该全是 0，以便硬件正确计算地址
