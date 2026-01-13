@@ -7,9 +7,8 @@ mod context;
 pub(crate) mod entry;
 mod head;
 mod paging;
-pub(crate) mod pte; // tock-registers 风格的页表项
+pub(crate) mod pte;
 mod register;
-pub(crate) mod registers; // tock-registers 风格的寄存器位域定义
 mod relocate;
 mod trap;
 
@@ -18,7 +17,7 @@ use loongArch64::{
     time::{Time, get_timer_freq},
 };
 pub use paging::Entry as Pte;
-pub use relocate::{relocate, relocate_kernel_to_vm_code};
+pub use relocate::relocate;
 
 use crate::{ArchTrait, arch::register::irq::TI, irq::IrqId, mem::PageTableInfo};
 
