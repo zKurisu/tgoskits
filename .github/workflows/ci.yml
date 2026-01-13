@@ -42,8 +42,8 @@ jobs:
 
     - uses: taiki-e/install-action@cargo-hack
 
-    # - name: Clippy for workspace
-      # run: cargo clippy --target loongarch64-unknown-none-softfloat -- -D warnings
+    - name: Clippy for workspace
+      run: cargo clippy --target loongarch64-unknown-none-softfloat -- -D warnings
 
     - name: Build test
       run: chmod +x ./test_all.sh && ./test_all.sh
