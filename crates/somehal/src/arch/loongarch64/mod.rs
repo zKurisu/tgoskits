@@ -6,7 +6,7 @@ mod cache;
 mod context;
 pub(crate) mod entry;
 mod head;
-pub mod paging;
+mod paging;
 pub(crate) mod pte; // tock-registers 风格的页表项
 mod register;
 pub(crate) mod registers; // tock-registers 风格的寄存器位域定义
@@ -14,12 +14,11 @@ mod relocate;
 mod trap;
 
 use loongArch64::{
-    register::{asid, crmd, pgdh, tcfg, ticlr},
+    register::{asid, crmd, pgdh, pgdl, tcfg, ticlr},
     time::{Time, get_timer_freq},
 };
 pub use paging::Entry as Pte;
-pub use relocate::relocate;
-pub use relocate::relocate_kernel_to_vm_code;
+pub use relocate::{relocate, relocate_kernel_to_vm_code};
 
 use crate::{ArchTrait, arch::register::irq::TI, irq::IrqId, mem::PageTableInfo};
 
@@ -152,8 +151,8 @@ impl ArchTrait for Arch {
         use crate::mem::PageTableInfo;
 
         PageTableInfo {
-            addr: paging::read_csr_pgdh() as usize,
-            asid: paging::read_csr_asid() as usize,
+            addr: pgdh::read().base(),
+            asid: asid::read().asid(),
         }
     }
 
@@ -177,16 +176,16 @@ impl ArchTrait for Arch {
 
     fn user_page_table() -> PageTableInfo {
         PageTableInfo {
-            addr: paging::read_csr_pgdl() as usize,
-            asid: paging::read_csr_asid() as usize,
+            addr: pgdl::read().base(),
+            asid: asid::read().asid(),
         }
     }
 
     fn set_user_page_table(val: PageTableInfo) {
         // 设置用户页表基地址到 PGDL (低地址空间)
-        paging::write_csr_pgdl(val.addr as u64);
+        pgdl::set_base(val.addr);
         // 设置 ASID
-        paging::write_csr_asid(val.asid as u64);
+        asid::set_asid(val.asid);
         // 刷新 TLB
         paging::local_flush_tlb_all();
         // 添加指令同步屏障
@@ -202,8 +201,3 @@ impl ArchTrait for Arch {
         paging::local_flush_tlb_all();
     }
 }
-
-// 导出公开的页表相关函数供外部使用
-pub use paging::{
-    local_flush_tlb_all, read_csr_asid, read_csr_pgdh, write_csr_asid, write_csr_pgdh,
-};

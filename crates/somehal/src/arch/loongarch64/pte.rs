@@ -9,10 +9,12 @@ use page_table_generic::{MemAttributes, PageTableEntry};
 use tock_registers::{interfaces::*, register_bitfields, registers::*};
 
 // LoongArch64 页表项寄存器位域定义
+
 register_bitfields![u64,
     /// LoongArch64 单页页表项 (Page Table Entry)
     ///
     /// 布局参考 LoongArch64 参考手册 5.4.2 节
+    /// 注意: 目录项非大页，除物理地址外，其他位都必须为 0
     PTE_DIR [
         /// V - 有效位 (bit 0)
         VALID OFFSET(0) NUMBITS(1) [],
@@ -35,10 +37,7 @@ register_bitfields![u64,
             WUC = 0b10   // 弱序非缓存 (Weakly-ordered UnCached)
         ],
 
-        /// H/G - 共享位（bit 6）
-        /// 在目录项中：H=1 表示大页映射
-        /// 在页表项中：G=1 表示全局映射（此时 H 必须为 0）
-        /// 注意：根据上下文区分是 H 位还是 G 位，不能同时为 1
+        /// H - 大页位 (bit 6)
         H OFFSET(6) NUMBITS(1) [],
 
         /// P - 存在位 (bit 7)
@@ -85,10 +84,7 @@ register_bitfields![u64,
             WUC = 0b10   // 弱序非缓存 (Weakly-ordered UnCached)
         ],
 
-        /// H/G - 共享位（bit 6）
-        /// 在目录项中：H=1 表示大页映射
-        /// 在页表项中：G=1 表示全局映射（此时 H 必须为 0）
-        /// 注意：根据上下文区分是 H 位还是 G 位，不能同时为 1
+        /// G - 全局位 (bit 6)
         G OFFSET(6) NUMBITS(1) [],
 
         /// P - 存在位 (bit 7)
