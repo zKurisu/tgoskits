@@ -11,8 +11,6 @@ use tock_registers::interfaces::*;
 use tock_registers::register_bitfields;
 use tock_registers::registers::*;
 
-use super::addrspace::PAGE_OFFSET;
-
 // LoongArch64 页表项寄存器位域定义
 register_bitfields![u64,
     /// LoongArch64 单页页表项 (Page Table Entry)
@@ -51,6 +49,8 @@ register_bitfields![u64,
 
         /// W - 写位 (bit 8)
         WRITE OFFSET(8) NUMBITS(1) [],
+
+        G OFFSET(12) NUMBITS(1) [],
 
         PHYS_ADDR OFFSET(12) NUMBITS(40) [],
 
@@ -167,12 +167,68 @@ impl PageTableEntry for Entry {
 
         // 目录项和页表项需要不同的处理
         if config.is_dir {
-            // 目录项：只设置地址部分，不设置标志位
-            // 目录项的 bit [11:0] 应该全是 0，以便硬件正确计算地址
-            let paddr = config.paddr.raw() as usize;
-            entry
-                .as_dir()
-                .modify(PTE_DIR::PHYS_ADDR.val((paddr >> 12) as u64));
+            if config.huge {
+                entry.as_dir().modify(PTE_DIR::H::SET);
+
+                // 页表项：设置完整的标志位和地址
+                // 设置有效位和存在位
+                if config.valid {
+                    entry
+                        .as_dir()
+                        .modify(PTE_DIR::VALID::SET + PTE_DIR::PRESENT::SET);
+                }
+
+                if !config.read {
+                    entry.as_base().modify(PTE::NO_READ::SET);
+                }
+
+                // 设置可写标志和脏位
+                if config.writable {
+                    entry.as_base().modify(PTE::WRITE::SET);
+                }
+
+                // 设置可执行标志
+                if !config.executable {
+                    entry.as_base().modify(PTE::NO_EXEC::SET);
+                }
+
+                // 设置用户访问标志（PLV3 表示用户态）
+                if config.lower {
+                    entry.as_dir().modify(PTE_DIR::PLV::PLV3);
+                } else {
+                    entry.as_dir().modify(PTE_DIR::PLV::PLV0);
+                }
+
+                // 设置脏位
+                if config.dirty {
+                    entry.as_base().modify(PTE::DIRTY::SET);
+                } else {
+                    entry.as_base().modify(PTE::DIRTY::CLEAR);
+                }
+
+                // 设置物理地址
+                let ppn = (config.paddr.raw() as u64) >> 12;
+                entry.as_base().modify(PTE::PHYS_ADDR.val(ppn));
+
+                if config.global {
+                    entry.as_dir().modify(PTE_DIR::G::SET);
+                }
+
+                // 设置内存属性
+                let cache = match config.mem_attr {
+                    MemAttributes::Device => 0b00,                         // SUC
+                    MemAttributes::Normal | MemAttributes::PerCpu => 0b01, // CC
+                    MemAttributes::Uncached => 0b10,                       // WUC
+                };
+                entry.as_base().modify(PTE::CACHE.val(cache));
+            } else {
+                // 目录项：只设置地址部分，不设置标志位
+                // 目录项的 bit [11:0] 应该全是 0，以便硬件正确计算地址
+                let paddr = config.paddr.raw();
+                entry
+                    .as_dir()
+                    .write(PTE_DIR::PHYS_ADDR.val((paddr >> 12) as u64));
+            }
         } else {
             // 页表项：设置完整的标志位和地址
             // 设置有效位和存在位
