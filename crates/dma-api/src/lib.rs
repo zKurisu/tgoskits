@@ -61,6 +61,18 @@ pub struct DmaHandle {
     pub layout: core::alloc::Layout,
 }
 
+impl DmaHandle {
+    pub fn new(virt_addr: NonNull<u8>, dma_addr: DmaAddr, layout: core::alloc::Layout) -> Self {
+        Self {
+            virt_addr,
+            dma_addr,
+            layout,
+        }
+    }
+}
+
+unsafe impl Send for DmaHandle {}
+
 impl Deref for DmaHandle {
     type Target = core::alloc::Layout;
     fn deref(&self) -> &Self::Target {
@@ -74,12 +86,12 @@ impl Deref for DmaHandle {
 pub trait Osal: Sync + Send + 'static {
     fn page_size(&self) -> usize;
 
-    /// 将虚拟地址映射到 DMA 地址
-    /// 若返回的size小于请求的size，则需要分多次映射
-    fn map(&self, addr: NonNull<u8>, size: usize, direction: Direction) -> DmaHandle;
+    // /// 将虚拟地址映射到 DMA 地址
+    // /// 若返回的size小于请求的size，则需要分多次映射
+    // fn map(&self, addr: NonNull<u8>, size: usize, direction: Direction) -> DmaAddr;
 
-    /// 解除 DMA 映射
-    fn unmap(&self, handle: DmaHandle);
+    // /// 解除 DMA 映射
+    // fn unmap(&self, handle: DmaHandle);
 
     /// 写回缓存到内存 (clean)
     fn flush(&self, addr: NonNull<u8>, size: usize) {

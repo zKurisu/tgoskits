@@ -30,10 +30,6 @@ impl<T> DCommon<T> {
         })
     }
 
-    pub fn as_slice(&self) -> &[u8] {
-        unsafe { core::slice::from_raw_parts(self.handle.virt_addr.as_ptr(), self.handle.size()) }
-    }
-
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         unsafe {
             core::slice::from_raw_parts_mut(self.handle.virt_addr.as_ptr(), self.handle.size())
@@ -42,11 +38,6 @@ impl<T> DCommon<T> {
 
     pub fn prepare_read(&self, ptr: NonNull<u8>, size: usize) {
         self.osal.prepare_read(ptr, size, self.direction);
-    }
-
-    pub fn prepare_read_all(&self) {
-        self.osal
-            .prepare_read(self.handle.virt_addr, self.handle.size(), self.direction);
     }
 
     pub fn confirm_write(&self, ptr: NonNull<u8>, size: usize) {

@@ -22,7 +22,7 @@ impl<T> DBox<T> {
         self.data.handle.dma_addr
     }
 
-    pub fn read_volatile(&self) -> T {
+    pub fn read(&self) -> T {
         unsafe {
             let ptr = self.data.handle.virt_addr.cast::<T>();
             self.data.prepare_read(ptr.cast(), size_of::<T>());
@@ -30,7 +30,7 @@ impl<T> DBox<T> {
         }
     }
 
-    pub fn write_volatile(&mut self, value: T) {
+    pub fn write(&mut self, value: T) {
         unsafe {
             let ptr = self.data.handle.virt_addr.cast::<T>();
             ptr.write_volatile(value);
@@ -39,8 +39,8 @@ impl<T> DBox<T> {
     }
 
     pub fn modify(&mut self, f: impl FnOnce(&mut T)) {
-        let mut value = self.read_volatile();
+        let mut value = self.read();
         f(&mut value);
-        self.write_volatile(value);
+        self.write(value);
     }
 }
