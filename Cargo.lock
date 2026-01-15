@@ -153,8 +153,23 @@ dependencies = [
  "enum_dispatch",
  "log",
  "paste",
- "rdif-intc",
+ "rdif-intc 0.12.1",
  "tock-registers 0.9.0",
+]
+
+[[package]]
+name = "arm-gic-driver"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0581a174abea2b9321f52648498a2c9ae8e406316733a88946ca8f55106fc621"
+dependencies = [
+ "aarch64-cpu 11.2.0",
+ "bitflags 2.10.0",
+ "enum_dispatch",
+ "log",
+ "paste",
+ "rdif-intc 0.13.0",
+ "tock-registers 0.10.1",
 ]
 
 [[package]]
@@ -416,6 +431,12 @@ dependencies = [
  "fdt-raw",
  "log",
 ]
+
+[[package]]
+name = "fdt-parser"
+version = "0.4.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f95f0bda5ff920492f6573294d8e3a99b75ee2e5ef93ab313fc6d517fa46785"
 
 [[package]]
 name = "fdt-raw"
@@ -712,6 +733,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pcie"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "225c81c0f672afbdd95e55abebe56541870e64e350eba9f7eabfb392112229ab"
+dependencies = [
+ "bare-test-macros",
+ "bit_field",
+ "bitflags 2.10.0",
+ "log",
+ "pci_types",
+ "rdif-pcie",
+ "thiserror",
+]
+
+[[package]]
 name = "pin-project-lite"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -846,6 +882,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdif-intc"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12b79eba6783fb02dfb2a499a7f9da60b6c16b56c666b546d026e8fffc82c517"
+dependencies = [
+ "cfg-if",
+ "rdif-base",
+]
+
+[[package]]
+name = "rdif-pcie"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60c6e8dea6d432b2c03bc3f4238dc59a276aacac6f688a937351e7a313918738"
+dependencies = [
+ "pci_types",
+ "rdif-base",
+ "thiserror",
+]
+
+[[package]]
 name = "rdif-serial"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -860,10 +917,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdrive"
+version = "0.18.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f28163d9cd26a17d444424168fde0f5f6f8b867cffdc7de617c2d0865eecf156"
+dependencies = [
+ "fdt-parser",
+ "log",
+ "paste",
+ "pcie",
+ "rdif-base",
+ "rdif-pcie",
+ "rdrive-macros",
+ "spin 0.10.0",
+ "thiserror",
+]
+
+[[package]]
 name = "rdrive-macro-utils"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68aa4694ee73b03d06548a5b7e93c8017e1d9adfd5cb363027241cc808ad4ddd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "rdrive-macros"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eab3105c9af32e901a2adc7d920b39ff8b6ee0f6f0b7dfdeaf18f306ec12606f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -988,7 +1073,7 @@ dependencies = [
  "aml",
  "ansi_rgb",
  "anyhow",
- "arm-gic-driver",
+ "arm-gic-driver 0.15.10",
  "arrayvec",
  "bitflags 2.10.0",
  "buddy_system_allocator",
@@ -1028,6 +1113,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "someplat"
+version = "0.1.0"
+dependencies = [
+ "aarch64-cpu 11.2.0",
+ "anyhow",
+ "arm-gic-driver 0.16.0",
+ "page-table-generic",
+ "rdif-intc 0.13.0",
+ "rdrive",
+ "somehal",
+ "thiserror",
+]
+
+[[package]]
 name = "sparreal-kernel"
 version = "0.13.0"
 dependencies = [
@@ -1041,6 +1140,7 @@ dependencies = [
  "log",
  "num-align",
  "page-table-generic",
+ "rdrive",
  "rgb",
  "sparreal-macros",
  "spin 0.10.0",
@@ -1066,6 +1166,7 @@ version = "0.13.0"
 dependencies = [
  "log",
  "somehal",
+ "someplat",
  "sparreal-kernel",
 ]
 

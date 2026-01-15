@@ -1,0 +1,22 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description.workspace = true
+edition.workspace = true
+keywords.workspace = true
+license.workspace = true
+name = "someplat"
+repository.workspace = true
+version = "0.1.0"
+
+[dependencies]
+anyhow = {workspace = true}
+page-table-generic = {workspace = true}
+rdif-intc = "0.13"
+rdrive = {workspace = true}
+somehal = {workspace = true}
+thiserror = {workspace = true}
+
+[target.'cfg(target_arch = "aarch64")'.dependencies]
+aarch64-cpu = "11"
+arm-gic-driver = {version = "0.16", features = ["rdif"]}

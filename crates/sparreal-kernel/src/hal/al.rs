@@ -1,10 +1,11 @@
-use core::time::Duration;
+use core::{ptr::NonNull, time::Duration};
 
 use alloc::boxed::Box;
 pub use heapless::Vec as StackVec;
 use kernutil::define_type;
 pub use kernutil::memory::{MemoryDescriptor, PageTableInfo};
 pub use page_table_generic::{AccessFlags, MemAttributes, MemConfig, PagingError};
+pub use rdrive::register::DriverRegisterSlice;
 
 use crate::os::mem::{__io, page_size};
 
@@ -35,7 +36,12 @@ pub trait Platform {
     fn post_allocator();
     fn irq_is_enabled(irq: IrqId) -> bool;
     fn irq_set_enabled(irq: IrqId, enabled: bool);
+
     fn shutdown() -> !;
+
+    fn driver_registers() -> DriverRegisterSlice;
+
+    fn fdt_addr() -> Option<NonNull<u8>>;
 }
 
 #[trait_ffi::def_extern_trait(not_def_impl, mod_path = "hal::al")]

@@ -14,7 +14,7 @@ hv = ["somehal/hv"]
 uspace = ["somehal/uspace"]
 
 [dependencies]
-
+someplat = { workspace = true }
 somehal = { workspace = true }
 sparreal-kernel = { workspace = true }
 

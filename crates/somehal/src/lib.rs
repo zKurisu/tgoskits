@@ -42,8 +42,10 @@ pub mod timer;
 
 pub use page_table_generic::*;
 pub use somehal_macros::{entry, irq_handler, secondary_entry};
+pub use fdt::fdt_addr;
 
 use crate::{irq::IrqId, mem::PageTableInfo};
+
 
 #[allow(unused)]
 pub trait ArchTrait {

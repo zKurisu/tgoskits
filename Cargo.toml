@@ -1,5 +1,5 @@
 [workspace]
-members = ["apps/*", "crates/*", "platform/sparreal-rt", "test-suit/*"]
+members = ["apps/*", "crates/*", "platform/*", "test-suit/*"]
 resolver = "3"
 
 [workspace.package]
@@ -18,10 +18,12 @@ byte-unit = {version = "5", default-features = false, features = ["byte"]}
 fdt-parser = "0.5"
 heapless = {version = "0.9"}
 log = "0.4"
-thiserror = {version = "2", default-features = false}
 ranges-ext = "0.5"
-uefi = "0.36"
+thiserror = {version = "2", default-features = false}
 tock-registers = "0.10"
+uefi = "0.36"
+
+rdrive = "0.18"
 
 dma-api = {version = "0.6", path = "crates/dma-api"}
 kasm-aarch64 = {path = "crates/kasm-aarch64", version = "0.2"}
@@ -29,6 +31,7 @@ kernutil = {path = "crates/kernutil", version = "0.1"}
 page-table-generic = {path = "crates/page-table-generic", version = "0.7"}
 somehal = {path = "crates/somehal", version = "0.5"}
 somehal-macros = {path = "crates/somehal-macros", version = "0.1"}
+someplat = {path = "platform/someplat", version = "0.1"}
 sparreal-kernel = {path = "crates/sparreal-kernel", version = "0.13"}
 sparreal-macros = {path = "crates/sparreal-macros", version = "0.10"}
 sparreal-rt = {path = "platform/sparreal-rt", version = "0.13"}

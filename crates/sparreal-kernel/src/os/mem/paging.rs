@@ -66,3 +66,9 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
             .expect("Failed to map memory region");
     }
 }
+
+pub fn ioremap(phys_start: PhysAddr, size: usize) -> Result<IoMemAddr, PagingError> {
+    let mut g = KERNEL_TABLE.lock();
+    let pt = g.as_mut().expect("Kernel page table not initialized");
+    pt.ioremap(phys_start, size, true)
+}

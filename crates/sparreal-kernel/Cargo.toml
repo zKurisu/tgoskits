@@ -26,3 +26,5 @@ num-align = "0.1"
 dma-api = {workspace = true, features = ["alloc"]}
 kernutil = {workspace = true}
 sparreal-macros = {workspace = true}
+rdrive = {workspace = true}
+
