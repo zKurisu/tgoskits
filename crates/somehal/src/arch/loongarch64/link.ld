@@ -51,19 +51,17 @@ SECTIONS
     . = ALIGN(PAGE_SIZE);
     _erodata = .;
     _sdata = .;
-    .got : ALIGN(16) { 
-        *(.got) 
-    }
-    .plt : ALIGN(16) { 
-        *(.plt)
-    }
-    .got.plt : ALIGN(16) { 
-        *(.got.plt)
-    }
+
     .data : ALIGN(16) { 
         *(.data .data.*)
         *(.init.data)
         *(.sdata .sdata.*)
+
+        . = ALIGN(PAGE_SIZE);
+        _sdriver = .;
+        *(.driver.register .driver.register.*)
+        _edriver = .;
+        . = ALIGN(PAGE_SIZE);
     }
     .rela.dyn : ALIGN(8) {
         __rela_dyn_begin = .;
