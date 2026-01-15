@@ -203,10 +203,4 @@ impl ArchTrait for Arch {
             core::arch::asm!("ibar 0", options(nomem, nostack));
         }
     }
-
-    fn enable_paging() {
-        // LoongArch64 在启动时已经启用了分页
-        // 这里只需要确保 TLB 已经刷新
-        paging::local_flush_tlb_all();
-    }
 }

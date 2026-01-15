@@ -50,12 +50,12 @@ pub(crate) fn __kimage_va(paddr: usize) -> *mut u8 {
     (paddr as isize - vm_load_offset()) as usize as *mut u8
 }
 
-pub fn memory_map() -> &'static [MemoryDescriptor] {
-    MEMORY_MAP.as_slice()
+pub(crate) fn __kimage_va_to_pa(vaddr: *const u8) -> usize {
+    (vaddr as usize as isize + vm_load_offset()) as usize
 }
 
-pub fn enable_paging() {
-    crate::arch::Arch::enable_paging();
+pub fn memory_map() -> &'static [MemoryDescriptor] {
+    MEMORY_MAP.as_slice()
 }
 
 /// 物理RAM实际转换为的内核虚拟地址
@@ -69,7 +69,6 @@ pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     } else {
         paddr as *mut u8
     }
-    // paddr as *mut u8
 }
 
 pub fn virt_to_phys(vaddr: *const u8) -> usize {

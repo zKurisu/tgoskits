@@ -23,7 +23,6 @@ pub fn init() {
     }
     debug!("Setting kernel page table to {pt_addr:?}");
     memory::set_kernel_page_table(pt_addr);
-    memory::enable_paging();
 }
 
 fn map_regions(pt: &mut Box<dyn PageTable>) {

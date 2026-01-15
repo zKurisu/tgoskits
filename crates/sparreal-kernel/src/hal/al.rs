@@ -18,13 +18,12 @@ pub trait Memory {
 
     /// Convert virtual address to physical address
     fn virt_to_phys(virt: VirtAddr) -> PhysAddr;
-    fn phys_to_virt(phys: PhysAddr) -> VirtAddr;
+
     fn page_size() -> usize;
     fn memory_map() -> &'static [MemoryDescriptor];
 
     fn page_table_new() -> Result<Box<dyn PageTable>, PagingError>;
 
-    fn enable_paging();
     fn kernel_page_table() -> PhysAddr;
     fn set_kernel_page_table(pt: PhysAddr);
     fn user_page_table() -> PageTableInfo;

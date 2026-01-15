@@ -60,7 +60,6 @@ pub trait ArchTrait {
 
     fn virt_to_phys(vaddr: *const u8) -> usize;
 
-    fn enable_paging();
     fn kernel_page_table() -> PageTableInfo;
     fn set_kernel_page_table(val: PageTableInfo);
     fn user_page_table() -> PageTableInfo;

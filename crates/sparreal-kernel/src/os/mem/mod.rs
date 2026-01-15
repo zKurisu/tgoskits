@@ -38,7 +38,7 @@ pub(crate) fn init_heap(regions: &[MemoryDescriptor]) {
             }
             let byte_count = Byte::from(size);
             let adjusted_byte = byte_count.get_appropriate_unit(UnitType::Binary);
-            let start: VirtAddr = start.into();
+            let start: VirtAddr = __va(start);
             debug!(
                 "Alloc add: {} - {} ({:.2})",
                 start,

@@ -11,7 +11,10 @@ use crate::{
     hal::al::memory::page_size,
     os::{
         irq::NoIrqGuard,
-        mem::address::{PhysAddr, VirtAddr},
+        mem::{
+            __va,
+            address::{PhysAddr, VirtAddr},
+        },
     },
 };
 
@@ -42,7 +45,7 @@ impl FrameAllocator for KernelAllocator {
 
     fn dealloc_frame(&self, frame: page_table_generic::PhysAddr) {
         let phys = PhysAddr::new(frame.raw());
-        let virt: VirtAddr = phys.into();
+        let virt: VirtAddr = __va(phys);
         let ptr = virt.as_mut_ptr();
         let nn = unsafe { NonNull::new_unchecked(ptr) };
         kernel_memory_allocator()
@@ -52,7 +55,7 @@ impl FrameAllocator for KernelAllocator {
 
     fn phys_to_virt(&self, paddr: page_table_generic::PhysAddr) -> *mut u8 {
         let phys = PhysAddr::new(paddr.raw());
-        let virt: VirtAddr = phys.into();
+        let virt: VirtAddr = __va(phys);
         virt.as_mut_ptr()
     }
 }

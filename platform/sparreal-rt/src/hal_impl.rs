@@ -43,10 +43,6 @@ impl Memory for MemoryImpl {
         somehal::mem::virt_to_phys(virt.raw() as _).into()
     }
 
-    fn phys_to_virt(phys: PhysAddr) -> VirtAddr {
-        somehal::mem::phys_to_virt(phys.raw() as _).into()
-    }
-
     fn page_size() -> usize {
         somehal::mem::page_size()
     }
@@ -57,10 +53,6 @@ impl Memory for MemoryImpl {
 
     fn page_table_new() -> Result< Box<dyn PageTable>, PagingError> {
         Ok(Box::new( PageTableImpl( somehal::mem::mmu::new_page_table(KernelAllocator)?)))
-    }
-
-    fn enable_paging() {
-        somehal::mem::enable_paging();
     }
 
     fn kernel_page_table() -> PhysAddr {

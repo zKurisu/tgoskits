@@ -53,8 +53,8 @@ impl From<VirtAddr> for PhysAddr {
     }
 }
 
-impl From<PhysAddr> for VirtAddr {
-    fn from(value: PhysAddr) -> Self {
-        al::memory::phys_to_virt(value)
-    }
-}
+// impl From<PhysAddr> for VirtAddr {
+//     fn from(value: PhysAddr) -> Self {
+//         al::memory::phys_to_virt(value)
+//     }
+// }

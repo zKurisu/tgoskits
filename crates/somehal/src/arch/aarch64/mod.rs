@@ -23,8 +23,11 @@ use elx::*;
 pub use paging::Entry;
 
 use crate::{
-    ArchTrait, arch::addrspace::PAGE_OFFSET, consts::VM_LOAD_ADDRESS, irq::IrqId,
-    mem::PageTableInfo,
+    ArchTrait,
+    arch::addrspace::PAGE_OFFSET,
+    consts::VM_LOAD_ADDRESS,
+    irq::IrqId,
+    mem::{__kimage_va_to_pa, PageTableInfo},
 };
 
 // ARM Generic Timer IRQ number (PPI 30)
@@ -141,12 +144,10 @@ impl ArchTrait for Arch {
         elx::systick_irq_is_enabled()
     }
 
-    fn enable_paging() {}
-
     fn virt_to_phys(vaddr: *const u8) -> usize {
         if is_mmu_enabled() {
             if vaddr as usize >= VM_LOAD_ADDRESS {
-                paging::_pa(vaddr)
+                __kimage_va_to_pa(vaddr)
             } else {
                 vaddr as usize & 0xffff_ffff_ffff
             }

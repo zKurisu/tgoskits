@@ -7,17 +7,13 @@ use page_table_generic::{MapConfig, MemAttributes, PteConfig};
 use crate::{
     arch::elx::{flush_tlb, set_kernal_table, set_user_table, setup_sctlr, setup_table_regs},
     console::print_mapping,
-    mem::{__kimage_va, __va, MB, PageTableInfo, page_size, vm_load_offset},
+    mem::{__kimage_va, __va, MB, PageTableInfo, page_size},
 };
 
 mod pte;
 
 pub use pte::Entry;
 pub use pte::Generic;
-
-pub(crate) fn _pa(vaddr: *const u8) -> usize {
-    (vaddr as usize as isize + vm_load_offset()) as usize
-}
 
 pub fn enable_mmu() -> ! {
     println!("Mapping early memory regions...");
