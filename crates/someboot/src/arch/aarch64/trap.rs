@@ -1,9 +1,6 @@
 use aarch64_cpu::registers::{Readable as _, *};
 use aarch64_cpu_ext::registers::ICC_SRE_EL2;
-use arm_gic_driver::{
-    IntId,
-    v3::{ICC_IAR1_EL1, ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1},
-};
+use arm_gic_driver::v3::{ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1};
 use core::arch::{asm, global_asm};
 use kasm_aarch64::aarch64_trap_handler;
 use log::*;
@@ -120,7 +117,7 @@ global_asm!(
 
 pub fn setup() {
     let addr = ext_sym_addr!(__vector_table);
-
+    println!("Setting up vector table at {:#x}", addr);
     match CurrentEL.read(CurrentEL::EL) {
         1 => unsafe {
             asm!("msr vbar_el1, {0}", in(reg) addr);
@@ -129,5 +126,25 @@ pub fn setup() {
             asm!("msr vbar_el2, {0}", in(reg) addr);
         },
         _ => panic!("Unsupported exception level for vector table setup"),
+    }
+}
+
+pub fn trap_addr() -> usize {
+    match CurrentEL.read(CurrentEL::EL) {
+        1 => {
+            let addr: u64;
+            unsafe {
+                asm!("mrs {0}, vbar_el1", out(reg) addr);
+            }
+            addr as usize
+        }
+        2 => {
+            let addr: u64;
+            unsafe {
+                asm!("mrs {0}, vbar_el2", out(reg) addr);
+            }
+            addr as usize
+        }
+        _ => panic!("Unsupported exception level for trap address retrieval"),
     }
 }

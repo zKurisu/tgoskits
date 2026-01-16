@@ -15,7 +15,7 @@ mod trap;
 use core::hint::spin_loop;
 
 use loongArch64::{
-    register::{asid, crmd, pgdh, pgdl, tcfg, ticlr},
+    register::{asid, crmd, eentry, pgdh, pgdl, tcfg, ticlr},
     time::{Time, get_timer_freq},
 };
 pub use paging::Entry as Pte;
@@ -202,5 +202,9 @@ impl ArchTrait for Arch {
             core::arch::asm!("dbar 0", options(nomem, nostack));
             core::arch::asm!("ibar 0", options(nomem, nostack));
         }
+    }
+
+    fn trap_addr() -> usize {
+        eentry::read().eentry() as usize
     }
 }

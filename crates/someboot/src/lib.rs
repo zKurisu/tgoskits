@@ -58,6 +58,7 @@ pub trait ArchTrait {
     fn post_allocator();
 
     fn per_cpu_trap_init(is_primary: bool);
+    fn trap_addr() -> usize;
 
     fn virt_to_phys(vaddr: *const u8) -> usize;
 
@@ -119,6 +120,8 @@ pub fn set_user_page_table(pt: PageTableInfo) {
 fn prime_entry() -> ! {
     fdt::setup_earlycon();
     let _ = acpi::earlycon::acpi_setup_earlycon();
+
+    println!("Trap vector at {:#x}", arch::Arch::trap_addr());
 
     mem::init_after_mmu();
 

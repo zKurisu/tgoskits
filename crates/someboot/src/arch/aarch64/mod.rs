@@ -24,7 +24,7 @@ pub use paging::Entry;
 
 use crate::{
     ArchTrait,
-    arch::addrspace::PAGE_OFFSET,
+    arch::{addrspace::PAGE_OFFSET, trap::trap_addr},
     consts::VM_LOAD_ADDRESS,
     irq::IrqId,
     mem::{__kimage_va_to_pa, PageTableInfo},
@@ -155,5 +155,9 @@ impl ArchTrait for Arch {
         } else {
             vaddr as usize
         }
+    }
+
+    fn trap_addr() -> usize {
+        trap_addr()
     }
 }
