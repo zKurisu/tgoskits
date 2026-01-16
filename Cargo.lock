@@ -1103,17 +1103,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "somehal-macros"
-version = "0.1.0"
-dependencies = [
- "darling 0.21.3",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "someplat"
+name = "somehal"
 version = "0.1.0"
 dependencies = [
  "aarch64-cpu 11.2.0",
@@ -1124,6 +1114,16 @@ dependencies = [
  "rdrive",
  "someboot",
  "thiserror",
+]
+
+[[package]]
+name = "somehal-macros"
+version = "0.1.0"
+dependencies = [
+ "darling 0.21.3",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1166,7 +1166,7 @@ version = "0.13.0"
 dependencies = [
  "log",
  "someboot",
- "someplat",
+ "somehal",
  "sparreal-kernel",
 ]
 

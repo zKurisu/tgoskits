@@ -3,9 +3,9 @@
 #![cfg(not(any(windows, unix)))]
 
 extern crate alloc;
-extern crate someplat;
+extern crate somehal;
 
-use someplat::KernelOp;
+use somehal::KernelOp;
 pub use sparreal_kernel::entry;
 pub use sparreal_kernel::*;
 
@@ -13,7 +13,7 @@ mod hal_impl;
 
 #[someboot::entry]
 fn main() -> ! {
-    someplat::set_kernel_op(&Kernel);
+    somehal::set_kernel_op(&Kernel);
     sparreal_kernel::run_kernel()
 }
 

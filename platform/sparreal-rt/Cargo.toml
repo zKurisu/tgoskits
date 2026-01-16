@@ -14,7 +14,7 @@ hv = ["someboot/hv"]
 uspace = ["someboot/uspace"]
 
 [dependencies]
-someplat = { workspace = true }
+somehal = { workspace = true }
 someboot = { workspace = true }
 sparreal-kernel = { workspace = true }
 
