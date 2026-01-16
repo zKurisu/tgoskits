@@ -150,7 +150,8 @@ impl TimerManager {
             let delay = key.deadline.saturating_sub(now);
 
             // Ensure minimum delay to avoid missing the interrupt
-            let delay = delay.max(Duration::from_micros(1));
+            // Use a larger minimum to handle edge cases with zero/near-zero delays
+            let delay = delay.max(Duration::from_micros(100));
 
             crate::hal::al::cpu::systimer_set_next_event(delay);
             crate::hal::al::cpu::systimer_irq_enable();
