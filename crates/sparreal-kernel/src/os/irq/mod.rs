@@ -12,9 +12,11 @@ pub fn register_handler<F>(irq: IrqId, handler: F)
 where
     F: Fn() + Send + Sync + 'static,
 {
+    {
+        let mut guard = IRQ_VEC.lock();
+        guard.insert(irq, Box::new(handler));
+    }
     crate::hal::al::platform::irq_set_enabled(irq, true);
-    let mut guard = IRQ_VEC.lock();
-    guard.insert(irq, Box::new(handler));
 }
 
 pub(crate) fn handle_irq(irq: IrqId) {
