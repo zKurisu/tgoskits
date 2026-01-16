@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use core::ptr::{NonNull, slice_from_raw_parts};
+use core::ptr::NonNull;
 use core::time::Duration;
 
 use someboot::{MemConfig, irq_handler, mem::PteConfig};
@@ -20,31 +20,17 @@ impl Platform for InitImpl {
         someboot::irq::irq_is_enabled(irq.raw().into())
     }
     fn irq_set_enabled(irq: IrqId, enable: bool) {
-        someboot::irq::irq_set_enable(irq.raw().into(), enable);
+        somehal::irq::irq_set_enable(irq.raw().into(), enable);
     }
 
     fn fdt_addr() -> Option<NonNull<u8>> {
         someboot::fdt_addr().map(|ptr| unsafe{ NonNull::new_unchecked(ptr)})
     }
 
-    fn driver_registers() -> DriverRegisterSlice {
-        DriverRegisterSlice::from_raw(driver_registers())
+    fn post_paging() {
+        somehal::post_paging();
     }
 }
-}
-
-fn driver_registers() -> &'static [u8] {
-    unsafe extern "C" {
-        fn _sdriver();
-        fn _edriver();
-    }
-
-    unsafe {
-        &*slice_from_raw_parts(
-            _sdriver as *const () as *const u8,
-            _edriver as *const () as usize - _sdriver as *const () as usize,
-        )
-    }
 }
 
 struct MemoryImpl;
@@ -155,7 +141,8 @@ impl Cpu for CpuImpl {
     }
 
     fn systimer_irq() -> IrqId {
-        someboot::irq::systimer_irq().raw().into()
+       let irq: usize = somehal::irq::systick_irq().into();
+         IrqId::from(irq)
     }
 
     fn systimer_enable() {

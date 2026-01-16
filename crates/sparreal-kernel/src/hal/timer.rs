@@ -190,6 +190,7 @@ impl TimerManager {
 }
 
 pub(crate) fn init() {
+    crate::hal::al::cpu::systimer_irq_disable();
     crate::hal::al::cpu::systimer_enable();
     {
         let mut guard = TIMER_MANAGER.lock();
@@ -203,9 +204,6 @@ pub(crate) fn init() {
 
     let timer_irq = crate::hal::al::cpu::systimer_irq();
     crate::os::irq::register_handler(timer_irq, systimer_irq_handler);
-
-    // Timer starts disabled, will be enabled when first timer is scheduled
-    crate::hal::al::cpu::systimer_irq_disable();
 }
 
 /// Schedule a one-shot timer after the provided delay.

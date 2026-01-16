@@ -62,7 +62,17 @@ impl ArchTrait for Arch {
     }
 
     fn systimer_irq_disable() {
+        debug!("Disable systick irq");
         elx::systick_irq_disable();
+    }
+
+    fn systimer_irq_enable() {
+        debug!("Enable systick irq");
+        elx::systick_irq_enable();
+    }
+
+    fn systimer_irq_is_enabled() -> bool {
+        elx::systick_irq_is_enabled()
     }
 
     fn systimer_set_interval(ticks: usize) {
@@ -128,20 +138,11 @@ impl ArchTrait for Arch {
     }
 
     fn irq_is_enabled(_irq: crate::irq::IrqId) -> bool {
-        // For now, return false (can be extended with GIC support)
-        false
+        unimplemented!()
     }
 
     fn irq_set_enable(_irq: crate::irq::IrqId, _enable: bool) {
-        // For now, do nothing (can be extended with GIC support)
-    }
-
-    fn systimer_irq_enable() {
-        elx::systick_irq_enable();
-    }
-
-    fn systimer_irq_is_enabled() -> bool {
-        elx::systick_irq_is_enabled()
+        unimplemented!()
     }
 
     fn virt_to_phys(vaddr: *const u8) -> usize {

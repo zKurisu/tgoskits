@@ -39,9 +39,8 @@ pub trait Platform {
 
     fn shutdown() -> !;
 
-    fn driver_registers() -> DriverRegisterSlice;
-
     fn fdt_addr() -> Option<NonNull<u8>>;
+    fn post_paging();
 }
 
 #[trait_ffi::def_extern_trait(not_def_impl, mod_path = "hal::al")]

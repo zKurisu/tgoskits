@@ -7,17 +7,12 @@ pub fn start_kernel() -> ! {
     crate::os::mem::init_heap(al::memory::memory_map());
     al::platform::post_allocator();
     crate::os::mem::paging::init();
+
+    al::platform::post_paging();
+
     timer::init();
 
-    if let Some(addr) = al::platform::fdt_addr() {
-        info!("Initializing rdrive with FDT at {:?}", addr);
-        rdrive::init(rdrive::Platform::Fdt { addr }).unwrap();
-
-        rdrive::register_append(&al::platform::driver_registers());
-
-        rdrive::probe_pre_kernel().unwrap();
-        rdrive::probe_all(true).unwrap();
-    }
+    rdrive::probe_all(true).unwrap();
 
     al::cpu::irq_local_set_enable(true);
 

@@ -2,11 +2,13 @@ use alloc::format;
 use arm_gic_driver::v3::Gic;
 use rdrive::{PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo};
 
-use crate::ioremap;
+use crate::common::ioremap;
 
-fn use_gicd(f: impl FnOnce(&mut Gic)) {
+pub fn with_gic(f: impl FnOnce(&mut Gic)) {
     let mut gic = super::get_gicd().lock().unwrap();
-    f(gic.typed_mut::<Gic>().expect("GICD is not initialized"));
+    if let Some(gic) = gic.typed_mut::<Gic>() {
+        f(gic);
+    }
 }
 
 module_driver!(
