@@ -7,12 +7,10 @@ pub struct Plat;
 
 impl PlatOp for Plat {
     fn init_irq_main() -> Result<(), anyhow::Error> {
-        gic::init();
         Ok(())
     }
 
     fn init_irq_current_cpu() -> Result<(), anyhow::Error> {
-        gic::init_cpu();
         Ok(())
     }
 

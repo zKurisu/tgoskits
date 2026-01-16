@@ -1,5 +1,6 @@
 use core::arch::naked_asm;
 
+use aarch64_cpu::registers::{CurrentEL, Readable};
 use kernutil::memory::PageTableInfo;
 
 use crate::{arch::elx, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
@@ -49,6 +50,7 @@ pub fn el_entry() -> ! {
     if let Some(cmdline) = crate::cmdline::cmdline() {
         println!("{cmdline}");
     }
+    println!("EL: {}", CurrentEL.read(CurrentEL::EL));
     println!("VM Load Offset: {:#x}", crate::mem::vm_load_offset());
 
     crate::mem::early_init(kernel_code_end_lma);

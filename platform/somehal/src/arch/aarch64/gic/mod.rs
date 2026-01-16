@@ -1,3 +1,4 @@
+use arm_gic_driver::IntId;
 use rdif_intc::Intc;
 use rdrive::Device;
 
@@ -5,14 +6,6 @@ mod v3;
 
 fn get_gicd() -> Device<Intc> {
     rdrive::get_one().expect("no interrupt controller found")
-}
-
-pub fn init() {
-    let intc = get_gicd();
-    debug!("Initializing GICD...");
-    let mut gic = intc.lock().unwrap();
-    gic.open().unwrap();
-    debug!("GICD initialized");
 }
 
 pub fn init_cpu() {
@@ -24,7 +17,9 @@ pub fn init_cpu() {
 }
 
 pub fn irq_set_enable(irq: rdrive::IrqId, enable: bool) {
+    let raw: usize = irq.into();
+
     v3::with_gic(|gic| {
-        gic.set_irq_enable(irq.into(), enable);
+        gic.set_irq_enable(unsafe { IntId::raw(raw as _) }, enable);
     });
 }

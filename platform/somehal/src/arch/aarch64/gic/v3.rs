@@ -35,8 +35,10 @@ fn probe_gic(info: FdtInfo<'_>, dev: PlatformDevice) -> Result<(), OnProbeError>
     let gicd = ioremap(gicd_reg.address as _, gicd_reg.size.unwrap_or(0x1000))?;
     let gicr = ioremap(gicr_reg.address as _, gicr_reg.size.unwrap_or(0x1000))?;
 
-    let gic = unsafe { Gic::new(gicd.into(), gicr.into()) };
-
+    let mut gic = unsafe { Gic::new(gicd.into(), gicr.into()) };
+    gic.init();
+    let mut cpu = gic.cpu_interface();
+    cpu.init_current_cpu().unwrap();
     dev.register(rdif_intc::Intc::new(gic));
 
     Ok(())
