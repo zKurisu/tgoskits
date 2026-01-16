@@ -165,7 +165,7 @@ pub fn systick_irq_enable() {
 }
 
 pub fn systick_irq_is_enabled() -> bool {
-    CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::IMASK)
+    !CNTP_CTL_EL0.is_set(CNTP_CTL_EL0::IMASK)
 }
 
 pub fn systick_set_interval(ticks: usize) {
