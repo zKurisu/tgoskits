@@ -1,9 +1,5 @@
 use aarch64_cpu::registers::{Readable as _, *};
-use aarch64_cpu_ext::registers::ICC_SRE_EL2;
-use arm_gic_driver::{
-    IntId,
-    v3::{ICC_IAR1_EL1, ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1},
-};
+use arm_gic_driver::v3::{ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1};
 use core::arch::{asm, global_asm};
 use kasm_aarch64::aarch64_trap_handler;
 use log::*;
@@ -15,10 +11,10 @@ fn handle_irq(_ctx: &Context) {
     if !ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE) {
         panic!("GIC CPU interface not enabled in EL1!");
     }
-    handle_irq_v3_el1();
+    handle_irq_v3();
 }
 
-fn handle_irq_v3_el1() {
+fn handle_irq_v3() {
     let ack = ack1();
 
     crate::irq::handle_irq(crate::irq::IrqId::new(ack.to_u32() as _));
