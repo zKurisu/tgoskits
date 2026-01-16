@@ -12,7 +12,7 @@ pub fn start_kernel() -> ! {
 
     timer::init();
 
-    rdrive::probe_all(true).unwrap();
+    // rdrive::probe_all(true).unwrap();
 
     al::cpu::irq_local_set_enable(true);
 
