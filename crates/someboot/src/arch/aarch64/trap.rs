@@ -1,5 +1,9 @@
 use aarch64_cpu::registers::{Readable as _, *};
-use arm_gic_driver::v3::{ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1};
+use aarch64_cpu_ext::registers::ICC_SRE_EL2;
+use arm_gic_driver::{
+    IntId,
+    v3::{ICC_IAR1_EL1, ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1},
+};
 use core::arch::{asm, global_asm};
 use kasm_aarch64::aarch64_trap_handler;
 use log::*;
@@ -8,9 +12,18 @@ use super::context::Context;
 
 #[aarch64_trap_handler(kind = "irq")]
 fn handle_irq(_ctx: &Context) {
-    if !ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE) {
-        panic!("GIC CPU interface not enabled in EL1!");
+    let icc_enable = if CurrentEL.read(CurrentEL::EL) == 1 {
+        ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE)
+    } else if CurrentEL.read(CurrentEL::EL) == 2 {
+        ICC_SRE_EL2.is_set(ICC_SRE_EL2::SRE)
+    } else {
+        panic!("Unsupported exception level for IRQ handling");
+    };
+
+    if !icc_enable {
+        panic!("GIC CPU interface not enabled!");
     }
+
     handle_irq_v3();
 }
 
