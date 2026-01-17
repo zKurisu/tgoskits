@@ -20,7 +20,7 @@ fn main() -> ! {
 pub struct Kernel;
 
 impl KernelOp for Kernel {
-    fn ioremap(&self, paddr: usize, size: usize) -> someboot::PagingResult<*mut u8> {
+    fn ioremap(&self, paddr: usize, size: usize) -> somehal::PagingResult<*mut u8> {
         sparreal_kernel::os::mem::ioremap(paddr.into(), size).map(|addr| addr.raw() as *mut u8)
     }
 }

@@ -1,6 +1,6 @@
-use crate::{arch::Plat, common::PlatOp};
-
 pub use someboot::irq::*;
+
+use crate::{arch::Plat, common::PlatOp};
 
 pub fn irq_set_enable(irq: rdrive::IrqId, enable: bool) {
     debug!("Setting IRQ {:?} enable to {}", irq, enable);
@@ -10,5 +10,3 @@ pub fn irq_set_enable(irq: rdrive::IrqId, enable: bool) {
 pub fn systick_irq() -> rdrive::IrqId {
     Plat::systick_irq()
 }
-
-

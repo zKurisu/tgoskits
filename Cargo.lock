@@ -1141,7 +1141,6 @@ name = "sparreal-rt"
 version = "0.13.0"
 dependencies = [
  "log",
- "someboot",
  "somehal",
  "sparreal-kernel",
 ]
