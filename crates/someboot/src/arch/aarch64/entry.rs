@@ -1,7 +1,6 @@
 use core::arch::naked_asm;
 
 use aarch64_cpu::registers::{CurrentEL, Readable};
-use kernutil::memory::PageTableInfo;
 
 use crate::{arch::elx, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
 
@@ -61,7 +60,7 @@ pub fn el_entry() -> ! {
 pub(crate) fn mmu_entry() -> ! {
     println!("Disable user page table");
     #[cfg(not(feature = "hv"))]
-    elx::set_user_table(PageTableInfo { asid: 0, addr: 0 });
+    elx::set_user_table(kernutil::memory::PageTableInfo { asid: 0, addr: 0 });
     elx::flush_tlb(None);
     super::trap::setup();
     crate::prime_entry()
