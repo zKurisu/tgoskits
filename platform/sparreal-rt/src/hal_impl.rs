@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use core::ptr::NonNull;
 use core::time::Duration;
+use log::trace;
 
 use someboot::{MemConfig, irq_handler, mem::PteConfig};
 use sparreal_kernel::hal::al::AccessFlags;

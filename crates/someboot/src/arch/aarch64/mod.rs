@@ -97,16 +97,7 @@ impl ArchTrait for Arch {
     }
 
     fn irq_all_is_enabled() -> bool {
-        unsafe {
-            let daif: u64;
-            core::arch::asm!(
-                "mrs {daif}, daif",
-                daif = out(reg) daif,
-                options(nomem, nostack, pure)
-            );
-            // IRQ is enabled when bit 1 (I bit) is 0
-            (daif & (1 << 1)) == 0
-        }
+        !DAIF.is_set(DAIF::I)
     }
 
     fn irq_all_set_enable(enable: bool) {

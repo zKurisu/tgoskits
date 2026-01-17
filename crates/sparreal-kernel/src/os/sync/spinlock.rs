@@ -167,16 +167,12 @@ impl<T> IrqSpinlock<T> {
     /// 3. 避免嵌套获取同一个锁
     #[inline]
     pub fn lock(&self) -> IrqMutexGuard<'_, T> {
-        // 禁用中断（这会在整个守卫生命周期内保持）
-        let irq_guard = NoIrqGuard::new();
-
-        // 获取锁
-        self.raw.lock();
-
-        IrqMutexGuard {
-            lock: self,
-            _irq_guard: irq_guard,
+        for _ in 0..100 {
+            if let Some(guard) = self.try_lock() {
+                return guard;
+            }
         }
+        panic!("IrqSpinlock lock timeout");
     }
 
     /// 尝试获取锁，如果失败则立即返回
@@ -192,10 +188,7 @@ impl<T> IrqSpinlock<T> {
     pub fn try_lock(&self) -> Option<IrqMutexGuard<'_, T>> {
         let irq_guard = NoIrqGuard::new();
         if self.raw.try_lock() {
-            Some(IrqMutexGuard {
-                lock: self,
-                _irq_guard: irq_guard,
-            })
+            Some(IrqMutexGuard::new(self, irq_guard))
         } else {
             None
         }
@@ -253,6 +246,15 @@ impl<T> IrqSpinlock<T> {
     #[inline]
     pub unsafe fn lock_raw(&self) -> &IrqRawSpinlock {
         &self.raw
+    }
+}
+
+impl<'a, T> IrqMutexGuard<'a, T> {
+    fn new(lock: &'a IrqSpinlock<T>, irq_guard: NoIrqGuard) -> Self {
+        Self {
+            lock,
+            _irq_guard: irq_guard,
+        }
     }
 }
 

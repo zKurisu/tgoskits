@@ -94,9 +94,10 @@ impl TimerManager {
             .is_none_or(|k| deadline < k.deadline);
 
         self.timers.insert(key, into_callback(callback));
-        self.index.insert(id, deadline);
 
+        self.index.insert(id, deadline);
         // If this is the earliest timer, reprogram hardware timer
+
         if is_earliest {
             self.arm_hardware_timer();
         }
@@ -219,10 +220,15 @@ where
     if !is_ready() {
         return Err(TimerError::NotReady);
     }
-    let mut cb = Some(callback);
     let delay = duration_to_ticks(delay);
-    with_manager_mut(|mgr| mgr.schedule_after(delay, cb.take().unwrap()))
-        .ok_or(TimerError::NotReady)?
+    let handle = with_manager_mut(move |mgr| mgr.schedule_after(delay, callback))
+        .ok_or(TimerError::NotReady)?;
+    debug!(
+        "Scheduled one-shot timer after {:?} ({} ticks)",
+        delay, delay
+    );
+
+    handle
 }
 
 /// Schedule a one-shot timer that fires at the absolute deadline.
@@ -293,6 +299,5 @@ where
     F: FnOnce(&mut TimerManager) -> R,
 {
     let mut guard = TIMER_MANAGER.lock();
-    debug!("got lock");
     guard.as_mut().map(f)
 }

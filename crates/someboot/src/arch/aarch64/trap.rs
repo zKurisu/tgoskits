@@ -9,6 +9,7 @@ use super::context::Context;
 
 #[aarch64_trap_handler(kind = "irq")]
 fn handle_irq(_ctx: &Context) {
+    trace!("Handling IRQ!!!");
     let icc_enable = if CurrentEL.read(CurrentEL::EL) == 1 {
         ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE)
     } else if CurrentEL.read(CurrentEL::EL) == 2 {
