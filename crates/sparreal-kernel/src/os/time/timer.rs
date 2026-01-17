@@ -124,7 +124,6 @@ impl TimerManager {
     }
 
     fn handle_irq(&mut self) -> Vec<TimerCallback> {
-        debug!("Timer IRQ fired");
         let now = ticks();
         let mut expired = Vec::new();
 
@@ -159,7 +158,6 @@ impl TimerManager {
             let delay = delay.max(1);
 
             crate::hal::al::cpu::systick_set_interval(delay);
-            debug!("Armed hardware timer for next deadline in {} ticks", delay);
             crate::hal::al::cpu::systick_irq_enable();
         } else {
             // No pending timers, disable hardware timer
@@ -221,14 +219,7 @@ where
         return Err(TimerError::NotReady);
     }
     let delay = duration_to_ticks(delay);
-    let handle = with_manager_mut(move |mgr| mgr.schedule_after(delay, callback))
-        .ok_or(TimerError::NotReady)?;
-    debug!(
-        "Scheduled one-shot timer after {:?} ({} ticks)",
-        delay, delay
-    );
-
-    handle
+    with_manager_mut(move |mgr| mgr.schedule_after(delay, callback)).ok_or(TimerError::NotReady)?
 }
 
 /// Schedule a one-shot timer that fires at the absolute deadline.
@@ -261,7 +252,6 @@ pub fn is_ready() -> bool {
 }
 
 fn systimer_irq_handler() {
-    debug!("Timer IRQ handler invoked");
     // Acknowledge the timer interrupt first to prevent interrupt storm
     crate::hal::al::cpu::systick_ack();
     let callbacks = with_manager_mut(|mgr| mgr.handle_irq()).unwrap_or_default();
