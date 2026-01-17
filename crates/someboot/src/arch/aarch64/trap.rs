@@ -1,6 +1,4 @@
 use aarch64_cpu::registers::{Readable as _, *};
-use aarch64_cpu_ext::registers::ICC_SRE_EL2;
-use arm_gic_driver::v3::{ICC_SRE_EL1, Readable as _, ack1, dir, eoi_mode, eoi1};
 use core::arch::{asm, global_asm};
 use kasm_aarch64::aarch64_trap_handler;
 use log::*;
@@ -9,37 +7,19 @@ use super::context::Context;
 
 #[aarch64_trap_handler(kind = "irq")]
 fn handle_irq(_ctx: &Context) {
-    trace!("Handling IRQ!!!");
-    let icc_enable = if CurrentEL.read(CurrentEL::EL) == 1 {
-        ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE)
-    } else if CurrentEL.read(CurrentEL::EL) == 2 {
-        ICC_SRE_EL2.is_set(ICC_SRE_EL2::SRE)
-    } else {
-        panic!("Unsupported exception level for IRQ handling");
-    };
-
-    if !icc_enable {
-        panic!("GIC CPU interface not enabled!");
+    unsafe extern "Rust" {
+        fn __aarch64_irq_handler();
     }
-
-    handle_irq_v3();
-}
-
-fn handle_irq_v3() {
-    let ack = ack1();
-
-    crate::irq::handle_irq(crate::irq::IrqId::new(ack.to_u32() as _));
-
-    if !ack.is_special() {
-        eoi1(ack);
-        if eoi_mode() {
-            dir(ack);
-        }
+    unsafe {
+        __aarch64_irq_handler();
     }
 }
 
 #[aarch64_trap_handler(kind = "fiq")]
-fn handle_fiq(_ctx: &Context) {}
+fn handle_fiq(_ctx: &Context) {
+    println!("Handling FIQ!!!");
+    panic!("Unhandled FIQ exception");
+}
 
 #[aarch64_trap_handler(kind = "sync")]
 fn handle_sync(ctx: &Context) {

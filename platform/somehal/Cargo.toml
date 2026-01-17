@@ -21,8 +21,11 @@ page-table-generic = {workspace = true}
 rdif-intc = "0.13"
 rdrive = {workspace = true}
 someboot = {workspace = true}
+somehal-macros = {workspace = true}
+tock-registers = "0.10"
 thiserror = {workspace = true}
 log = {workspace = true}
+
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu = "11"

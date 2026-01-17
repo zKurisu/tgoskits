@@ -144,21 +144,6 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "arm-gic-driver"
-version = "0.15.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad71090ed958939b87f6c99e0acd3c476b3a0dbd54f2e2d9aa1ca1f40dc4417e"
-dependencies = [
- "aarch64-cpu 10.0.0",
- "bitflags 2.10.0",
- "enum_dispatch",
- "log",
- "paste",
- "rdif-intc 0.12.1",
- "tock-registers 0.9.0",
-]
-
-[[package]]
-name = "arm-gic-driver"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0581a174abea2b9321f52648498a2c9ae8e406316733a88946ca8f55106fc621"
@@ -168,7 +153,7 @@ dependencies = [
  "enum_dispatch",
  "log",
  "paste",
- "rdif-intc 0.13.0",
+ "rdif-intc",
  "tock-registers 0.10.1",
 ]
 
@@ -872,17 +857,6 @@ dependencies = [
 
 [[package]]
 name = "rdif-intc"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "170ec813e6cf4d1e5fa53fa8fed0fadc7aaab96683d4f1d44c602a6109931eb4"
-dependencies = [
- "cfg-if",
- "rdif-base",
- "thiserror",
-]
-
-[[package]]
-name = "rdif-intc"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12b79eba6783fb02dfb2a499a7f9da60b6c16b56c666b546d026e8fffc82c517"
@@ -1073,7 +1047,6 @@ dependencies = [
  "aml",
  "ansi_rgb",
  "anyhow",
- "arm-gic-driver 0.15.10",
  "arrayvec",
  "bitflags 2.10.0",
  "buddy_system_allocator",
@@ -1108,13 +1081,15 @@ version = "0.5.0"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "anyhow",
- "arm-gic-driver 0.16.0",
+ "arm-gic-driver",
  "log",
  "page-table-generic",
- "rdif-intc 0.13.0",
+ "rdif-intc",
  "rdrive",
  "someboot",
+ "somehal-macros",
  "thiserror",
+ "tock-registers 0.10.1",
 ]
 
 [[package]]

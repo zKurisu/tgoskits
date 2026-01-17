@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(iter_next_chunk)]
 #![cfg(not(any(windows, unix)))]
 
 #[allow(unused_imports)]
@@ -42,7 +41,7 @@ pub mod timer;
 
 pub use fdt::fdt_addr;
 pub use page_table_generic::*;
-pub use somehal_macros::{entry, irq_handler, secondary_entry};
+pub use somehal_macros::{entry, secondary_entry};
 
 use crate::{irq::IrqId, mem::PageTableInfo};
 

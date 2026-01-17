@@ -1,3 +1,5 @@
+pub use somehal_macros::irq_handler;
+
 use crate::ArchTrait;
 
 pub fn systimer_irq() -> IrqId {

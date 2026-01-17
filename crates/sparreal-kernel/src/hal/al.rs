@@ -1,4 +1,4 @@
-use core::{ptr::NonNull, time::Duration};
+use core::ptr::NonNull;
 
 use alloc::boxed::Box;
 pub use heapless::Vec as StackVec;
