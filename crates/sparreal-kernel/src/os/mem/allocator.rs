@@ -71,6 +71,8 @@ pub fn kernel_memory_allocator() -> &'static KernelMemoryAllocator {
         // 对于非 none 目标，提供一个空实现
         use core::sync::atomic::{AtomicPtr, Ordering};
 
+        use alloc::boxed::Box;
+
         static EMPTY_ALLOCATOR: AtomicPtr<KernelMemoryAllocator> =
             AtomicPtr::new(core::ptr::null_mut());
 
@@ -83,7 +85,7 @@ pub fn kernel_memory_allocator() -> &'static KernelMemoryAllocator {
                 Ordering::AcqRel,
                 Ordering::Acquire,
             ) {
-                Ok(_) => allocator,
+                Ok(_) => &*allocator,
                 Err(existing) => unsafe { &*existing },
             }
         } else {

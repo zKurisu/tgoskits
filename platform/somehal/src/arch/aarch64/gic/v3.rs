@@ -1,4 +1,4 @@
-use aarch64_cpu::registers::CurrentEL;
+use aarch64_cpu::registers::ID_AA64PFR0_EL1;
 use alloc::format;
 use arm_gic_driver::v3::*;
 use kernutil::StaticCell;
@@ -51,17 +51,11 @@ fn probe_gic(info: FdtInfo<'_>, dev: PlatformDevice) -> Result<(), OnProbeError>
     Ok(())
 }
 
-pub fn is_v3() -> bool {
-    if CurrentEL.read(CurrentEL::EL) == 1 {
-        ICC_SRE_EL1.is_set(ICC_SRE_EL1::SRE)
-    } else if CurrentEL.read(CurrentEL::EL) == 2 {
-        ICC_SRE_EL2.is_set(ICC_SRE_EL2::SRE)
-    } else {
-        panic!(
-            "Unsupported exception level {} for IRQ handling",
-            CurrentEL.read(CurrentEL::EL)
-        );
-    }
+/// Check if support GIC cpu interface.
+pub fn is_support_icc() -> bool {
+    let val = ID_AA64PFR0_EL1.get();
+    // Check GIC field
+    val >> 24 & 0xf > 0
 }
 
 pub fn handle_irq() {

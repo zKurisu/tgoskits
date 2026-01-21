@@ -6,7 +6,7 @@ mod v2;
 mod v3;
 
 pub fn init_current_cpu() {
-    if v3::is_v3() {
+    if v3::is_support_icc() {
         v3::init_cpu();
     } else {
         v2::init_cpu();
@@ -25,7 +25,7 @@ pub fn irq_set_enable(irq: rdrive::IrqId, enable: bool) {
 
 #[unsafe(no_mangle)]
 fn __aarch64_irq_handler() {
-    if v3::is_v3() {
+    if v3::is_support_icc() {
         v3::handle_irq();
     } else {
         v2::handle_irq();
