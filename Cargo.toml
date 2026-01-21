@@ -35,3 +35,5 @@ somehal = {path = "platform/somehal", version = "0.5"}
 sparreal-kernel = {path = "crates/sparreal-kernel", version = "0.13"}
 sparreal-macros = {path = "crates/sparreal-macros", version = "0.10"}
 sparreal-rt = {path = "platform/sparreal-rt", version = "0.13"}
+bare-test-macros = {path = "crates/bare-test-macros", version = "0.3"}
+bare-test = {path = "crates/bare-test", version = "0.8"}
