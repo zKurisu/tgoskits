@@ -9,6 +9,7 @@ pub trait PlatOp {
     fn systick_irq() -> IrqId;
 }
 
+#[allow(dead_code)]
 pub fn ioremap(paddr: usize, size: usize) -> Result<*mut u8, IoremapError> {
     let ptr = kernel().ioremap(paddr, size)?;
     Ok(ptr)
