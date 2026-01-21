@@ -1,6 +1,6 @@
 [system.Cargo]
 args = [
-  "-Z", "build-std=core,alloc"  
+  "-Z", "build-std=core,alloc",  
 ]
 features = []
 package = "helloworld"
