@@ -13,5 +13,4 @@ version = "0.8.0"
 bare-test-macros.workspace = true
 log.workspace = true
 sparreal-rt.workspace = true
-sparreal-macros.workspace = true
 

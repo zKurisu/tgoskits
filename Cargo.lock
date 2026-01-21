@@ -192,7 +192,6 @@ version = "0.8.0"
 dependencies = [
  "bare-test-macros 0.3.0",
  "log",
- "sparreal-macros",
  "sparreal-rt",
 ]
 
