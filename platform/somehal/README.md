@@ -111,23 +111,76 @@ somehal/
 
 ## 快速开始
 
-### 基本使用
+### 使用 Entry 宏
+
+SomeHAL 提供了 `#[somehal::entry]` 宏来自动化初始化流程：
 
 ```rust
-use somehal;
+use somehal::{KernelOp, PagingResult};
+use sparreal_kernel::os::mem;
 
-// 1. 在内核初始化时设置
+// 1. 定义内核类型并实现 KernelOp trait
+pub struct Kernel;
+
+impl KernelOp for Kernel {
+    fn ioremap(&self, paddr: usize, size: usize) -> PagingResult<*mut u8> {
+        // 提供内存重映射接口
+        mem::ioremap(paddr.into(), size)
+            .map(|addr| addr.raw() as *mut u8)
+    }
+}
+
+// 2. 使用 entry 宏自动初始化
+#[somehal::entry(Kernel)]
 fn main() -> ! {
-    somehal::init(&kernel_op);
+    // somehal::init(&Kernel) 已由宏自动调用
 
     // ... 内存初始化 ...
 
-    // 2. 分页后启动驱动系统
+    // 3. 分页后启动驱动系统
     somehal::post_paging();
 
     // ... 继续启动 ...
 }
 ```
+
+**宏的参数要求**：
+- **必需参数**: 必须指定实现 `KernelOp` trait 的类型（如 `Kernel`）
+- **自动行为**: 宏会在函数开头自动插入 `somehal::init(&<type>)` 调用
+- **错误提示**: 无参数时会显示清晰的编译错误
+
+### KernelOp Trait
+
+所有使用 SomeHAL 的平台必须实现 `KernelOp` trait：
+
+```rust
+use somehal::KernelOp;
+
+pub trait KernelOp {
+    /// 内存重映射接口
+    ///
+    /// 将物理地址映射到内核虚拟地址空间
+    ///
+    /// # 参数
+    /// - `paddr`: 物理地址
+    /// - `size`: 映射大小（字节）
+    ///
+    /// # 返回
+    /// 映射后的虚拟地址指针
+    fn ioremap(&self, paddr: usize, size: usize) -> PagingResult<*mut u8>;
+}
+```
+
+### 初始化流程
+
+1. **自动初始化** (`#[somehal::entry(Kernel)]`)
+   - 宏自动调用 `somehal::init(&Kernel)`
+   - 设置内核操作回调接口
+
+2. **驱动系统启动** (`somehal::post_paging()`)
+   - 在分页系统初始化后调用
+   - 通过设备树自动探测硬件
+   - 初始化中断控制器和定时器
 
 ### 中断处理
 
@@ -146,29 +199,43 @@ let timer_irq = systick_irq();
 
 ### 平台操作
 
-实现 `PlatOp` trait 以提供平台特定功能：
+SomeHAL 通过 `KernelOp` trait 提供平台特定功能：
 
 ```rust
-use somehal::common::PlatOp;
+use somehal::KernelOp;
 
-pub struct Plat;
+// 在平台运行时中实现
+pub struct Kernel;
 
-impl PlatOp for Plat {
-    fn irq_set_enable(irq: rdrive::IrqId, enable: bool) {
-        // 平台特定的 IRQ 使能实现
-    }
-
-    fn systick_irq() -> rdrive::IrqId {
-        // 返回系统定时器 IRQ ID
+impl KernelOp for Kernel {
+    fn ioremap(&self, paddr: usize, size: usize) -> PagingResult<*mut u8> {
+        // 调用内核的内存管理接口
+        sparreal_kernel::os::mem::ioremap(paddr.into(), size)
+            .map(|addr| addr.raw() as *mut u8)
     }
 }
 ```
 
 ## 平台接口
 
-### `PlatOp` Trait
+### 核心接口
 
-平台操作的抽象接口，定义了所有平台必须实现的功能：
+SomeHAL 提供两个核心接口：
+
+#### 1. `KernelOp` Trait
+
+内核操作接口，由平台运行时实现：
+
+```rust
+pub trait KernelOp {
+    /// 内存重映射接口
+    fn ioremap(&self, paddr: usize, size: usize) -> PagingResult<*mut u8>;
+}
+```
+
+#### 2. `PlatOp` Trait
+
+平台操作接口，由架构实现提供：
 
 ```rust
 pub trait PlatOp {
@@ -180,18 +247,20 @@ pub trait PlatOp {
 }
 ```
 
-### 初始化流程
+### 初始化函数
 
-1. **`init(kernel)`**: 设置内核操作回调
-2. **`post_paging()`**: 启动驱动系统，初始化硬件设备
+| 函数 | 调用时机 | 说明 |
+|------|---------|------|
+| `init(kernel)` | entry 宏自动调用 | 设置内核操作回调 |
+| `post_paging()` | 分页系统初始化后 | 启动驱动系统，初始化硬件设备 |
 
 ### I/O 内存映射
 
-```rust
-use somehal::common::ioremap;
+通过 `KernelOp::ioremap` 进行内存映射：
 
-// 映射物理地址到虚拟地址
-let virt_addr = ioremap(0x0800_0000, 0x1000)?;
+```rust
+// 在内核代码中
+let virt_addr = somehal::ioremap(0x0800_0000, 0x1000)?;
 ```
 
 ## 特性标志
@@ -232,6 +301,66 @@ somehal = { version = "0.5", features = ["hv", "uspace"] }
 
 ## 开发指南
 
+### 创建新平台
+
+使用 SomeHAL 创建新平台运行时的步骤：
+
+#### 1. 定义内核类型
+
+```rust
+// platform/my-platform/src/lib.rs
+use somehal::KernelOp;
+
+pub struct Kernel;
+
+impl KernelOp for Kernel {
+    fn ioremap(&self, paddr: usize, size: usize) -> PagingResult<*mut u8> {
+        // 实现内存映射逻辑
+        // 通常调用 sparreal_kernel::os::mem::ioremap
+    }
+}
+```
+
+#### 2. 使用 entry 宏
+
+```rust
+#[somehal::entry(Kernel)]
+fn main() -> ! {
+    // somehal::init(&Kernel) 已自动调用
+
+    // 初始化内存管理
+    sparreal_kernel::os::mem::paging::init();
+
+    // 启动驱动系统
+    somehal::post_paging();
+
+    // 运行内核
+    sparreal_kernel::run_kernel()
+}
+```
+
+#### 3. 实现平台特定接口
+
+在 `hal_impl.rs` 中实现内核的 HAL trait：
+
+```rust
+use sparreal_kernel::hal::al;
+
+pub struct PlatformImpl;
+
+#[sparreal_macros::api_impl]
+impl Platform for PlatformImpl {
+    unsafe fn wait_for_interrupt() {
+        // 平台特定的 WFI 实现
+    }
+
+    fn shutdown() -> ! {
+        // 平台特定的关机实现
+        loop {}
+    }
+}
+```
+
 ### 添加新架构支持
 
 1. 在 `src/arch/` 下创建新目录
@@ -251,6 +380,23 @@ somehal = { version = "0.5", features = ["hv", "uspace"] }
    - `irq_set_enable()`: IRQ 使能控制
 3. 在上层添加版本检测逻辑
 4. 使用 `StaticCell` 管理全局状态
+
+### 宏使用最佳实践
+
+**entry 宏** (`#[somehal::entry]`)：
+- ✅ **必须提供参数**: 指定实现 `KernelOp` 的类型
+- ✅ **每个项目仅一次**: 整个依赖图只能有一个入口点
+- ✅ **函数签名**: `fn main() -> !` 或 `unsafe fn main() -> !`
+- ❌ **不要手动调用**: `somehal::init()` 由宏自动处理
+
+**irq_handler 宏** (`#[somehal::irq_handler]`)：
+```rust
+#[somehal::irq_handler]
+fn my_irq_handler(irq: someboot::irq::IrqId) {
+    // 处理中断
+    sparreal_kernel::os::irq::handle_irq(irq);
+}
+```
 
 ### 代码风格
 
@@ -282,4 +428,4 @@ somehal = { version = "0.5", features = ["hv", "uspace"] }
 
 ---
 
-**最后更新**: 2025-01-17
+**最后更新**: 2026-01-21
