@@ -2367,7 +2367,7 @@ dependencies = [
 
 [[package]]
 name = "sparreal-kernel"
-version = "0.12.3"
+version = "0.12.4"
 dependencies = [
  "ansi_rgb",
  "anyhow",

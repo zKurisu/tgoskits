@@ -43,6 +43,23 @@ static ALLOCATOR: KAllocator = KAllocator {
 
 static mut TMP_PAGE_ALLOC_ADDR: usize = 0;
 
+/// Allocate memory with DMA mask
+///
+/// # Safety
+///
+/// This function is unsafe because it performs raw memory allocation.
+pub unsafe fn alloc_with_mask(layout: core::alloc::Layout, dma_mask: u64) -> *mut u8 {
+    #[cfg(target_os = "none")]
+    {
+        unsafe { ALLOCATOR.alloc_with_mask(layout, dma_mask) }
+    }
+    #[cfg(not(target_os = "none"))]
+    {
+        let _ = dma_mask;
+        unsafe { alloc::alloc::alloc(layout) }
+    }
+}
+
 pub struct KAllocator {
     heap32: Mutex<Heap<32>>,
     heap64: Mutex<Heap<64>>,
