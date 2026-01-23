@@ -22,9 +22,6 @@ impl<T> DBox<T> {
 
     pub fn read(&self) -> T {
         unsafe {
-            // let ptr = self.data.handle.origin_virt.cast::<T>();
-            // self.data.prepare_read(ptr.cast(), size_of::<T>());
-            // ptr.read_volatile()
             self.data.prepare_read(0, core::mem::size_of::<T>());
             let ptr = self.data.get_ptr(0).cast::<T>();
             ptr.read_volatile()
@@ -33,9 +30,6 @@ impl<T> DBox<T> {
 
     pub fn write(&mut self, value: T) {
         unsafe {
-            // let ptr = self.data.handle.origin_virt.cast::<T>();
-            // ptr.write_volatile(value);
-            // self.data.confirm_write(ptr.cast(), size_of::<T>());
             let ptr = self.data.get_ptr(0).cast::<T>();
             ptr.write_volatile(value);
             self.data.confirm_write(0, core::mem::size_of::<T>());
@@ -46,5 +40,14 @@ impl<T> DBox<T> {
         let mut value = self.read();
         f(&mut value);
         self.write(value);
+    }
+
+    /// 获取底层缓冲区的可变切片
+    ///
+    /// # Safety
+    ///
+    ///
+    pub unsafe fn as_buff_slice_mut(&mut self) -> &mut [u8] {
+        self.data.as_mut_slice()
     }
 }

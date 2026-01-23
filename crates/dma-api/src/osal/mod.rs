@@ -61,22 +61,22 @@ pub trait DmaOp: Sync + Send + 'static {
 
     fn prepare_read(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
         if matches!(direction, Direction::FromDevice | Direction::Bidirectional) {
-            let ptr = unsafe { handle.as_ptr().add(offset) };
+            let ptr = unsafe { handle.dma_virt().add(offset) };
 
-            self.invalidate(unsafe { NonNull::new_unchecked(ptr) }, size);
-            
-            log::trace!("invalidate addr={ptr:#p}, size={size}");
+            self.invalidate(ptr, size);
+
+            // log::trace!("invalidate addr={ptr:#p}, size={size}");
 
             if let Some(virt) = handle.alloc_virt
                 && virt != handle.origin_virt
             {
                 unsafe {
-                    let src = core::slice::from_raw_parts(virt.add(offset).as_ptr(), size);
+                    let src = core::slice::from_raw_parts(ptr.as_ptr(), size);
                     let dst = core::slice::from_raw_parts_mut(
                         handle.origin_virt.as_ptr().add(offset),
                         size,
                     );
-                    log::trace!("\ncopy\n  @{src:#p} {src:?} ->\n  @{dst:#p} {dst:?}");
+                    // log::trace!("\ncopy\n  @{src:#p} {src:?} ->\n  @{dst:#p} {dst:?}");
 
                     dst.copy_from_slice(src);
                 }
@@ -86,22 +86,21 @@ pub trait DmaOp: Sync + Send + 'static {
 
     fn confirm_write(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
         if matches!(direction, Direction::ToDevice | Direction::Bidirectional) {
+            let ptr = unsafe { handle.dma_virt().add(offset) };
+
             if let Some(virt) = handle.alloc_virt
                 && virt != handle.origin_virt
             {
                 unsafe {
                     core::ptr::copy_nonoverlapping(
                         handle.origin_virt.as_ptr().add(offset),
-                        virt.as_ptr().add(offset),
+                        ptr.as_ptr(),
                         size,
                     );
                 }
             }
 
-            self.flush(
-                unsafe { NonNull::new_unchecked(handle.as_ptr().add(offset)) },
-                size,
-            )
+            self.flush(ptr, size)
         }
     }
 }

@@ -54,10 +54,7 @@ impl<T> DArray<T> {
         );
 
         unsafe {
-            // let ptr = self.data.handle.origin_virt.cast::<T>().add(index);
-            // ptr.write_volatile(value);
-            // self.data.confirm_write(ptr.cast(), size_of::<T>());
-            let offset = index * core::mem::size_of::<T>();
+            let offset = index * size_of::<T>();
             let ptr = self.data.get_ptr(offset).cast::<T>();
             ptr.write_volatile(value);
             self.data.confirm_write(offset, size_of::<T>());

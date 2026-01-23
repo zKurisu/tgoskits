@@ -76,8 +76,15 @@ impl DmaHandle {
     }
 
     pub fn as_ptr(&self) -> *mut u8 {
-        self.alloc_virt
-            .map_or(self.origin_virt.as_ptr(), |p| p.as_ptr())
+        self.origin_virt.as_ptr()
+    }
+
+    pub(crate) fn dma_virt(&self) -> NonNull<u8> {
+        if let Some(virt) = self.alloc_virt {
+            virt
+        } else {
+            self.origin_virt
+        }
     }
 
     pub fn dma_addr(&self) -> DmaAddr {
