@@ -172,18 +172,6 @@ impl DeviceDma {
 
     unsafe fn alloc_coherent(&self, layout: core::alloc::Layout) -> Option<DmaHandle> {
         let res = unsafe { self.os.alloc_coherent(self.mask, layout) };
-        #[cfg(debug_assertions)]
-        {
-            if let Some(ref handle) = res {
-                assert!(
-                    self.mask >= handle.dma_addr + layout.size() as u64,
-                    "DMA mask not match: addr={:#x}, size={:#x}, mask={:#x}",
-                    handle.dma_addr,
-                    layout.size(),
-                    self.mask
-                );
-            }
-        }
         res
     }
 
@@ -202,14 +190,6 @@ impl DeviceDma {
         #[cfg(debug_assertions)]
         {
             if let Ok(ref handle) = res {
-                assert!(
-                    self.mask >= handle.dma_addr + size.get() as u64,
-                    "DMA mask not match: addr={:#x}, size={:#x}, mask={:#x}",
-                    handle.dma_addr,
-                    size,
-                    self.mask
-                );
-
                 assert!(
                     handle.dma_addr % (align as u64) == 0,
                     "DMA address not aligned: addr={:#x}, align={:#x}",

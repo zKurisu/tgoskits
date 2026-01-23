@@ -21,7 +21,18 @@ impl<T> DCommon<T> {
         let layout = Layout::from_size_align(size, align)?;
         let handle = unsafe { os.alloc_coherent(layout) }.ok_or(DmaError::NoMemory)?;
         let dma_mask = os.dma_mask();
-        if handle.dma_addr > dma_mask {
+
+        let in_mask = if layout.size() == 0 {
+            handle.dma_addr <= dma_mask
+        } else {
+            handle
+                .dma_addr
+                .checked_add(layout.size().saturating_sub(1) as u64)
+                .map(|end| end <= dma_mask)
+                .unwrap_or(false)
+        };
+
+        if !in_mask {
             unsafe {
                 os.dealloc_coherent(handle);
             }
@@ -99,7 +110,14 @@ impl SingleMapping {
     ) -> Result<Self, DmaError> {
         let handle = unsafe { os._map_single(addr, size, align, direction)? };
         let dma_mask = os.dma_mask();
-        if handle.dma_addr > dma_mask {
+
+        let in_mask = handle
+            .dma_addr
+            .checked_add(size.get() as u64 - 1)
+            .map(|end| end <= dma_mask)
+            .unwrap_or(false);
+
+        if !in_mask {
             unsafe {
                 os.unmap_single(handle);
             }

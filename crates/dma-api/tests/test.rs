@@ -76,6 +76,30 @@ fn test_index() {
     assert_eq!(a, 0);
 }
 
+#[test]
+fn mask_check_rejects_overflow_alloc() {
+    static DMA: MaskedDma = MaskedDma;
+    let dev = DeviceDma::new(0x0fff, &DMA);
+
+    let err = dev.new_array::<u8>(0x1000, 0x1000, Direction::ToDevice);
+
+    assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
+}
+
+#[test]
+fn mask_check_rejects_overflow_map() {
+    static DMA: MaskedDma = MaskedDma;
+    let dev = DeviceDma::new(0x0fff, &DMA);
+
+    let mut buf = [0u8; 0x1000];
+    let addr = NonNull::new(buf.as_mut_ptr()).unwrap();
+    let size = NonZeroUsize::new(0x1000).unwrap();
+
+    let err = dev.map_single(addr, size, 64, Direction::FromDevice);
+
+    assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
+}
+
 fn new_api() -> DeviceDma {
     static IMPL: Impled = Impled;
     DeviceDma::new(u64::MAX, &IMPL)
@@ -149,6 +173,48 @@ impl DmaOp for Impled {
             handle.size(),
             handle.align()
         );
+        unsafe { std::alloc::dealloc(handle.origin_virt.as_ptr(), handle.layout) };
+    }
+}
+
+struct MaskedDma;
+
+impl DmaOp for MaskedDma {
+    fn page_size(&self) -> usize {
+        0x1000
+    }
+
+    unsafe fn map_single(
+        &self,
+        _dma_mask: u64,
+        addr: NonNull<u8>,
+        size: NonZeroUsize,
+        align: usize,
+        _direction: Direction,
+    ) -> Result<DmaHandle, DmaError> {
+        let layout = core::alloc::Layout::from_size_align(size.get(), align)?;
+        Ok(DmaHandle::new(addr, 0x1000, layout))
+    }
+
+    unsafe fn unmap_single(&self, _handle: DmaHandle) {}
+
+    fn flush(&self, _addr: std::ptr::NonNull<u8>, _size: usize) {}
+
+    fn invalidate(&self, _addr: std::ptr::NonNull<u8>, _size: usize) {}
+
+    unsafe fn alloc_coherent(
+        &self,
+        _dma_mask: u64,
+        layout: core::alloc::Layout,
+    ) -> Option<DmaHandle> {
+        let ptr = unsafe { std::alloc::alloc_zeroed(layout) };
+        if ptr.is_null() {
+            return None;
+        }
+        Some(DmaHandle::new(NonNull::new(ptr).unwrap(), 0x1000, layout))
+    }
+
+    unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
         unsafe { std::alloc::dealloc(handle.origin_virt.as_ptr(), handle.layout) };
     }
 }
