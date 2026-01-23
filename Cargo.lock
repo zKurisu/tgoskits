@@ -386,6 +386,7 @@ dependencies = [
  "aarch64-cpu-ext",
  "cfg-if",
  "log",
+ "mbarrier",
  "spin 0.10.0",
  "thiserror",
 ]

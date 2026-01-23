@@ -61,13 +61,11 @@ pub trait DmaOp: Sync + Send + 'static {
 
     fn prepare_read(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
         if matches!(direction, Direction::FromDevice | Direction::Bidirectional) {
-            self.invalidate(
-                unsafe { NonNull::new_unchecked(handle.as_ptr().add(offset)) },
-                size,
-            );
-            log::trace!("prepare_read addr={:#p}", unsafe {
-                handle.as_ptr().add(offset)
-            });
+            let ptr = unsafe { handle.as_ptr().add(offset) };
+
+            self.invalidate(unsafe { NonNull::new_unchecked(ptr) }, size);
+            
+            log::trace!("invalidate addr={ptr:#p}, size={size}");
 
             if let Some(virt) = handle.alloc_virt
                 && virt != handle.origin_virt
@@ -78,7 +76,7 @@ pub trait DmaOp: Sync + Send + 'static {
                         handle.origin_virt.as_ptr().add(offset),
                         size,
                     );
-                    log::trace!("\nprepare\n  {src:?} ->\n  {dst:?}");
+                    log::trace!("\ncopy\n  @{src:#p} {src:?} ->\n  @{dst:#p} {dst:?}");
 
                     dst.copy_from_slice(src);
                 }
