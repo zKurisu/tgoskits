@@ -1,23 +1,22 @@
-#![cfg_attr(not(any(windows, unix)), no_std)]
+#![cfg_attr(target_os = "none", no_std)]
 #![doc = include_str!("../README.md")]
 
 extern crate alloc;
 
-use core::{ops::Deref, ptr::NonNull};
-
-use alloc::sync::Arc;
+use core::{alloc::Layout, num::NonZeroUsize, ops::Deref, ptr::NonNull};
 
 mod osal;
 
 mod array;
 mod common;
 mod dbox;
-mod slice;
+// mod slice;
 
 pub use array::*;
+pub use common::SingleMapping;
 pub use dbox::*;
-pub use osal::Osal;
-pub use slice::*;
+pub use osal::DmaOp;
+// pub use slice::*;
 
 // mod stream;
 
@@ -62,21 +61,29 @@ impl From<core::alloc::LayoutError> for DmaError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DmaHandle {
-    pub virt_addr: NonNull<u8>,
+    pub origin_virt: NonNull<u8>,
     pub dma_addr: DmaAddr,
-    pub layout: core::alloc::Layout,
+    pub layout: Layout,
+    pub alloc_virt: Option<NonNull<u8>>,
 }
-
 impl DmaHandle {
-    pub fn new(virt_addr: NonNull<u8>, dma_addr: DmaAddr, layout: core::alloc::Layout) -> Self {
-        Self {
-            virt_addr,
-            dma_addr,
-            layout,
-        }
+    pub fn size(&self) -> usize {
+        self.layout.size()
+    }
+
+    pub fn align(&self) -> usize {
+        self.layout.align()
+    }
+
+    pub fn as_ptr(&self) -> *mut u8 {
+        self.alloc_virt
+            .map_or(self.origin_virt.as_ptr(), |p| p.as_ptr())
+    }
+
+    pub fn dma_addr(&self) -> DmaAddr {
+        self.dma_addr
     }
 }
-
 unsafe impl Send for DmaHandle {}
 
 impl Deref for DmaHandle {
@@ -86,24 +93,17 @@ impl Deref for DmaHandle {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MapHandle {
-    pub virt_addr: NonNull<u8>,
-    pub dma_addr: DmaAddr,
-    pub size: usize,
-}
-
 #[derive(Clone)]
 pub struct DeviceDma {
-    inner: Arc<dyn Osal>,
+    os: &'static dyn DmaOp,
     mask: u64,
 }
 
 impl DeviceDma {
-    pub fn new(osal: impl Osal, dma_mask: u64) -> Self {
+    pub fn new(dma_mask: u64, osal: &'static dyn DmaOp) -> Self {
         Self {
-            inner: Arc::new(osal),
             mask: dma_mask,
+            os: osal,
         }
     }
 
@@ -112,27 +112,27 @@ impl DeviceDma {
     }
 
     pub fn flush(&self, addr: NonNull<u8>, size: usize) {
-        self.inner.flush(addr, size)
+        self.os.flush(addr, size)
     }
 
     pub fn invalidate(&self, addr: NonNull<u8>, size: usize) {
-        self.inner.invalidate(addr, size)
+        self.os.invalidate(addr, size)
     }
 
     pub fn page_size(&self) -> usize {
-        self.inner.page_size()
+        self.os.page_size()
     }
 
-    fn prepare_read(&self, ptr: NonNull<u8>, size: usize, direction: Direction) {
-        self.inner.prepare_read(ptr, size, direction)
+    fn prepare_read(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
+        self.os.prepare_read(handle, offset, size, direction)
     }
 
-    fn confirm_write(&self, ptr: NonNull<u8>, size: usize, direction: Direction) {
-        self.inner.confirm_write(ptr, size, direction)
+    fn confirm_write(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
+        self.os.confirm_write(handle, offset, size, direction)
     }
 
     unsafe fn alloc_coherent(&self, layout: core::alloc::Layout) -> Option<DmaHandle> {
-        let res = unsafe { self.inner.alloc_coherent(self.mask, layout) };
+        let res = unsafe { self.os.alloc_coherent(self.mask, layout) };
         #[cfg(debug_assertions)]
         {
             if let Some(ref handle) = res {
@@ -149,21 +149,21 @@ impl DeviceDma {
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
-        unsafe { self.inner.dealloc_coherent(self.mask, handle) }
+        unsafe { self.os.dealloc_coherent(handle) }
     }
 
     unsafe fn _map_single(
         &self,
         addr: NonNull<u8>,
-        size: usize,
+        size: NonZeroUsize,
         direction: Direction,
-    ) -> Result<MapHandle, DmaError> {
-        let res = unsafe { self.inner.map_single(self.mask, addr, size, direction) };
+    ) -> Result<DmaHandle, DmaError> {
+        let res = unsafe { self.os.map_single(self.mask, addr, size, direction) };
         #[cfg(debug_assertions)]
         {
             if let Ok(ref handle) = res {
                 assert!(
-                    self.mask >= handle.dma_addr + size as u64,
+                    self.mask >= handle.dma_addr + size.get() as u64,
                     "DMA mask not match: addr={:#x}, size={:#x}, mask={:#x}",
                     handle.dma_addr,
                     size,
@@ -175,8 +175,8 @@ impl DeviceDma {
         res
     }
 
-    unsafe fn unmap_single(&self, handle: MapHandle) {
-        unsafe { self.inner.unmap_single(handle) }
+    unsafe fn unmap_single(&self, handle: DmaHandle) {
+        unsafe { self.os.unmap_single(handle) }
     }
 
     pub fn new_array<T>(
@@ -196,19 +196,28 @@ impl DeviceDma {
         dbox::DBox::new_zero(self, align, direction)
     }
 
-    pub fn map_single<'a, T>(
+    pub fn map_single(
         &self,
-        s: &'a [T],
+        addr: NonNull<u8>,
+        size: NonZeroUsize,
         direction: Direction,
-    ) -> Result<DSliceSingle<'a, T>, DmaError> {
-        DSliceSingle::new(self, s, direction)
+    ) -> Result<common::SingleMapping, DmaError> {
+        common::SingleMapping::new(self, addr, size, direction)
     }
 
-    pub fn map_single_mut<'a, T>(
-        &self,
-        s: &'a mut [T],
-        direction: Direction,
-    ) -> Result<DSliceSingleMut<'a, T>, DmaError> {
-        DSliceSingleMut::new(self, s, direction)
-    }
+    // pub fn map_single_slice<'a, T>(
+    //     &self,
+    //     s: &'a [T],
+    //     direction: Direction,
+    // ) -> Result<DSliceSingle<'a, T>, DmaError> {
+    //     DSliceSingle::new(self, s, direction)
+    // }
+
+    // pub fn map_single_slice_mut<'a, T>(
+    //     &self,
+    //     s: &'a mut [T],
+    //     direction: Direction,
+    // ) -> Result<DSliceSingleMut<'a, T>, DmaError> {
+    //     DSliceSingleMut::new(self, s, direction)
+    // }
 }

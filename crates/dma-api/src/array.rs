@@ -39,9 +39,9 @@ impl<T> DArray<T> {
         }
 
         unsafe {
-            let ptr = self.data.handle.virt_addr.cast::<T>().add(index);
-            self.data.prepare_read(ptr.cast(), size_of::<T>());
-            Some(ptr.read_volatile())
+            let offset = index * core::mem::size_of::<T>();
+            self.data.prepare_read(offset, size_of::<T>());
+            Some(self.data.get_ptr(offset).cast::<T>().read_volatile())
         }
     }
 
@@ -54,9 +54,13 @@ impl<T> DArray<T> {
         );
 
         unsafe {
-            let ptr = self.data.handle.virt_addr.cast::<T>().add(index);
+            // let ptr = self.data.handle.origin_virt.cast::<T>().add(index);
+            // ptr.write_volatile(value);
+            // self.data.confirm_write(ptr.cast(), size_of::<T>());
+            let offset = index * core::mem::size_of::<T>();
+            let ptr = self.data.get_ptr(offset).cast::<T>();
             ptr.write_volatile(value);
-            self.data.confirm_write(ptr.cast(), size_of::<T>());
+            self.data.confirm_write(offset, size_of::<T>());
         }
     }
 
@@ -79,6 +83,23 @@ impl<T> DArray<T> {
         };
         self.data.as_mut_slice().copy_from_slice(src_bytes);
         self.data.confirm_write_all();
+    }
+
+    /// # Safety
+    ///
+    /// slice will not auto do cache sync operations.
+    pub unsafe fn as_mut_slice(&mut self) -> &mut [T] {
+        let byte_slice = self.data.as_mut_slice();
+        unsafe {
+            core::slice::from_raw_parts_mut(
+                byte_slice.as_mut_ptr() as *mut T,
+                byte_slice.len() / core::mem::size_of::<T>(),
+            )
+        }
+    }
+
+    pub fn as_ptr(&self) -> *mut T {
+        self.data.handle.as_ptr().cast::<T>()
     }
 }
 
@@ -111,9 +132,13 @@ impl<T: Copy> Index<usize> for DArray<T> {
             self.len()
         );
         unsafe {
-            let ptr = self.data.handle.virt_addr.cast::<T>().add(index);
-            self.data.prepare_read(ptr.cast(), size_of::<T>());
-            &*ptr.as_ptr()
+            // let ptr = self.data.handle.origin_virt.cast::<T>().add(index);
+            // self.data.prepare_read(ptr.cast(), size_of::<T>());
+            // &*ptr.as_ptr()
+            let offset = index * core::mem::size_of::<T>();
+            let ptr = self.data.get_ptr(offset).cast::<T>();
+            self.data.prepare_read(offset, size_of::<T>());
+            &*ptr
         }
     }
 }

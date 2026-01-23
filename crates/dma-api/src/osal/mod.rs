@@ -1,6 +1,6 @@
-use core::ptr::NonNull;
+use core::{num::NonZeroUsize, ptr::NonNull};
 
-use crate::{Direction, DmaError, DmaHandle, MapHandle};
+use crate::{Direction, DmaError, DmaHandle};
 
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "aarch64")] {
@@ -12,26 +12,26 @@ cfg_if::cfg_if! {
     }
 }
 
-pub trait Osal: Sync + Send + 'static {
+pub trait DmaOp: Sync + Send + 'static {
     fn page_size(&self) -> usize;
 
     /// 将虚拟地址映射到 DMA 地址
-    /// 
+    ///
     /// # Safety
     /// 只能是单个连续内存块
     unsafe fn map_single(
         &self,
         dma_mask: u64,
         addr: NonNull<u8>,
-        size: usize,
+        size: NonZeroUsize,
         direction: Direction,
-    ) -> Result<MapHandle, DmaError>;
+    ) -> Result<DmaHandle, DmaError>;
 
     /// 解除 DMA 映射
-    /// 
+    ///
     /// # Safety
     /// 必须与 map_single 配对使用
-    unsafe fn unmap_single(&self, handle: MapHandle);
+    unsafe fn unmap_single(&self, handle: DmaHandle);
 
     /// 写回缓存到内存 (clean)
     fn flush(&self, addr: NonNull<u8>, size: usize) {
@@ -57,17 +57,53 @@ pub trait Osal: Sync + Send + 'static {
     /// 释放 DMA 内存
     /// # Safety
     /// 调用者必须确保 ptr 和 layout 与 alloc 时匹配
-    unsafe fn dealloc_coherent(&self, dma_mask: u64, handle: DmaHandle);
+    unsafe fn dealloc_coherent(&self, handle: DmaHandle);
 
-    fn prepare_read(&self, ptr: NonNull<u8>, size: usize, direction: Direction) {
+    fn prepare_read(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
         if matches!(direction, Direction::FromDevice | Direction::Bidirectional) {
-            self.invalidate(ptr, size);
+            self.invalidate(
+                unsafe { NonNull::new_unchecked(handle.as_ptr().add(offset)) },
+                size,
+            );
+            log::trace!("prepare_read addr={:#p}", unsafe {
+                handle.as_ptr().add(offset)
+            });
+
+            if let Some(virt) = handle.alloc_virt
+                && virt != handle.origin_virt
+            {
+                unsafe {
+                    let src = core::slice::from_raw_parts(virt.add(offset).as_ptr(), size);
+                    let dst = core::slice::from_raw_parts_mut(
+                        handle.origin_virt.as_ptr().add(offset),
+                        size,
+                    );
+                    log::trace!("\nprepare\n  {src:?} ->\n  {dst:?}");
+
+                    dst.copy_from_slice(src);
+                }
+            }
         }
     }
 
-    fn confirm_write(&self, ptr: NonNull<u8>, size: usize, direction: Direction) {
+    fn confirm_write(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
         if matches!(direction, Direction::ToDevice | Direction::Bidirectional) {
-            self.flush(ptr, size)
+            if let Some(virt) = handle.alloc_virt
+                && virt != handle.origin_virt
+            {
+                unsafe {
+                    core::ptr::copy_nonoverlapping(
+                        handle.origin_virt.as_ptr().add(offset),
+                        virt.as_ptr().add(offset),
+                        size,
+                    );
+                }
+            }
+
+            self.flush(
+                unsafe { NonNull::new_unchecked(handle.as_ptr().add(offset)) },
+                size,
+            )
         }
     }
 }

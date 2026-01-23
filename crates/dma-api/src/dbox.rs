@@ -22,17 +22,23 @@ impl<T> DBox<T> {
 
     pub fn read(&self) -> T {
         unsafe {
-            let ptr = self.data.handle.virt_addr.cast::<T>();
-            self.data.prepare_read(ptr.cast(), size_of::<T>());
+            // let ptr = self.data.handle.origin_virt.cast::<T>();
+            // self.data.prepare_read(ptr.cast(), size_of::<T>());
+            // ptr.read_volatile()
+            self.data.prepare_read(0, core::mem::size_of::<T>());
+            let ptr = self.data.get_ptr(0).cast::<T>();
             ptr.read_volatile()
         }
     }
 
     pub fn write(&mut self, value: T) {
         unsafe {
-            let ptr = self.data.handle.virt_addr.cast::<T>();
+            // let ptr = self.data.handle.origin_virt.cast::<T>();
+            // ptr.write_volatile(value);
+            // self.data.confirm_write(ptr.cast(), size_of::<T>());
+            let ptr = self.data.get_ptr(0).cast::<T>();
             ptr.write_volatile(value);
-            self.data.confirm_write(ptr.cast(), size_of::<T>());
+            self.data.confirm_write(0, core::mem::size_of::<T>());
         }
     }
 
