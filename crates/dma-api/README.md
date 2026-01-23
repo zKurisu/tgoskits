@@ -1,148 +1,222 @@
 # DMA API
 
-[![Rust](https://github.com/drivercraft/dma-api/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/drivercraft/dma-api/actions/workflows/rust.yml)
+用于 Rust 的 DMA（直接内存访问）抽象 API，提供安全的 DMA 内存操作接口，适用于嵌入式和裸机环境。
 
-A Rust-style DMA streaming API inspired by Linux kernel's scatterlist and DMA mapping APIs.
+## 特性
 
-## Features
+- **`no_std` 支持**: 完全支持裸机环境
+- **类型安全**: 提供类型安全的 DMA 操作接口
+- **自动缓存同步**: 根据传输方向自动处理缓存刷新/失效
+- **Linux 兼容语义**: API 设计遵循 Linux DMA 映射约定
+- **RAII 风格**: 自动管理 DMA 映射的生命周期
 
-- **Unified `DmaStream` API**: Single type that adapts based on feature flags
-- **Automatic Feature Selection**: Uses Scatter-Gather with `alloc` feature, single buffer without
-- **Automatic Cache Synchronization**: Proper cache flush/invalidate based on transfer direction
-- **Linux-compatible Semantics**: API design follows Linux DMA mapping conventions
-- **Safe Abstractions**: Type-safe wrappers that prevent common DMA programming errors
+## 核心类型
 
-## Core Types
-
-### `Direction` - DMA Transfer Direction
+### `Direction` - DMA 传输方向
 
 ```rust
 pub enum Direction {
-    ToDevice,       // DMA_TO_DEVICE: CPU writes, device reads
-    FromDevice,     // DMA_FROM_DEVICE: Device writes, CPU reads  
-    Bidirectional,  // DMA_BIDIRECTIONAL: Both directions
+    ToDevice,       // DMA_TO_DEVICE: CPU 写入，设备读取
+    FromDevice,     // DMA_FROM_DEVICE: 设备写入，CPU 读取
+    Bidirectional,  // DMA_BIDIRECTIONAL: 双向传输
 }
 ```
 
-### `DmaStream` - Unified Streaming DMA
+### `DeviceDma` - DMA 设备操作
 
-RAII wrapper for DMA mapping with automatic unmap on drop.
+DMA 设备的主要操作接口，提供内存分配、映射和缓存操作。
 
-- With `alloc` feature: Uses Scatter-Gather internally (supports multiple buffers)
-- Without `alloc` feature: Uses single buffer mode
+### `DmaOp` trait - 操作系统抽象层
 
-### `ScatterEntry` - Single Scatter-Gather Entry (requires `alloc`)
+需要由平台实现的 trait，用于提供底层的 DMA 操作支持。
 
-Represents a single DMA memory segment, similar to Linux's `struct scatterlist`.
+### `DArray<T>` - DMA 数组
 
-### `SgTable` - Scatter-Gather Table (requires `alloc`)
+DMA 可访问的数组类型，支持自动缓存同步。
 
-A collection of scatter-gather entries, similar to Linux's `struct sg_table`.
+### `DBox<T>` - DMA Box
 
-## Example
+DMA 可访问的单值容器，支持自动缓存同步。
+
+### `SingleMapping` - 单次映射
+
+临时的单缓冲区 DMA 映射，RAII 风格自动清理。
+
+## 使用示例
+
+### 实现 `DmaOp` trait
 
 ```rust
-use dma_api::*;
+use dma_api::{DmaOp, Direction, DmaHandle, DmaError};
+use core::{alloc::Layout, ptr::NonNull, num::NonZeroUsize};
 
-// ----- OS Side -----
+struct MyDmaImpl;
 
-init(&Impled);
-
-struct Impled;
-
-impl Osal for Impled {
-    fn map(&self, addr: std::ptr::NonNull<u8>, size: usize, direction: Direction) -> u64 {
-        // Virtual to physical/DMA address translation
-        addr.as_ptr() as usize as _
+impl DmaOp for MyDmaImpl {
+    fn page_size(&self) -> usize {
+        4096 // 返回系统页大小
     }
 
-    fn unmap(&self, addr: std::ptr::NonNull<u8>, size: usize) {
-        // Release DMA mapping
+    unsafe fn map_single(
+        &self,
+        dma_mask: u64,
+        addr: NonNull<u8>,
+        size: NonZeroUsize,
+        align: usize,
+        direction: Direction,
+    ) -> Result<DmaHandle, DmaError> {
+        // 实现虚拟地址到 DMA 地址的映射
+        // 返回 DmaHandle
+        todo!()
     }
 
-    fn flush(&self, addr: std::ptr::NonNull<u8>, size: usize) {
-        // Clean cache - write back to memory
+    unsafe fn unmap_single(&self, handle: DmaHandle) {
+        // 解除 DMA 映射
+        todo!()
     }
 
-    fn invalidate(&self, addr: std::ptr::NonNull<u8>, size: usize) {
-        // Invalidate cache
+    unsafe fn alloc_coherent(
+        &self,
+        dma_mask: u64,
+        layout: Layout,
+    ) -> Option<DmaHandle> {
+        // 分配 DMA 一致性内存
+        todo!()
     }
-}
 
-// ----- Driver Side: Simple usage (works with or without alloc) -----
-
-let mut buffer = [0u8; 4096];
-
-// Map buffer for DMA (CPU -> Device)
-let mapping = unsafe {
-    DmaStream::from_buffer(&mut buffer, 0x1000_0000, Direction::ToDevice).unwrap()
-};
-
-// Program DMA controller with mapping.dma_addr()
-let dma_addr = mapping.dma_addr();
-
-// ... DMA transfer happens ...
-
-// Mapping is automatically unmapped when dropped
-
-// ----- Driver Side: Scatter-Gather DMA (requires alloc feature) -----
-
-#[cfg(feature = "alloc")]
-{
-    // Build scatter-gather table
-    let mut sgt = SgTable::with_capacity(2);
-    
-    // Add entries (virt_addr, phys_addr, offset, length)
-    sgt.push(ScatterEntry::new(ptr1, phys1, 0, 4096));
-    sgt.push(ScatterEntry::new(ptr2, phys2, 0, 8192));
-    
-    // Map for DMA
-    let sg_mapping = unsafe {
-        DmaStream::new(sgt, Direction::FromDevice).unwrap()
-    };
-    
-    // Program scatter-gather DMA descriptors
-    sg_mapping.for_each_dma(|dma_addr, len| {
-        // Fill hardware descriptor with dma_addr and len
-    });
-    
-    // ... DMA transfer happens ...
-    
-    // Sync for CPU access before reading data
-    sg_mapping.sync_for_cpu();
-    
-    // All mappings automatically unmapped on drop
+    unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
+        // 释放 DMA 内存
+        todo!()
+    }
 }
 ```
 
-## Cache Synchronization
+### 使用 `DeviceDma` 和 DMA 容器
 
-The API follows Linux DMA cache coherency semantics:
+```rust
+use dma_api::{DeviceDma, Direction};
 
-### Before DMA Transfer
+// 创建 DMA 设备实例
+static DMA_IMPL: MyDmaImpl = MyDmaImpl;
+let device = DeviceDma::new(0xFFFFFFFF, &DMA_IMPL);
 
-- **ToDevice**: `flush` - write CPU data to memory
-- **FromDevice**: `invalidate` - discard stale CPU cache
-- **Bidirectional**: `flush` - ensure memory is up-to-date
+// 创建 DMA 数组 (自动初始化为零)
+let mut dma_array = device.new_array::<u32>(100, 64, Direction::FromDevice)
+    .expect("Failed to allocate DMA array");
 
-### After DMA Transfer (sync_for_cpu)
+// 写入数据 (自动处理缓存同步)
+dma_array.set(0, 0x12345678);
+dma_array.set(1, 0xABCDEF00);
 
-- **FromDevice/Bidirectional**: `invalidate` - read fresh device data
-- **ToDevice**: No action needed
+// 读取数据 (自动处理缓存同步)
+let value = dma_array.read(0);
+assert_eq!(value, 0x12345678);
 
-### Between Multiple Transfers (sync_for_device)
+// 获取 DMA 地址用于硬件配置
+let dma_addr = dma_array.dma_addr();
+// 配置 DMA 控制器使用 dma_addr...
 
-- **ToDevice/Bidirectional**: `flush` - write new CPU data
-- **FromDevice**: `invalidate` - prepare for device write
+// 使用索引访问
+let val = dma_array[0]; // 自动处理缓存同步
 
-## API Reference (Linux Equivalent)
+// 创建 DMA Box (单个值)
+let mut dma_box = device.new_box::<MyStruct>(64, Direction::ToDevice)
+    .expect("Failed to allocate DMA box");
 
-| Rust API | Linux Equivalent |
-|----------|------------------|
-| `DmaStream::new()` | `dma_map_sg()` / `dma_map_single()` |
-| `DmaStream::drop()` | `dma_unmap_sg()` / `dma_unmap_single()` |
-| `DmaStream::sync_for_cpu()` | `dma_sync_sg_for_cpu()` / `dma_sync_single_for_cpu()` |
-| `DmaStream::sync_for_device()` | `dma_sync_sg_for_device()` / `dma_sync_single_for_device()` |
-| `ScatterEntry` | `struct scatterlist` |
-| `SgTable` | `struct sg_table` |
+dma_box.write(MyStruct { field1: 42, field2: 100 });
+let value = dma_box.read();
 
+// 修改值 (read-modify-write 模式)
+dma_box.modify(|v| v.field1 += 10);
+```
+
+### 使用 `SingleMapping` 映射现有缓冲区
+
+```rust
+use dma_api::DeviceDma;
+use core::{ptr::NonNull, num::NonZeroUsize};
+
+let device = DeviceDma::new(0xFFFFFFFF, &DMA_IMPL);
+
+// 现有缓冲区
+let mut buffer = [0u8; 4096];
+let addr = NonNull::new(buffer.as_mut_ptr()).unwrap();
+let size = NonZeroUsize::new(4096).unwrap();
+
+// 映射缓冲区用于 DMA
+let mapping = unsafe {
+    device.map_single(addr, size, 64, Direction::ToDevice)
+        .expect("Mapping failed")
+};
+
+// 使用映射的 DMA 地址
+let dma_addr = mapping.dma_addr();
+
+// ... DMA 传输 ...
+
+// 映射在离开作用域时自动解除
+```
+
+## 缓存同步
+
+API 遵循 Linux DMA 缓存一致性语义，由 `DmaOp` trait 的 `prepare_read` 和 `confirm_write` 方法自动处理：
+
+### 读操作前 (`prepare_read`)
+
+- **FromDevice/Bidirectional**: 执行 `invalidate` - 使 CPU 缓存失效，准备接收设备数据
+- **ToDevice**: 无需操作
+
+### 写操作后 (`confirm_write`)
+
+- **ToDevice/Bidirectional**: 执行 `flush` - 将 CPU 数据写回内存
+- **FromDevice**: 无需操作
+
+### DMA 容器的自动同步
+
+`DArray<T>` 和 `DBox<T>` 在以下操作时自动处理缓存同步：
+
+- `read()` / `set()` - 自动同步对应元素
+- `index` (索引访问) - 自动同步读取的元素
+- `write()` / `modify()` - 自动同步写入
+- `copy_from_slice()` - 写入后自动同步整个范围
+
+## API 参考
+
+### 核心类型
+
+| 类型            | 说明                 |
+| :-------------- | :------------------- |
+| `DeviceDma`     | DMA 设备操作接口     |
+| `Direction`     | DMA 传输方向枚举     |
+| `DmaOp`         | 操作系统抽象层 trait |
+| `DmaHandle`     | DMA 映射句柄         |
+| `DArray<T>`     | DMA 数组容器         |
+| `DBox<T>`       | DMA 单值容器         |
+| `SingleMapping` | 单次映射             |
+
+### Linux 等价 API
+
+| Rust API                    | Linux Equivalent                     |
+| :-------------------------- | :----------------------------------- |
+| `DeviceDma::map_single()`   | `dma_map_single()`                   |
+| `SingleMapping::drop()`     | `dma_unmap_single()`                 |
+| `DmaOp::alloc_coherent()`   | `dma_alloc_coherent()`               |
+| `DmaOp::dealloc_coherent()` | `dma_free_coherent()`                |
+| `DmaOp::flush()`            | `dma_cache_sync()` (DMA_TO_DEVICE)   |
+| `DmaOp::invalidate()`       | `dma_cache_sync()` (DMA_FROM_DEVICE) |
+
+### 对齐要求
+
+DMA 操作通常需要对齐到特定的边界：
+
+- `new_array()` / `new_box()` 的 `align` 参数指定对齐字节数
+- 常见对齐值：64、128、256、512、4096
+- 确保返回的 DMA 地址满足对齐要求
+
+### DMA Mask
+
+`DeviceDma::new()` 的 `dma_mask` 参数指定设备可寻址的地址范围：
+
+- `0xFFFFFFFF` (32 位设备)
+- `0xFFFFFFFFFFFFFFFF` (64 位设备)
+- 其他值根据设备硬件限制
