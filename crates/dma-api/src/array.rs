@@ -1,6 +1,6 @@
 use core::ops::Index;
 
-use crate::{DeviceDma, Direction, DmaError, common::DCommon};
+use crate::{DeviceDma, DmaDirection, DmaError, common::DCommon};
 
 pub struct DArray<T> {
     data: DCommon<T>,
@@ -13,7 +13,7 @@ impl<T> DArray<T> {
         os: &DeviceDma,
         size: usize,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<Self, DmaError> {
         let data = DCommon::new(os, size * core::mem::size_of::<T>(), align, direction)?;
         Ok(Self { data })

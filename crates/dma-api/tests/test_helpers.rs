@@ -21,7 +21,7 @@ pub enum DmaOperation {
     MapSingle {
         virt_addr: usize,
         size: usize,
-        direction: Direction,
+        direction: DmaDirection,
     },
     /// UnmapSingle 操作
     UnmapSingle { size: usize },
@@ -146,7 +146,7 @@ impl DmaOp for TrackingDmaOp {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         _align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<DmaHandle, DmaError> {
         self.operations
             .lock()
@@ -158,7 +158,9 @@ impl DmaOp for TrackingDmaOp {
             });
 
         let layout = core::alloc::Layout::from_size_align(size.get(), 8)?;
-        Ok(DmaHandle::new(addr, addr.as_ptr() as u64, layout))
+        Ok(unsafe {
+            DmaHandle::new_for_map_single(addr, (addr.as_ptr() as u64).into(), layout, None)
+        })
     }
 
     unsafe fn unmap_single(&self, handle: DmaHandle) {
@@ -204,11 +206,13 @@ impl DmaOp for TrackingDmaOp {
         if ptr.is_null() {
             return None;
         }
-        Some(DmaHandle::new(
-            NonNull::new(ptr).unwrap(),
-            ptr as u64,
-            layout,
-        ))
+        Some(unsafe {
+            DmaHandle::new_for_alloc_coherent(
+                NonNull::new(ptr).unwrap(),
+                (ptr as u64).into(),
+                layout,
+            )
+        })
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
@@ -218,6 +222,6 @@ impl DmaOp for TrackingDmaOp {
             .push(DmaOperation::DeallocCoherent {
                 size: handle.size(),
             });
-        unsafe { std::alloc::dealloc(handle.origin_virt.as_ptr(), handle.layout) };
+        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
     }
 }

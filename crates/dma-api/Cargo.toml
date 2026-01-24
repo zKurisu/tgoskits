@@ -18,6 +18,7 @@ thiserror.workspace = true
 spin = "0.10"
 log = "0.4"
 mbarrier = "0.1"
+derive_more.workspace = true
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu-ext = "0.1"

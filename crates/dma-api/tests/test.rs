@@ -10,7 +10,7 @@ use test_helpers::{DmaOperation, TrackingDmaOp};
 #[test]
 fn test_read() {
     let mut dma: DArray<u32> = new_api()
-        .new_array(10, 0x1000, Direction::FromDevice)
+        .new_array(10, 0x1000, DmaDirection::FromDevice)
         .unwrap();
 
     dma.set(0, 1);
@@ -23,7 +23,7 @@ fn test_read() {
 #[test]
 fn test_write() {
     let mut dma: DArray<u32> = new_api()
-        .new_array(10, 0x1000, Direction::ToDevice)
+        .new_array(10, 0x1000, DmaDirection::ToDevice)
         .unwrap();
 
     dma.set(0, 1);
@@ -40,7 +40,7 @@ struct Foo {
 
 #[test]
 fn test_modify() {
-    let mut dma: DBox<Foo> = new_api().new_box(64, Direction::Bidirectional).unwrap();
+    let mut dma: DBox<Foo> = new_api().new_box(64, DmaDirection::Bidirectional).unwrap();
 
     dma.modify(|f| f.bar = 1);
 
@@ -50,7 +50,7 @@ fn test_modify() {
 #[test]
 fn test_copy() {
     let mut dma = new_api()
-        .new_array::<u32>(0x40, 0x1000, Direction::Bidirectional)
+        .new_array::<u32>(0x40, 0x1000, DmaDirection::Bidirectional)
         .unwrap();
 
     println!("new dma ok");
@@ -69,7 +69,7 @@ fn test_copy() {
 #[test]
 fn test_index() {
     let dma = new_api()
-        .new_array::<u64>(0x40, 0x1000, Direction::Bidirectional)
+        .new_array::<u64>(0x40, 0x1000, DmaDirection::Bidirectional)
         .unwrap();
 
     println!("new dma ok");
@@ -84,7 +84,7 @@ fn mask_check_rejects_overflow_alloc() {
     static DMA: MaskedDma = MaskedDma;
     let dev = DeviceDma::new(0x0fff, &DMA);
 
-    let err = dev.new_array::<u8>(0x1000, 0x1000, Direction::ToDevice);
+    let err = dev.new_array::<u8>(0x1000, 0x1000, DmaDirection::ToDevice);
 
     assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
 }
@@ -98,7 +98,7 @@ fn mask_check_rejects_overflow_map() {
     let addr = NonNull::new(buf.as_mut_ptr()).unwrap();
     let size = NonZeroUsize::new(0x1000).unwrap();
 
-    let err = dev.map_single(addr, size, 64, Direction::FromDevice);
+    let err = dev.map_single(addr, size, 64, DmaDirection::FromDevice);
 
     assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
 }
@@ -121,7 +121,7 @@ impl DmaOp for Impled {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         align: usize,
-        _direction: Direction,
+        _direction: DmaDirection,
     ) -> Result<DmaHandle, DmaError> {
         println!(
             "map_single @{:?}, size {:#x}, align: {:#x}",
@@ -130,13 +130,15 @@ impl DmaOp for Impled {
             align
         );
         let layout = core::alloc::Layout::from_size_align(size.get(), align)?;
-        Ok(DmaHandle::new(addr, addr.as_ptr() as u64, layout))
+        Ok(unsafe {
+            DmaHandle::new_for_map_single(addr, (addr.as_ptr() as u64).into(), layout, None)
+        })
     }
 
     unsafe fn unmap_single(&self, handle: DmaHandle) {
         println!(
             "unmap_single @{:?}, size {:#x}",
-            handle.origin_virt,
+            handle.origin_virt(),
             handle.size()
         );
     }
@@ -163,15 +165,17 @@ impl DmaOp for Impled {
         if ptr.is_null() {
             return None;
         }
-        Some(DmaHandle::new(
-            NonNull::new(ptr).unwrap(),
-            ptr as u64,
-            layout,
-        ))
+        Some(unsafe {
+            DmaHandle::new_for_alloc_coherent(
+                NonNull::new(ptr).unwrap(),
+                (ptr as u64).into(),
+                layout,
+            )
+        })
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
-        unsafe { std::alloc::dealloc(handle.origin_virt.as_ptr(), handle.layout) };
+        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
     }
 }
 
@@ -188,10 +192,10 @@ impl DmaOp for MaskedDma {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         align: usize,
-        _direction: Direction,
+        _direction: DmaDirection,
     ) -> Result<DmaHandle, DmaError> {
         let layout = core::alloc::Layout::from_size_align(size.get(), align)?;
-        Ok(DmaHandle::new(addr, 0x1000, layout))
+        Ok(unsafe { DmaHandle::new_for_map_single(addr, 0x1000u64.into(), layout, None) })
     }
 
     unsafe fn unmap_single(&self, _handle: DmaHandle) {}
@@ -209,11 +213,13 @@ impl DmaOp for MaskedDma {
         if ptr.is_null() {
             return None;
         }
-        Some(DmaHandle::new(NonNull::new(ptr).unwrap(), 0x1000, layout))
+        Some(unsafe {
+            DmaHandle::new_for_alloc_coherent(NonNull::new(ptr).unwrap(), 0x1000u64.into(), layout)
+        })
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
-        unsafe { std::alloc::dealloc(handle.origin_virt.as_ptr(), handle.layout) };
+        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
     }
 }
 
@@ -227,7 +233,7 @@ fn test_single_element_address() {
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
 
-    let mut dma: DArray<u32> = dev.new_array(1, 64, Direction::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev.new_array(1, 64, DmaDirection::ToDevice).unwrap();
 
     tracker.clear();
     dma.set(0, 0x12345678);
@@ -255,7 +261,7 @@ fn test_multi_element_offset() {
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
 
-    let mut dma: DArray<u32> = dev.new_array(10, 64, Direction::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::ToDevice).unwrap();
     tracker.clear();
 
     // 设置 index 0, 1, 2
@@ -295,7 +301,7 @@ fn test_different_type_sizes() {
     let dev = DeviceDma::new(u64::MAX, tracker);
 
     // u8 = 1 byte
-    let mut dma_u8: DArray<u8> = dev.new_array(5, 8, Direction::ToDevice).unwrap();
+    let mut dma_u8: DArray<u8> = dev.new_array(5, 8, DmaDirection::ToDevice).unwrap();
     tracker.clear();
     dma_u8.set(3, 1);
 
@@ -307,7 +313,7 @@ fn test_different_type_sizes() {
     }
 
     // u64 = 8 bytes
-    let mut dma_u64: DArray<u64> = dev.new_array(5, 8, Direction::ToDevice).unwrap();
+    let mut dma_u64: DArray<u64> = dev.new_array(5, 8, DmaDirection::ToDevice).unwrap();
     tracker.clear();
     dma_u64.set(2, 2);
 
@@ -320,7 +326,7 @@ fn test_different_type_sizes() {
 }
 
 // ============================================================================
-// 新增测试: Direction 行为测试
+// 新增测试: DmaDirection 行为测试
 // ============================================================================
 
 #[test]
@@ -328,7 +334,7 @@ fn test_direction_to_device() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, Direction::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::ToDevice).unwrap();
 
     tracker.clear();
 
@@ -348,7 +354,7 @@ fn test_direction_from_device() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, Direction::FromDevice).unwrap();
+    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::FromDevice).unwrap();
 
     tracker.clear();
 
@@ -369,7 +375,7 @@ fn test_direction_bidirectional() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, Direction::Bidirectional).unwrap();
+    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::Bidirectional).unwrap();
 
     tracker.clear();
 
@@ -398,7 +404,9 @@ fn test_drop_to_device() {
     let size = NonZeroUsize::new(0x1000).unwrap();
 
     {
-        let _mapping = dev.map_single(addr, size, 64, Direction::ToDevice).unwrap();
+        let _mapping = dev
+            .map_single(addr, size, 64, DmaDirection::ToDevice)
+            .unwrap();
         tracker.clear();
     } // Drop 被调用
 
@@ -420,7 +428,7 @@ fn test_drop_from_device() {
 
     {
         let _mapping = dev
-            .map_single(addr, size, 64, Direction::FromDevice)
+            .map_single(addr, size, 64, DmaDirection::FromDevice)
             .unwrap();
         tracker.clear();
     } // Drop 被调用
@@ -443,7 +451,7 @@ fn test_drop_bidirectional() {
 
     {
         let _mapping = dev
-            .map_single(addr, size, 64, Direction::Bidirectional)
+            .map_single(addr, size, 64, DmaDirection::Bidirectional)
             .unwrap();
         tracker.clear();
     } // Drop 被调用

@@ -1,11 +1,11 @@
 use core::{alloc::Layout, num::NonZeroUsize, ptr::NonNull};
 
-use crate::{DeviceDma, Direction, DmaError, DmaHandle, osal::arch::flush};
+use crate::{DeviceDma, DmaDirection, DmaError, DmaHandle, osal::arch::flush};
 
 pub struct DCommon<T> {
     pub handle: DmaHandle,
     pub osal: DeviceDma,
-    pub direction: Direction,
+    pub direction: DmaDirection,
     _phantom: core::marker::PhantomData<T>,
 }
 
@@ -16,7 +16,7 @@ impl<T> DCommon<T> {
         os: &DeviceDma,
         size: usize,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<Self, DmaError> {
         let layout = Layout::from_size_align(size, align)?;
         let handle = unsafe { os.alloc_coherent(layout) }.ok_or(DmaError::NoMemory)?;
@@ -95,7 +95,7 @@ impl<T> Drop for DCommon<T> {
 pub struct SingleMapping {
     pub handle: DmaHandle,
     osal: DeviceDma,
-    pub direction: Direction,
+    pub direction: DmaDirection,
 }
 
 unsafe impl Send for SingleMapping {}
@@ -106,7 +106,7 @@ impl SingleMapping {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<Self, DmaError> {
         let handle = unsafe { os._map_single(addr, size, align, direction)? };
         let dma_mask = os.dma_mask();

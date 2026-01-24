@@ -1,4 +1,4 @@
-use crate::{DeviceDma, Direction, DmaError, common::DCommon};
+use crate::{DeviceDma, DmaDirection, DmaError, common::DCommon};
 
 pub struct DBox<T> {
     data: DCommon<T>,
@@ -10,7 +10,7 @@ impl<T> DBox<T> {
     pub(crate) fn new_zero(
         os: &DeviceDma,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<Self, DmaError> {
         let data = DCommon::new(os, core::mem::size_of::<T>(), align, direction)?;
         Ok(Self { data })

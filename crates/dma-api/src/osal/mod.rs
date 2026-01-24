@@ -1,6 +1,6 @@
 use core::{num::NonZeroUsize, ptr::NonNull};
 
-use crate::{Direction, DmaError, DmaHandle};
+use crate::{DmaDirection, DmaError, DmaHandle};
 
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "aarch64")] {
@@ -25,7 +25,7 @@ pub trait DmaOp: Sync + Send + 'static {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<DmaHandle, DmaError>;
 
     /// 解除 DMA 映射
@@ -60,8 +60,17 @@ pub trait DmaOp: Sync + Send + 'static {
     /// 调用者必须确保 ptr 和 layout 与 alloc 时匹配
     unsafe fn dealloc_coherent(&self, handle: DmaHandle);
 
-    fn prepare_read(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
-        if matches!(direction, Direction::FromDevice | Direction::Bidirectional) {
+    fn prepare_read(
+        &self,
+        handle: &DmaHandle,
+        offset: usize,
+        size: usize,
+        direction: DmaDirection,
+    ) {
+        if matches!(
+            direction,
+            DmaDirection::FromDevice | DmaDirection::Bidirectional
+        ) {
             let ptr = unsafe { handle.dma_virt().add(offset) };
 
             self.invalidate(ptr, size);
@@ -82,8 +91,17 @@ pub trait DmaOp: Sync + Send + 'static {
         }
     }
 
-    fn confirm_write(&self, handle: &DmaHandle, offset: usize, size: usize, direction: Direction) {
-        if matches!(direction, Direction::ToDevice | Direction::Bidirectional) {
+    fn confirm_write(
+        &self,
+        handle: &DmaHandle,
+        offset: usize,
+        size: usize,
+        direction: DmaDirection,
+    ) {
+        if matches!(
+            direction,
+            DmaDirection::ToDevice | DmaDirection::Bidirectional
+        ) {
             let ptr = unsafe { handle.dma_virt().add(offset) };
 
             if let Some(virt) = handle.alloc_virt

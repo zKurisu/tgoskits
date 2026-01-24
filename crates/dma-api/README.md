@@ -47,7 +47,7 @@ DMA 可访问的单值容器，支持自动缓存同步。
 ### 实现 `DmaOp` trait
 
 ```rust
-use dma_api::{DmaOp, Direction, DmaHandle, DmaError};
+use dma_api::{DmaOp, DmaDirection, DmaHandle, DmaError};
 use core::{alloc::Layout, ptr::NonNull, num::NonZeroUsize};
 
 struct MyDmaImpl;
@@ -63,7 +63,7 @@ impl DmaOp for MyDmaImpl {
         addr: NonNull<u8>,
         size: NonZeroUsize,
         align: usize,
-        direction: Direction,
+        direction: DmaDirection,
     ) -> Result<DmaHandle, DmaError> {
         // 实现虚拟地址到 DMA 地址的映射
         // 返回 DmaHandle
