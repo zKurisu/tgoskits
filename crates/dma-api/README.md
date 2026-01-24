@@ -73,7 +73,7 @@ impl DmaOp for MyDmaImpl {
 |------|---------|------|
 | 需要数组类型的 DMA 缓冲区 | `DArray<T>` | 自动缓存同步，固定大小 |
 | 需要单个结构体的 DMA 缓冲区 | `DBox<T>` | 自动缓存同步，单个值 |
-| 映射现有缓冲区用于 DMA | `SingleMap` | 手动缓存同步，临时映射 |
+| 映射现有缓冲区用于 DMA | `SArrayPtr<T>` | 手动缓存同步，单个连续内存区域映射 |
 
 ---
 
@@ -203,7 +203,7 @@ let desc = dma_desc.read();           // 读取（自动失效缓存）
 let mut buffer = [0u8; 4096];
 
 // 映射现有缓冲区
-let mapping = device.map_single(&buffer, 64, Direction::ToDevice)
+let mapping = device.map_single_array(&buffer, 64, Direction::ToDevice)
     .expect("Mapping failed");
 
 // ⚠️ 重要：使用前必须手动同步缓存
@@ -233,7 +233,7 @@ let dma_addr = mapping.dma_addr();
 | [`array_zero_with_align<T>(len, align, dir)`](#device-zeros) | 创建指定对齐的 DMA 数组 | `DArray<T>` | 自动 |
 | [`box_zero<T>(align, dir)`](#device-zeros) | 创建默认对齐的 DMA Box | `DBox<T>` | 自动 |
 | [`box_zero_with_align<T>(align, dir)`](#device-zeros) | 创建指定对齐的 DMA Box | `DBox<T>` | 自动 |
-| [`map_single<T>(buff, align, dir)`](#device-maps) | 映射现有缓冲区 | `SingleMap` | **手动** |
+| [`map_single_array<T>(buff, align, dir)`](#device-maps) | 映射现有缓冲区 | `SArrayPtr<T>` | **手动** |
 
 ### 🔍 访问方法（DArray）
 
@@ -473,24 +473,24 @@ let box_val = device.box_zero_with_align::<MyStruct>(64, Direction::Bidirectiona
 #### <a name="device-maps"></a>映射方法
 
 ```rust,ignore
-pub fn map_single<T: Sized>(
+pub fn map_single_array<T: Sized>(
     &self,
     buff: &[T],
     align: usize,
     direction: DmaDirection,
-) -> Result<SingleMap, DmaError>
+) -> Result<SArrayPtr<T>, DmaError>
 ```
 - **用途**：将现有缓冲区映射为 DMA 可访问
 - **参数**：
   - `buff`: 要映射的缓冲区切片
   - `align`: 对齐字节数
   - `direction`: DMA 传输方向
-- **返回**：`SingleMap` 映射句柄
-- **缓存同步**：**手动**（必须调用 `prepare_read_all` / `confirm_write_all`）
+- **返回**：`SArrayPtr<T>` 映射句柄
+- **缓存同步**：**手动**（必须使用 `to_vec()` 和 `copy_from_slice()`）
 - **示例**：
 ```rust,ignore
 let buf = [0u8; 4096];
-let mapping = device.map_single(&buf, 64, Direction::ToDevice)?;
+let mapping = device.map_single_array(&buf, 64, Direction::ToDevice)?;
 ```
 
 ---
@@ -577,25 +577,38 @@ pub fn dma_addr(&self) -> DmaAddr
 
 ---
 
-#### `SingleMap`
+#### `SArrayPtr<T>`
 
-临时 DMA 映射，RAII 风格自动清理。
+映射单个连续内存区域的 DMA 数组，RAII 风格自动清理。
 
-##### <a name="singlemap-sync"></a>缓存同步方法
+**注意**：此类型提供手动缓存同步控制，与 `DArray<T>` 不同，它不会在每次访问时自动同步缓存。
 
-```rust,ignore
-pub fn prepare_read_all(&self)
-```
-- **用途**：使 CPU 缓存失效，准备接收设备数据
-- **适用方向**：`FromDevice`, `Bidirectional`
-- **调用时机**：设备写入数据后，CPU 读取前
+##### 访问方法
 
 ```rust,ignore
-pub fn confirm_write_all(&self)
+pub fn read(&self, index: usize) -> Option<T>
 ```
-- **用途**：刷新 CPU 缓存到内存，准备发送数据到设备
-- **适用方向**：`ToDevice`, `Bidirectional`
-- **调用时机**：CPU 写入数据后，设备读取前
+- **用途**：读取指定索引的元素（**不自动**同步缓存）
+- **返回**：`Some(T)` 如果索引有效，否则 `None`
+- **注意**：读取前需手动使用 `to_vec()` 方法
+
+```rust,ignore
+pub fn set(&mut self, index: usize, value: T)
+```
+- **用途**：写入指定索引的元素（**不自动**同步缓存）
+- **注意**：写入后需使用 `copy_from_slice()` 刷新缓存
+
+```rust,ignore
+pub fn copy_from_slice(&mut self, src: &[T])
+```
+- **用途**：从 slice 复制数据到数组
+- **缓存同步**：写入后自动刷新整个范围
+
+```rust,ignore
+pub fn to_vec(&self) -> Vec<T>
+```
+- **用途**：将整个数组转换为 Vec
+- **缓存同步**：读取前自动失效整个范围
 
 ##### 信息方法
 
@@ -604,6 +617,18 @@ pub fn dma_addr(&self) -> DmaAddr
 ```
 - **用途**：获取 DMA 地址，用于配置硬件
 - **返回**：DMA 地址
+
+```rust,ignore
+pub fn len(&self) -> usize
+```
+- **用途**：获取数组长度（元素个数）
+- **返回**：元素个数
+
+```rust,ignore
+pub fn is_empty(&self) -> bool
+```
+- **用途**：检查数组是否为空
+- **返回**：如果长度为 0 返回 `true`
 
 ---
 
@@ -655,8 +680,8 @@ impl DmaAddr {
 
 | Rust API | Linux Equivalent |
 |----------|------------------|
-| `DeviceDma::map_single()` | `dma_map_single()` |
-| `SingleMap::drop()` | `dma_unmap_single()` |
+| `DeviceDma::map_single_array()` | `dma_map_single()` |
+| `SArrayPtr<T>::drop()` | `dma_unmap_single()` |
 | `DmaOp::alloc_coherent()` | `dma_alloc_coherent()` |
 | `DmaOp::dealloc_coherent()` | `dma_free_coherent()` |
 | `DmaOp::flush()` | `dma_cache_sync()` (DMA_TO_DEVICE) |
@@ -670,7 +695,7 @@ DMA 操作通常需要对齐到特定的边界：
 
 - 常见对齐值：64、128、256、512、4096
 - `array_zero_with_align()` / `box_zero_with_align()` 的 `align` 参数指定对齐字节数
-- `map_single()` 的 `align` 参数也指定对齐要求
+- `map_single_array()` 的 `align` 参数也指定对齐要求
 - 确保返回的 DMA 地址满足对齐要求，否则返回 `DmaError::AlignMismatch`
 
 ### DMA Mask

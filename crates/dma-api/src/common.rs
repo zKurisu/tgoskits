@@ -1,6 +1,6 @@
 use core::alloc::Layout;
 
-use crate::{DeviceDma, DmaDirection, DmaError, DmaHandle, DmaMapHandle};
+use crate::{DeviceDma, DmaDirection, DmaError, DmaMapHandle};
 
 pub(crate) struct DCommon {
     pub handle: DmaMapHandle,
@@ -52,11 +52,6 @@ impl DCommon {
     pub fn confirm_write_all(&self) {
         self.osal
             .confirm_write(&self.handle, 0, self.handle.size(), self.direction);
-    }
-
-    pub fn prepare_read_all(&self) {
-        self.osal
-            .prepare_read(&self.handle, 0, self.handle.size(), self.direction);
     }
 }
 

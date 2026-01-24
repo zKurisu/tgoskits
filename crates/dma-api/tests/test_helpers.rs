@@ -147,7 +147,7 @@ impl DmaOp for TrackingDmaOp {
         size: NonZeroUsize,
         _align: usize,
         direction: DmaDirection,
-    ) -> Result<DmaHandle, DmaError> {
+    ) -> Result<DmaMapHandle, DmaError> {
         self.operations
             .lock()
             .unwrap()
@@ -158,12 +158,10 @@ impl DmaOp for TrackingDmaOp {
             });
 
         let layout = core::alloc::Layout::from_size_align(size.get(), 8)?;
-        Ok(unsafe {
-            DmaHandle::new_for_map_single(addr, (addr.as_ptr() as u64).into(), layout, None)
-        })
+        Ok(unsafe { DmaMapHandle::new(addr, (addr.as_ptr() as u64).into(), layout, None) })
     }
 
-    unsafe fn unmap_single(&self, handle: DmaHandle) {
+    unsafe fn unmap_single(&self, handle: DmaMapHandle) {
         self.operations
             .lock()
             .unwrap()

@@ -173,6 +173,27 @@ impl Deref for DmaMapHandle {
 }
 
 impl DmaMapHandle {
+    /// 为 `map_single` 操作创建 `DmaMapHandle`。
+    ///
+    /// 此构造函数用于将现有缓冲区映射为 DMA 可访问的场景，其中：
+    /// - 缓冲区可能已经存在于用户空间
+    /// - 如果原地址不满足对齐或掩码要求，会分配额外的对齐缓冲区
+    /// - `alloc_virt` 存储额外的对齐缓冲区地址（如果分配了）
+    ///
+    /// # 特性保证
+    ///
+    /// - 如果原地址满足要求，`alloc_virt` 为 `None`
+    /// - 如果分配了对齐缓冲区，`alloc_virt` 包含其地址
+    ///
+    /// # Safety
+    ///
+    /// 调用者必须确保：
+    /// - `cpu_addr` 指向有效内存，生命周期与 handle 相同
+    /// - `dma_addr` 是与 `cpu_addr` 对应的设备可访问地址
+    /// - `layout` 正确描述内存的大小和对齐
+    /// - `alloc_virt`（如果提供）必须指向有效分配的内存
+    /// - 内存必须保持有效直到 `unmap_single` 被调用
+    /// - 必须与 `DmaOp::unmap_single` 配对使用以防止内存泄漏
     pub unsafe fn new(
         cpu_addr: NonNull<u8>,
         dma_addr: DmaAddr,

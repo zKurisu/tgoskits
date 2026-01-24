@@ -98,7 +98,7 @@ fn mask_check_rejects_overflow_map() {
 
     let mut buf = [0u8; 0x1000];
 
-    let err = dev.map_single(&buf, 64, DmaDirection::FromDevice);
+    let err = dev.map_single_array(&buf, 64, DmaDirection::FromDevice);
 
     assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
 }
@@ -122,7 +122,7 @@ impl DmaOp for Impled {
         size: NonZeroUsize,
         align: usize,
         _direction: DmaDirection,
-    ) -> Result<DmaHandle, DmaError> {
+    ) -> Result<DmaMapHandle, DmaError> {
         println!(
             "map_single @{:?}, size {:#x}, align: {:#x}",
             addr,
@@ -130,12 +130,10 @@ impl DmaOp for Impled {
             align
         );
         let layout = core::alloc::Layout::from_size_align(size.get(), align)?;
-        Ok(unsafe {
-            DmaHandle::new_for_map_single(addr, (addr.as_ptr() as u64).into(), layout, None)
-        })
+        Ok(unsafe { DmaMapHandle::new(addr, (addr.as_ptr() as u64).into(), layout, None) })
     }
 
-    unsafe fn unmap_single(&self, handle: DmaHandle) {
+    unsafe fn unmap_single(&self, handle: DmaMapHandle) {
         println!(
             "unmap_single @{:?}, size {:#x}",
             handle.as_ptr(),
@@ -165,13 +163,7 @@ impl DmaOp for Impled {
         if ptr.is_null() {
             return None;
         }
-        Some(unsafe {
-            DmaHandle::new_for_alloc_coherent(
-                NonNull::new(ptr).unwrap(),
-                (ptr as u64).into(),
-                layout,
-            )
-        })
+        Some(unsafe { DmaHandle::new(NonNull::new(ptr).unwrap(), (ptr as u64).into(), layout) })
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
@@ -193,12 +185,12 @@ impl DmaOp for MaskedDma {
         size: NonZeroUsize,
         align: usize,
         _direction: DmaDirection,
-    ) -> Result<DmaHandle, DmaError> {
+    ) -> Result<DmaMapHandle, DmaError> {
         let layout = core::alloc::Layout::from_size_align(size.get(), align)?;
-        Ok(unsafe { DmaHandle::new_for_map_single(addr, 0x1000u64.into(), layout, None) })
+        Ok(unsafe { DmaMapHandle::new(addr, 0x1000u64.into(), layout, None) })
     }
 
-    unsafe fn unmap_single(&self, _handle: DmaHandle) {}
+    unsafe fn unmap_single(&self, _handle: DmaMapHandle) {}
 
     fn flush(&self, _addr: std::ptr::NonNull<u8>, _size: usize) {}
 
@@ -213,9 +205,7 @@ impl DmaOp for MaskedDma {
         if ptr.is_null() {
             return None;
         }
-        Some(unsafe {
-            DmaHandle::new_for_alloc_coherent(NonNull::new(ptr).unwrap(), 0x1000u64.into(), layout)
-        })
+        Some(unsafe { DmaHandle::new(NonNull::new(ptr).unwrap(), 0x1000u64.into(), layout) })
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
