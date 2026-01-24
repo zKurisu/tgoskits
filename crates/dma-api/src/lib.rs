@@ -193,9 +193,9 @@ impl DmaHandle {
         self.layout.align()
     }
 
-    /// Returns the original virtual address as a mutable pointer.
-    pub fn as_ptr(&self) -> *mut u8 {
-        self.origin_virt.as_ptr()
+    /// Returns the virtual address to access data.
+    pub fn as_ptr(&self) -> NonNull<u8> {
+        self.origin_virt
     }
 
     /// Returns the virtual address used for actual DMA operations.
@@ -213,14 +213,6 @@ impl DmaHandle {
     /// Returns the DMA address visible to devices.
     pub fn dma_addr(&self) -> DmaAddr {
         self.dma_addr
-    }
-
-    /// Returns the original virtual address as a `NonNull<u8>` pointer.
-    ///
-    /// This is the primary address for CPU access. If an additional aligned
-    /// buffer was allocated, this address may differ from the DMA virtual address.
-    pub fn origin_virt(&self) -> NonNull<u8> {
-        self.origin_virt
     }
 
     /// Returns the memory layout used for this DMA allocation.

@@ -1,4 +1,4 @@
-use core::{alloc::Layout, ops::Index};
+use core::{alloc::Layout, ops::Index, ptr::NonNull};
 
 use crate::{DeviceDma, DmaDirection, DmaError, common::DCommon};
 
@@ -44,6 +44,10 @@ impl<T> DArray<T> {
         self.len() == 0
     }
 
+    pub fn bytes_len(&self) -> usize {
+        self.data.handle.size()
+    }
+
     pub fn read(&self, index: usize) -> Option<T> {
         if index >= self.len() {
             return None;
@@ -86,10 +90,10 @@ impl<T> DArray<T> {
             src.len(),
             self.len()
         );
-        let src_bytes = unsafe {
-            core::slice::from_raw_parts(src.as_ptr() as *const u8, core::mem::size_of_val(src))
-        };
-        self.data.as_mut_slice().copy_from_slice(src_bytes);
+        unsafe {
+            let dst_ptr = self.data.handle.dma_virt().as_ptr() as *mut T;
+            core::ptr::copy_nonoverlapping(src.as_ptr(), dst_ptr, src.len());
+        }
         self.data.confirm_write_all();
     }
 
@@ -97,16 +101,16 @@ impl<T> DArray<T> {
     ///
     /// slice will not auto do cache sync operations.
     pub unsafe fn as_mut_slice(&mut self) -> &mut [T] {
-        let byte_slice = self.data.as_mut_slice();
+        let ptr = self.data.handle.dma_virt();
         unsafe {
             core::slice::from_raw_parts_mut(
-                byte_slice.as_mut_ptr() as *mut T,
-                byte_slice.len() / core::mem::size_of::<T>(),
+                ptr.as_ptr() as *mut T,
+                self.bytes_len() / core::mem::size_of::<T>(),
             )
         }
     }
 
-    pub fn as_ptr(&self) -> *mut T {
+    pub fn as_ptr(&self) -> NonNull<T> {
         self.data.handle.as_ptr().cast::<T>()
     }
 }
