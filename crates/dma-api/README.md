@@ -38,7 +38,7 @@ DMA 可访问的数组类型，支持自动缓存同步。
 
 DMA 可访问的单值容器，支持自动缓存同步。
 
-### `SingleMapping` - 单次映射
+### `SingleMap` - 单次映射
 
 临时的单缓冲区 DMA 映射，RAII 风格自动清理。
 
@@ -101,7 +101,7 @@ static DMA_IMPL: MyDmaImpl = MyDmaImpl;
 let device = DeviceDma::new(0xFFFFFFFF, &DMA_IMPL);
 
 // 创建 DMA 数组 (自动初始化为零)
-let mut dma_array = device.new_array::<u32>(100, 64, Direction::FromDevice)
+let mut dma_array = device.array_zero_with_align::<u32>(100, 64, Direction::FromDevice)
     .expect("Failed to allocate DMA array");
 
 // 写入数据 (自动处理缓存同步)
@@ -116,8 +116,8 @@ assert_eq!(value, Some(0x12345678));
 let dma_addr = dma_array.dma_addr();
 // 配置 DMA 控制器使用 dma_addr...
 
-// 使用索引访问
-let val = dma_array[0]; // 自动处理缓存同步
+// 使用 read 方法读取
+let val = dma_array.read(0).unwrap(); // 自动处理缓存同步
 
 // 创建 DMA Box (单个值)
 #[derive(Default)]
@@ -126,7 +126,7 @@ struct MyStruct {
     field2: u32,
 }
 
-let mut dma_box = device.new_box::<MyStruct>(64, Direction::ToDevice)
+let mut dma_box = device.box_zero_with_align::<MyStruct>(64, Direction::ToDevice)
     .expect("Failed to allocate DMA box");
 
 dma_box.write(MyStruct { field1: 42, field2: 100 });
@@ -136,7 +136,7 @@ let value = dma_box.read();
 dma_box.modify(|v| v.field1 += 10);
 ```
 
-### 使用 `SingleMapping` 映射现有缓冲区
+### 使用 `SingleMap` 映射现有缓冲区
 
 ```rust,ignore
 use dma_api::{DeviceDma, Direction};
@@ -181,7 +181,6 @@ API 遵循 Linux DMA 缓存一致性语义，由 `DmaOp` trait 的 `prepare_read
 `DArray<T>` 和 `DBox<T>` 在以下操作时自动处理缓存同步：
 
 - `read()` / `set()` - 自动同步对应元素
-- `index` (索引访问) - 自动同步读取的元素
 - `write()` / `modify()` - 自动同步写入
 - `copy_from_slice()` - 写入后自动同步整个范围
 
@@ -197,14 +196,14 @@ API 遵循 Linux DMA 缓存一致性语义，由 `DmaOp` trait 的 `prepare_read
 | `DmaHandle`     | DMA 映射句柄         |
 | `DArray<T>`     | DMA 数组容器         |
 | `DBox<T>`       | DMA 单值容器         |
-| `SingleMapping` | 单次映射             |
+| `SingleMap`     | 单次映射             |
 
 ### Linux 等价 API
 
 | Rust API                    | Linux Equivalent                     |
 | :-------------------------- | :----------------------------------- |
 | `DeviceDma::map_single()`   | `dma_map_single()`                   |
-| `SingleMapping::drop()`     | `dma_unmap_single()`                 |
+| `SingleMap::drop()`         | `dma_unmap_single()`                 |
 | `DmaOp::alloc_coherent()`   | `dma_alloc_coherent()`               |
 | `DmaOp::dealloc_coherent()` | `dma_free_coherent()`                |
 | `DmaOp::flush()`            | `dma_cache_sync()` (DMA_TO_DEVICE)   |
@@ -214,7 +213,7 @@ API 遵循 Linux DMA 缓存一致性语义，由 `DmaOp` trait 的 `prepare_read
 
 DMA 操作通常需要对齐到特定的边界：
 
-- `new_array()` / `new_box()` 的 `align` 参数指定对齐字节数
+- `array_zero_with_align()` / `box_zero_with_align()` 的 `align` 参数指定对齐字节数
 - 常见对齐值：64、128、256、512、4096
 - 确保返回的 DMA 地址满足对齐要求
 

@@ -16,7 +16,10 @@ impl<T> DArray<T> {
         algin: usize,
         direction: DmaDirection,
     ) -> Result<Self, DmaError> {
-        let layout = Layout::from_size_align(size, algin.max(core::mem::align_of::<T>()))?;
+        let layout = Layout::from_size_align(
+            size * core::mem::size_of::<T>(),
+            algin.max(core::mem::align_of::<T>()),
+        )?;
         let data = DCommon::new_zero(os, layout, direction)?;
         Ok(Self {
             data,

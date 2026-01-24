@@ -10,7 +10,7 @@ use test_helpers::{DmaOperation, TrackingDmaOp};
 #[test]
 fn test_read() {
     let mut dma: DArray<u32> = new_api()
-        .new_array(10, 0x1000, DmaDirection::FromDevice)
+        .array_zero_with_align(10, 0x1000, DmaDirection::FromDevice)
         .unwrap();
 
     dma.set(0, 1);
@@ -23,7 +23,7 @@ fn test_read() {
 #[test]
 fn test_write() {
     let mut dma: DArray<u32> = new_api()
-        .new_array(10, 0x1000, DmaDirection::ToDevice)
+        .array_zero_with_align(10, 0x1000, DmaDirection::ToDevice)
         .unwrap();
 
     dma.set(0, 1);
@@ -40,7 +40,9 @@ struct Foo {
 
 #[test]
 fn test_modify() {
-    let mut dma: DBox<Foo> = new_api().new_box(64, DmaDirection::Bidirectional).unwrap();
+    let mut dma: DBox<Foo> = new_api()
+        .box_zero_with_align(64, DmaDirection::Bidirectional)
+        .unwrap();
 
     dma.modify(|f| f.bar = 1);
 
@@ -50,7 +52,7 @@ fn test_modify() {
 #[test]
 fn test_copy() {
     let mut dma = new_api()
-        .new_array::<u32>(0x40, 0x1000, DmaDirection::Bidirectional)
+        .array_zero_with_align::<u32>(0x40, 0x1000, DmaDirection::Bidirectional)
         .unwrap();
 
     println!("new dma ok");
@@ -62,19 +64,19 @@ fn test_copy() {
     println!("copy ok");
 
     for (i, &v) in src.iter().enumerate() {
-        assert_eq!(dma[i], v);
+        assert_eq!(dma.read(i).unwrap(), v);
     }
 }
 
 #[test]
 fn test_index() {
     let dma = new_api()
-        .new_array::<u64>(0x40, 0x1000, DmaDirection::Bidirectional)
+        .array_zero_with_align::<u64>(0x40, 0x1000, DmaDirection::Bidirectional)
         .unwrap();
 
     println!("new dma ok");
 
-    let a = dma[0];
+    let a = dma.read(0).unwrap();
 
     assert_eq!(a, 0);
 }
@@ -84,7 +86,7 @@ fn mask_check_rejects_overflow_alloc() {
     static DMA: MaskedDma = MaskedDma;
     let dev = DeviceDma::new(0x0fff, &DMA);
 
-    let err = dev.new_array::<u8>(0x1000, 0x1000, DmaDirection::ToDevice);
+    let err = dev.array_zero_with_align::<u8>(0x1000, 0x1000, DmaDirection::ToDevice);
 
     assert!(matches!(err, Err(DmaError::DmaMaskNotMatch { .. })));
 }
@@ -138,7 +140,7 @@ impl DmaOp for Impled {
     unsafe fn unmap_single(&self, handle: DmaHandle) {
         println!(
             "unmap_single @{:?}, size {:#x}",
-            handle.origin_virt(),
+            handle.as_ptr(),
             handle.size()
         );
     }
@@ -175,7 +177,7 @@ impl DmaOp for Impled {
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
-        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
+        unsafe { std::alloc::dealloc(handle.as_ptr().as_ptr(), handle.layout()) };
     }
 }
 
@@ -219,7 +221,7 @@ impl DmaOp for MaskedDma {
     }
 
     unsafe fn dealloc_coherent(&self, handle: DmaHandle) {
-        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
+        unsafe { std::alloc::dealloc(handle.as_ptr().as_ptr(), handle.layout()) };
     }
 }
 
@@ -233,7 +235,9 @@ fn test_single_element_address() {
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
 
-    let mut dma: DArray<u32> = dev.new_array(1, 64, DmaDirection::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev
+        .array_zero_with_align(1, 64, DmaDirection::ToDevice)
+        .unwrap();
 
     tracker.clear();
     dma.set(0, 0x12345678);
@@ -261,7 +265,9 @@ fn test_multi_element_offset() {
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
 
-    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev
+        .array_zero_with_align(10, 64, DmaDirection::ToDevice)
+        .unwrap();
     tracker.clear();
 
     // 设置 index 0, 1, 2
@@ -301,7 +307,9 @@ fn test_different_type_sizes() {
     let dev = DeviceDma::new(u64::MAX, tracker);
 
     // u8 = 1 byte
-    let mut dma_u8: DArray<u8> = dev.new_array(5, 8, DmaDirection::ToDevice).unwrap();
+    let mut dma_u8: DArray<u8> = dev
+        .array_zero_with_align(5, 8, DmaDirection::ToDevice)
+        .unwrap();
     tracker.clear();
     dma_u8.set(3, 1);
 
@@ -313,7 +321,9 @@ fn test_different_type_sizes() {
     }
 
     // u64 = 8 bytes
-    let mut dma_u64: DArray<u64> = dev.new_array(5, 8, DmaDirection::ToDevice).unwrap();
+    let mut dma_u64: DArray<u64> = dev
+        .array_zero_with_align(5, 8, DmaDirection::ToDevice)
+        .unwrap();
     tracker.clear();
     dma_u64.set(2, 2);
 
@@ -334,7 +344,9 @@ fn test_direction_to_device() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::ToDevice).unwrap();
+    let mut dma: DArray<u32> = dev
+        .array_zero_with_align(10, 64, DmaDirection::ToDevice)
+        .unwrap();
 
     tracker.clear();
 
@@ -354,7 +366,9 @@ fn test_direction_from_device() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::FromDevice).unwrap();
+    let mut dma: DArray<u32> = dev
+        .array_zero_with_align(10, 64, DmaDirection::FromDevice)
+        .unwrap();
 
     tracker.clear();
 
@@ -375,7 +389,9 @@ fn test_direction_bidirectional() {
     let tracker = Box::new(TrackingDmaOp::new(0x1000));
     let tracker: &'static TrackingDmaOp = Box::leak(tracker);
     let dev = DeviceDma::new(u64::MAX, tracker);
-    let mut dma: DArray<u32> = dev.new_array(10, 64, DmaDirection::Bidirectional).unwrap();
+    let mut dma: DArray<u32> = dev
+        .array_zero_with_align(10, 64, DmaDirection::Bidirectional)
+        .unwrap();
 
     tracker.clear();
 

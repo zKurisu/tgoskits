@@ -118,6 +118,8 @@ impl SingleMap {
 
 impl Drop for SingleMap {
     fn drop(&mut self) {
+        self.confirm_write_all();
+        self.prepare_read_all();
         unsafe {
             self.osal.unmap_single(self.handle);
         }

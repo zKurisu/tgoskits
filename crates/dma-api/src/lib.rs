@@ -327,7 +327,10 @@ impl DeviceDma {
             });
         }
 
-        let is_aligned = handle.dma_addr.as_u64().is_multiple_of(self.dma_mask());
+        let is_aligned = handle
+            .dma_addr
+            .as_u64()
+            .is_multiple_of(handle.align() as u64);
         if !is_aligned {
             return Err(DmaError::AlignMismatch {
                 address: handle.dma_addr,

@@ -222,6 +222,6 @@ impl DmaOp for TrackingDmaOp {
             .push(DmaOperation::DeallocCoherent {
                 size: handle.size(),
             });
-        unsafe { std::alloc::dealloc(handle.origin_virt().as_ptr(), handle.layout()) };
+        unsafe { std::alloc::dealloc(handle.as_ptr().as_ptr(), handle.layout()) };
     }
 }
