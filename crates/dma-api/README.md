@@ -137,7 +137,7 @@ DMA 操作需要处理 CPU 缓存和内存之间的数据一致性：
 let device = DeviceDma::new(0xFFFFFFFF, &DMA_IMPL);
 
 // 创建 100 个 u32 的 DMA 数组
-let mut dma_array = device.array_zero_with_align::<u32>(100, 64, Direction::FromDevice)
+let mut dma_array = device.array_zero_with_align::<u32>(100, 64, DmaDirection::FromDevice)
     .expect("Failed to allocate");
 
 dma_array.set(0, 0x12345678);  // 写入（自动刷新缓存）
@@ -173,7 +173,7 @@ struct Descriptor {
     flags: u32,
 }
 
-let mut dma_desc = device.box_zero_with_align::<Descriptor>(64, Direction::ToDevice)
+let mut dma_desc = device.box_zero_with_align::<Descriptor>(64, DmaDirection::ToDevice)
     .expect("Failed to allocate");
 
 dma_desc.modify(|d| d.length = 4096); // 修改（自动刷新缓存）
@@ -203,7 +203,7 @@ let desc = dma_desc.read();           // 读取（自动失效缓存）
 let mut buffer = [0u8; 4096];
 
 // 映射现有缓冲区
-let mapping = device.map_single_array(&buffer, 64, Direction::ToDevice)
+let mapping = device.map_single_array(&buffer, 64, DmaDirection::ToDevice)
     .expect("Mapping failed");
 
 // ⚠️ 重要：使用前必须手动同步缓存
@@ -278,7 +278,7 @@ use dma_api::{DeviceDma, Direction};
 let device = DeviceDma::new(0xFFFFFFFF, &DMA_IMPL);
 
 // 分配接收缓冲区（1500 字节数据包）
-let mut rx_buffer = device.array_zero_with_align::<u8>(1500, 64, Direction::FromDevice)
+let mut rx_buffer = device.array_zero_with_align::<u8>(1500, 64, DmaDirection::FromDevice)
     .expect("Failed to allocate RX buffer");
 
 // 配置网卡使用这个 DMA 地址
@@ -302,7 +302,7 @@ struct DmaDescriptor {
 }
 
 // 分配描述符
-let mut desc = device.box_zero_with_align::<DmaDescriptor>(64, Direction::ToDevice)
+let mut desc = device.box_zero_with_align::<DmaDescriptor>(64, DmaDirection::ToDevice)
     .expect("Failed to allocate descriptor");
 
 // 配置描述符（自动刷新缓存）
@@ -326,7 +326,7 @@ let desc_addr = desc.dma_addr();
 let mut temp_buf = [0u8; 256];
 
 // 映射用于 DMA 写入
-let mapping = device.map_single(&temp_buf, 64, Direction::ToDevice)
+let mapping = device.map_single_array(&temp_buf, 64, DmaDirection::ToDevice)
     .expect("Failed to map");
 
 // 准备数据写入设备
@@ -366,7 +366,7 @@ mapping.confirm_write_all();
 `SingleMap` **不会**在 Drop 时自动同步缓存，必须显式调用：
 
 ```rust,ignore,ignore
-let mapping = device.map_single(&buffer, 64, Direction::ToDevice)?;
+let mapping = device.map_single_array(&buffer, 64, DmaDirection::ToDevice)?;
 
 // 写入前准备
 mapping.confirm_write_all();  // 将 CPU 数据刷到内存
@@ -442,7 +442,7 @@ pub fn array_zero_with_align<T: Sized + Default>(
 - **缓存同步**：自动
 - **示例**：
 ```rust,ignore
-let array = device.array_zero_with_align::<u32>(100, 64, Direction::ToDevice)?;
+let array = device.array_zero_with_align::<u32>(100, 64, DmaDirection::ToDevice)?;
 ```
 
 #### <a name="device-zeros"></a>Box 创建方法
@@ -467,7 +467,7 @@ pub fn box_zero_with_align<T: Sized + Default>(
 - **缓存同步**：自动
 - **示例**：
 ```rust,ignore
-let box_val = device.box_zero_with_align::<MyStruct>(64, Direction::Bidirectional)?;
+let box_val = device.box_zero_with_align::<MyStruct>(64, DmaDirection::Bidirectional)?;
 ```
 
 #### <a name="device-maps"></a>映射方法
@@ -490,7 +490,7 @@ pub fn map_single_array<T: Sized>(
 - **示例**：
 ```rust,ignore
 let buf = [0u8; 4096];
-let mapping = device.map_single_array(&buf, 64, Direction::ToDevice)?;
+let mapping = device.map_single_array(&buf, 64, DmaDirection::ToDevice)?;
 ```
 
 ---
