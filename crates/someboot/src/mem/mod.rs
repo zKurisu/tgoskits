@@ -97,6 +97,7 @@ pub(crate) fn early_init(kernel_end_phys: usize) {
 }
 
 pub(crate) fn init_after_mmu() -> Option<()> {
+    unsafe { MEMORY_MAP.update(|m| *m = MemoryMap::new()) };
     super::fdt::init_memory_map();
     Some(())
 }
@@ -159,18 +160,7 @@ pub fn print_memory_map() {
 pub(crate) fn add_memory_descriptor(
     desc: MemoryDescriptor,
 ) -> Result<(), RangeError<MemoryDescriptor>> {
-    // let temp = unsafe {
-    //     let start = phys_to_virt(Ram {}.current().align_up(page_size()) as usize);
-    //     core::slice::from_raw_parts_mut(start, size_of::<MemoryMap>())
-    // };
-
     unsafe {
-        // let temp_ptr = MEMORY_MAP_TEMP.as_slice().as_ptr();
-        // let len = MEMORY_MAP_TEMP.len() * core::mem::size_of::<MemoryDescriptor>();
-        // let temp = core::slice::from_raw_parts_mut(temp_ptr as *mut u8, len);
-
-        // MEMORY_MAP.update(|mem| mem.merge_add(desc, temp))
-
         let mut temp = MemoryMap::new();
         MEMORY_MAP.update(|mem| mem.merge_add_with_temp(desc, &mut temp))
     }
