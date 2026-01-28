@@ -59,7 +59,7 @@ pub(crate) fn save_fdt() {
         .unwrap();
 
     unsafe {
-        core::ptr::copy_nonoverlapping(slice.as_ptr(), fdt_buff, size);
-        FDT_ADDR = fdt_buff as usize;
+        core::ptr::copy_nonoverlapping(slice.as_ptr(), fdt_buff.as_ptr(), size);
+        FDT_ADDR = fdt_buff.as_ptr() as usize;
     }
 }

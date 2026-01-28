@@ -1,4 +1,4 @@
-use core::{alloc::Layout, cell::UnsafeCell};
+use core::{alloc::Layout, cell::UnsafeCell, ops::Range, ptr::NonNull};
 
 use num_align::NumAlign;
 use page_table_generic::FrameAllocator;
@@ -7,6 +7,7 @@ use crate::mem::page_size;
 
 struct SimpleAllocator {
     start: usize,
+    end: usize,
     current: usize, // 当前分配位置
 }
 
@@ -14,19 +15,24 @@ impl SimpleAllocator {
     const fn new() -> Self {
         SimpleAllocator {
             start: 0,
+            end: 0,
             current: 0,
         }
     }
 
-    unsafe fn init(&mut self, kernel_end: usize) {
-        self.start = kernel_end;
-        self.current = kernel_end;
+    unsafe fn init(&mut self, range: Range<usize>) {
+        self.start = range.start;
+        self.end = range.end;
+        self.current = range.start.max(0x40);
     }
 
     pub fn alloc(&mut self, layout: Layout) -> *mut u8 {
         unsafe {
             let start = self.current.align_up(layout.align()) as *mut u8;
             let end = start.add(layout.size());
+            if end as usize > self.end {
+                return core::ptr::null_mut();
+            }
             self.current = end as usize;
             start
         }
@@ -48,15 +54,15 @@ impl Ram {
         unsafe { (*RAM_ALLOC.0.get()).current as _ }
     }
 
-    pub fn alloc(&self, layout: Layout) -> Option<*mut u8> {
-        Some(unsafe { (*RAM_ALLOC.0.get()).alloc(layout) })
+    pub fn alloc(&self, layout: Layout) -> Option<NonNull<u8>> {
+        unsafe { NonNull::new((*RAM_ALLOC.0.get()).alloc(layout)) }
     }
 }
 
 impl FrameAllocator for Ram {
     fn alloc_frame(&self) -> Option<page_table_generic::PhysAddr> {
         self.alloc(unsafe { Layout::from_size_align_unchecked(page_size(), page_size()) })
-            .map(|ptr| (ptr as usize).into())
+            .map(|ptr| (ptr.as_ptr() as usize).into())
     }
 
     fn dealloc_frame(&self, _frame: page_table_generic::PhysAddr) {}
@@ -66,12 +72,19 @@ impl FrameAllocator for Ram {
     }
 }
 
-pub fn init(kernel_end_phys: usize) {
+pub fn init(range: Range<usize>) {
+    println!("Initialize RAM allocator: {:#x?}", range);
     unsafe {
-        (*RAM_ALLOC.0.get()).init(kernel_end_phys);
+        (*RAM_ALLOC.0.get()).init(range);
     }
 }
 
-pub fn current() -> *mut u8 {
-    Ram {}.current() as _
+// pub fn current() -> *mut u8 {
+//     Ram {}.current() as _
+// }
+
+pub fn used_range() -> Range<usize> {
+    let start = unsafe { (*RAM_ALLOC.0.get()).start as _ };
+    let end = Ram {}.current() as usize;
+    start..end.align_up(page_size())
 }

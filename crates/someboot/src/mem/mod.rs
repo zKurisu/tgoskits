@@ -91,13 +91,13 @@ pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
     }
 }
 
-pub(crate) fn early_init(kernel_end_phys: usize) {
+pub(crate) fn early_init(range: core::ops::Range<usize>) {
     static mut INITIALIZED: bool = false;
     if unsafe { INITIALIZED } {
         return;
     }
 
-    ram::init(kernel_end_phys);
+    ram::init(range);
     crate::fdt::save_fdt();
     unsafe {
         INITIALIZED = true;
@@ -135,12 +135,12 @@ pub fn page_size() -> usize {
     core::ptr::addr_of!(PAGE_SIZE) as usize
 }
 
-fn ram_used_range() -> core::ops::Range<usize> {
-    let kernel = kimage_range();
-    let start = kernel.end;
-    let end = ram::current() as usize;
-    start..end.align_up(page_size())
-}
+// fn ram_used_range() -> core::ops::Range<usize> {
+//     // let kernel = kimage_range();
+//     let start = ;
+//     let end = ram::current() as usize;
+//     start..end.align_up(page_size())
+// }
 
 pub(crate) fn memory_map_setup() {
     let kernel_range = kimage_range();
@@ -148,7 +148,7 @@ pub(crate) fn memory_map_setup() {
 
     add_memory_descriptor(desc).unwrap();
 
-    let ram_range = ram_used_range();
+    let ram_range = ram::used_range();
     let desc = MemoryDescriptor::new_with_range("Some Rsv", ram_range, MemoryType::Reserved);
     add_memory_descriptor(desc).unwrap();
 

@@ -140,7 +140,6 @@ impl TableMeta for Generic {
 
 pub fn relocate_kernel_to_vm_code() -> ! {
     let k_start = crate::mem::kimage_range().start;
-
     let mut table = crate::mem::mmu::new_boot_table();
 
     let pte = PteConfig {
