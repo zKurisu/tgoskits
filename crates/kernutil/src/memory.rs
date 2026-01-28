@@ -98,3 +98,9 @@ pub struct PageTableInfo {
     pub asid: usize,
     pub addr: usize,
 }
+
+impl PageTableInfo {
+    pub const fn zero() -> Self {
+        PageTableInfo { asid: 0, addr: 0 }
+    }
+}

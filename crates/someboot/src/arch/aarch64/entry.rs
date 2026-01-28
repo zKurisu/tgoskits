@@ -41,8 +41,7 @@ pub fn el_entry() -> ! {
 
     let kernel_code_start_lma = ext_sym_addr!(_head);
     let kernel_code_end_lma = ext_sym_addr!(__kernel_code_end);
-    // crate::mem::set_kernel_range(kernel_code_start_lma, kernel_code_end_lma);
-    // setup_kernel_link_start(VM_LOAD_ADDRESS);
+
     crate::mem::setup_entry(
         kernel_code_start_lma.into(),
         kernel_code_end_lma.into(),
@@ -66,8 +65,8 @@ pub fn el_entry() -> ! {
 
 pub(crate) fn mmu_entry() -> ! {
     println!("Disable user page table");
-    #[cfg(not(feature = "hv"))]
-    elx::set_user_table(kernutil::memory::PageTableInfo { asid: 0, addr: 0 });
+    #[cfg(uspace)]
+    elx::set_user_table(kernutil::memory::PageTableInfo::zero());
     elx::flush_tlb(None);
     super::trap::setup();
     crate::mem::reset_memory_map();
