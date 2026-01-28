@@ -24,6 +24,7 @@ pub fn new_page_table<A: page_table_generic::FrameAllocator>(
 }
 
 pub(crate) fn set_boot_table(table: ArchPageTable<Ram>) {
+    // aarch64 `LDXR` `LDAXR` not work here before MMU is enabled
     unsafe { BOOT_TABLE.init_single_core(table) };
 }
 
