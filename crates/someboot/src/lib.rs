@@ -119,6 +119,7 @@ pub fn set_user_page_table(pt: PageTableInfo) {
     arch::Arch::set_user_page_table(pt);
 }
 
+/// Entry point after enabling MMU
 fn prime_entry() -> ! {
     fdt::setup_earlycon();
     let _ = acpi::earlycon::acpi_setup_earlycon();

@@ -1123,6 +1123,7 @@ dependencies = [
  "bitflags 2.10.0",
  "buddy_system_allocator",
  "byte-unit",
+ "derive_more",
  "fdt-edit",
  "fdt-raw",
  "heapless",

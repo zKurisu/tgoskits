@@ -2,7 +2,7 @@ use core::arch::naked_asm;
 
 use aarch64_cpu::registers::{CurrentEL, Readable};
 
-use crate::{arch::elx, consts::VM_LOAD_ADDRESS, fdt, mem::set_vm_load_offset};
+use crate::{arch::elx, consts::VM_LOAD_ADDRESS, fdt};
 
 use super::switch_to_elx;
 
@@ -41,9 +41,14 @@ pub fn el_entry() -> ! {
 
     let kernel_code_start_lma = ext_sym_addr!(_head);
     let kernel_code_end_lma = ext_sym_addr!(__kernel_code_end);
-    crate::mem::set_kernel_range(kernel_code_start_lma, kernel_code_end_lma);
+    // crate::mem::set_kernel_range(kernel_code_start_lma, kernel_code_end_lma);
+    // setup_kernel_link_start(VM_LOAD_ADDRESS);
+    crate::mem::setup_entry(
+        kernel_code_start_lma.into(),
+        kernel_code_end_lma.into(),
+        VM_LOAD_ADDRESS.into(),
+    );
 
-    set_vm_load_offset(crate::mem::kimage_range().start as isize - VM_LOAD_ADDRESS as isize);
     super::trap::setup();
 
     crate::fdt::setup_earlycon();
@@ -65,5 +70,6 @@ pub(crate) fn mmu_entry() -> ! {
     elx::set_user_table(kernutil::memory::PageTableInfo { asid: 0, addr: 0 });
     elx::flush_tlb(None);
     super::trap::setup();
+    crate::mem::reset_memory_map();
     crate::prime_entry()
 }

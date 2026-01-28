@@ -39,6 +39,7 @@ somehal-macros = {workspace = true}
 spin = "0.10"
 tock-registers.workspace = true
 uguid = "2.2.1"
+derive_more.workspace = true
 
 [target.'cfg(target_arch = "loongarch64")'.dependencies]
 loongArch64 = "0.2"

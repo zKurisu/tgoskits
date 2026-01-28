@@ -18,15 +18,23 @@ pub const GB: usize = 1024 * MB;
 
 static mut VM_LOAD_OFFSET: isize = 0;
 static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
-static mut KIMAGE_START: usize = 0;
-static mut KIMAGE_END: usize = 0;
+/// Load address of the kernel start
+static mut KIMAGE_START: Option<PhysAddr> = None;
+/// Load address of the kernel end
+static mut KIMAGE_END: PhysAddr = PhysAddr::new(0);
 
 pub type MemoryMap = heapless::Vec<MemoryDescriptor, 128>;
 
-/// 运行地址 - 链接地址
-pub(crate) fn set_vm_load_offset(offset: isize) {
+pub(crate) fn setup_entry(
+    kernel_start: PhysAddr,
+    kernel_end: PhysAddr,
+    kernel_start_link: VirtAddr,
+) {
     unsafe {
-        VM_LOAD_OFFSET = offset;
+        KIMAGE_START = Some(kernel_start);
+        KIMAGE_END = kernel_end.raw().align_up(page_size()).into();
+
+        VM_LOAD_OFFSET = kernel_start.raw() as isize - kernel_start_link.raw() as isize;
     }
 }
 
@@ -97,21 +105,27 @@ pub(crate) fn early_init(kernel_end_phys: usize) {
 }
 
 pub(crate) fn init_after_mmu() -> Option<()> {
-    unsafe { MEMORY_MAP.update(|m| *m = MemoryMap::new()) };
     super::fdt::init_memory_map();
     Some(())
 }
 
-pub(crate) fn set_kernel_range(start: usize, end: usize) {
+#[allow(dead_code)]
+pub(crate) fn reset_memory_map() {
     unsafe {
-        KIMAGE_START = start.align_down(page_size());
-        KIMAGE_END = end.align_up(page_size());
+        MEMORY_MAP.update(|m| *m = MemoryMap::new());
     }
 }
 
 /// Get the physical range of the kernel image
 pub(crate) fn kimage_range() -> core::ops::Range<usize> {
-    unsafe { KIMAGE_START..KIMAGE_END }
+    unsafe {
+        let Some(start) = KIMAGE_START else {
+            println!("Kernel image start is not set");
+            panic!();
+        };
+        let end = KIMAGE_END;
+        start.raw()..end.raw()
+    }
 }
 
 pub fn page_size() -> usize {

@@ -1,6 +1,6 @@
 use core::{arch::naked_asm, ffi::c_void};
 
-use crate::{arch::addrspace::*, mem::set_vm_load_offset};
+use crate::arch::addrspace::*;
 
 static mut FW_ARG0: usize = 0;
 static mut FW_ARG1: usize = 0;
@@ -89,8 +89,15 @@ fn rust_main() -> ! {
     let kernel_code_start_lma = to_phys(sym_running_addr!(_head));
     println!("Kernel LMA: {:#x}", kernel_code_start_lma);
     let kernel_code_end_lma = to_phys(sym_running_addr!(__kernel_code_end));
-    crate::mem::set_kernel_range(kernel_code_start_lma, kernel_code_end_lma);
-    set_vm_load_offset(crate::mem::kimage_range().start as isize - VM_LOAD_ADDRESS as isize);
+
+    crate::mem::setup_entry(
+        kernel_code_start_lma.into(),
+        kernel_code_end_lma.into(),
+        VM_LOAD_ADDRESS.into(),
+    );
+
+    // crate::mem::set_kernel_range(kernel_code_start_lma, kernel_code_end_lma);
+    // set_vm_load_offset(crate::mem::kimage_range().start as isize - VM_LOAD_ADDRESS as isize);
 
     if unsafe { FW_ARG0 } == 1 {
         eif_entry();
