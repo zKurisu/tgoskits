@@ -29,14 +29,31 @@ impl<T> StaticCell<T> {
     }
 
     pub fn init(&self, val: T) {
-        if self.init.swap(true, Ordering::AcqRel) {
+        if self
+            .init
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
             panic!(
                 "LazyStatic {} already initialized",
                 core::any::type_name::<T>()
             );
         }
         unsafe { (*self.value.get()).as_mut_ptr().write(val) };
-        self.init.store(true, Ordering::Release);
+    }
+
+    /// 初始化单核场景下的值
+    /// # Safety
+    /// thread-unsafe
+    pub unsafe fn init_single_core(&self, val: T) {
+        if self.init.load(Ordering::Relaxed) {
+            panic!(
+                "LazyStatic {} already initialized",
+                core::any::type_name::<T>()
+            );
+        }
+        unsafe { (*self.value.get()).as_mut_ptr().write(val) };
+        self.init.store(true, Ordering::Relaxed);
     }
 
     /// 更新已初始化的值

@@ -24,7 +24,7 @@ pub fn new_page_table<A: page_table_generic::FrameAllocator>(
 }
 
 pub(crate) fn set_boot_table(table: ArchPageTable<Ram>) {
-    BOOT_TABLE.init(table);
+    unsafe { BOOT_TABLE.init_single_core(table) };
 }
 
 pub(crate) fn is_mmu_enabled() -> bool {
