@@ -5,30 +5,12 @@ description = "A test framework for bare metal."
 keywords = ["test", "case", "testing", "testcase", "unittest"]
 license = "MPL-2.0"
 name = "bare-test"
-repository = "https://github.com/ZR233/sparreal-os/tree/main/crates/bare-test"
-version = "0.7.0"
+edition.workspace = true
+repository.workspace = true
+version = "0.8.0"
 
-[dependencies.bare-test-macros]
-path = "../bare-test-macros"
-version = "0.2"
+[dependencies]
+bare-test-macros.workspace = true
+log.workspace = true
+sparreal-rt.workspace = true
 
-[dependencies.log]
-version = "0.4"
-
-[dependencies.sparreal-kernel]
-workspace = true
-
-[dependencies.sparreal-macros]
-path = "../sparreal-macros"
-version = "0.9"
-
-[dependencies.sparreal-rt]
-optional = true
-workspace = true
-
-[features]
-default = ["rt"]
-rt = ["sparreal-rt"]
-
-[package.edition]
-workspace = true

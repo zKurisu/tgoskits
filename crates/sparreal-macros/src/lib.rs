@@ -114,7 +114,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
         #[allow(non_snake_case)]
         #[unsafe(no_mangle)]
         #(#attrs)*
-        pub #unsafety extern "C" fn __sparreal_rt_main(#args) {
+        pub #unsafety extern "C" fn __sparreal_main(#args) {
             #(#stmts)*
         }
     )

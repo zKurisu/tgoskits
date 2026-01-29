@@ -1,0 +1,181 @@
+use byte_unit::{Byte, UnitType};
+use kernutil::StaticCell;
+pub use kernutil::memory::{MemoryDescriptor, MemoryType, PageTableInfo};
+use num_align::NumAlign;
+use ranges_ext::{RangeError, RangeExtBaseOps};
+
+pub mod mmu;
+pub(crate) mod ram;
+pub(crate) mod region;
+
+use crate::ArchTrait;
+
+pub use page_table_generic::*;
+
+pub const KB: usize = 1024;
+pub const MB: usize = 1024 * KB;
+pub const GB: usize = 1024 * MB;
+
+static mut VM_LOAD_OFFSET: isize = 0;
+static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
+/// Load address of the kernel start
+static mut KIMAGE_START: Option<PhysAddr> = None;
+/// Load address of the kernel end
+static mut KIMAGE_END: PhysAddr = PhysAddr::new(0);
+
+pub type MemoryMap = heapless::Vec<MemoryDescriptor, 128>;
+
+pub(crate) fn setup_entry(
+    kernel_start: PhysAddr,
+    kernel_end: PhysAddr,
+    kernel_start_link: VirtAddr,
+) {
+    unsafe {
+        KIMAGE_START = Some(kernel_start);
+        KIMAGE_END = kernel_end.raw().align_up(page_size()).into();
+
+        VM_LOAD_OFFSET = kernel_start.raw() as isize - kernel_start_link.raw() as isize;
+    }
+}
+
+/// Get the offset between virtual address and physical address of the loaded kernel image
+pub fn vm_load_offset() -> isize {
+    unsafe { VM_LOAD_OFFSET }
+}
+
+/// RAM 物理地址应当转换为的内核虚拟地址
+pub fn __va(paddr: usize) -> *mut u8 {
+    crate::arch::Arch::_va(paddr)
+}
+
+/// IO 物理地址应当转换为的内核虚拟地址
+pub fn __io(paddr: usize) -> *mut u8 {
+    crate::arch::Arch::_io(paddr)
+}
+
+/// kernel image 物理地址转换为内核虚拟地址
+pub(crate) fn __kimage_va(paddr: usize) -> *mut u8 {
+    (paddr as isize - vm_load_offset()) as usize as *mut u8
+}
+
+pub(crate) fn __kimage_va_to_pa(vaddr: *const u8) -> usize {
+    (vaddr as usize as isize + vm_load_offset()) as usize
+}
+
+pub fn memory_map() -> &'static [MemoryDescriptor] {
+    MEMORY_MAP.as_slice()
+}
+
+/// 物理RAM实际转换为的内核虚拟地址
+pub fn phys_to_virt(paddr: usize) -> *mut u8 {
+    if mmu::is_mmu_enabled() {
+        if kimage_range().contains(&paddr) {
+            __kimage_va(paddr)
+        } else {
+            __va(paddr)
+        }
+    } else {
+        paddr as *mut u8
+    }
+}
+
+pub fn virt_to_phys(vaddr: *const u8) -> usize {
+    crate::arch::Arch::virt_to_phys(vaddr)
+}
+
+pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
+    if mmu::is_mmu_enabled() {
+        __io(paddr)
+    } else {
+        paddr as *mut u8
+    }
+}
+
+pub(crate) fn early_init(range: core::ops::Range<usize>) {
+    static mut INITIALIZED: bool = false;
+    if unsafe { INITIALIZED } {
+        return;
+    }
+
+    ram::init(range);
+    crate::fdt::save_fdt();
+    unsafe {
+        INITIALIZED = true;
+    }
+}
+
+pub(crate) fn init_after_mmu() -> Option<()> {
+    super::fdt::init_memory_map();
+    Some(())
+}
+
+#[allow(dead_code)]
+pub(crate) fn reset_memory_map() {
+    unsafe {
+        MEMORY_MAP.update(|m| *m = MemoryMap::new());
+    }
+}
+
+/// Get the physical range of the kernel image
+pub(crate) fn kimage_range() -> core::ops::Range<usize> {
+    unsafe {
+        let Some(start) = KIMAGE_START else {
+            println!("Kernel image start is not set");
+            panic!();
+        };
+        let end = KIMAGE_END;
+        start.raw()..end.raw()
+    }
+}
+
+pub fn page_size() -> usize {
+    unsafe extern "C" {
+        static PAGE_SIZE: usize;
+    }
+    core::ptr::addr_of!(PAGE_SIZE) as usize
+}
+
+// fn ram_used_range() -> core::ops::Range<usize> {
+//     // let kernel = kimage_range();
+//     let start = ;
+//     let end = ram::current() as usize;
+//     start..end.align_up(page_size())
+// }
+
+pub(crate) fn memory_map_setup() {
+    let kernel_range = kimage_range();
+    let desc = MemoryDescriptor::new_with_range("Kernel", kernel_range, MemoryType::KImage);
+
+    add_memory_descriptor(desc).unwrap();
+
+    let ram_range = ram::used_range();
+    let desc = MemoryDescriptor::new_with_range("Some Rsv", ram_range, MemoryType::Reserved);
+    add_memory_descriptor(desc).unwrap();
+
+    if let Some(desc) = crate::console::debug_to_memory_desc() {
+        add_memory_descriptor(desc).unwrap();
+    }
+}
+
+pub fn print_memory_map() {
+    println!("Memory Map:");
+    for desc in memory_map().iter() {
+        let fmt = Byte::from(desc.size_in_bytes).get_appropriate_unit(UnitType::Binary);
+        println!(
+            "  {:<20} {:>#016x} - {:>#016x} ({:#.2})",
+            desc.name,
+            desc.physical_start,
+            desc.physical_start + desc.size_in_bytes,
+            fmt
+        );
+    }
+}
+
+pub(crate) fn add_memory_descriptor(
+    desc: MemoryDescriptor,
+) -> Result<(), RangeError<MemoryDescriptor>> {
+    unsafe {
+        let mut temp = MemoryMap::new();
+        MEMORY_MAP.update(|mem| mem.merge_add_with_temp(desc, &mut temp))
+    }
+}

@@ -1,0 +1,57 @@
+name: Check, Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: 
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [loongarch64, aarch64]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install libudev-dev
+      run: sudo apt update && sudo apt install libudev-dev -y
+    - name: Install toolchain
+      run: rustup show
+    - name: Check rust version
+      run: rustc --version --verbose
+
+    - name: Setup QEMU
+      uses: arceos-org/setup-qemu@v1
+      with:
+        version: 10.1.0
+        arch_list: ${{ matrix.arch }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: test
+        cache-targets: false
+
+    - name: Install cargo-binutils
+      run: cargo install cargo-binutils
+    - name: Install ostool
+      run: cargo install ostool
+    - name: Add Target
+      run: rustc --version
+    - name: Check code format
+      run: cargo fmt --all -- --check
+
+    - uses: taiki-e/install-action@cargo-hack
+
+    - name: Clippy for workspace
+      run: cargo clippy --target ${{ matrix.arch }}-unknown-none-softfloat -- -D warnings
+
+    - name: Build test
+      run: ./test_${{ matrix.arch }}.sh

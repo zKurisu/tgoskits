@@ -1,32 +1,21 @@
 #![no_std]
-#![feature(linkage)]
-#![feature(fn_align)]
-#![feature(allocator_api)]
 
+#[allow(unused_imports)]
+#[macro_use]
 extern crate alloc;
 #[macro_use]
 extern crate log;
 
-pub use rdrive::module_driver;
-
-#[macro_use]
-mod logger;
-
 pub mod __export;
-pub mod boot;
-pub mod globals;
-pub mod io;
+pub mod hal;
+mod lang;
+mod logo;
+pub mod os;
 
-pub mod async_std;
-pub mod driver;
-pub mod hal_al;
-pub mod irq;
-mod lang_items;
+use hal::setup::start_kernel;
+pub use sparreal_macros::entry;
 
-pub mod mem;
-pub mod platform;
-pub mod prelude;
-pub mod task;
-pub mod time;
-
-pub use mem::Address;
+pub fn run_kernel() -> ! {
+    logo::print_logo();
+    start_kernel()
+}

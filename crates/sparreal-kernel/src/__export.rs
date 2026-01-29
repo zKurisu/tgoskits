@@ -1,1 +1,1 @@
-pub use crate::io::print::print;
+pub use crate::os::console::_write_fmt;

@@ -1,5 +1,7 @@
-[alias]
-xtask = "run --package xtask --"
-
-[target.'cfg(all(target_os = "none"))']
+[target.'cfg(not(any(windows, unix)))']
 runner = "cargo osrun"
+
+[alias]
+b = "build --config .cargo/config-app.toml  -Z unstable-options -Z build-std=core,alloc"
+r = "run --config .cargo/config-app.toml  -Z unstable-options -Z build-std=core,alloc"
+t = "test --config .cargo/config-test.toml  -Z unstable-options -Z build-std=core,alloc"

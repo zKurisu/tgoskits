@@ -5,8 +5,8 @@ SECTIONS
     .test_case : ALIGN(4)
     {
         _stest_case = .;
-        *(.test_case)
-        *(.test_case.*)
+        KEEP(*(.test_case))
+        KEEP(*(.test_case.*))
         _etest_case = .;
     }
     /* 其他段定义 */
