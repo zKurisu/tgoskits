@@ -7,7 +7,6 @@ mod lang;
 #[cfg(not(target_os = "none"))]
 mod run;
 
-
 #[cfg(not(target_os = "none"))]
 fn main() {
     println!("Hello, world!");
