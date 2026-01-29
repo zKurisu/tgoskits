@@ -1,2 +1,2 @@
-# $env:KERNEL_BUILTIN_CMDLINE = "earlycon=pl011,mmio32,0x9000000"
-ostool run -c ./test-suit/timer/aarch64.toml qemu -q ./test-suit/timer/qemu-aarch64.toml
+./test_aarch64_el1.sh
+./test_aarch64_el2.sh

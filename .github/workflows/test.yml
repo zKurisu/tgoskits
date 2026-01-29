@@ -54,4 +54,4 @@ jobs:
       run: cargo clippy --target ${{ matrix.arch }}-unknown-none-softfloat -- -D warnings
 
     - name: Build test
-      run: chmod +x ./test_all.sh && ./test_all.sh
+      run: ./test_${{ matrix.arch }}.sh
