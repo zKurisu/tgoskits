@@ -33,17 +33,23 @@ pub(crate) mod consts;
 #[cfg(efi)]
 mod efi_stub;
 mod elf;
+mod entry;
+mod err;
 pub(crate) mod fdt;
 pub mod irq;
 pub mod mem;
 pub mod power;
+mod smp;
 pub mod timer;
 
 pub use fdt::fdt_addr;
 pub use page_table_generic::*;
 pub use somehal_macros::{entry, irq_handler, secondary_entry};
 
-use crate::{irq::IrqId, mem::PageTableInfo};
+use crate::{
+    irq::IrqId,
+    mem::{__percpu, PageTableInfo},
+};
 
 #[allow(unused)]
 pub trait ArchTrait {
@@ -53,6 +59,11 @@ pub trait ArchTrait {
     fn _io(paddr: usize) -> *mut u8 {
         Self::_va(paddr)
     }
+    fn _percpu(paddr: usize) -> *mut u8 {
+        Self::_va(paddr)
+    }
+
+    fn jump_to(entry: usize, sp: usize) -> !;
 
     fn post_allocator();
 
@@ -126,13 +137,20 @@ fn prime_entry() -> ! {
 
     println!("Trap vector at {:#x}", arch::Arch::trap_addr());
 
-    mem::init_after_mmu();
-
+    // mem::init_after_mmu();
     mem::memory_map_setup();
     mem::print_memory_map();
 
     unsafe extern "C" {
         fn __someboot_main() -> !;
     }
-    unsafe { __someboot_main() }
+
+    let entry = __someboot_main as *const () as usize;
+    let sp = crate::smp::cpu_meta(0).unwrap().stack_top;
+    let sp = __percpu(sp);
+    println!(
+        "Jumping to main entry point at {:#x} with SP {:#p}",
+        entry, sp
+    );
+    arch::Arch::jump_to(entry, sp as _)
 }

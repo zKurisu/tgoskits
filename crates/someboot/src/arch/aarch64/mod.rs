@@ -39,6 +39,10 @@ impl ArchTrait for Arch {
         (paddr + PAGE_OFFSET) as *mut u8
     }
 
+    fn _percpu(paddr: usize) -> *mut u8 {
+        (paddr + PAGE_OFFSET + 0xFF00_0000_0000) as *mut u8
+    }
+
     fn post_allocator() {
         power::init();
     }
@@ -144,5 +148,17 @@ impl ArchTrait for Arch {
 
     fn trap_addr() -> usize {
         trap_addr()
+    }
+
+    fn jump_to(entry: usize, sp: usize) -> ! {
+        unsafe {
+            core::arch::asm!(
+                "mov sp, {sp}",
+                "br {entry}",
+                sp = in(reg) sp,
+                entry = in(reg) entry,
+                options(noreturn)
+            );
+        }
     }
 }

@@ -18,6 +18,7 @@ pub const GB: usize = 1024 * MB;
 
 static mut VM_LOAD_OFFSET: isize = 0;
 static MEMORY_MAP: StaticCell<MemoryMap> = StaticCell::new(MemoryMap::new());
+
 /// Load address of the kernel start
 static mut KIMAGE_START: Option<PhysAddr> = None;
 /// Load address of the kernel end
@@ -38,6 +39,13 @@ pub(crate) fn setup_entry(
     }
 }
 
+pub fn stack_size() -> usize {
+    unsafe extern "C" {
+        fn STACK_SIZE();
+    }
+    STACK_SIZE as *const () as usize
+}
+
 /// Get the offset between virtual address and physical address of the loaded kernel image
 pub fn vm_load_offset() -> isize {
     unsafe { VM_LOAD_OFFSET }
@@ -51,6 +59,10 @@ pub fn __va(paddr: usize) -> *mut u8 {
 /// IO 物理地址应当转换为的内核虚拟地址
 pub fn __io(paddr: usize) -> *mut u8 {
     crate::arch::Arch::_io(paddr)
+}
+
+pub fn __percpu(paddr: usize) -> *mut u8 {
+    crate::arch::Arch::_percpu(paddr)
 }
 
 /// kernel image 物理地址转换为内核虚拟地址
@@ -91,37 +103,41 @@ pub(crate) fn _fixmap_io(paddr: usize) -> *mut u8 {
     }
 }
 
-pub(crate) fn early_init(range: core::ops::Range<usize>) {
-    static mut INITIALIZED: bool = false;
-    if unsafe { INITIALIZED } {
-        return;
+pub(crate) fn early_init() {
+    crate::fdt::init_memory_map();
+
+    let kernel_range = kimage_range();
+    add_memory_descriptor(MemoryDescriptor {
+        physical_start: kernel_range.start,
+        size_in_bytes: kernel_range.end - kernel_range.start,
+        memory_type: MemoryType::KImage,
+    })
+    .unwrap();
+
+    unsafe { MEMORY_MAP.update(|m| m.sort_by_key(|a| a.physical_start)) };
+
+    print_memory_map();
+
+    let mut free_range = None;
+
+    for desc in memory_map().iter() {
+        if desc.memory_type == MemoryType::Free && desc.size_in_bytes > 8 * MB {
+            free_range = Some(desc.physical_start..(desc.physical_start + desc.size_in_bytes));
+            break;
+        }
     }
 
-    ram::init(range);
+    ram::init(free_range.expect("No free memory"));
+
     crate::fdt::save_fdt();
-    unsafe {
-        INITIALIZED = true;
-    }
-}
-
-pub(crate) fn init_after_mmu() -> Option<()> {
-    super::fdt::init_memory_map();
-    Some(())
-}
-
-#[allow(dead_code)]
-pub(crate) fn reset_memory_map() {
-    unsafe {
-        MEMORY_MAP.update(|m| *m = MemoryMap::new());
-    }
+    crate::smp::init_percpu();
 }
 
 /// Get the physical range of the kernel image
 pub(crate) fn kimage_range() -> core::ops::Range<usize> {
     unsafe {
         let Some(start) = KIMAGE_START else {
-            println!("Kernel image start is not set");
-            panic!();
+            panic!("Kernel image start is not set");
         };
         let end = KIMAGE_END;
         start.raw()..end.raw()
@@ -135,23 +151,17 @@ pub fn page_size() -> usize {
     core::ptr::addr_of!(PAGE_SIZE) as usize
 }
 
-// fn ram_used_range() -> core::ops::Range<usize> {
-//     // let kernel = kimage_range();
-//     let start = ;
-//     let end = ram::current() as usize;
-//     start..end.align_up(page_size())
-// }
-
 pub(crate) fn memory_map_setup() {
-    let kernel_range = kimage_range();
-    let desc = MemoryDescriptor::new_with_range("Kernel", kernel_range, MemoryType::KImage);
+    // let kernel_range = kimage_range();
+    // let desc = MemoryDescriptor::new_with_range(kernel_range, MemoryType::KImage);
 
-    add_memory_descriptor(desc).unwrap();
+    // add_memory_descriptor(desc).unwrap();
 
     let ram_range = ram::used_range();
-    let desc = MemoryDescriptor::new_with_range("Some Rsv", ram_range, MemoryType::Reserved);
-    add_memory_descriptor(desc).unwrap();
-
+    if !ram_range.is_empty() {
+        let desc = MemoryDescriptor::new_with_range(ram_range, MemoryType::Reserved);
+        add_memory_descriptor(desc).unwrap();
+    }
     if let Some(desc) = crate::console::debug_to_memory_desc() {
         add_memory_descriptor(desc).unwrap();
     }
@@ -159,11 +169,13 @@ pub(crate) fn memory_map_setup() {
 
 pub fn print_memory_map() {
     println!("Memory Map:");
+    unsafe { MEMORY_MAP.update(|m| m.sort_by_key(|m| m.physical_start)) };
+
     for desc in memory_map().iter() {
         let fmt = Byte::from(desc.size_in_bytes).get_appropriate_unit(UnitType::Binary);
         println!(
-            "  {:<20} {:>#016x} - {:>#016x} ({:#.2})",
-            desc.name,
+            "  {} {:>#016x} - {:>#016x} ({:#.2})",
+            desc.memory_type,
             desc.physical_start,
             desc.physical_start + desc.size_in_bytes,
             fmt

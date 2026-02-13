@@ -9,7 +9,7 @@ pub use memory::{init_memory_map, memories};
 
 use crate::mem::phys_to_virt;
 
-pub static mut FDT_ADDR: usize = 0;
+pub(crate) static mut FDT_ADDR: usize = 0;
 static FDT: StaticCell<fdt_edit::Fdt> = StaticCell::uninit();
 
 pub fn fdt_addr() -> Option<*mut u8> {
@@ -54,12 +54,27 @@ pub(crate) fn save_fdt() {
     let size = fdt.header().totalsize as usize;
     let slice = unsafe { core::slice::from_raw_parts(FDT_ADDR as *const u8, size) };
 
-    let fdt_buff = crate::mem::ram::Ram
-        .alloc(core::alloc::Layout::from_size_align(size, 8).unwrap())
-        .unwrap();
+    let fdt_buff = unsafe {
+        crate::mem::ram::alloc(core::alloc::Layout::from_size_align(size, 8).unwrap()).unwrap()
+    };
 
     unsafe {
-        core::ptr::copy_nonoverlapping(slice.as_ptr(), fdt_buff.as_ptr(), size);
-        FDT_ADDR = fdt_buff.as_ptr() as usize;
+        core::ptr::copy_nonoverlapping(slice.as_ptr(), fdt_buff as _, size);
+        FDT_ADDR = fdt_buff;
     }
+}
+
+fn cpu_nodes() -> Option<impl Iterator<Item = fdt_raw::Node<'static>>> {
+    let fdt = fdt_base()?;
+    let iter = fdt.find_children_by_path("/cpus");
+    Some(iter.filter(|n| n.name().starts_with("cpu@")))
+}
+
+pub fn cpu_id_list() -> Option<impl Iterator<Item = usize>> {
+    Some(cpu_nodes()?.map(|node| {
+        node.reg()
+            .and_then(|mut r| r.next())
+            .map(|reg| reg.address as usize)
+            .unwrap_or(0)
+    }))
 }

@@ -6,7 +6,7 @@ use spin::Mutex;
 
 use crate::{
     hal::al::*,
-    os::mem::{__kimage_va, __va},
+    os::mem::{__kimage_va, __percpu, __va},
 };
 
 static KERNEL_TABLE: Mutex<Option<Box<dyn PageTable>>> = Mutex::new(None);
@@ -45,6 +45,11 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
                 access = AccessFlags::READ | AccessFlags::WRITE;
                 attrs = MemAttributes::Device;
             }
+            MemoryType::PerCpuData => {
+                virt = __percpu(phys);
+                access = AccessFlags::READ | AccessFlags::WRITE | AccessFlags::EXECUTE;
+                attrs = MemAttributes::PerCpu;
+            }
             _ => {
                 virt = __va(phys);
                 access = AccessFlags::READ | AccessFlags::WRITE | AccessFlags::EXECUTE;
@@ -53,8 +58,8 @@ fn map_regions(pt: &mut Box<dyn PageTable>) {
         }
         let config = MemConfig { access, attrs };
         debug!(
-            "Mapping `{:<16}`: [0x{:>016x}, 0x{:>016x}) -> [0x{:>016x}, 0x{:>016x}) {} ({:#.2})",
-            region.name,
+            "Mapping `{}`: [0x{:>016x}, 0x{:>016x}) -> [0x{:>016x}, 0x{:>016x}) {} ({:#.2})",
+            region.memory_type,
             virt.raw(),
             (virt.raw() + size),
             phys.raw(),

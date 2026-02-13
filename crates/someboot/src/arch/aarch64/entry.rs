@@ -2,7 +2,7 @@ use core::arch::naked_asm;
 
 use aarch64_cpu::registers::{CurrentEL, Readable};
 
-use crate::{arch::elx, consts::VM_LOAD_ADDRESS, fdt};
+use crate::{arch::elx, consts::VM_LOAD_ADDRESS, entry::PrimaryCpuInitInfo};
 
 use super::switch_to_elx;
 
@@ -38,28 +38,19 @@ pub unsafe extern "C" fn kernel_entry(_fdt_addr: usize) {
 
 pub fn el_entry() -> ! {
     super::relocate::apply();
+    super::trap::setup();
 
     let kernel_code_start_lma = ext_sym_addr!(_head);
     let kernel_code_end_lma = ext_sym_addr!(__kernel_code_end);
 
-    crate::mem::setup_entry(
-        kernel_code_start_lma.into(),
-        kernel_code_end_lma.into(),
-        VM_LOAD_ADDRESS.into(),
-    );
-
-    super::trap::setup();
-
-    crate::fdt::setup_earlycon();
-    if let Some(cmdline) = crate::cmdline::cmdline() {
-        println!("{cmdline}");
-    }
+    crate::entry::primary_init_early(PrimaryCpuInitInfo {
+        kernel_start: kernel_code_start_lma.into(),
+        kernel_end: kernel_code_end_lma.into(),
+        kernel_start_link: VM_LOAD_ADDRESS.into(),
+    });
 
     println!("EL: {}", CurrentEL.read(CurrentEL::EL));
-    println!("VM Load Offset: {:#x}", crate::mem::vm_load_offset());
 
-    crate::mem::early_init(kernel_code_end_lma..usize::MAX);
-    fdt::init_memory_map();
     crate::arch::paging::enable_mmu()
 }
 
@@ -69,6 +60,8 @@ pub(crate) fn mmu_entry() -> ! {
     elx::set_user_table(kernutil::memory::PageTableInfo::zero());
     elx::flush_tlb(None);
     super::trap::setup();
-    crate::mem::reset_memory_map();
+
+    // crate::mem::reset_memory_map();
+    crate::arch::relocate::reset();
     crate::prime_entry()
 }
