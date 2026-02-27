@@ -15,6 +15,7 @@ mod trap;
 
 use core::hint::spin_loop;
 
+pub(crate) use entry::_secondary_entry;
 use loongArch64::{
     register::*,
     time::{Time, get_timer_freq},
@@ -22,7 +23,7 @@ use loongArch64::{
 pub use paging::Entry as Pte;
 pub use relocate::relocate;
 
-use crate::{ArchTrait, efi_stub, irq::IrqId};
+use crate::{ArchTrait, DCacheOp, efi_stub, irq::IrqId, power::CpuOnError};
 
 const MIN_TICKS: usize = 4;
 
@@ -64,7 +65,6 @@ impl ArchTrait for Arch {
         let ticks = ticks.max(MIN_TICKS);
         // Ensure the value is aligned to a multiple of 4 as required by TCFG
         let ticks = (ticks + 3) & !3;
-        let ticks = ticks.min(usize::MAX);
 
         // 先禁用定时器
         tcfg::set_en(false);
@@ -216,6 +216,24 @@ impl ArchTrait for Arch {
                 entry = in(reg) entry,
                 options(noreturn)
             );
+        }
+    }
+
+    fn cpu_current_hartid() -> usize {
+        cpuid::read().core_id()
+    }
+
+    fn kernel_space() -> core::ops::Range<usize> {
+        0xFFFF_0000_0000_0000..usize::MAX
+    }
+
+    fn cpu_on(_hartid: usize, _entry: usize, _arg: usize) -> Result<(), CpuOnError> {
+        Err(CpuOnError::NotSupported)
+    }
+
+    fn dcache_range(_op: DCacheOp, _addr: usize, _size: usize) {
+        unsafe {
+            core::arch::asm!("dbar 0", options(nomem, nostack));
         }
     }
 }

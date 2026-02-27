@@ -31,6 +31,10 @@ pub fn _write_bytes(bytes: &[u8]) -> usize {
     con().write_bytes(bytes)
 }
 
+pub fn _write_str(s: &str) {
+    con().write_str(s);
+}
+
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::console::_print(core::format_args!($($arg)*)));
@@ -130,35 +134,6 @@ impl Con for NoCon {
 }
 
 static mut CON: &dyn Con = &NoCon;
-// static mut CON2: &dyn Con = &NoCon;
-
-#[inline(never)]
-#[unsafe(no_mangle)]
-pub(crate) fn print_con_info() {
-    // // Print current PC
-    // let pc: usize;
-    // unsafe {
-    //     core::arch::asm!("adr {}, .", out(reg) pc);
-    // }
-    // println!("Current PC: 0x{:x}", pc);
-
-    let ptr = &raw const CON;
-    println!("Console at {:p}", ptr);
-    // let ptr = &raw const EARLYCON_SENDER;
-    // println!("Console at {:p}", ptr);
-    // println!("Console ptr as usize: 0x{:x}", ptr as usize);
-    // let ptr = &raw const CON2;
-    // println!("Console at {:p}", ptr);
-
-    // The &raw const generates adr instruction which cannot be relocated
-    // So we demonstrate the issue first
-    let ptr1 = core::ptr::addr_of!(DEBUG_BASE);
-
-    println!(
-        "DEBUG_BASE 1: {:p} (WRONG! adr instruction, not relocated)",
-        ptr1
-    );
-}
 
 pub(crate) unsafe fn set_out(v: &'static dyn Con) {
     unsafe {

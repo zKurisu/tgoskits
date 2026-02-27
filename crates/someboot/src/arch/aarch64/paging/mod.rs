@@ -10,6 +10,7 @@ use crate::{
     arch::elx::{flush_tlb, set_kernal_table, setup_sctlr, setup_table_regs},
     console::print_mapping,
     mem::{__kimage_va, __percpu, __va, MB, PageTableInfo, page_size},
+    smp::PerCpuMeta,
 };
 
 mod pte;
@@ -52,6 +53,24 @@ pub fn enable_mmu() -> ! {
             options(noreturn, nostack)
         )
     }
+}
+
+pub fn init_mmu_secondary(cpu_meta_paddr: usize) -> usize {
+    let meta = unsafe { &*(cpu_meta_paddr as *const PerCpuMeta) };
+
+    setup_table_regs();
+    let tb = PageTableInfo {
+        asid: 0,
+        addr: meta.boot_table_paddr,
+    };
+    set_kernal_table(tb);
+    #[cfg(not(feature = "hv"))]
+    set_user_table(tb);
+    setup_sctlr();
+    flush_tlb(None);
+    dsb(barrier::SY);
+    isb(barrier::SY);
+    cpu_meta_paddr
 }
 
 fn setup_page_table() -> anyhow::Result<()> {

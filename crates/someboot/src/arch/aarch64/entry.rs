@@ -1,10 +1,15 @@
-use core::arch::naked_asm;
+use core::{arch::naked_asm, mem::offset_of};
 
 use aarch64_cpu::registers::{CurrentEL, Readable};
 
-use crate::{arch::elx, consts::VM_LOAD_ADDRESS, entry::PrimaryCpuInitInfo};
+use crate::{
+    arch::{elx, paging::init_mmu_secondary},
+    consts::VM_LOAD_ADDRESS,
+    entry::PrimaryCpuInitInfo,
+    smp::PerCpuMeta,
+};
 
-use super::switch_to_elx;
+use super::{switch_to_elx, switch_to_elx_secondary};
 
 #[unsafe(naked)]
 #[unsafe(no_mangle)]
@@ -64,4 +69,32 @@ pub(crate) fn mmu_entry() -> ! {
     // crate::mem::reset_memory_map();
     crate::arch::relocate::reset();
     crate::prime_entry()
+}
+
+#[unsafe(naked)]
+pub(crate) unsafe extern "C" fn _secondary_entry(_arg: usize) -> ! {
+    naked_asm!(
+        "mov x20, x0",
+        "ldr x1, [x20, {stack_top_offset}]",
+        "mov sp, x1",
+        "mov x0, x20",
+        "bl {switch_to_elx_secondary}",
+        switch_to_elx_secondary = sym switch_to_elx_secondary,
+        stack_top_offset = const offset_of!(crate::smp::PerCpuMeta, stack_top),
+    )
+}
+
+#[unsafe(naked)]
+pub(crate) unsafe extern "C" fn secondary_el_entry(_cpu_meta_paddr: usize) -> ! {
+    naked_asm!(
+        "bl {init_mmu}",
+        "ldr x8, [x20, {stack_top_virt_offset}]",
+        "mov sp, x8",
+        "ldr x8, [x20, {entry_offset}]",
+        "blr x8",
+        "b .",
+        init_mmu = sym init_mmu_secondary,
+        stack_top_virt_offset = const offset_of!(PerCpuMeta, stack_top_virt),
+        entry_offset = const offset_of!(PerCpuMeta, entry_virt),
+    )
 }

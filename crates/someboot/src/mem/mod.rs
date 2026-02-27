@@ -1,3 +1,5 @@
+use core::ops::Range;
+
 use byte_unit::{Byte, UnitType};
 use kernutil::StaticCell;
 pub use kernutil::memory::{MemoryDescriptor, MemoryType, PageTableInfo};
@@ -8,7 +10,7 @@ pub mod mmu;
 pub(crate) mod ram;
 pub(crate) mod region;
 
-use crate::ArchTrait;
+use crate::{ArchTrait, DCacheOp, arch::Arch, smp::percpu_range};
 
 pub use page_table_generic::*;
 
@@ -78,11 +80,17 @@ pub fn memory_map() -> &'static [MemoryDescriptor] {
     MEMORY_MAP.as_slice()
 }
 
+pub fn dcache_range(op: DCacheOp, addr: *const u8, size: usize) {
+    Arch::dcache_range(op, addr as _, size);
+}
+
 /// 物理RAM实际转换为的内核虚拟地址
 pub fn phys_to_virt(paddr: usize) -> *mut u8 {
     if mmu::is_mmu_enabled() {
         if kimage_range().contains(&paddr) {
             __kimage_va(paddr)
+        } else if percpu_range().contains(&paddr) {
+            __percpu(paddr)
         } else {
             __va(paddr)
         }
@@ -130,7 +138,7 @@ pub(crate) fn early_init() {
     ram::init(free_range.expect("No free memory"));
 
     crate::fdt::save_fdt();
-    crate::smp::init_percpu();
+    crate::smp::alloc_percpu();
 }
 
 /// Get the physical range of the kernel image
@@ -187,4 +195,8 @@ pub(crate) fn add_memory_descriptor(
     desc: MemoryDescriptor,
 ) -> Result<(), RangeError<MemoryDescriptor>> {
     unsafe { MEMORY_MAP.update(|mem| mem.merge_add(desc)) }
+}
+
+pub fn kernel_space() -> Range<usize> {
+    Arch::kernel_space()
 }

@@ -39,16 +39,17 @@ pub(crate) mod fdt;
 pub mod irq;
 pub mod mem;
 pub mod power;
-mod smp;
+pub mod smp;
 pub mod timer;
 
-pub use fdt::fdt_addr;
+pub use fdt::{fdt_addr, fdt_addr_phys};
 pub use page_table_generic::*;
 pub use somehal_macros::{entry, irq_handler, secondary_entry};
 
 use crate::{
     irq::IrqId,
     mem::{__percpu, PageTableInfo},
+    power::CpuOnError,
 };
 
 #[allow(unused)]
@@ -63,6 +64,8 @@ pub trait ArchTrait {
         Self::_va(paddr)
     }
 
+    fn cpu_current_hartid() -> usize;
+
     fn jump_to(entry: usize, sp: usize) -> !;
 
     fn post_allocator();
@@ -72,6 +75,8 @@ pub trait ArchTrait {
 
     fn virt_to_phys(vaddr: *const u8) -> usize;
 
+    fn kernel_space() -> core::ops::Range<usize>;
+
     fn kernel_page_table() -> PageTableInfo;
     fn set_kernel_page_table(val: PageTableInfo);
     #[cfg(uspace)]
@@ -80,6 +85,7 @@ pub trait ArchTrait {
     fn set_user_page_table(val: PageTableInfo);
 
     fn shutdown() -> !;
+    fn cpu_on(hartid: usize, entry: usize, arg: usize) -> Result<(), CpuOnError>;
 
     fn systimer_enable();
     fn systimer_irq_enable();
@@ -99,6 +105,15 @@ pub trait ArchTrait {
 
     fn irq_is_enabled(irq: IrqId) -> bool;
     fn irq_set_enable(irq: IrqId, enable: bool);
+
+    fn dcache_range(op: DCacheOp, addr: usize, size: usize);
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum DCacheOp {
+    Clean,
+    Invalidate,
+    CleanInvalidate,
 }
 
 pub fn post_allocator() {
@@ -140,6 +155,7 @@ fn prime_entry() -> ! {
     // mem::init_after_mmu();
     mem::memory_map_setup();
     mem::print_memory_map();
+    smp::init_percpu();
 
     unsafe extern "C" {
         fn __someboot_main() -> !;

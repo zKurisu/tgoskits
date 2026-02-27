@@ -21,6 +21,7 @@ mod trap;
 
 use aarch64_cpu::registers::*;
 use elx::*;
+pub(crate) use entry::_secondary_entry;
 pub use paging::Entry;
 
 use crate::{
@@ -28,6 +29,7 @@ use crate::{
     arch::{addrspace::PAGE_OFFSET, trap::trap_addr},
     consts::VM_LOAD_ADDRESS,
     mem::{__kimage_va_to_pa, PageTableInfo},
+    smp::percpu_va_range,
 };
 
 pub struct Arch;
@@ -136,7 +138,9 @@ impl ArchTrait for Arch {
 
     fn virt_to_phys(vaddr: *const u8) -> usize {
         if is_mmu_enabled() {
-            if vaddr as usize >= VM_LOAD_ADDRESS {
+            if percpu_va_range().contains(&(vaddr as usize)) {
+                vaddr as usize - 0xFF00_0000_0000 - PAGE_OFFSET
+            } else if vaddr as usize >= VM_LOAD_ADDRESS {
                 __kimage_va_to_pa(vaddr)
             } else {
                 vaddr as usize & 0xffff_ffff_ffff
@@ -159,6 +163,46 @@ impl ArchTrait for Arch {
                 entry = in(reg) entry,
                 options(noreturn)
             );
+        }
+    }
+
+    fn cpu_current_hartid() -> usize {
+        const ATTR0: usize = 0xFF;
+        const ATTR1: usize = 0xFF << 8;
+        const ATTR2: usize = 0xFF << 16;
+        const ATTR3: usize = 0xFF << 32;
+
+        const MASK: usize = ATTR0 | ATTR1 | ATTR2 | ATTR3;
+
+        MPIDR_EL1.get() as usize & MASK
+    }
+
+    fn kernel_space() -> core::ops::Range<usize> {
+        PAGE_OFFSET..usize::MAX
+    }
+
+    fn cpu_on(hartid: usize, entry: usize, arg: usize) -> Result<(), crate::power::CpuOnError> {
+        power::cpu_on(hartid as _, entry as _, arg as _).map_err(|e| match e {
+            smccc::psci::error::Error::NotSupported => crate::power::CpuOnError::NotSupported,
+            smccc::psci::error::Error::InvalidParameters => {
+                crate::power::CpuOnError::InvalidParameters
+            }
+            smccc::psci::error::Error::AlreadyOn => crate::power::CpuOnError::AlreadyOn,
+            e => crate::power::CpuOnError::Other(anyhow::anyhow!("cpu_on failed: {e:?}")),
+        })
+    }
+
+    fn dcache_range(op: crate::DCacheOp, addr: usize, size: usize) {
+        aarch64_cpu_ext::cache::dcache_range(op.into(), addr, size);
+    }
+}
+
+impl From<crate::DCacheOp> for aarch64_cpu_ext::cache::CacheOp {
+    fn from(value: crate::DCacheOp) -> Self {
+        match value {
+            crate::DCacheOp::Clean => Self::Clean,
+            crate::DCacheOp::Invalidate => Self::Invalidate,
+            crate::DCacheOp::CleanInvalidate => Self::CleanAndInvalidate,
         }
     }
 }
