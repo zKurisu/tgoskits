@@ -2,7 +2,7 @@ use core::{cell::UnsafeCell, num::NonZeroU32};
 
 use alloc::{boxed::Box, sync::Arc};
 use heapless::Deque;
-use rdif_base::{DriverGeneric, KError};
+use rdif_base::DriverGeneric;
 use spin::Mutex;
 
 use crate::TransferError;
@@ -138,14 +138,8 @@ impl<T: InterfaceRaw> super::Interface for SerialDyn<T> {
 }
 
 impl<T: InterfaceRaw> DriverGeneric for SerialDyn<T> {
-    fn open(&mut self) -> Result<(), KError> {
-        self.inner.open();
-        Ok(())
-    }
-
-    fn close(&mut self) -> Result<(), KError> {
-        self.inner.close();
-        Ok(())
+    fn name(&self) -> &str {
+        self.inner.name()
     }
 }
 
@@ -185,7 +179,7 @@ pub struct Reciever {
 
 impl Reciever {
     fn inner(&self) -> &SRecv {
-        &*self.inner.as_ref().unwrap()
+        self.inner.as_ref().unwrap()
     }
 }
 
@@ -254,7 +248,7 @@ impl super::TIrqHandler for IrqHandler {
         let status = h.clean_interrupt_status();
         if status.contains(InterruptMask::RX_AVAILABLE) {
             while let Some(b) = self.rcv.read_byte() {
-                let _ = self.rcv.fifo_push(b);
+                self.rcv.fifo_push(b);
             }
         }
 
