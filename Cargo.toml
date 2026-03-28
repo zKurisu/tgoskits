@@ -115,6 +115,9 @@ members = [
     # platform
     "platform/axplat-dyn",
     "platform/x86-qemu-q35",
+
+    # demo examples
+    "examples/tgmath",
 ]
 exclude = [
     # workspace directories
