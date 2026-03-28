@@ -24,7 +24,8 @@ fn remove_timeout_field(config: &str) -> String {
         return config.to_string();
     }
     // Remove timeout line while preserving original format
-    config.lines()
+    config
+        .lines()
         .filter(|line| !line.trim().starts_with("timeout"))
         .collect::<Vec<_>>()
         .join("\n")
@@ -35,7 +36,8 @@ fn update_timeout_field(config: &str, timeout_seconds: u64) -> String {
     let timeout_line = format!("timeout = {}", timeout_seconds);
     if config.contains("timeout") {
         // Replace existing timeout line
-        config.lines()
+        config
+            .lines()
             .map(|line| {
                 if line.trim().starts_with("timeout") {
                     timeout_line.clone()
@@ -137,7 +139,7 @@ pub(crate) async fn prepare_test_qemu_config(
 
     // Handle timeout override
     let config = match timeout_override {
-        None => config, // Keep timeout from config file
+        None => config,                           // Keep timeout from config file
         Some(0) => remove_timeout_field(&config), // 0 means disable timeout
         Some(seconds) => {
             // Set the specified timeout value

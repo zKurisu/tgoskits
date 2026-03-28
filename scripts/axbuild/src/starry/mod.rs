@@ -1,4 +1,7 @@
-use std::{fs, path::Path, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 use clap::{Args, Subcommand};
@@ -88,7 +91,11 @@ pub struct ArgsTestQemu {
     pub target: String,
     #[arg(long, value_name = "CMD_OR_FILE")]
     pub shell_init_cmd: Option<String>,
-    #[arg(long, value_name = "SECONDS", help = "Test timeout in seconds (0 to disable timeout)")]
+    #[arg(
+        long,
+        value_name = "SECONDS",
+        help = "Test timeout in seconds (0 to disable timeout)"
+    )]
     pub timeout: Option<u64>,
 }
 
@@ -167,8 +174,9 @@ impl Starry {
             Some(value) => {
                 let path = Path::new(&value);
                 if path.exists() {
-                    let content = fs::read_to_string(&path)
-                        .with_context(|| format!("failed to read shell init cmd file: {}", path.display()))?;
+                    let content = fs::read_to_string(&path).with_context(|| {
+                        format!("failed to read shell init cmd file: {}", path.display())
+                    })?;
                     // Join multiple commands with &&
                     let content = content
                         .lines()
@@ -439,7 +447,8 @@ mod tests {
 
     #[test]
     fn resolve_shell_init_cmd_returns_value_for_nonexistent_path() {
-        let result = Starry::resolve_shell_init_cmd(Some("echo 'direct command'".to_string())).unwrap();
+        let result =
+            Starry::resolve_shell_init_cmd(Some("echo 'direct command'".to_string())).unwrap();
         assert_eq!(result, Some("echo 'direct command'".to_string()));
     }
 
