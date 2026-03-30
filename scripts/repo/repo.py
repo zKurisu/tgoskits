@@ -37,7 +37,10 @@ class Repo:
     @property
     def repo_name(self) -> str:
         """Extract repo name from URL."""
-        return self.url.rstrip('/').split('/')[-1]
+        name = self.url.rstrip('/').split('/')[-1]
+        if name.endswith('.git'):
+            name = name[:-4]
+        return name
 
 
 class CSVManager:
@@ -178,28 +181,65 @@ class GitSubtreeManager:
         self.csv_manager = csv_manager
 
     @staticmethod
-    def _run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+    def _git_subtree_env() -> Optional[Dict]:
+        """Return an env dict suitable for running git-subtree directly via bash.
+        git-subtree requires GIT_EXEC_PATH to be set and present in PATH."""
+        exec_path_result = subprocess.run(
+            ['git', '--exec-path'],
+            capture_output=True, text=True
+        )
+        exec_path = exec_path_result.stdout.strip()
+        if not exec_path:
+            return None
+        env = os.environ.copy()
+        env['GIT_EXEC_PATH'] = exec_path
+        env['PATH'] = exec_path + ':' + env.get('PATH', '')
+        return env
+
+    @staticmethod
+    def _git_subtree_cmd(subcommand: str, args: List[str]) -> List[str]:
+        """Build a git-subtree command run via bash to avoid dash's hardcoded
+        recursion limit of 1000, which git-subtree (a #!/bin/sh script) hits
+        on repositories with large commit histories."""
+        exec_path_result = subprocess.run(
+            ['git', '--exec-path'],
+            capture_output=True, text=True
+        )
+        git_subtree_script = Path(exec_path_result.stdout.strip()) / 'git-subtree'
+        if git_subtree_script.exists():
+            return ['bash', str(git_subtree_script), subcommand] + args
+        # Fallback to the standard invocation if the script isn't found
+        return ['git', 'subtree', subcommand] + args
+
+    @staticmethod
+    def _run_command(cmd: List[str], check: bool = True,
+                     env: Optional[Dict] = None) -> subprocess.CompletedProcess:
         """Run a shell command and return the result."""
         print(f"Running: {' '.join(cmd)}")
-        result = subprocess.run(cmd, check=check, capture_output=False, text=True)
+        result = subprocess.run(cmd, check=check, capture_output=False, text=True, env=env)
         return result
 
     @staticmethod
-    def _run_command_with_stdout(cmd: List[str], check: bool = True) -> str:
+    def _run_command_with_stdout(cmd: List[str], check: bool = True,
+                                 env: Optional[Dict] = None) -> str:
         """Run a command, keep stderr visible, and return stripped stdout."""
         print(f"Running: {' '.join(cmd)}")
         result = subprocess.run(
             cmd,
             check=check,
             stdout=subprocess.PIPE,
-            text=True
+            text=True,
+            env=env,
         )
         return result.stdout.strip()
 
     @staticmethod
     def get_repo_name(url: str) -> str:
         """Extract repo name from URL."""
-        return url.rstrip('/').split('/')[-1]
+        name = url.rstrip('/').split('/')[-1]
+        if name.endswith('.git'):
+            name = name[:-4]
+        return name
 
     @staticmethod
     def check_working_tree_clean() -> bool:
@@ -373,12 +413,13 @@ class GitSubtreeManager:
         if force:
             # Some git-subtree versions strip the leading '+' from the refspec
             # before invoking `git push`, so perform the split/push explicitly.
-            split_cmd = [
-                'git', 'subtree', 'split',
+            # Use bash to invoke git-subtree to avoid dash's 1000-recursion limit.
+            subtree_env = self._git_subtree_env()
+            split_cmd = self._git_subtree_cmd('split', [
                 '--quiet',
                 '--prefix=' + target_dir,
-            ]
-            split_rev = self._run_command_with_stdout(split_cmd)
+            ])
+            split_rev = self._run_command_with_stdout(split_cmd, env=subtree_env)
             if not split_rev:
                 raise ValueError(f"Failed to split subtree at '{target_dir}'")
 
@@ -391,14 +432,28 @@ class GitSubtreeManager:
             self._run_command(push_cmd)
             return
 
-        cmd = [
-            'git', 'subtree', 'push',
+        # Use bash to invoke git-subtree to avoid dash's hardcoded 1000-recursion
+        # limit, which is hit when the repo history exceeds ~1000 commits.
+        subtree_env = self._git_subtree_env()
+
+        # Clear any stale subtree split cache before pushing.  Some git-subtree
+        # versions call `git notes add` (not `--force`) when caching a split
+        # result, which raises "fatal: cache for <hash> already exists!" if the
+        # same commit was previously cached.  Deleting the notes ref beforehand
+        # is safe; the cache is purely a performance optimisation and will be
+        # rebuilt automatically on the next operation.
+        subprocess.run(
+            ['git', 'update-ref', '-d', 'refs/notes/subtree-cache'],
+            capture_output=True,
+        )
+
+        cmd = self._git_subtree_cmd('push', [
             '--quiet',
             '--prefix=' + target_dir,
             url,
-            branch
-        ]
-        self._run_command(cmd)
+            branch,
+        ])
+        self._run_command(cmd, env=subtree_env)
 
     def switch_branch(self, url: str, target_dir: str, old_branch: str, new_branch: str) -> None:
         """Switch a subtree to a different branch."""
