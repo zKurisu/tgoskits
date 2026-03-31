@@ -215,7 +215,7 @@ class GitSubtreeManager:
     def _run_command(cmd: List[str], check: bool = True,
                      env: Optional[Dict] = None) -> subprocess.CompletedProcess:
         """Run a shell command and return the result."""
-        print(f"Running: {' '.join(cmd)}")
+        print(f"Running: {' '.join(cmd)}", flush=True)
         result = subprocess.run(cmd, check=check, capture_output=False, text=True, env=env)
         return result
 
@@ -223,7 +223,7 @@ class GitSubtreeManager:
     def _run_command_with_stdout(cmd: List[str], check: bool = True,
                                  env: Optional[Dict] = None) -> str:
         """Run a command, keep stderr visible, and return stripped stdout."""
-        print(f"Running: {' '.join(cmd)}")
+        print(f"Running: {' '.join(cmd)}", flush=True)
         result = subprocess.run(
             cmd,
             check=check,
@@ -643,9 +643,9 @@ def cmd_push(args: argparse.Namespace) -> int:
         branch = args.branch if args.branch else PUSH_DEFAULT_BRANCH
 
         try:
-            print(f"\nPushing {repo.repo_name}...")
+            print(f"\nPushing {repo.repo_name}...", flush=True)
             if args.force:
-                print("Using force mode (will force-push subtree history)")
+                print("Using force mode (will force-push subtree history)", flush=True)
             git_manager.push_subtree(repo.url, repo.target_dir, branch, force=args.force)
         except (subprocess.CalledProcessError, ValueError) as e:
             print(f"Error pushing {repo.repo_name}: {e}", file=sys.stderr)
