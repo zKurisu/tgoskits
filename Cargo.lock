@@ -1528,7 +1528,6 @@ version = "0.3.0-preview.3"
 dependencies = [
  "axsync",
  "axtask",
- "event-listener",
  "fastrand",
  "kspin",
  "lock_api",
@@ -1547,7 +1546,6 @@ dependencies = [
  "cfg-if",
  "cpumask 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "crate_interface 0.3.0",
- "event-listener",
  "extern-trait",
  "futures-util",
  "kernel_guard",
@@ -1557,6 +1555,7 @@ dependencies = [
  "memory_addr",
  "percpu",
  "spin 0.10.0",
+ "timer_list",
 ]
 
 [[package]]
@@ -1679,7 +1678,7 @@ dependencies = [
  "sdmmc",
  "spin 0.10.0",
  "syn 2.0.117",
- "timer_list 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "timer_list",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
 ]
@@ -7287,12 +7286,6 @@ dependencies = [
 [[package]]
 name = "timer_list"
 version = "0.1.0"
-
-[[package]]
-name = "timer_list"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "158b52ace9609dd94f4af338f4828ff23b600d9160def8c001f2c73885521936"
 
 [[package]]
 name = "tinystr"
