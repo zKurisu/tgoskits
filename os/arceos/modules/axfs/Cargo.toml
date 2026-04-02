@@ -16,14 +16,15 @@ use-ramdisk = [] # TODO: init ramdisk
 [dependencies]
 axdriver = { workspace = true, features = ["block"] }
 axerrno = { workspace = true }
-axfs_devfs = { version = "0.1" }
-axfs_ramfs = { version = "0.1" }
-axfs_vfs = "0.1"
+axhal = { workspace = true }
+axfs_devfs = { version = "0.3.2" }
+axfs_ramfs = { version = "0.3.2" }
+axfs_vfs = "0.3.2"
 axio = { workspace = true, features = ["alloc"] }
-cap_access = "0.1"
-lazyinit = "0.2"
+cap_access = "0.3.0"
+lazyinit = "0.4.2"
 log = { workspace = true }
-rsext4 = "0.1.0-pre.0"
+rsext4 = "0.3.0"
 spin = { workspace = true }
 
 [dependencies.axfatfs]
