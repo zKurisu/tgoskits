@@ -85,7 +85,7 @@ flowchart TD
 如果你改的是：
 
 - `components/axerrno`、`components/kspin`、`components/page_table_multiarch`
-- 或 `os/arceos/modules/axhal`、`axtask`、`axdriver`、`ax-net`、`ax-fs`
+- 或 `os/arceos/modules/axhal`、`axtask`、`ax-driver`、`ax-net`、`ax-fs`
 
 建议先跑最小消费者：
 

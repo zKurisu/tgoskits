@@ -12,7 +12,7 @@
 ### 1.1 设计定位
 `ax-fs` 位于 `ax-runtime` 与旧版 `axfs_vfs` trait 生态之间，承担的是“启动期装配 + 运行期路径路由”双重职责：
 
-- 启动期，它从 `axdriver` 提供的块设备中取出第一个块设备，解析 `bootargs` 中的 `root=` 参数，扫描 GPT 或直接把整盘视为单分区，再决定根文件系统应该落在哪个分区上。
+- 启动期，它从 `ax-driver` 提供的块设备中取出第一个块设备，解析 `bootargs` 中的 `root=` 参数，扫描 GPT 或直接把整盘视为单分区，再决定根文件系统应该落在哪个分区上。
 - 运行期，它通过 `RootDirectory` 把根文件系统、额外挂载分区以及 `/proc`、`/sys` 这类伪文件树拼成一个统一视图。
 - API 层，它提供两套接口：`api` 模块更接近 `std::fs` 风格，`fops` 模块则更像内核内部使用的打开文件/目录对象。
 
@@ -99,7 +99,7 @@ flowchart TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axdriver["axdriver(block)"] --> current["ax-fs"]
+    ax-driver["ax-driver(block)"] --> current["ax-fs"]
     axfs_vfs["axfs_vfs"] --> current
     axfs_ramfs["axfs_ramfs"] --> current
     axfs_devfs["axfs_devfs"] --> current
@@ -113,7 +113,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axdriver`：提供块设备来源。
+- `ax-driver`：提供块设备来源。
 - `axfs_vfs`：旧栈统一 trait 契约。
 - `axfs_ramfs`、`axfs_devfs`：旧栈中的内存文件系统与设备文件系统。
 - `axfatfs`、`rsext4`：分别承担 FAT 与 ext4 的实际格式实现。

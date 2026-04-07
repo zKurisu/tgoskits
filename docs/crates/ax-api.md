@@ -36,7 +36,7 @@ graph LR
     current --> axconfig["axconfig"]
     current --> ax-display["ax-display"]
     current --> axdma["axdma"]
-    current --> axdriver["axdriver"]
+    current --> ax-driver["ax-driver"]
     current --> axerrno["axerrno"]
     current --> ax-feat["ax-feat"]
     current --> ax-fs["ax-fs"]
@@ -48,7 +48,7 @@ graph LR
 - `axconfig`
 - `ax-display`
 - `axdma`
-- `axdriver`
+- `ax-driver`
 - `axerrno`
 - `ax-feat`
 - `ax-fs`

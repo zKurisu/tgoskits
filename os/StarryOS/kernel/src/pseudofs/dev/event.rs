@@ -2,7 +2,7 @@ use alloc::{format, sync::Arc};
 use core::{any::Any, task::Context, time::Duration};
 
 #[allow(unused_imports)]
-use axdriver::prelude::{
+use ax_driver::prelude::{
     AxInputDevice, BaseDriverOps, DevError, Event, EventType, InputDeviceId, InputDriverOps,
 };
 use axerrno::{AxError, AxResult};

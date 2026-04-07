@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/ramdisk.rs`、`src/ramdisk_static.rs`、`src/sdmmc.rs`、`src/bcm2835sdhci.rs`、`os/arceos/modules/axdriver/src/drivers.rs`、`platform/axplat-dyn/src/drivers/blk/mod.rs`
 
-`axdriver_block` 不是文件系统，也不是块缓存层。它的真实定位是 ArceOS 驱动栈里的块设备类别接口 crate：一方面定义统一的 `BlockDriverOps`，另一方面在 feature 打开时提供少量叶子块设备实现，例如 `ramdisk`、`sdmmc`、`bcm2835-sdhci` 和 `ahci`。上层 `axdriver` 负责探测与聚合，`ax-fs`/`ax-fs-ng` 才是消费块设备并组织文件系统语义的地方。
+`axdriver_block` 不是文件系统，也不是块缓存层。它的真实定位是 ArceOS 驱动栈里的块设备类别接口 crate：一方面定义统一的 `BlockDriverOps`，另一方面在 feature 打开时提供少量叶子块设备实现，例如 `ramdisk`、`sdmmc`、`bcm2835-sdhci` 和 `ahci`。上层 `ax-driver` 负责探测与聚合，`ax-fs`/`ax-fs-ng` 才是消费块设备并组织文件系统语义的地方。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -59,14 +59,14 @@
 - 读写要求缓冲区至少覆盖一个块，且需满足 `u32` 对齐要求。
 - 将外部 `SDHCIError` 映射回统一的 `DevError`。
 
-### 1.4 与 `axdriver` 聚合层的接线关系
+### 1.4 与 `ax-driver` 聚合层的接线关系
 在当前仓库中，真正把这些实现接进系统初始化流程的是 `os/arceos/modules/axdriver/src/drivers.rs`：
 
 - `ramdisk` 通过 `RamDiskDriver::probe_global()` 创建固定大小 16 MiB RAM 盘。
 - `sdmmc` 通过 `SdMmcDriver::new()` 使用 `axconfig::devices::SDMMC_PADDR` 对应寄存器基址。
 - `bcm2835-sdhci` 通过 `SDHCIDriver::try_new()` 接入。
 
-需要特别注意一个实现事实：**`axdriver_block` 虽然有 `ahci` feature 和 `ahci` 模块，但当前 `axdriver::drivers.rs` 并没有把 AHCI 探测逻辑注册进去。** 也就是说，打开 feature 并不等于当前 ArceOS 探测路径就会自动发现 AHCI 设备。
+需要特别注意一个实现事实：**`axdriver_block` 虽然有 `ahci` feature 和 `ahci` 模块，但当前 `ax-driver::drivers.rs` 并没有把 AHCI 探测逻辑注册进去。** 也就是说，打开 feature 并不等于当前 ArceOS 探测路径就会自动发现 AHCI 设备。
 
 ### 1.5 与动态平台路径的关系
 在 `platform/axplat-dyn/src/drivers/blk/mod.rs` 中，`rd_block::Block` 会被包装成实现 `BlockDriverOps` 的 `Block`。这说明：
@@ -84,8 +84,8 @@
 ### 2.2 典型调用链
 当前仓库里最典型的使用主线是：
 
-1. `ax_runtime::init_drivers()` 调用 `axdriver::init_drivers()`。
-2. `axdriver` 根据 feature 选择 `ramdisk`、`sdmmc`、`bcm2835-sdhci` 或 `virtio-blk` 路径。
+1. `ax_runtime::init_drivers()` 调用 `ax-driver::init_drivers()`。
+2. `ax-driver` 根据 feature 选择 `ramdisk`、`sdmmc`、`bcm2835-sdhci` 或 `virtio-blk` 路径。
 3. 设备实例被包装成 `AxBlockDevice` 放入 `AllDevices.block`。
 4. `ax-fs` 或 `ax-fs-ng` 再接手这些块设备。
 
@@ -116,7 +116,7 @@
 ### 3.3 分层关系总结
 - 向下依赖具体控制器库或内存后端。
 - 向上输出统一的 `BlockDriverOps` 语义。
-- 由 `axdriver` 聚合层决定哪些设备真正进入系统。
+- 由 `ax-driver` 聚合层决定哪些设备真正进入系统。
 
 ## 4. 开发指南
 ### 4.1 何时应在这里扩展
@@ -135,7 +135,7 @@
 
 ### 4.3 常见坑
 - 不要把本 crate 写成“块设备子系统”；队列调度、页缓存、文件系统挂载都不在这里。
-- 仅在本 crate 中加入一个模块，并不会自动进入 `axdriver` 探测流程。
+- 仅在本 crate 中加入一个模块，并不会自动进入 `ax-driver` 探测流程。
 - `flush()` 语义在不同实现里强弱不同，不能想当然地把它当作硬件缓存落盘保证。
 
 ## 5. 测试策略
@@ -143,7 +143,7 @@
 该 crate 没有独立的 `tests/` 目录，验证主要依赖：
 
 - `ramdisk` 的内存读写行为。
-- `axdriver` 初始化阶段是否能真正注册块设备。
+- `ax-driver` 初始化阶段是否能真正注册块设备。
 - `ax-fs` / `ax-fs-ng` 是否能基于这些设备完成挂载和读写。
 
 ### 5.2 建议补充的单元测试
@@ -162,7 +162,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-这是当前仓库里的主消费方。ArceOS 通过 `axdriver` 和文件系统模块把它作为块设备类别契约和部分内建驱动实现使用。
+这是当前仓库里的主消费方。ArceOS 通过 `ax-driver` 和文件系统模块把它作为块设备类别契约和部分内建驱动实现使用。
 
 ### 6.2 StarryOS
 StarryOS 在当前仓库中没有把 `axdriver_block` 当成独立块子系统直接使用；它更多是通过共享的 ArceOS 底层模块栈间接受益。

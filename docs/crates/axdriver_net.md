@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/net_buf.rs`、`src/fxmac.rs`、`src/ixgbe.rs`、`components/axdriver_crates/axdriver_virtio/src/net.rs`、`os/arceos/modules/axdriver/src/drivers.rs`
 
-`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `ax-net`、`ax-net-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `axdriver`、`axdriver_virtio` 等承担。
+`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `ax-net`、`ax-net-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `ax-driver`、`axdriver_virtio` 等承担。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -63,12 +63,12 @@
 - `receive_packets()` 支持批量接收并转成 `NetBufPtr`。
 - `IxgbeHal` 由 `os/arceos/modules/axdriver/src/ixgbe.rs` 对接 `axdma`。
 
-### 1.6 与 `axdriver` 和 `axdriver_virtio` 的接线关系
+### 1.6 与 `ax-driver` 和 `axdriver_virtio` 的接线关系
 当前仓库中的三条主要接线路径是：
 
 - `axdriver_virtio::VirtIoNetDev`：用 `NetBufPool` 组织 VirtIO 队列收发。
-- `axdriver::drivers::IxgbeDriver`：在 PCI 探测路径中构造 `IxgbeNic`。
-- `axdriver::drivers::FXmacDriver`：在全局 probe 路径中构造 `FXmacNic`，并通过 `crate_interface` 实现 `KernelFunc`。
+- `ax-driver::drivers::IxgbeDriver`：在 PCI 探测路径中构造 `IxgbeNic`。
+- `ax-driver::drivers::FXmacDriver`：在全局 probe 路径中构造 `FXmacNic`，并通过 `crate_interface` 实现 `KernelFunc`。
 
 所以 `axdriver_net` 负责“网卡应该如何工作”，而不是“系统去哪里找到网卡”。
 
@@ -115,7 +115,7 @@
 ### 3.3 分层关系总结
 - 向下可接不同 NIC 实现。
 - 向上统一暴露网卡语义。
-- 由 `axdriver` 决定设备探测与聚合，由 `ax-net`/`ax-net-ng` 决定协议栈语义。
+- 由 `ax-driver` 决定设备探测与聚合，由 `ax-net`/`ax-net-ng` 决定协议栈语义。
 
 ## 4. 开发指南
 ### 4.1 何时应该改这里
@@ -131,7 +131,7 @@
 1. 先决定是实现 `NetDriverOps` 还是直接在本 crate 内新增 feature 模块。
 2. 明确 `receive()` 返回后缓冲区如何归还。
 3. 如果驱动依赖 DMA，需要同时明确 DMA 分配和地址转换由哪一层提供。
-4. 若接入 `axdriver` 探测主线，还需同步修改 `os/arceos/modules/axdriver/src/drivers.rs`。
+4. 若接入 `ax-driver` 探测主线，还需同步修改 `os/arceos/modules/axdriver/src/drivers.rs`。
 
 ### 4.3 常见坑
 - `receive()` 返回的 `NetBufPtr` 不是普通切片，背后有明确的所有权和回收语义。
@@ -163,7 +163,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 是当前仓库里最主要的直接消费者：`axdriver` 负责把设备接进来，`ax-net` / `ax-net-ng` 负责把它们变成网络能力。
+ArceOS 是当前仓库里最主要的直接消费者：`ax-driver` 负责把设备接进来，`ax-net` / `ax-net-ng` 负责把它们变成网络能力。
 
 ### 6.2 StarryOS
 StarryOS 当前并没有把 `axdriver_net` 当成独立网络栈；若复用网络能力，也主要是通过共享的 ArceOS 底层模块链路间接使用。

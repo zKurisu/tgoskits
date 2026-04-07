@@ -208,7 +208,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     axmm::init_memory_management();
 
     // #[cfg(feature = "plat-dyn")]
-    // axdriver::setup(arg);
+    // ax_driver::setup(arg);
 
     info!("Initialize platform devices...");
     axhal::init_later(cpu_id, arg);
@@ -216,10 +216,10 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     #[cfg(feature = "multitask")]
     axtask::init_scheduler();
 
-    #[cfg(feature = "axdriver")]
+    #[cfg(feature = "ax-driver")]
     {
         #[allow(unused_variables)]
-        let all_devices = axdriver::init_drivers();
+        let all_devices = ax_driver::init_drivers();
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "fs-ng")] {

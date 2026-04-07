@@ -4,7 +4,7 @@ use core::{
     time::Duration,
 };
 
-use axdriver::prelude::*;
+use ax_driver::prelude::*;
 use axerrno::{AxError, AxResult, ax_bail};
 use axsync::Mutex;
 use axtask::future::{block_on, interruptible};

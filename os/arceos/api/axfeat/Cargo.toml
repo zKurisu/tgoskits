@@ -22,7 +22,7 @@ uspace = ["axhal/uspace"]
 hv = ["axhal/hv"]
 
 # Interrupts
-irq = ["axhal/irq", "ax-runtime/irq", "axtask?/irq", "axdriver?/irq"]
+irq = ["axhal/irq", "ax-runtime/irq", "axtask?/irq", "ax-driver?/irq"]
 ipi = ["irq", "dep:axipi", "axhal/ipi", "ax-runtime/ipi"]
 
 # Custom or default platforms
@@ -63,7 +63,7 @@ sched-cfs = ["axtask/sched-cfs", "irq"]
 fs = [
     "alloc",
     "paging",
-    "axdriver/virtio-blk",
+    "ax-driver/virtio-blk",
     "dep:ax-fs",
     "ax-runtime/fs",
 ] # TODO: try to remove "paging"
@@ -73,7 +73,7 @@ fs-ng-fat = ["fs-ng", "ax-fs-ng/fat"]
 fs-ng-times = ["fs-ng", "ax-fs-ng/times"]
 
 # Networking
-net = ["alloc", "paging", "axdriver/virtio-net", "dep:ax-net", "ax-runtime/net"]
+net = ["alloc", "paging", "ax-driver/virtio-net", "dep:ax-net", "ax-runtime/net"]
 net-ng = ["net", "irq", "multitask", "ax-runtime/net-ng"]
 vsock = ["ax-runtime/vsock"]
 
@@ -81,7 +81,7 @@ vsock = ["ax-runtime/vsock"]
 display = [
     "alloc",
     "paging",
-    "axdriver/virtio-gpu",
+    "ax-driver/virtio-gpu",
     "dep:ax-display",
     "ax-runtime/display",
 ]
@@ -90,7 +90,7 @@ display = [
 input = [
     "alloc",
     "paging",
-    "axdriver/virtio-input",
+    "ax-driver/virtio-input",
     "dep:ax-input",
     "ax-runtime/input",
 ]
@@ -99,14 +99,14 @@ input = [
 rtc = ["axhal/rtc", "ax-runtime/rtc"]
 
 # Device drivers
-bus-mmio = ["axdriver?/bus-mmio"]
-bus-pci = ["axdriver?/bus-pci"]
-driver-ramdisk = ["axdriver?/ramdisk", "ax-fs?/use-ramdisk"]
-driver-sdmmc = ["axdriver?/sdmmc"]
-driver-ixgbe = ["axdriver?/ixgbe"]
-driver-fxmac = ["axdriver?/fxmac"]                          # fxmac ethernet driver for PhytiumPi
-driver-bcm2835-sdhci = ["axdriver?/bcm2835-sdhci"]
-driver-ahci = ["axdriver?/ahci"]
+bus-mmio = ["ax-driver?/bus-mmio"]
+bus-pci = ["ax-driver?/bus-pci"]
+driver-ramdisk = ["ax-driver?/ramdisk", "ax-fs?/use-ramdisk"]
+driver-sdmmc = ["ax-driver?/sdmmc"]
+driver-ixgbe = ["ax-driver?/ixgbe"]
+driver-fxmac = ["ax-driver?/fxmac"]                          # fxmac ethernet driver for PhytiumPi
+driver-bcm2835-sdhci = ["ax-driver?/bcm2835-sdhci"]
+driver-ahci = ["ax-driver?/ahci"]
 
 # Backtrace
 dwarf = ["alloc", "axbacktrace/dwarf"]
@@ -116,7 +116,7 @@ axalloc = { workspace = true, optional = true }
 axbacktrace.workspace = true
 axconfig = { workspace = true, optional = true }
 ax-display = { workspace = true, optional = true }
-axdriver = { workspace = true, optional = true }
+ax-driver = { workspace = true, optional = true }
 ax-fs = { workspace = true, optional = true }
 ax-fs-ng = { workspace = true, optional = true }
 axhal.workspace = true

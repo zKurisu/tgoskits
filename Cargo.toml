@@ -178,7 +178,7 @@ ax-fs-ng = { path = "os/arceos/modules/axfs-ng" }
 ax-net = { path = "os/arceos/modules/axnet" }
 ax-net-ng = { path = "os/arceos/modules/axnet-ng" }
 axalloc = { path = "os/arceos/modules/axalloc" }
-axdriver = { path = "os/arceos/modules/axdriver" }
+ax-driver = { path = "os/arceos/modules/axdriver" }
 ax-input = { path = "os/arceos/modules/axinput" }
 axipi = { path = "os/arceos/modules/axipi" }
 axlog = { path = "os/arceos/modules/axlog" }
@@ -308,7 +308,7 @@ axalloc = { path = "os/arceos/modules/axalloc", version = "0.5.0" }
 axconfig = { path = "os/arceos/modules/axconfig", version = "0.5.0" }
 ax-display = { path = "os/arceos/modules/axdisplay", version = "0.5.0" }
 axdma = { path = "os/arceos/modules/axdma", version = "0.5.0" }
-axdriver = { path = "os/arceos/modules/axdriver", version = "0.5.0" }
+ax-driver = { path = "os/arceos/modules/axdriver", version = "0.5.0" }
 ax-fs = { path = "os/arceos/modules/axfs", version = "0.5.0" }
 ax-fs-ng = { path = "os/arceos/modules/axfs-ng", version = "0.5.0" }
 axhal = { path = "os/arceos/modules/axhal", version = "0.5.0" }

@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`components/axdriver_crates/axdriver_virtio/src/gpu.rs`、`os/arceos/modules/axdisplay/src/lib.rs`、`os/StarryOS/kernel/src/pseudofs/dev/fb.rs`
 
-`axdriver_display` 的职责是为显示设备定义统一的驱动接口。它不负责探测设备，也不负责把帧缓冲暴露成 `/dev/fb0`，更不提供窗口系统或图形合成能力；它只定义显示驱动最小需要暴露的信息和操作，让 `virtio-gpu` 之类的具体实现可以被 `axdriver` 聚合层和 `ax-display` 上层模块统一消费。
+`axdriver_display` 的职责是为显示设备定义统一的驱动接口。它不负责探测设备，也不负责把帧缓冲暴露成 `/dev/fb0`，更不提供窗口系统或图形合成能力；它只定义显示驱动最小需要暴露的信息和操作，让 `virtio-gpu` 之类的具体实现可以被 `ax-driver` 聚合层和 `ax-display` 上层模块统一消费。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -48,7 +48,7 @@
 
 再往上一层：
 
-- `axdriver` 把具体实例包装为 `AxDisplayDevice` 放入 `AllDevices.display`。
+- `ax-driver` 把具体实例包装为 `AxDisplayDevice` 放入 `AllDevices.display`。
 - `ax-runtime` 调用 `ax_display::init_display(all_devices.display)`。
 - `ax-display` 提供 `framebuffer_info()` / `framebuffer_flush()`。
 - StarryOS 的 `pseudofs/dev/fb.rs` 再把这组能力包装成伪文件系统的 framebuffer 设备。
@@ -61,7 +61,7 @@
 - 为显示设备统一定义 `DisplayDriverOps`。
 - 用 `DisplayInfo` 传递最关键的屏幕和帧缓冲信息。
 - 用 `FrameBuffer` 表达设备映射显存的可写视图。
-- 让不同显示驱动能被 `axdriver` 和 `ax-display` 统一消费。
+- 让不同显示驱动能被 `ax-driver` 和 `ax-display` 统一消费。
 
 ### 2.2 关键 API 与语义
 - `info()`：返回显示元信息。
@@ -138,7 +138,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `axdriver` 和 `ax-display` 直接消费本 crate 的接口，是当前最明确的主线使用者。
+ArceOS 通过 `ax-driver` 和 `ax-display` 直接消费本 crate 的接口，是当前最明确的主线使用者。
 
 ### 6.2 StarryOS
 StarryOS 不直接实现新的显示驱动 trait，而是通过 `ax-display` 提供的能力在 `pseudofs/dev/fb.rs` 中构造 framebuffer 设备，因此它更偏上层消费者。

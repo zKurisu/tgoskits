@@ -8,8 +8,8 @@
 extern crate log;
 
 #[doc(no_inline)]
-pub use axdriver::prelude::DisplayInfo;
-use axdriver::{AxDeviceContainer, prelude::*};
+pub use ax_driver::prelude::DisplayInfo;
+use ax_driver::{AxDeviceContainer, prelude::*};
 use axsync::Mutex;
 use lazyinit::LazyInit;
 

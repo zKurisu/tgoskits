@@ -17,7 +17,7 @@
 
 它在分层中的位置很明确：
 
-- 不是 `axdriver`：不负责枚举所有设备，也不维护 `AllDevices`。
+- 不是 `ax-driver`：不负责枚举所有设备，也不维护 `AllDevices`。
 - 不是 `axdriver_pci`：不负责扫描总线或分配 BAR。
 - 也不是 `virtio-drivers` 本身：它提供的是 ArceOS 风格的包装接口，而非原始 VirtIO API。
 
@@ -54,14 +54,14 @@
 - `VirtIoInputDev` 通过 `query_config_select()` 暴露事件位图，通过 `pop_pending_event()` 取事件。
 - `VirtIoSocketDev` 把底层 vsock 事件翻译成 `VsockDriverEvent`。
 
-### 1.5 与 `axdriver` 的配合方式
+### 1.5 与 `ax-driver` 的配合方式
 在 `os/arceos/modules/axdriver/src/virtio.rs` 中，ArceOS 进一步定义了：
 
 - `VirtIoDevMeta`：为每种 VirtIO 设备绑定 `DeviceType`、具体 `Device` 类型和 `try_new()`。
 - `VirtIoDriver<D>`：实现 `DriverProbe`，把 MMIO/PCI 识别结果转成 `AxDeviceEnum`。
 - `VirtIoHalImpl`：对接 `axalloc`、`axhal`，为 `virtio-drivers` 提供 DMA 和地址转换。
 
-因此本 crate 只做到“把一个已经识别出来的 VirtIO 设备变成类别驱动”；真正把它纳入系统初始化流程的是 `axdriver`。
+因此本 crate 只做到“把一个已经识别出来的 VirtIO 设备变成类别驱动”；真正把它纳入系统初始化流程的是 `ax-driver`。
 
 ### 1.6 与动态平台路径的关系
 `platform/axplat-dyn` 的块设备动态探测会直接使用本 crate：
@@ -124,7 +124,7 @@
 ### 3.3 分层关系总结
 - 向下连接 `virtio-drivers`。
 - 向上输出 `axdriver_*` 兼容设备对象。
-- 由 `axdriver` 决定这些对象何时、如何进入 `AllDevices`。
+- 由 `ax-driver` 决定这些对象何时、如何进入 `AllDevices`。
 
 ## 4. 开发指南
 ### 4.1 新增一种 VirtIO 设备支持时要改哪些地方
@@ -132,7 +132,7 @@
 2. 在 `lib.rs` 中加 feature、导出和 `as_dev_type()` 映射。
 3. 在 `os/arceos/modules/axdriver/src/virtio.rs` 中补 `VirtIoDevMeta`。
 4. 在 `os/arceos/modules/axdriver/src/drivers.rs` 中注册对应类别驱动。
-5. 若需要顶层 feature，还要同步 `axdriver/Cargo.toml` 和 `ax-feat/Cargo.toml`。
+5. 若需要顶层 feature，还要同步 `ax-driver/Cargo.toml` 和 `ax-feat/Cargo.toml`。
 
 ### 4.2 HAL 接入注意事项
 - `VirtIoHal` 要正确实现 DMA 分配、回收、MMIO 地址转换、share/unshare。
@@ -149,7 +149,7 @@
 该 crate 没有独立测试目录，当前主要依赖：
 
 - QEMU/平台上的 VirtIO MMIO 或 PCI 启动。
-- `axdriver` 对 `virtio-*` 设备的探测与初始化。
+- `ax-driver` 对 `virtio-*` 设备的探测与初始化。
 - `ax-display`、`ax-input`、`ax-net`、`ax-fs`、`ax-net-ng` 对包装后设备的实际消费。
 
 ### 5.2 建议补充的单元测试
@@ -170,7 +170,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 是当前最主要的主线消费者：`axdriver` 通过它把 VirtIO 设备接入块、网、显、输入和 vsock 各类别路径。
+ArceOS 是当前最主要的主线消费者：`ax-driver` 通过它把 VirtIO 设备接入块、网、显、输入和 vsock 各类别路径。
 
 ### 6.2 StarryOS
 StarryOS 若通过共享 ArceOS 驱动栈获得显示、输入或存储能力，会间接使用本 crate；但它并不把本 crate 当作独立的 VirtIO 管理框架。

@@ -41,7 +41,7 @@ timer_list
 axalloc
 axconfig
 ax-display
-axdriver
+ax-driver
 axhal
 axsync
 axtask

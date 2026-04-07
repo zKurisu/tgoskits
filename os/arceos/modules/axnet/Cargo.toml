@@ -14,10 +14,10 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axnet"
 [features]
 smoltcp = ["dep:smoltcp"]
 default = ["smoltcp"]
-vsock = ["axdriver/vsock"]
+vsock = ["ax-driver/vsock"]
 
 [dependencies]
-axdriver = { workspace = true, features = ["net"] }
+ax-driver = { workspace = true, features = ["net"] }
 axerrno.workspace = true
 axhal.workspace = true
 axio.workspace = true

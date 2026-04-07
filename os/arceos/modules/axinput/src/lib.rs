@@ -9,7 +9,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use core::mem;
 
-use axdriver::{AxDeviceContainer, prelude::*};
+use ax_driver::{AxDeviceContainer, prelude::*};
 use axsync::Mutex;
 use lazyinit::LazyInit;
 

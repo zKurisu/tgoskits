@@ -22,15 +22,15 @@ rtc = []
 smp = ["axhal/smp", "axtask?/smp"]
 tls = ["axhal/tls", "axtask?/tls"]
 
-plat-dyn = ["axdriver/dyn", "paging", "buddy-slab"]
+plat-dyn = ["ax-driver/dyn", "paging", "buddy-slab"]
 
-axdriver = ["dep:axdriver"]
-display = ["axdriver", "dep:ax-display"]
-fs = ["axdriver", "dep:ax-fs"]
-fs-ng = ["axdriver", "dep:ax-fs-ng"]
-input = ["axdriver", "dep:ax-input"]
-net = ["axdriver", "dep:ax-net"]
-net-ng = ["axdriver", "dep:ax-net-ng"]
+ax-driver = ["dep:ax-driver"]
+display = ["ax-driver", "dep:ax-display"]
+fs = ["ax-driver", "dep:ax-fs"]
+fs-ng = ["ax-driver", "dep:ax-fs-ng"]
+input = ["ax-driver", "dep:ax-input"]
+net = ["ax-driver", "dep:ax-net"]
+net-ng = ["ax-driver", "dep:ax-net-ng"]
 vsock = ["net-ng", "ax-net-ng/vsock"]
 
 [dependencies]
@@ -38,7 +38,7 @@ axalloc = { workspace = true, optional = true }
 axbacktrace = { workspace = true }
 axconfig = { workspace = true }
 ax-display = { workspace = true, optional = true }
-axdriver = { workspace = true, optional = true }
+ax-driver = { workspace = true, optional = true }
 ax-fs = { workspace = true, optional = true }
 ax-fs-ng = { workspace = true, optional = true }
 axhal = { workspace = true }

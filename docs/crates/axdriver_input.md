@@ -42,7 +42,7 @@
 当前仓库里的典型接线链路如下：
 
 1. `axdriver_virtio::VirtIoInputDev` 实现 `InputDriverOps`。
-2. `axdriver` 把它包装成 `AxInputDevice` 放进 `AllDevices.input`。
+2. `ax-driver` 把它包装成 `AxInputDevice` 放进 `AllDevices.input`。
 3. `ax-runtime` 调用 `ax_input::init_input(all_devices.input)`。
 4. StarryOS 的 `pseudofs/dev/event.rs` 再用 `ax_input::take_inputs()` 取走这些设备，构造 evdev 风格的字符设备。
 
@@ -56,7 +56,7 @@
 - 统一输入事件和事件类型表示。
 - 统一输入设备 ID 和能力位图查询接口。
 - 统一“无事件时返回 `DevError::Again`”的轮询约定。
-- 让不同输入设备能被 `axdriver`、`ax-input` 和 StarryOS evdev 层共同消费。
+- 让不同输入设备能被 `ax-driver`、`ax-input` 和 StarryOS evdev 层共同消费。
 
 ### 2.2 当前 VirtIO 路径的实现方式
 `axdriver_virtio::VirtIoInputDev` 是当前仓库里的主要实现：
@@ -135,7 +135,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `axdriver` 和 `ax-input` 直接消费它，是当前仓库中的主线使用场景。
+ArceOS 通过 `ax-driver` 和 `ax-input` 直接消费它，是当前仓库中的主线使用场景。
 
 ### 6.2 StarryOS
 StarryOS 在 `pseudofs/dev/event.rs` 中直接使用 `InputDriverOps`、`EventType`、`InputDeviceId` 等符号，把它变成 evdev 风格输入设备，因此是更贴近上层能力的一侧消费者。

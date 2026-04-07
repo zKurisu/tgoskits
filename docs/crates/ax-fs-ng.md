@@ -33,7 +33,7 @@
 graph LR
     current["ax-fs-ng"]
     current --> axalloc["axalloc"]
-    current --> axdriver["axdriver"]
+    current --> ax-driver["ax-driver"]
     current --> axerrno["axerrno"]
     current --> axfs_ng_vfs["axfs-ng-vfs"]
     current --> axhal["axhal"]
@@ -48,7 +48,7 @@ graph LR
 
 ### 3.1 直接与间接依赖
 - `axalloc`
-- `axdriver`
+- `ax-driver`
 - `axerrno`
 - `axfs-ng-vfs`
 - `axhal`

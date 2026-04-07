@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 use core::cell::OnceCell;
 
-use axdriver::AxBlockDevice;
+use ax_driver::AxBlockDevice;
 use axfs_ng_vfs::{
     DirEntry, DirNode, Filesystem, FilesystemOps, Reference, StatFs, VfsResult, path::MAX_NAME_LEN,
 };

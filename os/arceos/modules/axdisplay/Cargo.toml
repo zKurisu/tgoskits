@@ -9,7 +9,7 @@ homepage.workspace = true
 repository = "https://github.com/arceos-org/arceos/tree/main/modules/axdisplay"
 
 [dependencies]
-axdriver = { workspace = true, features = ["display"] }
+ax-driver = { workspace = true, features = ["display"] }
 axsync.workspace = true
 lazyinit.workspace = true
 log.workspace = true

@@ -92,7 +92,7 @@
 
 本仓库中的真实调用链可以概括为：
 
-1. `axdriver` 暴露 NIC 或更高层网络设备
+1. `ax-driver` 暴露 NIC 或更高层网络设备
 2. `ax-net` / `ax-net-ng` 将其适配成 `smoltcp::phy::Device`
 3. `smoltcp::iface::Interface` 与 `SocketSet` 负责推进协议状态机
 4. `ax-net` / `ax-net-ng` 把 `smoltcp` socket 封装成系统友好的同步 socket 接口

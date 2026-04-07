@@ -73,7 +73,7 @@
 
 但要特别注意一个实现事实：
 
-- `axdriver/Cargo.toml` 中 `fxmac` feature 也声明了 `dep:axdma`；
+- `ax-driver/Cargo.toml` 中 `fxmac` feature 也声明了 `dep:axdma`；
 - 可是 `os/arceos/modules/axdriver/src/drivers.rs` 里的 `FXmacDriver` glue 实际使用的是 `axalloc::global_allocator().alloc_pages(..., UsageKind::Dma)`，并没有直接调用 `axdma` 的 coherent allocator。
 
 这说明在当前代码树里，**`axdma` 不是所有 DMA 驱动的唯一后端**，而是其中一条已被明确使用的 DMA 服务路径。

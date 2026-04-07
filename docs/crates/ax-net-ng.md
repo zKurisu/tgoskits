@@ -40,7 +40,7 @@
 graph LR
     current["ax-net-ng"]
     current --> axconfig["axconfig"]
-    current --> axdriver["axdriver"]
+    current --> ax-driver["ax-driver"]
     current --> axerrno["axerrno"]
     current --> axfs_ng["ax-fs-ng"]
     current --> axfs_ng_vfs["axfs-ng-vfs"]
@@ -53,7 +53,7 @@ graph LR
 
 ### 3.1 直接与间接依赖
 - `axconfig`
-- `axdriver`
+- `ax-driver`
 - `axerrno`
 - `ax-fs-ng`
 - `axfs-ng-vfs`

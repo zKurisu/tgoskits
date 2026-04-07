@@ -56,7 +56,7 @@ flowchart TD
    例如 `components/starry-process`、`components/axvm`
 
 2. 先经过 ArceOS 模块层，再被上层系统消费  
-   例如 `axhal`、`axtask`、`axdriver`、`ax-net`
+   例如 `axhal`、`axtask`、`ax-driver`、`ax-net`
 
 3. 通过平台和配置接到最终系统  
    例如 `axplat-*`、`platform/x86-qemu-q35`、Axvisor 的 `configs/board/*.toml`

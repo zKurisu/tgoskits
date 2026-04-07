@@ -185,7 +185,7 @@ CURATED_DOCS = {
     "ax-std",
     "ax-runtime",
     "axmm",
-    "axdriver",
+    "ax-driver",
     "axdriver_base",
     "axdriver_block",
     "axdriver_display",

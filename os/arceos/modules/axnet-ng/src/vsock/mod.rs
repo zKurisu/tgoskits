@@ -5,7 +5,7 @@ pub(crate) mod stream;
 
 use core::task::Context;
 
-pub use axdriver::prelude::{VsockAddr, VsockConnId};
+pub use ax_driver::prelude::{VsockAddr, VsockConnId};
 use axerrno::{AxError, AxResult};
 use axio::{IoBuf, IoBufMut, Read, Write};
 use axpoll::{IoEvents, Pollable};

@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`os/arceos/modules/axdriver/src/prelude.rs`
 
-`axdriver_base` 是整个 `axdriver_crates` 体系的最小公共基座。它不负责探测设备、枚举总线、管理 DMA，也不组织 `AllDevices` 这样的设备聚合对象；它只把所有驱动都必须共享的设备分类、错误模型和基础元信息接口集中定义出来，供 `axdriver_block`、`axdriver_net`、`axdriver_display`、`axdriver_input`、`axdriver_vsock` 以及上层 `axdriver` 聚合层复用。
+`axdriver_base` 是整个 `axdriver_crates` 体系的最小公共基座。它不负责探测设备、枚举总线、管理 DMA，也不组织 `AllDevices` 这样的设备聚合对象；它只把所有驱动都必须共享的设备分类、错误模型和基础元信息接口集中定义出来，供 `axdriver_block`、`axdriver_net`、`axdriver_display`、`axdriver_input`、`axdriver_vsock` 以及上层 `ax-driver` 聚合层复用。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -18,7 +18,7 @@
 
 这意味着它在驱动栈中的位置很明确：
 
-- 它不是 `axdriver` 那样的驱动聚合层。
+- 它不是 `ax-driver` 那样的驱动聚合层。
 - 它不是 `axdriver_pci` 或 `axdriver_virtio` 那样的总线/传输层。
 - 它也不是 `axdriver_block`、`axdriver_net` 这类具体设备类别层。
 
@@ -27,12 +27,12 @@
 ### 1.2 关键对象
 | 符号 | 作用 | 在体系中的位置 |
 | --- | --- | --- |
-| `DeviceType` | 统一设备类别枚举 | 被 `axdriver::AxDeviceEnum`、`AllDevices` 和日志输出使用 |
+| `DeviceType` | 统一设备类别枚举 | 被 `ax-driver::AxDeviceEnum`、`AllDevices` 和日志输出使用 |
 | `DevError` | 统一设备错误枚举 | 被所有 `*DriverOps` 实现共享 |
 | `DevResult<T>` | 设备操作统一返回类型 | `Result<T, DevError>` 的别名 |
 | `BaseDriverOps` | 所有设备的最小公共 trait | 是各类别 `*DriverOps` 的共同父接口 |
 
-`DeviceType` 当前覆盖 `Block`、`Char`、`Net`、`Display`、`Input`、`Vsock` 六类。其中 `Char` 在当前 `axdriver` 聚合层里还没有对应容器字段，这也说明 `axdriver_base` 的枚举范围略大于当前 ArceOS 运行时实际接入面。
+`DeviceType` 当前覆盖 `Block`、`Char`、`Net`、`Display`、`Input`、`Vsock` 六类。其中 `Char` 在当前 `ax-driver` 聚合层里还没有对应容器字段，这也说明 `axdriver_base` 的枚举范围略大于当前 ArceOS 运行时实际接入面。
 
 ### 1.3 接口约束
 `BaseDriverOps` 的接口极小：
@@ -52,7 +52,7 @@
 | `axdriver_base` | 设备类别、错误模型、最小元信息接口 | 设备探测、总线枚举、DMA、具体读写协议 |
 | `axdriver_block`/`net`/`display`/`input`/`vsock` | 各设备类别专属 trait 与少量实现 | 全局设备聚合、系统初始化时序 |
 | `axdriver_pci` / `axdriver_virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
-| `axdriver` | 设备探测、分类、聚合、向上交付 `AllDevices` | 重新定义基础错误与元信息接口 |
+| `ax-driver` | 设备探测、分类、聚合、向上交付 `AllDevices` | 重新定义基础错误与元信息接口 |
 
 这里最关键的边界澄清是：**`axdriver_base` 只是公共契约层，不是驱动管理器。**
 
@@ -61,14 +61,14 @@
 - 为所有驱动提供统一的 `DeviceType`。
 - 为所有驱动提供统一的 `DevError` / `DevResult`。
 - 为各类别 trait 提供共同父接口 `BaseDriverOps`。
-- 让上层 `axdriver::prelude` 可以用一套统一名字重导出基础类型。
+- 让上层 `ax-driver::prelude` 可以用一套统一名字重导出基础类型。
 
 ### 2.2 典型使用方式
 在各类别 crate 中，常见模式是：
 
 1. 先实现 `BaseDriverOps`。
 2. 再实现本类别的专属 trait，例如 `BlockDriverOps` 或 `NetDriverOps`。
-3. 最终由 `axdriver` 聚合层把实例包装进 `AxDeviceEnum` 或 `Ax*Device`。
+3. 最终由 `ax-driver` 聚合层把实例包装进 `AxDeviceEnum` 或 `Ax*Device`。
 
 也就是说，`axdriver_base` 只定义“底座接口”，并不规定设备如何初始化、如何被发现、如何被消费。
 
@@ -96,7 +96,7 @@
 
 - 向下：无本地依赖。
 - 向上：被所有类别层、总线适配层和聚合层共享。
-- 向旁：通过 `axdriver::prelude` 间接进入 `ax-display`、`ax-input`、`ax-net`、`ax-fs` 等上层模块。
+- 向旁：通过 `ax-driver::prelude` 间接进入 `ax-display`、`ax-input`、`ax-net`、`ax-fs` 等上层模块。
 
 ## 4. 开发指南
 ### 4.1 何时应该修改本 crate
@@ -109,13 +109,13 @@
 如果只是新增块设备、网卡、显示设备或输入设备能力，通常应改对应的类别 crate，而不是这里。
 
 ### 4.2 修改时必须同步检查的地方
-1. 若新增 `DeviceType` 成员，需要同步检查 `axdriver::AxDeviceEnum`、`AllDevices`、`prelude.rs` 和上层消费者是否都能识别该类别。
+1. 若新增 `DeviceType` 成员，需要同步检查 `ax-driver::AxDeviceEnum`、`AllDevices`、`prelude.rs` 和上层消费者是否都能识别该类别。
 2. 若调整 `DevError`，需要确认 `axdriver_virtio::as_dev_err()`、`axdriver_block`、`axdriver_net` 等映射逻辑仍然一致。
 3. 若给 `BaseDriverOps` 增加新方法，会影响所有驱动实现，是高风险接口变更。
 
 ### 4.3 常见误区
 - 不要把类别专属能力塞进 `BaseDriverOps`。例如 `read_block()`、`flush()`、`read_event()` 都应留在各自类别 trait 中。
-- 不要把设备探测接口放进这里；探测属于 `axdriver` 或总线/传输适配层的职责。
+- 不要把设备探测接口放进这里；探测属于 `ax-driver` 或总线/传输适配层的职责。
 - 不要把“设备名可打印”误解为“设备可被系统自动管理”；管理逻辑在上层。
 
 ## 5. 测试策略
@@ -128,7 +128,7 @@
 - `BaseDriverOps` 默认 `irq_num()` 返回 `None` 的契约。
 
 ### 5.3 集成测试重点
-- 各类别驱动能否以同一套 `BaseDriverOps` 被 `axdriver::prelude` 和 `AllDevices` 使用。
+- 各类别驱动能否以同一套 `BaseDriverOps` 被 `ax-driver::prelude` 和 `AllDevices` 使用。
 - `DevError` 是否能被 `axdriver_virtio`、`axdriver_net`、`axdriver_block` 等映射成一致行为。
 
 ### 5.4 风险点
@@ -137,10 +137,10 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-这是当前仓库中最主要的直接消费方。ArceOS 通过 `axdriver` 聚合层把它作为整个驱动体系的公共接口底座。
+这是当前仓库中最主要的直接消费方。ArceOS 通过 `ax-driver` 聚合层把它作为整个驱动体系的公共接口底座。
 
 ### 6.2 StarryOS
-StarryOS 不是直接围绕 `axdriver_base` 写业务逻辑，而是通过共享的 `axdriver`、`ax-display`、`ax-input` 等模块间接复用这套基础契约。
+StarryOS 不是直接围绕 `axdriver_base` 写业务逻辑，而是通过共享的 `ax-driver`、`ax-display`、`ax-input` 等模块间接复用这套基础契约。
 
 ### 6.3 Axvisor
 当前仓库里没有看到 Axvisor 直接把 `axdriver_base` 当作其核心设备管理接口。即便未来在某些宿主兼容路径中复用它，它也只会扮演“共享驱动契约层”，而不是虚拟机设备分发中心。

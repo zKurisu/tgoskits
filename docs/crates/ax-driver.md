@@ -1,4 +1,4 @@
-# `axdriver` 技术文档
+# `ax-driver` 技术文档
 
 > 路径：`os/arceos/modules/axdriver`
 > 类型：库 crate
@@ -6,11 +6,11 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`build.rs`、`src/lib.rs`、`src/macros.rs`、`src/drivers.rs`、`src/bus/pci.rs`、`src/bus/mmio.rs`、`src/virtio.rs`、`src/structs/*`、`src/dyn_drivers/mod.rs`
 
-`axdriver` 是 ArceOS 的设备驱动聚合与探测入口。它并不试图把所有设备协议都做成统一对象模型，而是先按设备类别完成“探测 -> 分类 -> 聚合”，再把结果交给文件系统、网络栈、显示和输入等上层子系统消费。
+`ax-driver` 是 ArceOS 的设备驱动聚合与探测入口。它并不试图把所有设备协议都做成统一对象模型，而是先按设备类别完成“探测 -> 分类 -> 聚合”，再把结果交给文件系统、网络栈、显示和输入等上层子系统消费。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axdriver` 的核心设计目标是把“底层设备驱动”整理成“上层子系统可消费的设备容器”：
+`ax-driver` 的核心设计目标是把“底层设备驱动”整理成“上层子系统可消费的设备容器”：
 
 - 向下，它负责根据总线类型、feature 组合和平台能力探测可用设备。
 - 向上，它通过 `AllDevices` 把设备按 `block`、`net`、`display`、`input`、`vsock` 分类聚合。
@@ -18,7 +18,7 @@
   - 静态模型：每个类别在编译期选中一个具体设备类型，避免动态分发，性能更好。
   - 动态模型：每个类别使用 trait object，可支持多实例，但需要额外的动态分发和 `axplat-dyn` 路径。
 
-因此，`axdriver` 的中心价值不是单个驱动协议实现，而是“驱动装配层”和“总线探测层”的边界设计。
+因此，`ax-driver` 的中心价值不是单个驱动协议实现，而是“驱动装配层”和“总线探测层”的边界设计。
 
 ### 1.2 内部模块划分
 - `src/lib.rs`：crate 入口。定义 `AllDevices`、`init_drivers()`、`AllDevices::probe()` 和 `add_device()`。
@@ -34,18 +34,18 @@
 - `build.rs`：根据 feature 生成 `cfg(bus = "...")` 和 `cfg(net_dev = "...")` 等条件编译开关。
 
 ### 1.3 关键数据结构与对象
-- `AllDevices`：按设备类别聚合所有已探测设备，是 `axdriver` 的核心输出对象。
+- `AllDevices`：按设备类别聚合所有已探测设备，是 `ax-driver` 的核心输出对象。
 - `AxDeviceContainer<D>`：内部使用 `SmallVec<[D; 1]>` 保存同类设备，兼顾“通常只有一个设备”和“支持少量多实例”的场景。
 - `AxDeviceEnum`：设备探测阶段的统一枚举，负责在加入 `AllDevices` 时按类别分发。
 - `DriverProbe`：所有驱动探测逻辑的统一 trait，定义 `probe_global()`、`probe_mmio()` 和 `probe_pci()`。
 - `VirtIoDriver<D>` / `VirtIoHalImpl`：VirtIO 探测与 DMA/MMIO glue 的关键对象。
 
 ### 1.4 设备探测与初始化主线
-`axdriver` 的主入口是 `init_drivers()`，其核心调用链如下：
+`ax-driver` 的主入口是 `init_drivers()`，其核心调用链如下：
 
 ```mermaid
 flowchart TD
-    A["ax_runtime::init_drivers"] --> B["axdriver::init_drivers()"]
+    A["ax_runtime::init_drivers"] --> B["ax-driver::init_drivers()"]
     B --> C["AllDevices::probe()"]
     C --> D{"feature = dyn ?"}
     D -- yes --> E["dyn_drivers::probe_all_devices()"]
@@ -110,10 +110,10 @@ flowchart TD
 - `DriverProbe`：新增驱动或扩展总线匹配逻辑时的统一入口。
 
 ### 2.3 典型使用方式
-对上层模块来说，典型用法不是自己枚举总线，而是消费 `axdriver` 已经聚合好的设备：
+对上层模块来说，典型用法不是自己枚举总线，而是消费 `ax-driver` 已经聚合好的设备：
 
 ```rust
-let mut all = axdriver::init_drivers();
+let mut all = ax-driver::init_drivers();
 let blk = all.block.take_one();
 let net = all.net.take_one();
 ```
@@ -123,19 +123,19 @@ let net = all.net.take_one();
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axconfig["axconfig"] --> axdriver["axdriver"]
-    axhal["axhal"] --> axdriver
-    axalloc["axalloc"] --> axdriver
-    axdma["axdma"] --> axdriver
-    axdriver_base["axdriver_base / axdriver_*"] --> axdriver
-    axplat_dyn["axplat-dyn (dyn 模式)"] --> axdriver
+    axconfig["axconfig"] --> ax-driver["ax-driver"]
+    axhal["axhal"] --> ax-driver
+    axalloc["axalloc"] --> ax-driver
+    axdma["axdma"] --> ax-driver
+    axdriver_base["axdriver_base / axdriver_*"] --> ax-driver
+    axplat_dyn["axplat-dyn (dyn 模式)"] --> ax-driver
 
-    axdriver --> ax-runtime["ax-runtime"]
-    axdriver --> ax-fs["ax-fs / ax-fs-ng"]
-    axdriver --> ax-net["ax-net / ax-net-ng"]
-    axdriver --> ax-display["ax-display"]
-    axdriver --> ax-input["ax-input"]
-    axdriver --> starry_kernel["starry-kernel"]
+    ax-driver --> ax-runtime["ax-runtime"]
+    ax-driver --> ax-fs["ax-fs / ax-fs-ng"]
+    ax-driver --> ax-net["ax-net / ax-net-ng"]
+    ax-driver --> ax-display["ax-display"]
+    ax-driver --> ax-input["ax-input"]
+    ax-driver --> starry_kernel["starry-kernel"]
 ```
 
 ### 3.1 关键直接依赖
@@ -161,7 +161,7 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axdriver = { workspace = true, features = ["block", "net", "virtio-blk", "virtio-net"] }
+ax-driver = { workspace = true, features = ["block", "net", "virtio-blk", "virtio-net"] }
 ```
 
 ### 4.2 新驱动接入原则
@@ -178,7 +178,7 @@ axdriver = { workspace = true, features = ["block", "net", "virtio-blk", "virtio
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
-`axdriver` 自身的验证重点主要是系统级集成测试，而不是 crate 内单元测试。
+`ax-driver` 自身的验证重点主要是系统级集成测试，而不是 crate 内单元测试。
 
 ### 5.2 单元测试重点
 - `build.rs` 生成的 `cfg(bus = "...")` 与 `cfg(*_dev = "...")` 是否符合预期。
@@ -191,16 +191,16 @@ axdriver = { workspace = true, features = ["block", "net", "virtio-blk", "virtio
 - 至少覆盖块设备、网卡和一条显示/输入或 vsock 路径，避免只验证单一类别。
 
 ### 5.4 覆盖率要求
-- 对 `axdriver`，比“函数覆盖率”更关键的是“设备矩阵覆盖率”。
+- 对 `ax-driver`，比“函数覆盖率”更关键的是“设备矩阵覆盖率”。
 - 至少要覆盖总线选择、驱动选择、设备分类和上层消费四个层面。
 - 涉及 `build.rs`、探测宏、BAR/MMIO 配置或 DMA glue 的改动，都应视为高风险改动。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axdriver` 是 ArceOS 运行时中的驱动装配中心。它本身不实现完整文件系统或网络语义，但负责把设备探测结果注入这些子系统，因此是 ArceOS bring-up 中非常关键的一层。
+`ax-driver` 是 ArceOS 运行时中的驱动装配中心。它本身不实现完整文件系统或网络语义，但负责把设备探测结果注入这些子系统，因此是 ArceOS bring-up 中非常关键的一层。
 
 ### 6.2 StarryOS
-StarryOS 并不完全沿用 ArceOS 的“`AllDevices` 初始化后直接交给上层”模型，但仍然复用 `axdriver` 提供的驱动 trait 和设备抽象。因此它在 StarryOS 中更偏“共享驱动接口层”和“基础设备 glue 层”。
+StarryOS 并不完全沿用 ArceOS 的“`AllDevices` 初始化后直接交给上层”模型，但仍然复用 `ax-driver` 提供的驱动 trait 和设备抽象。因此它在 StarryOS 中更偏“共享驱动接口层”和“基础设备 glue 层”。
 
 ### 6.3 Axvisor
-Axvisor 并不把 `axdriver` 当作虚拟化控制核心，但会在宿主侧块设备等兼容路径中借用 ArceOS 生态的设备 trait 与对象模型。因此 `axdriver` 在 Axvisor 中扮演的是“宿主设备兼容层的基础设施”，而不是“VMM 策略层”。
+Axvisor 并不把 `ax-driver` 当作虚拟化控制核心，但会在宿主侧块设备等兼容路径中借用 ArceOS 生态的设备 trait 与对象模型。因此 `ax-driver` 在 Axvisor 中扮演的是“宿主设备兼容层的基础设施”，而不是“VMM 策略层”。

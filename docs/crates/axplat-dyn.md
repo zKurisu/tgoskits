@@ -4,9 +4,9 @@
 > 类型：库 crate
 > 分层：平台层 / 动态平台桥接层
 > 版本：`0.3.0-preview.3`
-> 文档依据：当前仓库源码、`Cargo.toml`、`build.rs`、`link.ld` 及 `os/arceos/modules/axhal`/`axdriver` 的接入路径
+> 文档依据：当前仓库源码、`Cargo.toml`、`build.rs`、`link.ld` 及 `os/arceos/modules/axhal`/`ax-driver` 的接入路径
 
-`axplat-dyn` 不是 `cargo-axplat` 生成的那类“用 `axconfig.toml` 固化板级常量”的常规 `axplat-*` 平台包。它更像一层桥接适配器：把 `somehal` 已经建立好的启动入口、FDT 地址、内存图、时钟、IRQ、电源与 SMP 元数据转译成 `axplat` 的统一契约；同时再补上一条 `axdriver` 动态设备模型所需的设备探测与 DMA glue。这里的 `dyn` 真正表示“平台事实来自运行时抽象层和探测结果”，而不是“把平台包当作运行时可装卸模块加载”。
+`axplat-dyn` 不是 `cargo-axplat` 生成的那类“用 `axconfig.toml` 固化板级常量”的常规 `axplat-*` 平台包。它更像一层桥接适配器：把 `somehal` 已经建立好的启动入口、FDT 地址、内存图、时钟、IRQ、电源与 SMP 元数据转译成 `axplat` 的统一契约；同时再补上一条 `ax-driver` 动态设备模型所需的设备探测与 DMA glue。这里的 `dyn` 真正表示“平台事实来自运行时抽象层和探测结果”，而不是“把平台包当作运行时可装卸模块加载”。
 
 ## 1. 架构设计分析
 
@@ -16,7 +16,7 @@
 
 - 向下：依赖 `somehal` 提供的入口宏、内存映射、控制台、时钟、中断、电源和 CPU 元数据。
 - 向上：实现 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf` 以及可选 `IrqIf`，并通过 `axplat::call_main()` / `call_secondary_main()` 把控制权交给内核入口。
-- 向旁：公开 `drivers` 模块，为 `axdriver` 的 `dyn` 设备模型提供基于 `rdrive` 的设备探测与块设备封装。
+- 向旁：公开 `drivers` 模块，为 `ax-driver` 的 `dyn` 设备模型提供基于 `rdrive` 的设备探测与块设备封装。
 - 向链接层：通过 `build.rs` 生成 `axplat.x`，把 `linkme` 段、异常表和若干 ArceOS 约定符号补进最终镜像。
 
 这决定了它与普通板级包的一个根本差异：
@@ -46,7 +46,7 @@
 | --- | --- | --- | --- |
 | 启动 glue | `somehal` | `boot.rs` | 把主核/次核入口收敛到 `axplat::call_main()` / `call_secondary_main()` |
 | 平台契约 glue | `axplat` | `init.rs`、`console.rs`、`mem.rs`、`generic_timer.rs`、`irq.rs`、`power.rs` | 用 `#[impl_plat_interface]` 把 `somehal` 能力接到 `axplat` trait |
-| 设备 glue | `rdrive`、`rd-block`、`axdriver_virtio` | `drivers/*` | 把 FDT/PCIe/VirtIO 探测结果转成 `axdriver` 可消费的动态块设备 |
+| 设备 glue | `rdrive`、`rd-block`、`axdriver_virtio` | `drivers/*` | 把 FDT/PCIe/VirtIO 探测结果转成 `ax-driver` 可消费的动态块设备 |
 | 链接 glue | `build.rs`、`link.ld` | crate 根目录 | 生成 `axplat.x`，插入所需段和符号，适配 ArceOS 链接约定 |
 
 这套装配方式说明它承担的是“桥接与接线”职责，而不是“重新定义平台抽象”。
@@ -133,7 +133,7 @@ flowchart TD
 3. `drivers/pci.rs` 通过 `module_driver!` 注册通用 PCIe ECAM 控制器探测器。
 4. `drivers/blk/virtio.rs` 通过 `module_driver!` 注册 `virtio,mmio` block 设备探测器。
 5. 探测出的 `rd_block::Block` 被包成实现 `axdriver_block::BlockDriverOps` 的 `Block`，最终进入 `BLOCK_DEVICES`。
-6. `os/arceos/modules/axdriver/src/dyn_drivers/mod.rs` 再通过 `take_block_devices()` 把它们取走，转成 `axdriver` 的动态设备集合。
+6. `os/arceos/modules/axdriver/src/dyn_drivers/mod.rs` 再通过 `take_block_devices()` 把它们取走，转成 `ax-driver` 的动态设备集合。
 
 ```mermaid
 flowchart TD
@@ -141,12 +141,12 @@ flowchart TD
     B --> C[rd_block::Block]
     C --> D[drivers::blk::Block]
     D --> E[BLOCK_DEVICES]
-    E --> F[axdriver::dyn_drivers::probe_all_devices]
+    E --> F[ax-driver::dyn_drivers::probe_all_devices]
 ```
 
 这一层的关键价值在于：
 
-- `axplat-dyn` 不只是“平台初始化 glue”，还是 `axdriver` 动态设备模型的探测前端。
+- `axplat-dyn` 不只是“平台初始化 glue”，还是 `ax-driver` 动态设备模型的探测前端。
 - 当前有效覆盖面主要是块设备；网络、显示等类别并没有在本 crate 中提供同等级的动态探测路径。
 - `VirtIO` block 路径里的 `enable_irq()` / `disable_irq()` 仍是 `todo!()`，说明它更偏向当前可用的基础探测和阻塞 I/O 路径，而非完整中断驱动栈。
 
@@ -166,7 +166,7 @@ flowchart TD
 - 作为 `somehal` 到 `axplat` 的桥接层，提供统一的启动、内存、时间、中断和电源接口实现。
 - 通过 `build.rs + link.ld` 生成适配当前内核镜像的 `axplat.x` 链接脚本扩展。
 - 让 `axhal` 可通过 `plat-dyn` feature 接入这一动态平台路径。
-- 让 `axdriver` 可通过 `dyn` feature 复用其设备探测与动态块设备封装。
+- 让 `ax-driver` 可通过 `dyn` feature 复用其设备探测与动态块设备封装。
 - 通过 `hv`、`uspace`、`smp`、`irq` feature 把能力向 `somehal` 和 `axplat` 两侧传播。
 
 ### 2.2 feature 行为
@@ -183,7 +183,7 @@ flowchart TD
 ### 2.3 典型使用场景
 
 - 需要把 `somehal` 管理的运行时平台事实快速挂接到 ArceOS `axplat`/`axhal` 栈。
-- 需要配合 `axdriver` 的 `dyn` 模型，在运行时探测并收集多实例块设备。
+- 需要配合 `ax-driver` 的 `dyn` 模型，在运行时探测并收集多实例块设备。
 - 需要实验性地复用一套更“运行时驱动”的平台 bring-up 路径，而不是重新写一个静态 `axplat-*` 板级包。
 
 ## 3. 依赖关系图谱
@@ -217,7 +217,7 @@ graph TD
     D[rdrive / rd-block / dma-api / axdriver_virtio] --> B
 
     B --> E[axhal: plat-dyn]
-    B --> F[axdriver: dyn]
+    B --> F[ax-driver: dyn]
 
     E --> G[ArceOS]
     F --> G
@@ -240,11 +240,11 @@ graph TD
 
 ### 4.2 接入主线
 
-1. 在上层内核构建中启用 `axhal` 的 `plat-dyn` feature；若需要动态设备探测，再启用 `axdriver` 的 `dyn` 相关 feature。
+1. 在上层内核构建中启用 `axhal` 的 `plat-dyn` feature；若需要动态设备探测，再启用 `ax-driver` 的 `dyn` 相关 feature。
 2. 确保目标是裸机环境，而不是 `unix`/`windows` 宿主机构建路径。
 3. 让 `somehal` 提供入口、FDT、内存图、控制台、时钟、中断和电源实现。
 4. 由 `boot.rs` 把控制流统一转到 `axplat::call_main()`，随后上层只通过 `axplat` 接口使用平台能力。
-5. 若需要动态块设备，在适当阶段调用 `axdriver::init_drivers()`，其内部会落到 `axplat_dyn::drivers::probe_all_devices()`。
+5. 若需要动态块设备，在适当阶段调用 `ax-driver::init_drivers()`，其内部会落到 `axplat_dyn::drivers::probe_all_devices()`。
 
 ### 4.3 维护注意事项
 
@@ -261,7 +261,7 @@ graph TD
 - 裸机目标上的完整启动冒烟：确认 `somehal` 入口能贯通到 `axplat::call_main()`。
 - 内存图验证：检查 `somehal::mem::memory_map()` 过滤出的 RAM、保留区和 MMIO 是否与上层预期一致。
 - 计时器与 IRQ 验证：确认 `init_later()` 后 timer IRQ 真正可触发。
-- 动态设备验证：确认 `axdriver` 的 `dyn` 路径能从本 crate 获取块设备。
+- 动态设备验证：确认 `ax-driver` 的 `dyn` 路径能从本 crate 获取块设备。
 
 ### 5.2 推荐测试分层
 
@@ -280,10 +280,10 @@ graph TD
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | `axhal`/`axdriver` 的实验性平台路径 | 动态平台桥接层 | 把 `somehal` 与 `rdrive` 驱动式能力接到 ArceOS 标准平台/驱动抽象上 |
+| ArceOS | `axhal`/`ax-driver` 的实验性平台路径 | 动态平台桥接层 | 把 `somehal` 与 `rdrive` 驱动式能力接到 ArceOS 标准平台/驱动抽象上 |
 | StarryOS | 仅在复用同一模块栈时才可能间接接入 | 非默认平台包路径 | 它不是 `axplat_crates/platforms` 中那类标准发行平台包，只有在共享 ArceOS 底层模块时才会发挥作用 |
-| Axvisor | 宿主侧若共享 `axhal`/`axdriver` 路径时可复用 | 宿主 bring-up 桥接层 | 可为基于 ArceOS 模块栈的宿主环境提供动态平台 glue，但虚拟化核心并不在本 crate 中 |
+| Axvisor | 宿主侧若共享 `axhal`/`ax-driver` 路径时可复用 | 宿主 bring-up 桥接层 | 可为基于 ArceOS 模块栈的宿主环境提供动态平台 glue，但虚拟化核心并不在本 crate 中 |
 
 ## 7. 总结
 
-`axplat-dyn` 的价值不在“又实现了一套新的板级常量配置”，而在它把 `somehal` 的运行时平台事实和 `rdrive` 的设备探测能力拼成了 `axplat`/`axdriver` 能消费的标准形态。它既不是常规 `axplat-*` 平台包，也不是运行时装卸模块，而是一条面向动态平台事实和动态驱动模型的桥接路径。理解这一点，是读懂它与 `axplat`、`axplat-macros`、`cargo-axplat` 及上层构建系统边界的关键。
+`axplat-dyn` 的价值不在“又实现了一套新的板级常量配置”，而在它把 `somehal` 的运行时平台事实和 `rdrive` 的设备探测能力拼成了 `axplat`/`ax-driver` 能消费的标准形态。它既不是常规 `axplat-*` 平台包，也不是运行时装卸模块，而是一条面向动态平台事实和动态驱动模型的桥接路径。理解这一点，是读懂它与 `axplat`、`axplat-macros`、`cargo-axplat` 及上层构建系统边界的关键。

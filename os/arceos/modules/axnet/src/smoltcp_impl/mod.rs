@@ -8,7 +8,7 @@ mod udp;
 use alloc::vec;
 use core::{cell::RefCell, ops::DerefMut};
 
-use axdriver::prelude::*;
+use ax_driver::prelude::*;
 use axhal::time::{NANOS_PER_MICROS, wall_time_nanos};
 use axsync::Mutex;
 use lazyinit::LazyInit;

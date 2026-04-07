@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`components/axdriver_crates/axdriver_virtio/src/socket.rs`、`os/arceos/modules/axruntime/src/lib.rs`
 
-`axdriver_vsock` 用来定义 vsock 驱动的统一接口。它既不是通用 socket API，也不是网络协议栈，而是把“面向 host/guest 通道的设备驱动”抽象成一组统一操作，让 `virtio-vsock` 之类的具体实现能被 `axdriver` 聚合层和 `ax-net-ng` 上层消费。
+`axdriver_vsock` 用来定义 vsock 驱动的统一接口。它既不是通用 socket API，也不是网络协议栈，而是把“面向 host/guest 通道的设备驱动”抽象成一组统一操作，让 `virtio-vsock` 之类的具体实现能被 `ax-driver` 聚合层和 `ax-net-ng` 上层消费。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -19,7 +19,7 @@
 它的层次位置是：
 
 - 向下承接具体 vsock 设备驱动，例如 `VirtIoSocketDev`。
-- 向上被 `axdriver::prelude` 和 `ax-net-ng` 使用。
+- 向上被 `ax-driver::prelude` 和 `ax-net-ng` 使用。
 - 不承担 BSD socket、poll 语义、地址解析等更高层网络职责。
 
 ### 1.2 关键对象
@@ -50,7 +50,7 @@
 
 再往上一层：
 
-- `axdriver` 把 vsock 设备放入 `AllDevices.vsock`。
+- `ax-driver` 把 vsock 设备放入 `AllDevices.vsock`。
 - `ax-runtime` 仅在 `net-ng` + `vsock` feature 组合下调用 `ax-net_ng::init_vsock(all_devices.vsock)`。
 
 这说明该 crate 不是独立的网络主线，而是 `ax-net-ng` 可选能力的一部分。
@@ -65,7 +65,7 @@
 ### 2.1 主要能力
 - 统一表达 vsock 地址、连接和驱动事件。
 - 为设备驱动提供一套面向连接管理和事件轮询的 trait。
-- 让 `virtio-vsock` 这样的实现可以被 `axdriver` 聚合和 `ax-net-ng` 消费。
+- 让 `virtio-vsock` 这样的实现可以被 `ax-driver` 聚合和 `ax-net-ng` 消费。
 
 ### 2.2 当前接口特征
 - 连接标识以 `peer_addr + local_port` 为主，而不是文件描述符或句柄。
@@ -90,7 +90,7 @@
 ### 3.3 分层关系总结
 - 向下不耦合任何具体总线。
 - 向上作为 `ax-net-ng` 的一个设备能力来源。
-- 真正的设备探测和 transport 建立仍由 `axdriver` 与 `axdriver_virtio` 负责。
+- 真正的设备探测和 transport 建立仍由 `ax-driver` 与 `axdriver_virtio` 负责。
 
 ## 4. 开发指南
 ### 4.1 何时修改这里
@@ -136,7 +136,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `axdriver` 和 `ax-net-ng` 使用它，是当前仓库中唯一明确的主线落点。
+ArceOS 通过 `ax-driver` 和 `ax-net-ng` 使用它，是当前仓库中唯一明确的主线落点。
 
 ### 6.2 StarryOS
 当前仓库中没有看到 StarryOS 直接消费 `axdriver_vsock` 的证据，因此不应把它描述成 StarryOS 的常规网络接口层。

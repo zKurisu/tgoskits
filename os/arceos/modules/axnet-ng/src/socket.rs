@@ -7,7 +7,7 @@ use core::{
 };
 
 #[cfg(feature = "vsock")]
-use axdriver::prelude::VsockAddr;
+use ax_driver::prelude::VsockAddr;
 use axerrno::{AxError, AxResult, LinuxError};
 use axio::prelude::*;
 use axpoll::{IoEvents, Pollable};

@@ -527,6 +527,7 @@ name = "ax-api"
 version = "0.5.0"
 dependencies = [
  "ax-display",
+ "ax-driver",
  "ax-feat",
  "ax-fs",
  "ax-net",
@@ -534,7 +535,6 @@ dependencies = [
  "axalloc",
  "axconfig",
  "axdma",
- "axdriver",
  "axerrno",
  "axhal",
  "axio",
@@ -549,10 +549,34 @@ dependencies = [
 name = "ax-display"
 version = "0.5.0"
 dependencies = [
- "axdriver",
+ "ax-driver",
  "axsync",
  "lazyinit 0.4.2",
  "log",
+]
+
+[[package]]
+name = "ax-driver"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axconfig",
+ "axdma",
+ "axdriver_base",
+ "axdriver_block",
+ "axdriver_display",
+ "axdriver_input",
+ "axdriver_net",
+ "axdriver_pci",
+ "axdriver_virtio",
+ "axdriver_vsock",
+ "axerrno",
+ "axhal",
+ "axplat-dyn",
+ "cfg-if",
+ "crate_interface 0.5.0",
+ "log",
+ "smallvec",
 ]
 
 [[package]]
@@ -560,6 +584,7 @@ name = "ax-feat"
 version = "0.5.0"
 dependencies = [
  "ax-display",
+ "ax-driver",
  "ax-fs",
  "ax-fs-ng",
  "ax-input",
@@ -568,7 +593,6 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdriver",
  "axhal",
  "axipi",
  "axlog",
@@ -581,7 +605,7 @@ dependencies = [
 name = "ax-fs"
 version = "0.5.0"
 dependencies = [
- "axdriver",
+ "ax-driver",
  "axerrno",
  "axfatfs",
  "axfs_devfs",
@@ -600,8 +624,8 @@ dependencies = [
 name = "ax-fs-ng"
 version = "0.5.0"
 dependencies = [
+ "ax-driver",
  "axalloc",
- "axdriver",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
@@ -662,7 +686,7 @@ dependencies = [
 name = "ax-input"
 version = "0.5.0"
 dependencies = [
- "axdriver",
+ "ax-driver",
  "axsync",
  "lazyinit 0.4.2",
  "log",
@@ -683,7 +707,7 @@ dependencies = [
 name = "ax-net"
 version = "0.5.0"
 dependencies = [
- "axdriver",
+ "ax-driver",
  "axerrno",
  "axhal",
  "axio",
@@ -702,9 +726,9 @@ version = "0.5.0"
 dependencies = [
  "async-channel",
  "async-trait",
+ "ax-driver",
  "ax-fs-ng",
  "axconfig",
- "axdriver",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
@@ -752,6 +776,7 @@ name = "ax-runtime"
 version = "0.5.0"
 dependencies = [
  "ax-display",
+ "ax-driver",
  "ax-fs",
  "ax-fs-ng",
  "ax-input",
@@ -760,7 +785,6 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdriver",
  "axhal",
  "axipi",
  "axklib",
@@ -1047,30 +1071,6 @@ dependencies = [
  "kspin 0.3.1",
  "log",
  "memory_addr 0.6.1",
-]
-
-[[package]]
-name = "axdriver"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axconfig",
- "axdma",
- "axdriver_base",
- "axdriver_block",
- "axdriver_display",
- "axdriver_input",
- "axdriver_net",
- "axdriver_pci",
- "axdriver_virtio",
- "axdriver_vsock",
- "axerrno",
- "axhal",
- "axplat-dyn",
- "cfg-if",
- "crate_interface 0.5.0",
- "log",
- "smallvec",
 ]
 
 [[package]]
@@ -7415,6 +7415,7 @@ name = "starry-kernel"
 version = "0.5.0"
 dependencies = [
  "ax-display",
+ "ax-driver",
  "ax-feat",
  "ax-fs-ng",
  "ax-input",
@@ -7423,7 +7424,6 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdriver",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",

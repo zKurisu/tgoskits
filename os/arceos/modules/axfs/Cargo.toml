@@ -14,7 +14,7 @@ times = []
 use-ramdisk = [] # TODO: init ramdisk
 
 [dependencies]
-axdriver = { workspace = true, features = ["block"] }
+ax-driver = { workspace = true, features = ["block"] }
 axerrno = { workspace = true }
 axhal = { workspace = true }
 axfs_devfs = { version = "0.3.2" }

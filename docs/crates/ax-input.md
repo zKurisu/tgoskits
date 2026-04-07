@@ -31,7 +31,7 @@
 ```mermaid
 graph LR
     current["ax-input"]
-    current --> axdriver["axdriver"]
+    current --> ax-driver["ax-driver"]
     current --> axsync["axsync"]
     current --> lazyinit["lazyinit"]
     ax_feat["ax-feat"] --> current
@@ -40,7 +40,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `axdriver`
+- `ax-driver`
 - `axsync`
 - `lazyinit`
 

@@ -11,7 +11,7 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-axdriver = { workspace = true, features = ["input"] }
+ax-driver = { workspace = true, features = ["input"] }
 axsync = { workspace = true }
 
 lazyinit = { workspace = true }

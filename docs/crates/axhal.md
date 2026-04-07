@@ -13,7 +13,7 @@
 `axhal` 处在三层之间：
 
 - 向下连接 `axcpu` 与 `axplat-*`，分别承接 ISA 级抽象和板级/平台级实现。
-- 向上为 `ax-runtime`、`axmm`、`axtask`、`axdriver` 等模块提供统一 API。
+- 向上为 `ax-runtime`、`axmm`、`axtask`、`ax-driver` 等模块提供统一 API。
 - 在 `plat-dyn`、`defplat`、`myplat` 等 feature 作用下，决定最终链接到哪一类平台实现。
 
 这意味着 `axhal` 的核心价值不是“算法复杂”，而是“边界清晰”与“初始化顺序正确”。它本质上是 ArceOS 运行时的硬件语义总入口。
@@ -124,7 +124,7 @@ graph LR
     axhal --> ax-runtime["ax-runtime"]
     axhal --> axmm["axmm"]
     axhal --> axtask["axtask"]
-    axhal --> axdriver["axdriver"]
+    axhal --> ax-driver["ax-driver"]
     axhal --> starry["starry-kernel"]
     axhal --> axvisor["axvisor"]
 ```
@@ -144,7 +144,7 @@ graph LR
 - `ax-runtime`：系统 bring-up 总控，是 `axhal` 的第一直接消费者。
 - `axmm`：使用 `paging`、地址转换与内存区域信息。
 - `axtask`：使用 CPU 本地状态、时间、IRQ、TLS 与上下文相关能力。
-- `axdriver`、`ax-net`、`ax-fs*`：通过时间、中断、设备树和平台资源完成硬件接线。
+- `ax-driver`、`ax-net`、`ax-fs*`：通过时间、中断、设备树和平台资源完成硬件接线。
 - `starry-kernel`：复用 `UserContext`、分页、时间和控制台能力。
 - `axvisor`：通过 `axhal` 为虚拟化路径提供中断、时间、CPU ID、地址翻译等宿主能力。
 

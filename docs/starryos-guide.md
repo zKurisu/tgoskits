@@ -84,7 +84,7 @@ flowchart TD
 如果你改的是：
 
 - `components/axerrno`、`components/kspin` 这类基础 crate
-- 或 `os/arceos/modules/axhal`、`axtask`、`axdriver`、`ax-net`
+- 或 `os/arceos/modules/axhal`、`axtask`、`ax-driver`、`ax-net`
 
 建议先确认 ArceOS 最小路径仍然工作，再回到 StarryOS：
 

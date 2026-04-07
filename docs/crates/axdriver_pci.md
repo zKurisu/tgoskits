@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`os/arceos/modules/axdriver/src/bus/pci.rs`、`os/arceos/modules/axdriver/src/virtio.rs`
 
-`axdriver_pci` 的定位非常清晰：它是 `axdriver` 体系里的 PCI 总线访问辅助层。它不负责把设备按类别聚合，也不负责实现具体网卡、块设备或显示设备驱动；它提供的是 PCI 配置空间相关类型的统一来源，以及一个很小但很关键的 `PciRangeAllocator`，供上层为未分配地址的 PCI BAR 安排 MMIO 窗口。
+`axdriver_pci` 的定位非常清晰：它是 `ax-driver` 体系里的 PCI 总线访问辅助层。它不负责把设备按类别聚合，也不负责实现具体网卡、块设备或显示设备驱动；它提供的是 PCI 配置空间相关类型的统一来源，以及一个很小但很关键的 `PciRangeAllocator`，供上层为未分配地址的 PCI BAR 安排 MMIO 窗口。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -37,7 +37,7 @@
 
 它本质上是一个顺序递增分配器，适合 BAR 窗口这种“启动期一次性分配、运行期不回收”的场景。
 
-### 1.4 在 `axdriver` 中的真实调用方式
+### 1.4 在 `ax-driver` 中的真实调用方式
 在 `os/arceos/modules/axdriver/src/bus/pci.rs` 里，PCI 探测主线如下：
 
 1. 用 `PciRoot::new(..., Cam::Ecam)` 打开 ECAM。
@@ -51,7 +51,7 @@
 这说明：
 
 - `axdriver_pci` 负责的是“访问和分配”。
-- `axdriver` 才负责“枚举和派发”。
+- `ax-driver` 才负责“枚举和派发”。
 
 ### 1.5 与 VirtIO 路径的关系
 `axdriver_virtio::probe_pci_device()` 和 `os/arceos/modules/axdriver/src/virtio.rs` 会继续基于 `PciRoot`、`DeviceFunction`、`DeviceFunctionInfo` 做 VirtIO PCI 设备识别。因此 `axdriver_pci` 也是 VirtIO PCI 探测路径的底层依赖。
@@ -63,7 +63,7 @@
 ### 2.1 主要能力
 - 统一提供 PCI 配置空间访问相关类型。
 - 为 BAR 资源分配提供最小分配器 `PciRangeAllocator`。
-- 为上层 `axdriver` 的 PCI 枚举和 VirtIO PCI 探测提供公共底座。
+- 为上层 `ax-driver` 的 PCI 枚举和 VirtIO PCI 探测提供公共底座。
 
 ### 2.2 当前实现特征
 - crate 自身没有 Cargo feature，也没有内部子模块拆分。
@@ -88,7 +88,7 @@
 
 ### 3.3 分层关系总结
 - 向下：依赖 `virtio-drivers` 的 PCI bus 实现。
-- 向上：服务 `axdriver` 的 PCI 探测与 VirtIO PCI 路径。
+- 向上：服务 `ax-driver` 的 PCI 探测与 VirtIO PCI 路径。
 - 横向：保持对设备类别中立，不直接依赖 `axdriver_block`、`axdriver_net` 等类别 crate。
 
 ## 4. 开发指南
@@ -99,7 +99,7 @@
 - 需要补充 BAR 分配或 PCI 配置访问相关能力。
 - 需要统一仓库内对 `virtio-drivers` PCI bus API 的适配点。
 
-如果只是新增某类 PCI 设备驱动，通常应修改 `axdriver` 或对应设备 crate，而不是这里。
+如果只是新增某类 PCI 设备驱动，通常应修改 `ax-driver` 或对应设备 crate，而不是这里。
 
 ### 4.2 修改时要同步检查的地方
 1. `os/arceos/modules/axdriver/src/bus/pci.rs` 的枚举和 BAR 配置逻辑。
@@ -134,7 +134,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 是当前仓库里唯一明确的直接主线消费者。`axdriver` 的 PCI 探测路径完全建立在本 crate 暴露的类型和分配器之上。
+ArceOS 是当前仓库里唯一明确的直接主线消费者。`ax-driver` 的 PCI 探测路径完全建立在本 crate 暴露的类型和分配器之上。
 
 ### 6.2 StarryOS
 StarryOS 若复用 ArceOS 底层驱动栈，会间接依赖本 crate；但当前仓库中没有看到它作为 StarryOS 独立 PCI 子系统直接存在。

@@ -16,7 +16,7 @@
 
 `ax-net` 的设计目标非常直接：把 `smoltcp` 变成 ArceOS 可直接消费的同步网络 API。当前实现采用三层收敛：
 
-- 设备层：从 `axdriver` 取出一个 `AxNetDevice`，直接适配成 `smoltcp::phy::Device`
+- 设备层：从 `ax-driver` 取出一个 `AxNetDevice`，直接适配成 `smoltcp::phy::Device`
 - 接口层：使用单个全局 `InterfaceWrapper` 管理唯一网络接口 `eth0`
 - socket 层：提供同步的 `TcpSocket`、`UdpSocket` 和 `dns_query()`
 
@@ -137,7 +137,7 @@
 
 | 依赖 | 作用 |
 | --- | --- |
-| `axdriver` | 提供 NIC 设备对象 |
+| `ax-driver` | 提供 NIC 设备对象 |
 | `axhal` | 提供时间接口，驱动 `smoltcp::Instant` |
 | `axio` | 提供 `PollState` 与通用 I/O trait |
 | `axsync` / `spin` / `lazyinit` | 管理全局接口、`SocketSet` 与监听表 |
