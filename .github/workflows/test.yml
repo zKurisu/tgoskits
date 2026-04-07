@@ -147,11 +147,11 @@ jobs:
 
       - run: rustc --version
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: test-axvisor-board-${{ matrix.test_group }}
-          cache-bin: false
-          save-if: ${{ github.event_name == 'push' }}
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: test-axvisor-board-${{ matrix.test_group }}
+      #     cache-bin: false
+      #     save-if: ${{ github.event_name == 'push' }}
 
       - name: Run axvisor board tests
         run: cargo axvisor test board -t ${{ matrix.test_group }}
