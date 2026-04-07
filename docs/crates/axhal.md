@@ -6,14 +6,14 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/dtb.rs`、`src/mem.rs`、`src/percpu.rs`、`src/irq.rs`、`src/paging.rs`、`src/tls.rs`、`build.rs`、`linker.lds.S`
 
-`axhal` 是 ArceOS 家族中最关键的“硬件抽象粘合层”。它并不试图独立实现所有架构/平台逻辑，而是把 `axcpu` 的 ISA 语义、`axplat` 的平台实现和上层运行时需要的统一接口收束成一套稳定的 HAL 边界，因此它既是 `ax-runtime` 的启动基座，也是 `ax-mm`、`axtask`、StarryOS 与 Axvisor 共同复用的低层能力入口。
+`axhal` 是 ArceOS 家族中最关键的“硬件抽象粘合层”。它并不试图独立实现所有架构/平台逻辑，而是把 `axcpu` 的 ISA 语义、`axplat` 的平台实现和上层运行时需要的统一接口收束成一套稳定的 HAL 边界，因此它既是 `ax-runtime` 的启动基座，也是 `ax-mm`、`ax-task`、StarryOS 与 Axvisor 共同复用的低层能力入口。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
 `axhal` 处在三层之间：
 
 - 向下连接 `axcpu` 与 `axplat-*`，分别承接 ISA 级抽象和板级/平台级实现。
-- 向上为 `ax-runtime`、`ax-mm`、`axtask`、`ax-driver` 等模块提供统一 API。
+- 向上为 `ax-runtime`、`ax-mm`、`ax-task`、`ax-driver` 等模块提供统一 API。
 - 在 `plat-dyn`、`defplat`、`myplat` 等 feature 作用下，决定最终链接到哪一类平台实现。
 
 这意味着 `axhal` 的核心价值不是“算法复杂”，而是“边界清晰”与“初始化顺序正确”。它本质上是 ArceOS 运行时的硬件语义总入口。
@@ -82,7 +82,7 @@ flowchart TD
 - 提供统一的 trap/IRQ 桥接：`register_trap_handler`、IRQ 派发与 IRQ hook。
 - 提供统一的时间与计时器接口：`monotonic_time()`、`wall_time()`、one-shot timer 等由 `time` 子模块统一导出。
 - 提供统一的每 CPU 与上下文接口：`TaskContext`、`TrapFrame`、当前 CPU ID、当前任务指针等。
-- 提供页表与 TLS 支撑：在打开 `paging` 或 `tls` 时，为 `ax-mm`、`axtask`、用户态支持等提供底层能力。
+- 提供页表与 TLS 支撑：在打开 `paging` 或 `tls` 时，为 `ax-mm`、`ax-task`、用户态支持等提供底层能力。
 
 ### 2.2 关键 API 与使用场景
 - `init_early()` / `init_later()`：仅供运行时和平台入口链调用，是系统 bring-up 的核心接口。
@@ -123,7 +123,7 @@ graph LR
 
     axhal --> ax-runtime["ax-runtime"]
     axhal --> ax-mm["ax-mm"]
-    axhal --> axtask["axtask"]
+    axhal --> ax-task["ax-task"]
     axhal --> ax-driver["ax-driver"]
     axhal --> starry["starry-kernel"]
     axhal --> axvisor["axvisor"]
@@ -143,7 +143,7 @@ graph LR
 ### 3.3 关键直接消费者
 - `ax-runtime`：系统 bring-up 总控，是 `axhal` 的第一直接消费者。
 - `ax-mm`：使用 `paging`、地址转换与内存区域信息。
-- `axtask`：使用 CPU 本地状态、时间、IRQ、TLS 与上下文相关能力。
+- `ax-task`：使用 CPU 本地状态、时间、IRQ、TLS 与上下文相关能力。
 - `ax-driver`、`ax-net`、`ax-fs*`：通过时间、中断、设备树和平台资源完成硬件接线。
 - `starry-kernel`：复用 `UserContext`、分页、时间和控制台能力。
 - `axvisor`：通过 `axhal` 为虚拟化路径提供中断、时间、CPU ID、地址翻译等宿主能力。
@@ -192,7 +192,7 @@ axhal = { workspace = true }
 更关键的是系统级验证：
 
 - ArceOS 最小启动路径，例如 `ax-helloworld`。
-- 依赖 `paging`、`irq`、`smp` 的场景，如 `ax-mm`、`axtask` 相关测试。
+- 依赖 `paging`、`irq`、`smp` 的场景，如 `ax-mm`、`ax-task` 相关测试。
 - StarryOS 与 Axvisor 的最小 bring-up 路径，验证 HAL 改动没有破坏上层复用。
 
 ### 5.3 覆盖率要求
@@ -202,7 +202,7 @@ axhal = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axhal` 是 ArceOS 的硬件抽象中枢。`ax-runtime` 通过它完成 BSP/从核初始化，`ax-mm` 通过它操作页表与地址空间，`axtask` 通过它获取 CPU 本地状态、时间和中断能力。没有 `axhal`，ArceOS 的模块化运行时就失去了与真实硬件之间的统一边界。
+`axhal` 是 ArceOS 的硬件抽象中枢。`ax-runtime` 通过它完成 BSP/从核初始化，`ax-mm` 通过它操作页表与地址空间，`ax-task` 通过它获取 CPU 本地状态、时间和中断能力。没有 `axhal`，ArceOS 的模块化运行时就失去了与真实硬件之间的统一边界。
 
 ### 6.2 StarryOS
 StarryOS 并不重新实现 HAL，而是直接复用 `axhal`。它通过 `axhal::uspace::UserContext`、`paging`、`time`、`console` 等能力实现 Linux 兼容内核路径，因此 `axhal` 在 StarryOS 中扮演的是“宿主内核底层抽象层”而不是外围工具库。

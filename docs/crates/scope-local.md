@@ -155,11 +155,11 @@ graph TD
 - 若没有任何调度/上下文钩子切换 `ActiveScope`，访问将始终落到 `GLOBAL_SCOPE`
 - `Scope` 生命周期必须与使用它的执行上下文一致，否则 `ACTIVE_SCOPE_PTR` 会悬空
 
-### 4.3 与 `percpu` / `axtask` 的职责分工
+### 4.3 与 `percpu` / `ax-task` 的职责分工
 
 - `percpu`：只负责“当前 CPU 有一个当前 scope 指针”
 - `scope-local`：负责“如何根据当前 scope 指针解析局部项”
-- `axtask`/Starry 调度层：决定“何时切换当前 scope”
+- `ax-task`/Starry 调度层：决定“何时切换当前 scope”
 
 不要把调度策略写回 `scope-local`，否则它会失去通用性。
 

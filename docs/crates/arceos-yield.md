@@ -24,11 +24,11 @@
 
 ```mermaid
 flowchart LR
-    A["thread::spawn"] --> B["axtask::spawn_raw"]
+    A["thread::spawn"] --> B["ax-task::spawn_raw"]
     B --> C["任务执行"]
     C --> D["thread::yield_now()"]
     D --> E["ax_api::task::ax_yield_now"]
-    E --> F["axtask::yield_now"]
+    E --> F["ax-task::yield_now"]
     F --> G["当前 run queue 重新调度"]
 ```
 
@@ -80,7 +80,7 @@ flowchart LR
 graph LR
     test["arceos-yield"] --> ax-std["ax-std(multitask)"]
     ax-std --> ax-api["ax_api::task"]
-    ax-api --> axtask["axtask"]
+    ax-api --> ax-task["ax-task"]
 ```
 
 ### 3.1 直接依赖
@@ -88,11 +88,11 @@ graph LR
 
 ### 3.2 关键间接依赖
 - `ax_api::task::ax_yield_now`：连接用户侧线程 API 与内核任务 API。
-- `axtask::yield_now`：真正对当前 run queue 触发让出和重新调度。
+- `ax-task::yield_now`：真正对当前 run queue 触发让出和重新调度。
 
 ### 3.3 主要消费者
 - `cargo arceos test qemu` 自动收集的任务基础回归。
-- 修改 `axtask`、调度器 feature 或 cooperative 调度路径后的最小验证。
+- 修改 `ax-task`、调度器 feature 或 cooperative 调度路径后的最小验证。
 
 ## 4. 开发指南
 ### 4.1 推荐运行方式

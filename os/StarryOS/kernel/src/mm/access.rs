@@ -7,6 +7,7 @@ use core::{
     ptr, slice, str,
 };
 
+use ax_task::current;
 use axerrno::{AxError, AxResult};
 use axhal::{
     asm::user_copy,
@@ -14,7 +15,6 @@ use axhal::{
     trap::{PAGE_FAULT, register_trap_handler},
 };
 use axio::prelude::*;
-use axtask::current;
 use extern_trait::extern_trait;
 use kernel_guard::IrqSave;
 use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};

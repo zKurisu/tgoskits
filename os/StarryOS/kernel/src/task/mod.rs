@@ -16,8 +16,8 @@ use core::{
 };
 
 use ax_sync::{Mutex, spin::SpinNoIrq};
+use ax_task::{TaskExt, TaskInner};
 use axpoll::PollSet;
-use axtask::{TaskExt, TaskInner};
 use extern_trait::extern_trait;
 use scope_local::{ActiveScope, Scope};
 use spin::RwLock;

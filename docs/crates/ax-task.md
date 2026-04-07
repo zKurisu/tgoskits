@@ -1,4 +1,4 @@
-# `axtask` 技术文档
+# `ax-task` 技术文档
 
 > 路径：`os/arceos/modules/axtask`
 > 类型：库 crate
@@ -6,17 +6,17 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/api.rs`、`src/task.rs`、`src/run_queue.rs`、`src/wait_queue.rs`、`src/timers.rs`、`src/future/*`
 
-`axtask` 是 ArceOS 的任务管理核心模块。它既承担线程/任务对象的创建、阻塞、退出与回收，又通过 `axsched` 抽象把 FIFO、RR、CFS 等调度策略统一到同一个运行队列框架下，并进一步向 StarryOS 和 Axvisor 输出可复用的调度基础设施。
+`ax-task` 是 ArceOS 的任务管理核心模块。它既承担线程/任务对象的创建、阻塞、退出与回收，又通过 `axsched` 抽象把 FIFO、RR、CFS 等调度策略统一到同一个运行队列框架下，并进一步向 StarryOS 和 Axvisor 输出可复用的调度基础设施。
 
 ## 1. 架构设计分析
 ### 1.1 总体设计
-`axtask` 的设计目标不是提供“单一线程库”，而是构造一个可裁剪的内核任务运行时：
+`ax-task` 的设计目标不是提供“单一线程库”，而是构造一个可裁剪的内核任务运行时：
 
 - 通过 `multitask` feature 在“真正多任务调度器”和“单任务桩实现”之间切换。
 - 通过 `sched-fifo`、`sched-rr`、`sched-cfs` 在同一套 API 下选择不同调度策略。
 - 通过 `irq`、`preempt`、`smp`、`tls`、`task-ext` 决定任务系统究竟具备多少内核能力。
 
-因此，`axtask` 是一个强 feature 驱动的状态机模块，而不是简单的 API 封装。
+因此，`ax-task` 是一个强 feature 驱动的状态机模块，而不是简单的 API 封装。
 
 ### 1.2 模块划分
 - `src/lib.rs`：顶层 feature 门控。决定编译 `run_queue`、`task`、`api`、`wait_queue`、`future`、`timers` 还是退回 `api_s` 单任务实现。
@@ -42,7 +42,7 @@
 - `AxTaskExt` / `TaskExt`：供上层系统附加任务私有语义的扩展接口，是 StarryOS 线程对象与 Axvisor vCPU 任务集成的关键点。
 
 ### 1.4 调度器抽象与算法实现
-`axtask` 并不自己实现完整调度算法，而是通过 `api.rs` 中的类型别名把 `TaskInner` 适配到 `axsched`：
+`ax-task` 并不自己实现完整调度算法，而是通过 `api.rs` 中的类型别名把 `TaskInner` 适配到 `axsched`：
 
 - `sched-fifo`：`FifoScheduler` + `FifoTask`，协作式调度。
 - `sched-rr`：`RRScheduler` + `RRTask`，带时间片，依赖 `preempt`。
@@ -101,12 +101,12 @@ stateDiagram-v2
 ```rust
 use core::time::Duration;
 
-let worker = axtask::spawn(|| {
+let worker = ax-task::spawn(|| {
     // do work
 });
 
-axtask::yield_now();
-axtask::sleep(Duration::from_millis(10));
+ax-task::yield_now();
+ax-task::sleep(Duration::from_millis(10));
 
 let _exit_code = worker.join();
 ```
@@ -114,26 +114,26 @@ let _exit_code = worker.join();
 若需要等待条件成立，通常走 `WaitQueue`：
 
 ```rust
-let wq = axtask::WaitQueue::new();
+let wq = ax-task::WaitQueue::new();
 // 条件不满足时 wait，条件满足后 wake
 ```
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axhal["axhal"] --> axtask["axtask"]
-    axsched["axsched"] --> axtask
-    axconfig["axconfig"] --> axtask
-    kernel_guard["kernel_guard"] --> axtask
-    axpoll["axpoll"] --> axtask
-    cpumask["cpumask"] --> axtask
+    axhal["axhal"] --> ax-task["ax-task"]
+    axsched["axsched"] --> ax-task
+    axconfig["axconfig"] --> ax-task
+    kernel_guard["kernel_guard"] --> ax-task
+    axpoll["axpoll"] --> ax-task
+    cpumask["cpumask"] --> ax-task
 
-    axtask --> ax-runtime["ax-runtime"]
-    axtask --> ax-sync["ax-sync"]
-    axtask --> ax-api["ax-api"]
-    axtask --> ax-posix-api["ax-posix-api"]
-    axtask --> starry["starry-kernel"]
-    axtask --> axvisor["axvisor (via ax-std/indirect)"]
+    ax-task --> ax-runtime["ax-runtime"]
+    ax-task --> ax-sync["ax-sync"]
+    ax-task --> ax-api["ax-api"]
+    ax-task --> ax-posix-api["ax-posix-api"]
+    ax-task --> starry["starry-kernel"]
+    ax-task --> axvisor["axvisor (via ax-std/indirect)"]
 ```
 
 ### 3.1 关键直接依赖
@@ -146,16 +146,16 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `ax-runtime`：在启动链中初始化调度器，并在 timer tick 中调用 `on_timer_tick()`。
-- `ax-sync`：基于 `axtask` 的阻塞/唤醒机制构建锁和同步原语。
+- `ax-sync`：基于 `ax-task` 的阻塞/唤醒机制构建锁和同步原语。
 - `ax-api`、`ax-posix-api`：把任务、睡眠、等待队列等能力对外暴露。
-- `starry-kernel`：在 Linux 兼容线程模型上直接复用 `axtask`。
+- `starry-kernel`：在 Linux 兼容线程模型上直接复用 `ax-task`。
 - `ax-net`、`ax-net-ng`：在网络栈阻塞/异步路径上复用调度与等待能力。
 
 ## 4. 开发指南
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axtask = { workspace = true }
+ax-task = { workspace = true }
 ```
 
 常见 feature 组合：
@@ -211,10 +211,10 @@ axtask = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axtask` 是 ArceOS 的标准任务运行时。它为 `ax-runtime`、`ax-sync`、`ax-api` 和各种示例/测试提供统一的任务抽象，是系统从“单核顺序执行”迈向“可调度 OS”的关键模块。
+`ax-task` 是 ArceOS 的标准任务运行时。它为 `ax-runtime`、`ax-sync`、`ax-api` 和各种示例/测试提供统一的任务抽象，是系统从“单核顺序执行”迈向“可调度 OS”的关键模块。
 
 ### 6.2 StarryOS
-StarryOS 直接复用 `axtask` 作为线程调度基础，并借助 `TaskExt` 把 Linux 兼容线程对象挂接到任务实体上。因此，`axtask` 在 StarryOS 中承担的是“底层线程调度内核”，而不是外围帮助库。
+StarryOS 直接复用 `ax-task` 作为线程调度基础，并借助 `TaskExt` 把 Linux 兼容线程对象挂接到任务实体上。因此，`ax-task` 在 StarryOS 中承担的是“底层线程调度内核”，而不是外围帮助库。
 
 ### 6.3 Axvisor
-Axvisor 并不直接依赖 `axtask` 包名，但它通过 `ax-std` 启用的任务能力，把每个 vCPU 组织成可调度任务，并利用 `TaskExt`、`WaitQueue` 和运行队列复用 Hypervisor 并发模型。因此，`axtask` 是 Axvisor 把“vCPU”转化成“宿主调度实体”的关键基础设施。
+Axvisor 并不直接依赖 `ax-task` 包名，但它通过 `ax-std` 启用的任务能力，把每个 vCPU 组织成可调度任务，并利用 `TaskExt`、`WaitQueue` 和运行队列复用 Hypervisor 并发模型。因此，`ax-task` 是 Axvisor 把“vCPU”转化成“宿主调度实体”的关键基础设施。

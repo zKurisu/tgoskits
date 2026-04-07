@@ -50,11 +50,11 @@
 ### 2.2 关键 API 与真实使用位置
 - `SpinNoIrq`：被 `axalloc`、`ax-ipi`、`axlog`、`ax-mm`、Axvisor 计时器等路径广泛使用。
 - `SpinNoPreempt`：在 `ax-fs-ng` 等需要关抢占但不一定关 IRQ 的路径使用。
-- `SpinRaw`：被 `axtask::run_queue` 用来保护已由外层 guard 保证过的就绪队列状态。
+- `SpinRaw`：被 `ax-task::run_queue` 用来保护已由外层 guard 保证过的就绪队列状态。
 
 ### 2.3 使用边界
 - `kspin` 不会睡眠等待，所以它不是阻塞式锁。
-- `kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `ax-sync` / `axtask`。
+- `kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `ax-sync` / `ax-task`。
 - `kspin` 也不决定 guard 的具体语义；那部分在 `kernel_guard`。
 
 ## 3. 依赖关系图谱
@@ -66,7 +66,7 @@ graph LR
     kspin --> ax-ipi["ax-ipi"]
     kspin --> axlog["axlog"]
     kspin --> ax-mm["ax-mm"]
-    kspin --> axtask["axtask"]
+    kspin --> ax-task["ax-task"]
     kspin --> ax-sync["ax-sync"]
     kspin --> axplat["axplat / platform crates"]
     kspin --> starry["starry-kernel"]
@@ -78,7 +78,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axalloc`、`ax-ipi`、`axlog`、`ax-mm`：系统运行时基础模块。
-- `axtask`：任务与 run queue 路径。
+- `ax-task`：任务与 run queue 路径。
 - `ax-sync`：在非 `multitask` 路径下直接把 `SpinNoIrq` 当 `Mutex`。
 - 各类平台 crate、StarryOS、Axvisor：用于平台状态和驱动共享状态保护。
 
@@ -122,7 +122,7 @@ kspin = { workspace = true, features = ["smp"] }
 - `force_unlock()` 与 RAII drop 的相互关系。
 
 ### 5.3 集成测试重点
-- `axtask` run queue 在高频调度下是否仍稳定。
+- `ax-task` run queue 在高频调度下是否仍稳定。
 - `axlog`、`axalloc` 这类高频使用者在并发环境下是否出现死锁或输出/统计错乱。
 
 ### 5.4 覆盖率要求

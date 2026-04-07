@@ -124,7 +124,7 @@
 
 - 平台层定义 `CPU_ID`、`IS_BSP`
 - `axhal` 定义当前任务指针
-- `axtask` 定义 per-CPU 运行队列
+- `ax-task` 定义 per-CPU 运行队列
 - `axvcpu` 或 `os/axvisor` 定义每核虚拟化状态
 
 ### 2.3 与 `percpu` 的分工
@@ -157,7 +157,7 @@
 
 - `axplat`
 - `axhal`
-- `axtask`
+- `ax-task`
 - `axvcpu`
 - `arm_vcpu`
 - `os/axvisor`
@@ -170,7 +170,7 @@ graph TD
     A[percpu_macros] --> B[percpu]
     B --> C[axplat]
     C --> D[axhal]
-    D --> E[axtask]
+    D --> E[ax-task]
     D --> F[ax-runtime]
     B --> G[axvcpu / arm_vcpu]
     B --> H[scope-local]
@@ -217,7 +217,7 @@ graph TD
 ### 5.3 风险点
 
 - 它属于“编译期生成 + 运行时契约”结合点，错误很难只在本 crate 内暴露
-- 任何宏展开格式变动，都可能影响 `percpu`、`axhal`、`axtask` 和 Axvisor 的每核状态访问
+- 任何宏展开格式变动，都可能影响 `percpu`、`axhal`、`ax-task` 和 Axvisor 的每核状态访问
 
 ## 6. 跨项目定位分析
 

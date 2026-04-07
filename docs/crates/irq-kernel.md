@@ -144,7 +144,7 @@ make ARCH=<x86_64|aarch64|riscv64|loongarch64> run
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 不直接依赖这个样例，但会复用相同的 `axplat` 平台包和 IRQ 底座。因此它对 ArceOS 的意义是“先确认平台 IRQ 最小链路成立，再进入 `ax-runtime` 和 `axtask` 的更复杂场景”。
+ArceOS 不直接依赖这个样例，但会复用相同的 `axplat` 平台包和 IRQ 底座。因此它对 ArceOS 的意义是“先确认平台 IRQ 最小链路成立，再进入 `ax-runtime` 和 `ax-task` 的更复杂场景”。
 
 ### 6.2 StarryOS
 StarryOS 也不会直接运行它。这个样例只是帮助确认共享平台包的 trap/IRQ 基础能力仍然健全。

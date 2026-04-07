@@ -77,7 +77,7 @@
 
 - `KernelGuardIf`
 
-具体由谁来实现、如何实现，交给其他 crate。例如 `axtask` 会把它接到任务抢占计数或调度状态上。这样 `kernel_guard` 可以保持足够小，而不依赖调度器本身。
+具体由谁来实现、如何实现，交给其他 crate。例如 `ax-task` 会把它接到任务抢占计数或调度状态上。这样 `kernel_guard` 可以保持足够小，而不依赖调度器本身。
 
 ### 1.7 一个容易混淆的点
 
@@ -132,7 +132,7 @@
 
 - `kspin`
 - `percpu`
-- `axtask`
+- `ax-task`
 - `axhal`
 - `os/StarryOS/kernel`
 - `os/axvisor`
@@ -143,7 +143,7 @@
 graph TD
     A[kernel_guard] --> B[kspin]
     A --> C[percpu]
-    A --> D[axtask]
+    A --> D[ax-task]
     A --> E[axhal]
     D --> F[ArceOS 调度路径]
     E --> G[IRQ / current task path]
@@ -162,13 +162,13 @@ graph TD
 3. 在 `acquire()` 中切换状态
 4. 在 `release()` 中恢复状态
 
-这样就能被 `kspin`、`axtask` 等通用框架复用。
+这样就能被 `kspin`、`ax-task` 等通用框架复用。
 
 ### 4.2 修改现有 guard 时的关注点
 
 - `NoPreemptIrqSave` 的进入/退出顺序不能随意改动
 - host 上 `target_os != none` 时 guard 会退化成 `NoOp`，修改时要同时考虑裸机和主机测试语义
-- 若 `KernelGuardIf` 契约变化，要同步检查 `axtask` 等实现方
+- 若 `KernelGuardIf` 契约变化，要同步检查 `ax-task` 等实现方
 
 ### 4.3 与锁的职责边界
 
@@ -184,7 +184,7 @@ graph TD
 从仓库结构看，本 crate 本体的独立测试不多，更多依赖：
 
 - 多架构构建检查
-- 上层 `kspin`、`percpu`、`axtask` 的间接使用
+- 上层 `kspin`、`percpu`、`ax-task` 的间接使用
 
 这符合它的定位，因为很多关键语义要在目标架构和真实运行时上下文中才成立。
 
@@ -193,7 +193,7 @@ graph TD
 - 裸机目标上的 IRQ save/restore 正确性
 - `preempt` 开关前后的 `NoPreempt` / `NoPreemptIrqSave` 行为
 - 与 `kspin` 组合时的嵌套和 drop 顺序
-- 与 `axtask` 调度路径配合时的抢占计数一致性
+- 与 `ax-task` 调度路径配合时的抢占计数一致性
 
 ### 5.3 风险点
 

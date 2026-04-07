@@ -185,7 +185,7 @@ axlog = { path = "os/arceos/modules/axlog" }
 ax-mm = { path = "os/arceos/modules/axmm" }
 ax-runtime = { path = "os/arceos/modules/axruntime" }
 ax-sync = { path = "os/arceos/modules/axsync" }
-axtask = { path = "os/arceos/modules/axtask" }
+ax-task = { path = "os/arceos/modules/axtask" }
 ax-feat = { path = "os/arceos/api/axfeat" }
 ax-api = { path = "os/arceos/api/arceos_api" }
 ax-posix-api = { path = "os/arceos/api/arceos_posix_api" }
@@ -321,7 +321,7 @@ ax-net-ng = { path = "os/arceos/modules/axnet-ng", version = "0.5.0" }
 axplat-dyn = { path = "platform/axplat-dyn", version = "0.5.0", default-features = false }
 ax-runtime = { path = "os/arceos/modules/axruntime", version = "0.5.0" }
 ax-sync = { path = "os/arceos/modules/axsync", version = "0.5.0" }
-axtask = { path = "os/arceos/modules/axtask", version = "0.5.0" }
+ax-task = { path = "os/arceos/modules/axtask", version = "0.5.0" }
 
 # === components (actual versions) ===
 axaddrspace = { path = "components/axaddrspace", version = "0.5.0" }

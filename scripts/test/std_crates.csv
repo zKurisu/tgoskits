@@ -44,7 +44,7 @@ ax-display
 ax-driver
 axhal
 ax-sync
-axtask
+ax-task
 ax-input
 ax-ipi
 axlog

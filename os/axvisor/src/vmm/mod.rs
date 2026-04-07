@@ -121,8 +121,8 @@ pub fn with_vm_and_vcpu_on_pcpu(
     // Disables preemption and IRQs to prevent the current task from being preempted or re-scheduled.
     let guard = kernel_guard::NoPreemptIrqSave::new();
 
-    let current_vm = axtask::current().as_vcpu_task().vm().id();
-    let current_vcpu = axtask::current().as_vcpu_task().vcpu.id();
+    let current_vm = ax_task::current().as_vcpu_task().vm().id();
+    let current_vcpu = ax_task::current().as_vcpu_task().vcpu.id();
 
     // The target vCPU is the current task, execute the closure directly.
     if current_vm == vm_id && current_vcpu == vcpu_id {

@@ -165,7 +165,7 @@ FEATURE_LIKE_CRATES = {
 CURATED_DOCS = {
     "axhal",
     "aarch64_sysreg",
-    "axtask",
+    "ax-task",
     "axvm",
     "starry-kernel",
     "starry-process",

@@ -1,9 +1,9 @@
 use alloc::vec::Vec;
 
+use ax_task::future::{self, block_on, poll_io};
 use axerrno::{AxError, AxResult};
 use axhal::time::TimeValue;
 use axpoll::IoEvents;
-use axtask::future::{self, block_on, poll_io};
 use linux_raw_sys::general::{POLLNVAL, pollfd, timespec};
 use starry_signal::SignalSet;
 

@@ -2,7 +2,7 @@
 
 use core::sync::atomic::{AtomicU64, Ordering};
 
-use axtask::{WaitQueue, current};
+use ax_task::{WaitQueue, current};
 
 /// A [`lock_api::RawMutex`] implementation.
 ///

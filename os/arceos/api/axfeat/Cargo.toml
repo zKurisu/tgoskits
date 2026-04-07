@@ -12,7 +12,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/api/axfeat"
 default = []
 
 # Multicore
-smp = ["axhal/smp", "ax-runtime/smp", "axtask?/smp", "kspin/smp"]
+smp = ["axhal/smp", "ax-runtime/smp", "ax-task?/smp", "kspin/smp"]
 
 # Floating point/SIMD
 fp-simd = ["axhal/fp-simd"]
@@ -22,7 +22,7 @@ uspace = ["axhal/uspace"]
 hv = ["axhal/hv"]
 
 # Interrupts
-irq = ["axhal/irq", "ax-runtime/irq", "axtask?/irq", "ax-driver?/irq"]
+irq = ["axhal/irq", "ax-runtime/irq", "ax-task?/irq", "ax-driver?/irq"]
 ipi = ["irq", "dep:ax-ipi", "axhal/ipi", "ax-runtime/ipi"]
 
 # Custom or default platforms
@@ -44,20 +44,20 @@ alloc-level-1 = ["axalloc/level-1", "alloc"]
 page-alloc-64g = ["axalloc/page-alloc-64g"]                  # up to 64G memory capacity
 page-alloc-4g = ["axalloc/page-alloc-4g"]                    # up to 4G memory capacity
 paging = ["alloc", "axhal/paging", "ax-runtime/paging"]
-tls = ["alloc", "axhal/tls", "ax-runtime/tls", "axtask?/tls"]
+tls = ["alloc", "axhal/tls", "ax-runtime/tls", "ax-task?/tls"]
 dma = ["alloc", "paging"]
 
 # Multi-threading and scheduler
 multitask = [
     "alloc",
-    "axtask/multitask",
+    "ax-task/multitask",
     "ax-sync/multitask",
     "ax-runtime/multitask",
 ]
-task-ext = ["axtask/task-ext"]
-sched-fifo = ["axtask/sched-fifo"]
-sched-rr = ["axtask/sched-rr", "irq"]
-sched-cfs = ["axtask/sched-cfs", "irq"]
+task-ext = ["ax-task/task-ext"]
+sched-fifo = ["ax-task/sched-fifo"]
+sched-rr = ["ax-task/sched-rr", "irq"]
+sched-cfs = ["ax-task/sched-cfs", "irq"]
 
 # File system
 fs = [
@@ -126,5 +126,5 @@ axlog.workspace = true
 ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 ax-sync = { workspace = true, optional = true }
-axtask = { workspace = true, optional = true }
+ax-task = { workspace = true, optional = true }
 kspin = { workspace = true, optional = true }

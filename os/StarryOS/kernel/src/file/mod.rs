@@ -10,11 +10,11 @@ use alloc::{borrow::Cow, sync::Arc};
 use core::{ffi::c_int, time::Duration};
 
 use ax_fs::{FS_CONTEXT, OpenOptions};
+use ax_task::current;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::DeviceId;
 use axio::prelude::*;
 use axpoll::Pollable;
-use axtask::current;
 use downcast_rs::{DowncastSync, impl_downcast};
 use flatten_objects::FlattenObjects;
 use linux_raw_sys::general::{RLIMIT_NOFILE, stat, statx, statx_timestamp};

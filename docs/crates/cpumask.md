@@ -12,7 +12,7 @@
 ### 1.1 设计定位
 `cpumask` 的价值在于把“CPU 集合”收敛成一个小而稳定的类型：
 
-- `axtask` 用它表示任务 CPU affinity。
+- `ax-task` 用它表示任务 CPU affinity。
 - `axvm` / `axvisor` 用它表示 vCPU 目标集合。
 - 平台或上层策略代码可以在不引入复杂调度逻辑的情况下操作 CPU 集合。
 
@@ -46,8 +46,8 @@
 - 为上层 affinity、目标 CPU 选择等场景提供一个可复制、可比较、可哈希的值对象。
 
 ### 2.2 关键 API 与真实使用位置
-- `CpuMask::new()` / `set()`：`axtask/src/api.rs` 用来构造 `AxCpuMask`。
-- `get()` / `is_empty()`：`axtask/src/run_queue.rs` 用于根据 affinity 选择运行队列。
+- `CpuMask::new()` / `set()`：`ax-task/src/api.rs` 用来构造 `AxCpuMask`。
+- `get()` / `is_empty()`：`ax-task/src/run_queue.rs` 用于根据 affinity 选择运行队列。
 - `CpuMask`：`components/axvm/src/vm.rs` 和 `os/axvisor/src/vmm/vcpus.rs` 直接使用，用来描述 vCPU 目标集合。
 
 ### 2.3 使用边界
@@ -59,7 +59,7 @@
 ```mermaid
 graph LR
     bitmaps["bitmaps"] --> cpumask["cpumask"]
-    cpumask --> axtask["axtask"]
+    cpumask --> ax-task["ax-task"]
     cpumask --> axvm["axvm"]
     cpumask --> axvisor["axvisor"]
 ```
@@ -68,7 +68,7 @@ graph LR
 - `bitmaps`：底层位图实现来源。
 
 ### 3.2 关键直接消费者
-- `axtask`：任务 affinity 的核心值类型。
+- `ax-task`：任务 affinity 的核心值类型。
 - `axvm` / `axvisor`：虚拟机或 vCPU 目标集合表达。
 
 ## 4. 开发指南
@@ -102,7 +102,7 @@ cpumask = { workspace = true }
 - 位运算与双端迭代的一致性。
 
 ### 5.3 集成测试重点
-- `axtask` 在 SMP 下的 affinity 设置和迁移逻辑。
+- `ax-task` 在 SMP 下的 affinity 设置和迁移逻辑。
 - `axvm` / `axvisor` 对较大尺寸 mask 的处理。
 
 ### 5.4 覆盖率要求
@@ -111,7 +111,7 @@ cpumask = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-在 ArceOS 中，`cpumask` 主要通过 `axtask` 承担任务 affinity 的值类型角色。它是调度约束的表达层，不是调度器本体。
+在 ArceOS 中，`cpumask` 主要通过 `ax-task` 承担任务 affinity 的值类型角色。它是调度约束的表达层，不是调度器本体。
 
 ### 6.2 StarryOS
 当前仓库里 StarryOS 没有直接把 `cpumask` 作为独立子系统扩展；若经共享任务栈间接使用，它也仍只是 CPU 集合值类型。

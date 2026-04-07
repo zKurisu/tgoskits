@@ -99,7 +99,7 @@
 
 1. 先调用 `smoltcp` 的 nonblocking socket API
 2. 若当前不可完成，则返回 `AxError::WouldBlock`
-3. 在 blocking 模式下，循环调用 `poll_interfaces()` 并穿插 `axtask::yield_now()`
+3. 在 blocking 模式下，循环调用 `poll_interfaces()` 并穿插 `ax-task::yield_now()`
 4. 条件满足后再返回真实结果
 
 这意味着 `ax-net` 的“阻塞”本质上是一种同步轮询式阻塞，而不是基于 `axpoll` 的等待/唤醒模型。
@@ -141,7 +141,7 @@
 | `axhal` | 提供时间接口，驱动 `smoltcp::Instant` |
 | `axio` | 提供 `PollState` 与通用 I/O trait |
 | `ax-sync` / `spin` / `lazyinit` | 管理全局接口、`SocketSet` 与监听表 |
-| `axtask` | blocking 路径中的 `yield_now()` 与任务协作 |
+| `ax-task` | blocking 路径中的 `yield_now()` 与任务协作 |
 | `smoltcp` | 真正的 TCP/UDP/DNS/IP 协议实现 |
 
 ### 3.2 主要直接消费者

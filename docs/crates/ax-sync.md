@@ -18,7 +18,7 @@
 因此，`ax-sync` 的职责边界是：
 
 - 向上提供统一的 `Mutex` / `MutexGuard` / 可选 `RawMutex`。
-- 向下复用 `kspin`、`lock_api`、`event-listener` 和 `axtask`，而不是重复造轮子。
+- 向下复用 `kspin`、`lock_api`、`event-listener` 和 `ax-task`，而不是重复造轮子。
 
 ### 1.2 模块划分
 - `src/lib.rs`：feature 分流入口。决定 `Mutex` 是 `kspin::SpinNoIrq` 的别名，还是本 crate 自己的阻塞 mutex。
@@ -56,7 +56,7 @@ flowchart TD
 
 - 先尝试快速 CAS 抢锁。
 - 若失败，先做一小段指数退避式自旋与 `yield_now()`。
-- 再进一步进入 `event-listener` + `axtask::future::block_on()` 的阻塞等待。
+- 再进一步进入 `event-listener` + `ax-task::future::block_on()` 的阻塞等待。
 
 因此 `ax-sync` 的阻塞 mutex 不是纯 parking lock，也不是纯自旋锁，而是“短自旋 + 让出 + 阻塞”的混合策略。
 
@@ -72,7 +72,7 @@ flowchart TD
   - 编译 `src/mutex.rs`
   - 导出 `RawMutex`
   - `Mutex` 变为真正可阻塞的互斥锁
-  - 同时要求 `axtask/multitask`
+  - 同时要求 `ax-task/multitask`
 - 关闭 `multitask`：
   - `RawMutex` 不存在
   - `Mutex` 只是 `SpinNoIrq` 的别名
@@ -111,7 +111,7 @@ graph LR
     kspin["kspin"] --> ax-sync["ax-sync"]
     lock_api["lock_api"] --> ax-sync
     event_listener["event-listener"] --> ax-sync
-    axtask["axtask"] --> ax-sync
+    ax-task["ax-task"] --> ax-sync
 
     ax-sync --> ax-api["ax-api"]
     ax-sync --> ax-posix-api["ax-posix-api"]
@@ -125,7 +125,7 @@ graph LR
 - `kspin`：提供自旋锁实现，并通过 `spin` 再导出。
 - `lock_api`：提供 `RawMutex` trait 与泛型 `Mutex<T>` 框架。
 - `event-listener`：提供等待/唤醒事件机制。
-- `axtask`：提供当前任务 ID、`yield_now()` 与 `block_on()`，使阻塞 mutex 真正能与调度器协作。
+- `ax-task`：提供当前任务 ID、`yield_now()` 与 `block_on()`，使阻塞 mutex 真正能与调度器协作。
 
 ### 3.2 关键直接消费者
 - `ax-api`：在 `multitask` 路径下把 `RawMutex` 作为公开类型再导出。
@@ -179,7 +179,7 @@ ax-sync = { workspace = true, features = ["multitask"] }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`ax-sync` 是 ArceOS 内核模块共享的统一同步层。它通过 `multitask` feature 与 `axtask`、`ax-runtime`、`ax-feat` 联动，确保“调度器语义”和“锁语义”一起切换。
+`ax-sync` 是 ArceOS 内核模块共享的统一同步层。它通过 `multitask` feature 与 `ax-task`、`ax-runtime`、`ax-feat` 联动，确保“调度器语义”和“锁语义”一起切换。
 
 ### 6.2 StarryOS
 StarryOS 大量复用 `ax-sync::Mutex` 作为内核内部同步原语之一。因此在 StarryOS 中，`ax-sync` 扮演的是“兼容内核与 ArceOS 模块共享的基础锁层”。

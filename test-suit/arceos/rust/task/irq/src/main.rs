@@ -85,7 +85,7 @@ fn test_sleep() {
 fn test_wait_queue() {
     use std::os::arceos::modules::axtask;
 
-    use axtask::WaitQueue;
+    use ax_task::WaitQueue;
 
     static WQ1: WaitQueue = WaitQueue::new();
     static WQ2: WaitQueue = WaitQueue::new();
@@ -96,7 +96,7 @@ fn test_wait_queue() {
     println!("Hello, main task test_wait_queue()!");
 
     for _ in 0..NUM_TASKS {
-        axtask::spawn(move || {
+        ax_task::spawn(move || {
             assert_irq_enabled();
 
             // equals to sleep(100ms)

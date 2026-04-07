@@ -84,7 +84,7 @@ async fn refresh_task() {
         if !ax_display::framebuffer_flush() {
             warn!("Failed to refresh framebuffer");
         }
-        axtask::future::sleep(delay).await;
+        ax_task::future::sleep(delay).await;
     }
 }
 
@@ -94,8 +94,8 @@ pub struct FrameBuffer {
 }
 impl FrameBuffer {
     pub fn new() -> Self {
-        axtask::spawn_with_name(
-            || axtask::future::block_on(refresh_task()),
+        ax_task::spawn_with_name(
+            || ax_task::future::block_on(refresh_task()),
             "fb-refresh".into(),
         );
         let info = ax_display::framebuffer_info();

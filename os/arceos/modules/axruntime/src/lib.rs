@@ -91,7 +91,7 @@ impl axlog::LogIf for LogIfImpl {
         if is_init_ok() {
             #[cfg(feature = "multitask")]
             {
-                axtask::current_may_uninit().map(|curr| curr.id().as_u64())
+                ax_task::current_may_uninit().map(|curr| curr.id().as_u64())
             }
             #[cfg(not(feature = "multitask"))]
             None
@@ -214,7 +214,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     axhal::init_later(cpu_id, arg);
 
     #[cfg(feature = "multitask")]
-    axtask::init_scheduler();
+    ax_task::init_scheduler();
 
     #[cfg(feature = "ax-driver")]
     {
@@ -275,7 +275,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     unsafe { main() };
 
     #[cfg(feature = "multitask")]
-    axtask::exit(0);
+    ax_task::exit(0);
     #[cfg(not(feature = "multitask"))]
     {
         debug!("main task exited: exit_code={}", 0);
@@ -368,7 +368,7 @@ fn init_interrupt() {
     axhal::irq::register(axhal::time::irq_num(), || {
         update_timer();
         #[cfg(feature = "multitask")]
-        axtask::on_timer_tick();
+        ax_task::on_timer_tick();
     });
 
     #[cfg(feature = "ipi")]

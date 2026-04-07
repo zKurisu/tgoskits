@@ -153,7 +153,7 @@ flowchart TD
 - `axplat-macros`
 - `axlog`
 - `ax-runtime`
-- `axtask`
+- `ax-task`
 - `kernel_guard`
 - `axvisor_api`
 - `os/axvisor`
@@ -169,7 +169,7 @@ graph TD
     A --> E[axvisor_api]
     B --> F[axplat-*]
     D --> G[ax-runtime]
-    C --> H[axtask]
+    C --> H[ax-task]
     E --> I[Axvisor]
 ```
 

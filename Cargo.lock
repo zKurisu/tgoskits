@@ -532,6 +532,7 @@ dependencies = [
  "ax-feat",
  "ax-fs",
  "ax-ipi",
+ "ax-mm",
  "ax-net",
  "ax-runtime",
  "ax-sync",
@@ -541,7 +542,6 @@ dependencies = [
  "axhal",
  "axio",
  "axlog",
- "axmm",
  "axtask",
 ]
 
@@ -559,11 +559,11 @@ dependencies = [
 name = "ax-dma"
 version = "0.5.0"
 dependencies = [
+ "ax-mm",
  "axalloc",
  "axallocator 0.4.0",
  "axconfig",
  "axhal",
- "axmm",
  "buddy-slab-allocator",
  "kspin 0.3.1",
  "log",
@@ -731,6 +731,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-mm"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axerrno",
+ "axhal",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "memory_addr 0.6.1",
+ "memory_set",
+ "page_table_multiarch 0.8.1",
+]
+
+[[package]]
 name = "ax-net"
 version = "0.5.0"
 dependencies = [
@@ -808,6 +823,7 @@ dependencies = [
  "ax-fs-ng",
  "ax-input",
  "ax-ipi",
+ "ax-mm",
  "ax-net",
  "ax-net-ng",
  "axalloc",
@@ -816,7 +832,6 @@ dependencies = [
  "axhal",
  "axklib",
  "axlog",
- "axmm",
  "axplat 0.5.1",
  "axtask",
  "cfg-if",
@@ -1299,21 +1314,6 @@ dependencies = [
  "crate_interface 0.5.0",
  "kspin 0.3.1",
  "log",
-]
-
-[[package]]
-name = "axmm"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axerrno",
- "axhal",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "memory_addr 0.6.1",
- "memory_set",
- "page_table_multiarch 0.8.1",
 ]
 
 [[package]]
@@ -7419,6 +7419,7 @@ dependencies = [
  "ax-feat",
  "ax-fs-ng",
  "ax-input",
+ "ax-mm",
  "ax-net-ng",
  "ax-runtime",
  "ax-sync",
@@ -7430,7 +7431,6 @@ dependencies = [
  "axhal",
  "axio",
  "axlog",
- "axmm",
  "axpoll",
  "axtask",
  "bitflags 2.11.0",

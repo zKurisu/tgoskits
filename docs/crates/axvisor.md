@@ -21,7 +21,7 @@
 - `src/main.rs`：Hypervisor 主入口，按顺序执行 Logo 输出、虚拟化使能、VMM 初始化、VM 启动和控制台 shell。
 - `src/hal/`：宿主 HAL 实现层，提供 `AxVMHalImpl`、`AxVCpuHalImpl`、`AxMmHalImpl`，并用 `axvisor_api::api_mod_impl` 注入 memory/time/vmm/host 能力。
 - `src/vmm/`：VMM 核心，包括 VM 配置加载、镜像加载、VM 列表、vCPU 任务管理、hypercall、定时器、FDT 处理等。
-- `src/task.rs`：定义 `VCpuTask`，把当前任务与 VM/vCPU 对象绑定，是 Hypervisor 并发模型与 `axtask` 的结合点。
+- `src/task.rs`：定义 `VCpuTask`，把当前任务与 VM/vCPU 对象绑定，是 Hypervisor 并发模型与 `ax-task` 的结合点。
 - `src/shell/`：交互式控制台与 VM 管理命令。
 - `src/driver/`：宿主侧硬件驱动接入。
 
@@ -127,7 +127,7 @@ graph LR
 - `axbuild`：主要服务 `xtask` 路径，是构建工作流的重要依赖。
 
 ### 3.2 关键间接依赖
-- `axhal`、`axtask`、`axalloc`、`ax-mm` 等 ArceOS 模块会通过 `ax-std` 与 `hal` 注入路径间接参与 Hypervisor 运行。
+- `axhal`、`ax-task`、`axalloc`、`ax-mm` 等 ArceOS 模块会通过 `ax-std` 与 `hal` 注入路径间接参与 Hypervisor 运行。
 - `arm_vcpu`、`arm_vgic`、`x86_vcpu`、`riscv_vcpu` 等底层组件会通过 `axvm`/`axvcpu` 间接进入虚拟化主线。
 
 ### 3.3 被依赖情况

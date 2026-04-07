@@ -1,5 +1,5 @@
 [package]
-name = "axtask"
+name = "ax-task"
 version.workspace = true
 edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
@@ -62,4 +62,4 @@ timer_list = { workspace = true, optional = true }
 
 [dev-dependencies]
 axhal = { workspace = true, features = ["fp-simd"] }
-axtask = { path = ".", features = ["test", "multitask"] }
+ax-task = { path = ".", features = ["test", "multitask"] }

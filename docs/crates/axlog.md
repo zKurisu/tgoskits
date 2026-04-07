@@ -65,9 +65,9 @@ flowchart TD
 
 ### 2.2 关键 API 与真实使用位置
 - `init()` / `set_max_level()`：由 `ax-runtime/src/lib.rs` 在系统 bring-up 早期调用。
-- `LogIf`：由 `ax_runtime::LogIfImpl` 实现，背后再转发到 `axhal::console`、`axhal::time`、`axtask` 等模块。
+- `LogIf`：由 `ax_runtime::LogIfImpl` 实现，背后再转发到 `axhal::console`、`axhal::time`、`ax-task` 等模块。
 - `print_fmt()`：被 `ax-api/src/imp/mod.rs` 直接使用，作为 API 层输出通道。
-- `warn!` 等宏：被 `ax-posix-api`、`axtask` 等模块直接调用。
+- `warn!` 等宏：被 `ax-posix-api`、`ax-task` 等模块直接调用。
 
 ### 2.3 使用边界
 - `axlog` 不管理串口、显示器或控制台设备；它只定义如何把字符串交给后端。

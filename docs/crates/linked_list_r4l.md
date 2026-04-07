@@ -69,7 +69,7 @@
 ```mermaid
 graph LR
     linked_list_r4l["linked_list_r4l"] --> axsched["axsched FIFO / RR"]
-    axsched --> axtask["axtask"]
+    axsched --> ax-task["ax-task"]
 ```
 
 ### 3.1 关键直接依赖

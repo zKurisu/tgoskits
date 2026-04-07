@@ -56,7 +56,7 @@ graph LR
 - `ax-net`
 - `ax-runtime`
 - `ax-sync`
-- `axtask`
+- `ax-task`
 - 另外还有 `1` 个同类项未在此展开
 
 ### 3.2 间接本地依赖

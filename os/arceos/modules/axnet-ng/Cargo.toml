@@ -23,7 +23,7 @@ axhal = { workspace = true }
 axio = { workspace = true }
 axpoll = { workspace = true }
 ax-sync = { workspace = true }
-axtask = { workspace = true, features = ["irq", "multitask"] }
+ax-task = { workspace = true, features = ["irq", "multitask"] }
 bitflags = "2.9"
 cfg-if = { workspace = true }
 enum_dispatch = "0.3"

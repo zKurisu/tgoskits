@@ -6,9 +6,9 @@ use core::{
 };
 
 use ax_fs::{FS_CONTEXT, FileBackend, OpenOptions, OpenResult};
+use ax_task::current;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::{DirEntry, FileNode, Location, NodePermission, NodeType, Reference};
-use axtask::current;
 use bitflags::bitflags;
 use linux_raw_sys::general::*;
 

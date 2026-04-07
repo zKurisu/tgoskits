@@ -72,7 +72,7 @@
 真正的等待与唤醒不在 `axio` 中：
 
 - `axpoll` 负责 `IoEvents`、`Pollable` 和 waker 集合
-- `axtask` 负责把 nonblocking I/O 桥接成 future
+- `ax-task` 负责把 nonblocking I/O 桥接成 future
 - `select` / `poll` / `epoll` 一类系统接口在更高层实现
 
 这条边界对理解 `axio` 极其关键：`axio` 是同步 I/O 语义层，不是事件轮询层。

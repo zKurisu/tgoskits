@@ -529,7 +529,7 @@ impl TcpSocket {
                 SOCKET_SET.poll_interfaces();
                 match f() {
                     Ok(t) => return Ok(t),
-                    Err(AxError::WouldBlock) => axtask::yield_now(),
+                    Err(AxError::WouldBlock) => ax_task::yield_now(),
                     Err(e) => return Err(e),
                 }
             }

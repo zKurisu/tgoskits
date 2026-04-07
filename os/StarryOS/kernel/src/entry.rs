@@ -5,8 +5,8 @@ use alloc::{
 
 use ax_fs::FS_CONTEXT;
 use ax_sync::Mutex;
+use ax_task::{AxTaskExt, spawn_task};
 use axhal::uspace::UserContext;
-use axtask::{AxTaskExt, spawn_task};
 use starry_process::{Pid, Process};
 
 use crate::{

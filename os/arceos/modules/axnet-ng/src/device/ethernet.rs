@@ -2,7 +2,7 @@ use alloc::{string::String, vec};
 use core::task::Waker;
 
 use ax_driver::prelude::*;
-use axtask::future::register_irq_waker;
+use ax_task::future::register_irq_waker;
 use hashbrown::HashMap;
 use smoltcp::{
     storage::{PacketBuffer, PacketMetadata},

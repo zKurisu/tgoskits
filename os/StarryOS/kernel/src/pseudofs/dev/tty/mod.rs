@@ -8,13 +8,13 @@ use alloc::sync::{Arc, Weak};
 use core::{any::Any, ops::Deref, sync::atomic::Ordering, task::Context};
 
 use ax_sync::Mutex;
-use axerrno::{AxError, AxResult};
-use axfs_ng_vfs::NodeFlags;
-use axpoll::{IoEvents, Pollable};
-use axtask::{
+use ax_task::{
     current,
     future::{block_on, poll_io},
 };
+use axerrno::{AxError, AxResult};
+use axfs_ng_vfs::NodeFlags;
+use axpoll::{IoEvents, Pollable};
 use starry_process::Process;
 use starry_vm::{VmMutPtr, VmPtr};
 

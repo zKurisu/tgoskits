@@ -300,7 +300,7 @@ impl SocketOps for TcpSocket {
             })?;
 
         // Hack: let the server listen
-        axtask::yield_now();
+        ax_task::yield_now();
 
         // Here our state must be `CONNECTING`, and only one thread can run here.
         self.general.send_poller(self, || {

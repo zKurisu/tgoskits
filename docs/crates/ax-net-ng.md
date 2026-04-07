@@ -61,7 +61,7 @@ graph LR
 - `axio`
 - `axpoll`
 - `ax-sync`
-- `axtask`
+- `ax-task`
 - `smoltcp`
 
 ### 3.2 间接本地依赖

@@ -104,7 +104,7 @@
 | `ax-runtime` | ArceOS 层 | `os/arceos/modules/axruntime` | 20 | 4 | [查看](./ax-runtime.md) |
 | `axsched` | 组件层 | `components/axsched` | 1 | 1 | [查看](./axsched.md) |
 | `ax-sync` | ArceOS 层 | `os/arceos/modules/axsync` | 2 | 9 | [查看](./ax-sync.md) |
-| `axtask` | ArceOS 层 | `os/arceos/modules/axtask` | 13 | 8 | [查看](./axtask.md) |
+| `ax-task` | ArceOS 层 | `os/arceos/modules/axtask` | 13 | 8 | [查看](./ax-task.md) |
 | `axvcpu` | 组件层 | `components/axvcpu` | 5 | 5 | [查看](./axvcpu.md) |
 | `axvisor` | Axvisor 层 | `os/axvisor` | 27 | 0 | [查看](./axvisor.md) |
 | `axvisor_api` | 组件层 | `components/axvisor_api` | 5 | 10 | [查看](./axvisor_api.md) |

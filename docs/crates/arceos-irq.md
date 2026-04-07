@@ -36,9 +36,9 @@
 
 ```mermaid
 flowchart TD
-    A["yield_now()"] --> B["axtask::yield_now"]
-    C["sleep()"] --> D["axtask::sleep_until"]
-    E["WaitQueue wait/notify"] --> F["axtask::WaitQueue"]
+    A["yield_now()"] --> B["ax-task::yield_now"]
+    C["sleep()"] --> D["ax-task::sleep_until"]
+    E["WaitQueue wait/notify"] --> F["ax-task::WaitQueue"]
     B --> G["检查 IRQ 状态"]
     D --> G
     F --> G
@@ -66,7 +66,7 @@ flowchart TD
 这部分更接近“timer 驱动的任务阻塞/唤醒路径 IRQ 语义回归”。
 
 ### 2.3 `test_wait_queue()`
-这里直接使用 `axtask::WaitQueue`，而不是 `AxWaitQueueHandle`。它验证：
+这里直接使用 `ax-task::WaitQueue`，而不是 `AxWaitQueueHandle`。它验证：
 
 - `wait_timeout_until`
 - `wait_until`
@@ -89,7 +89,7 @@ flowchart TD
 graph LR
     test["arceos-irq"] --> ax-std["ax-std(multitask, irq)"]
     test --> axhal["axhal::asm"]
-    test --> axtask["axtask::WaitQueue"]
+    test --> ax-task["ax-task::WaitQueue"]
     ax-std --> ax-api["ax_api::task"]
 ```
 
@@ -97,12 +97,12 @@ graph LR
 - `ax-std(multitask, irq)`：启用多任务与中断相关路径。
 
 ### 3.2 关键间接依赖
-- `axtask`：任务切换、睡眠和等待队列的真实实现。
+- `ax-task`：任务切换、睡眠和等待队列的真实实现。
 - `axhal::asm`：读取和切换当前 CPU 的 IRQ 状态。
 
 ### 3.3 主要消费者
 - `cargo arceos test qemu` 自动回归。
-- `axtask`、IRQ 相关上下文切换逻辑改动后的定向验证。
+- `ax-task`、IRQ 相关上下文切换逻辑改动后的定向验证。
 
 ## 4. 开发指南
 ### 4.1 推荐运行方式

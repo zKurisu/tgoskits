@@ -14,11 +14,11 @@ use core::{
 };
 
 use ax_sync::Mutex;
-use axerrno::AxResult;
-use axtask::{
+use ax_task::{
     current,
     future::{self, block_on, interruptible},
 };
+use axerrno::AxResult;
 use hashbrown::HashMap;
 use kspin::SpinNoIrq;
 use memory_addr::VirtAddr;

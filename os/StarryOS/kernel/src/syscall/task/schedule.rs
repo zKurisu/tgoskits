@@ -1,9 +1,9 @@
-use axerrno::{AxError, AxResult};
-use axhal::time::TimeValue;
-use axtask::{
+use ax_task::{
     AxCpuMask, current,
     future::{block_on, interruptible, sleep},
 };
+use axerrno::{AxError, AxResult};
+use axhal::time::TimeValue;
 use linux_raw_sys::general::{
     __kernel_clockid_t, CLOCK_MONOTONIC, CLOCK_REALTIME, PRIO_PGRP, PRIO_PROCESS, PRIO_USER,
     SCHED_RR, TIMER_ABSTIME, timespec,
@@ -16,7 +16,7 @@ use crate::{
 };
 
 pub fn sys_sched_yield() -> AxResult<isize> {
-    axtask::yield_now();
+    ax_task::yield_now();
     Ok(0)
 }
 
@@ -122,7 +122,7 @@ pub fn sys_sched_setaffinity(
     }
 
     // TODO: support other threads
-    axtask::set_current_affinity(cpu_mask);
+    ax_task::set_current_affinity(cpu_mask);
 
     Ok(0)
 }

@@ -2,9 +2,9 @@ use alloc::{string::ToString, sync::Arc, vec::Vec};
 use core::ffi::c_char;
 
 use ax_fs::FS_CONTEXT;
+use ax_task::current;
 use axerrno::{AxError, AxResult};
 use axhal::uspace::UserContext;
-use axtask::current;
 use starry_vm::vm_load_until_nul;
 
 use crate::{

@@ -181,7 +181,7 @@ components/crate_interface/test_crates/run_tests.sh simple
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | 无主线直接依赖 | 间接保护测试资产 | 间接保护 `axlog`、`ax-runtime`、`axtask` 等真实使用 `crate_interface` 的路径 |
+| ArceOS | 无主线直接依赖 | 间接保护测试资产 | 间接保护 `axlog`、`ax-runtime`、`ax-task` 等真实使用 `crate_interface` 的路径 |
 | StarryOS | 无主线直接依赖 | 间接保护测试资产 | 通过复用 ArceOS 公共基础设施，间接受益于 stable 链接语义回归 |
 | Axvisor | 无主线直接依赖 | 间接保护测试资产 | `axvisor_api` 等组件使用 `crate_interface`，但不会直接消费这个测试二进制 |
 

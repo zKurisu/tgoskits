@@ -153,7 +153,7 @@
 - 当前任务切换
 - 调度器局部状态一致性
 
-这些运行时语义配合。因此它经常与 `kernel_guard`、`axtask`、`axhal` 一起出现。
+这些运行时语义配合。因此它经常与 `kernel_guard`、`ax-task`、`axhal` 一起出现。
 
 ## 3. 依赖关系图谱
 
@@ -174,7 +174,7 @@
 - `axplat`
 - `axhal`
 - `ax-runtime`
-- `axtask`
+- `ax-task`
 - `axalloc`
 - `axvcpu`
 - `axvm`
@@ -190,7 +190,7 @@ graph TD
     B --> C[axplat]
     C --> D[axhal]
     D --> E[ax-runtime]
-    D --> F[axtask]
+    D --> F[ax-task]
     B --> G[axvcpu]
     G --> H[axvm / Axvisor]
     B --> I[StarryOS kernel]

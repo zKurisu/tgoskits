@@ -5,12 +5,12 @@ use core::{
     task::Context,
 };
 
-use axerrno::{AxError, AxResult};
-use axpoll::{IoEvents, PollSet, Pollable};
-use axtask::{
+use ax_task::{
     current,
     future::{block_on, poll_io},
 };
+use axerrno::{AxError, AxResult};
+use axpoll::{IoEvents, PollSet, Pollable};
 use spin::RwLock;
 use starry_signal::{SignalInfo, SignalSet};
 use zerocopy::{Immutable, IntoBytes};

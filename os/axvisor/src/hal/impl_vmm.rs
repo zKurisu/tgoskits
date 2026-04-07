@@ -17,11 +17,11 @@ fn current_time_nanos() -> u64 {
 }
 
 fn current_vm_id() -> usize {
-    axtask::current().as_vcpu_task().vm().id()
+    ax_task::current().as_vcpu_task().vm().id()
 }
 
 fn current_vcpu_id() -> usize {
-    axtask::current().as_vcpu_task().vcpu.id()
+    ax_task::current().as_vcpu_task().vcpu.id()
 }
 
 fn current_pcpu_id() -> usize {
@@ -42,11 +42,11 @@ fn inject_irq_to_vcpu(vm_id: usize, vcpu_id: usize, irq: usize) -> AxResult {
 #[axvisor_api::api_impl]
 impl VmmIf for VmmImpl {
     fn current_vm_id() -> usize {
-        axtask::current().as_vcpu_task().vm().id()
+        ax_task::current().as_vcpu_task().vm().id()
     }
 
     fn current_vcpu_id() -> usize {
-        axtask::current().as_vcpu_task().vcpu.id()
+        ax_task::current().as_vcpu_task().vcpu.id()
     }
 
     fn vcpu_num(vm_id: VMId) -> Option<usize> {

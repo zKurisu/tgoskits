@@ -66,9 +66,9 @@ flowchart TD
 - 提供便捷宏，降低错误返回样板代码。
 
 ### 2.2 关键 API 与真实使用位置
-- `AxErrorKind` / `AxError`：在 `axalloc`、`ax-mm`、`ax-net`、`ax-fs`、`axtask` 等模块里高频使用。
+- `AxErrorKind` / `AxError`：在 `axalloc`、`ax-mm`、`ax-net`、`ax-fs`、`ax-task` 等模块里高频使用。
 - `LinuxError`：在 `ax-libc`、`ax-posix-api`、`ax-net-ng` 的 POSIX 兼容路径中直接使用。
-- `ax_err!` / `ax_err_type!`：在 `axvisor`、`ax-net`、`ax-std`、`axtask` 等代码里广泛出现。
+- `ax_err!` / `ax_err_type!`：在 `axvisor`、`ax-net`、`ax-std`、`ax-task` 等代码里广泛出现。
 - `canonicalize()`：适合把兼容层传回来的 Linux 错误重新折叠到内核内部语义。
 
 ### 2.3 使用边界
@@ -98,7 +98,7 @@ graph LR
 - `log`：支撑 `ax_err_type!` 等宏里的 `warn!` 输出。
 
 ### 3.2 关键直接消费者
-- ArceOS 几乎所有核心模块：`axalloc`、`ax-mm`、`ax-fs`、`ax-net`、`axtask`、`ax-std`、`ax-libc`。
+- ArceOS 几乎所有核心模块：`axalloc`、`ax-mm`、`ax-fs`、`ax-net`、`ax-task`、`ax-std`、`ax-libc`。
 - StarryOS 内核与相关虚拟化组件。
 - Axvisor 和其设备/虚拟机管理路径。
 

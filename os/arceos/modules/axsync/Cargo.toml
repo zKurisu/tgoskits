@@ -9,16 +9,16 @@ homepage.workspace = true
 repository = "https://github.com/arceos-org/arceos/tree/main/modules/axsync"
 
 [features]
-multitask = ["axtask/multitask"]
+multitask = ["ax-task/multitask"]
 default = []
 
 [dependencies]
-axtask.workspace = true
+ax-task.workspace = true
 kspin.workspace = true
 lock_api.workspace = true
 
 [dev-dependencies]
 ax-sync = { path = ".", features = ["multitask"] }
-axtask = { workspace = true, features = ["test"] }
+ax-task = { workspace = true, features = ["test"] }
 # FIXME: `rand` crate can not be used since https://github.com/google/zerocopy/pull/2574
 fastrand = "2.3"

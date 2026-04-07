@@ -51,7 +51,7 @@ ax-mm.workspace = true
 axnet = { version = "0.5.0", package = "ax-net-ng" }
 ax-runtime.workspace = true
 ax-sync.workspace = true
-axtask.workspace = true
+ax-task.workspace = true
 
 axbacktrace = "0.3.2"
 axerrno = "0.4.2"

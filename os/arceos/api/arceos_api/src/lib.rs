@@ -408,11 +408,11 @@ pub mod modules {
     pub use ax_net;
     pub use ax_runtime;
     pub use ax_sync;
+    #[cfg(feature = "multitask")]
+    pub use ax_task;
     #[cfg(feature = "alloc")]
     pub use axalloc;
     pub use axconfig;
     pub use axhal;
     pub use axlog;
-    #[cfg(feature = "multitask")]
-    pub use axtask;
 }

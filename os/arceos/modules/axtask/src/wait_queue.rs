@@ -12,14 +12,14 @@ use crate::{AxTaskRef, CurrentTask, current_run_queue, select_run_queue};
 /// ```
 /// use core::sync::atomic::{AtomicU32, Ordering};
 ///
-/// use axtask::WaitQueue;
+/// use ax_task::WaitQueue;
 ///
 /// static VALUE: AtomicU32 = AtomicU32::new(0);
 /// static WQ: WaitQueue = WaitQueue::new();
 ///
-/// axtask::init_scheduler();
+/// ax_task::init_scheduler();
 /// // spawn a new task that updates `VALUE` and notifies the main task
-/// axtask::spawn(|| {
+/// ax_task::spawn(|| {
 ///     assert_eq!(VALUE.load(Ordering::Acquire), 0);
 ///     VALUE.fetch_add(1, Ordering::Release);
 ///     WQ.notify_one(true); // wake up the main task

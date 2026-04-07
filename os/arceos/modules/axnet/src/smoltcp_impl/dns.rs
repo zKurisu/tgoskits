@@ -69,7 +69,7 @@ impl DnsSocket {
                     }
                     return Ok(res);
                 }
-                Err(AxError::WouldBlock) => axtask::yield_now(),
+                Err(AxError::WouldBlock) => ax_task::yield_now(),
                 Err(e) => return Err(e),
             }
         }

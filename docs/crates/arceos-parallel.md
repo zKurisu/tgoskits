@@ -36,7 +36,7 @@
 ### 1.3 真实调用链
 ```mermaid
 flowchart LR
-    A["thread::spawn"] --> B["axtask 任务创建"]
+    A["thread::spawn"] --> B["ax-task 任务创建"]
     B --> C["每个任务处理数据切片"]
     C --> D["barrier() -> wait queue"]
     D --> E["thread::JoinHandle::join"]
@@ -77,7 +77,7 @@ graph LR
     test["arceos-parallel"] --> ax-std["ax-std(alloc, multitask, irq)"]
     test --> rand["rand(small_rng)"]
     ax-std --> ax-api["ax_api::task"]
-    ax-api --> axtask["axtask / wait queue"]
+    ax-api --> ax-task["ax-task / wait queue"]
 ```
 
 ### 3.1 直接依赖
@@ -87,7 +87,7 @@ graph LR
 ### 3.2 关键间接依赖
 - `JoinHandle::join`：等待子任务结果收敛。
 - `AxWaitQueueHandle`：构造 barrier 与超时 smoke test。
-- `axtask`：真实承载调度与同步。
+- `ax-task`：真实承载调度与同步。
 
 ### 3.3 主要消费者
 - 并行任务与同步基础设施改动后的快速回归。

@@ -1,5 +1,5 @@
+use ax_task::current;
 use axerrno::{AxError, AxResult};
-use axtask::current;
 
 use crate::task::AsThread;
 
