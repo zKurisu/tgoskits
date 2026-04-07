@@ -659,7 +659,7 @@ dependencies = [
  "axdriver",
  "axerrno 0.2.2",
  "axfatfs",
- "axfs_devfs",
+ "ax-fs-devfs",
  "axfs_ramfs",
  "axfs_vfs",
  "axio",
@@ -715,7 +715,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axfs_devfs"
+name = "ax-fs-devfs"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81b87ae981272ca8d5d8f106a4452c63f4b5ac36e17ee8f848ee1b250538b9f8"

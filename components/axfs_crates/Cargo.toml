@@ -3,7 +3,7 @@ resolver = "2"
 
 members = [
     "axfs_vfs",
-    "axfs_devfs",
+    "ax-fs-devfs",
     "axfs_ramfs",
 ]
 

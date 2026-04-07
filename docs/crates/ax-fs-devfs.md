@@ -76,7 +76,7 @@
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axfs_vfs["axfs_vfs"] --> current["axfs_devfs"]
+    axfs_vfs["axfs_vfs"] --> current["ax-fs-devfs"]
 
     current --> ax-fs["ax-fs"]
 ```
@@ -97,7 +97,7 @@ graph LR
 ### 4.1 接入方式
 ```toml
 [dependencies]
-axfs_devfs = { workspace = true }
+ax-fs-devfs = { workspace = true }
 ```
 
 ### 4.2 使用与改动约束

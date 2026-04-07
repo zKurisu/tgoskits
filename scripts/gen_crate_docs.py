@@ -217,7 +217,7 @@ CURATED_DOCS = {
     "ax-fs",
     "ax-fs-ng",
     "axfs-ng-vfs",
-    "axfs_devfs",
+    "ax-fs-devfs",
     "axfs_ramfs",
     "axfs_vfs",
     "axhvc",

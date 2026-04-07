@@ -17,7 +17,7 @@ use-ramdisk = [] # TODO: init ramdisk
 ax-driver = { workspace = true, features = ["block"] }
 axerrno = { workspace = true }
 ax-hal = { workspace = true }
-axfs_devfs = { version = "0.3.2" }
+ax-fs-devfs = { version = "0.3.2" }
 axfs_ramfs = { version = "0.3.2" }
 axfs_vfs = "0.3.2"
 axio = { workspace = true, features = ["alloc"] }

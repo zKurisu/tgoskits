@@ -680,10 +680,10 @@ name = "ax-fs"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-fs-devfs",
  "ax-hal",
  "axerrno",
  "axfatfs",
- "axfs_devfs",
  "axfs_ramfs",
  "axfs_vfs",
  "axio",
@@ -692,6 +692,15 @@ dependencies = [
  "log",
  "rsext4",
  "spin 0.10.0",
+]
+
+[[package]]
+name = "ax-fs-devfs"
+version = "0.3.2"
+dependencies = [
+ "axfs_vfs",
+ "log",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -1431,15 +1440,6 @@ dependencies = [
  "log",
  "smallvec",
  "spin 0.10.0",
-]
-
-[[package]]
-name = "axfs_devfs"
-version = "0.3.2"
-dependencies = [
- "axfs_vfs",
- "log",
- "spin 0.9.8",
 ]
 
 [[package]]

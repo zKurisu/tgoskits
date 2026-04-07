@@ -85,7 +85,7 @@ graph LR
 
     current --> ax-fs["ax-fs"]
     current --> axfs_ramfs["axfs_ramfs"]
-    current --> axfs_devfs["axfs_devfs"]
+    current --> axfs_devfs["ax-fs-devfs"]
 ```
 
 ### 3.1 关键直接依赖

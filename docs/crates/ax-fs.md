@@ -102,7 +102,7 @@ graph LR
     ax-driver["ax-driver(block)"] --> current["ax-fs"]
     axfs_vfs["axfs_vfs"] --> current
     axfs_ramfs["axfs_ramfs"] --> current
-    axfs_devfs["axfs_devfs"] --> current
+    axfs_devfs["ax-fs-devfs"] --> current
     axfatfs["axfatfs"] --> current
     rsext4["rsext4"] --> current
     cap_access["cap_access"] --> current
