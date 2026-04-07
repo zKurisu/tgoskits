@@ -62,7 +62,7 @@ README 已经说明了两种使用模式：
 
 - `os/arceos/modules/axruntime/src/lib.rs`
 
-在主 CPU 初始化流程中，`axruntime` 完成驱动、文件系统、网络、显示、中断等基础初始化后，会显式执行：
+在主 CPU 初始化流程中，`ax-runtime` 完成驱动、文件系统、网络、显示、中断等基础初始化后，会显式执行：
 
 - `ctor_bare::call_ctors();`
 
@@ -92,7 +92,7 @@ README 已经说明了两种使用模式：
 
 1. 业务函数上使用 `#[register_ctor]`
 2. 宏 crate 把函数指针放进 `.init_array`
-3. `axruntime` 启动时调用 `ctor_bare::call_ctors()`
+3. `ax-runtime` 启动时调用 `ctor_bare::call_ctors()`
 4. 各注册函数被依次执行
 
 这说明 `ctor_bare` 处于：
@@ -129,7 +129,7 @@ README 已经说明了两种使用模式：
 
 可确认的间接链路：
 
-- `ctor_bare` -> `axruntime` -> ArceOS/StarryOS/Axvisor 的共享运行时启动路径
+- `ctor_bare` -> `ax-runtime` -> ArceOS/StarryOS/Axvisor 的共享运行时启动路径
 
 ### 3.3 关系解读
 
@@ -137,7 +137,7 @@ README 已经说明了两种使用模式：
 | --- | --- |
 | `ctor_bare_macros` | 编译期登记函数指针 |
 | `ctor_bare` | 运行时遍历 `.init_array` |
-| `axruntime` | 在系统启动序列中选择何时执行这些函数 |
+| `ax-runtime` | 在系统启动序列中选择何时执行这些函数 |
 
 ## 4. 开发指南
 
@@ -202,8 +202,8 @@ README 已经说明了两种使用模式：
 
 | 项目 | 位置 | 角色 | 说明 |
 | --- | --- | --- | --- |
-| ArceOS | `axruntime` 启动路径 | 构造函数遍历运行时 | 当前最明确的真实接线点 |
-| StarryOS | 共享运行时链路 | 启动期辅助组件 | 若复用同一 `axruntime` 路径则会间接使用 |
+| ArceOS | `ax-runtime` 启动路径 | 构造函数遍历运行时 | 当前最明确的真实接线点 |
+| StarryOS | 共享运行时链路 | 启动期辅助组件 | 若复用同一 `ax-runtime` 路径则会间接使用 |
 | Axvisor | 共享运行时链路 | 启动期辅助组件 | 通过共享运行时基础设施间接获得能力 |
 
 ## 7. 总结

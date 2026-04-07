@@ -6,14 +6,14 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/dtb.rs`、`src/mem.rs`、`src/percpu.rs`、`src/irq.rs`、`src/paging.rs`、`src/tls.rs`、`build.rs`、`linker.lds.S`
 
-`axhal` 是 ArceOS 家族中最关键的“硬件抽象粘合层”。它并不试图独立实现所有架构/平台逻辑，而是把 `axcpu` 的 ISA 语义、`axplat` 的平台实现和上层运行时需要的统一接口收束成一套稳定的 HAL 边界，因此它既是 `axruntime` 的启动基座，也是 `axmm`、`axtask`、StarryOS 与 Axvisor 共同复用的低层能力入口。
+`axhal` 是 ArceOS 家族中最关键的“硬件抽象粘合层”。它并不试图独立实现所有架构/平台逻辑，而是把 `axcpu` 的 ISA 语义、`axplat` 的平台实现和上层运行时需要的统一接口收束成一套稳定的 HAL 边界，因此它既是 `ax-runtime` 的启动基座，也是 `axmm`、`axtask`、StarryOS 与 Axvisor 共同复用的低层能力入口。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
 `axhal` 处在三层之间：
 
 - 向下连接 `axcpu` 与 `axplat-*`，分别承接 ISA 级抽象和板级/平台级实现。
-- 向上为 `axruntime`、`axmm`、`axtask`、`axdriver` 等模块提供统一 API。
+- 向上为 `ax-runtime`、`axmm`、`axtask`、`axdriver` 等模块提供统一 API。
 - 在 `plat-dyn`、`defplat`、`myplat` 等 feature 作用下，决定最终链接到哪一类平台实现。
 
 这意味着 `axhal` 的核心价值不是“算法复杂”，而是“边界清晰”与“初始化顺序正确”。它本质上是 ArceOS 运行时的硬件语义总入口。
@@ -32,7 +32,7 @@
 
 ### 1.3 关键数据结构与全局对象
 - `BOOTARG`：保存引导阶段传入的参数，后续由 DTB/FDT 解析流程读取。
-- `ALL_MEM_REGIONS`：统一后的物理内存区域视图，是 `axalloc`、`axruntime` 等模块做内存初始化的基础。
+- `ALL_MEM_REGIONS`：统一后的物理内存区域视图，是 `axalloc`、`ax-runtime` 等模块做内存初始化的基础。
 - `CURRENT_TASK_PTR`：每 CPU 当前任务指针，供调度与上下文切换路径读取。
 - `IRQ_HOOK`：可注册的 IRQ 钩子，用于平台 IRQ 分发前后的附加处理。
 - `CPU_NUM`：在 `smp` 场景下，取平台声明 CPU 数与 `axconfig::plat::MAX_CPU_NUM` 的较小值。
@@ -40,7 +40,7 @@
 - `TlsArea`：内核态线程局部存储块管理对象，仅在 TLS 打开时参与主线。
 
 ### 1.4 启动与初始化主线
-`axhal` 的关键不是单个函数，而是一条被 `axruntime` 调用的固定主线：
+`axhal` 的关键不是单个函数，而是一条被 `ax-runtime` 调用的固定主线：
 
 ```mermaid
 flowchart TD
@@ -49,7 +49,7 @@ flowchart TD
     PerCpu --> Early["axhal::init_early"]
     Early --> Dtb["dtb::init(arg)"]
     Early --> PlatEarly["axplat::init::init_early"]
-    PlatEarly --> Runtime["axruntime 继续初始化"]
+    PlatEarly --> Runtime["ax-runtime 继续初始化"]
     Runtime --> Later["axhal::init_later"]
     Later --> PlatLater["axplat::init::init_later"]
     PlatLater --> Svc["调度/驱动/文件系统/网络等上层服务初始化"]
@@ -57,7 +57,7 @@ flowchart TD
 
 对应到源码，最重要的调用链是：
 
-1. `axruntime::rust_main()` 先调用 `axhal::mem::clear_bss()`。
+1. `ax_runtime::rust_main()` 先调用 `axhal::mem::clear_bss()`。
 2. 调用 `axhal::percpu::init_primary(cpu_id)` 建立 BSP 的每核状态。
 3. 调用 `axhal::init_early(cpu_id, arg)`，内部先做 `dtb::init(arg)`，再转入 `axplat::init::init_early()`。
 4. 上层完成日志、分配器、页表等初始化后，调用 `axhal::init_later(cpu_id, arg)` 进入平台后期初始化。
@@ -121,7 +121,7 @@ graph LR
     axalloc["axalloc (paging)"] --> axhal
     page_table["page_table_multiarch"] --> axhal
 
-    axhal --> axruntime["axruntime"]
+    axhal --> ax-runtime["ax-runtime"]
     axhal --> axmm["axmm"]
     axhal --> axtask["axtask"]
     axhal --> axdriver["axdriver"]
@@ -141,7 +141,7 @@ graph LR
 - `percpu`、`kernel_guard`、`memory_addr` 等基础组件通过 `axcpu`、`axplat` 或 `paging` 路径提供底层支持。
 
 ### 3.3 关键直接消费者
-- `axruntime`：系统 bring-up 总控，是 `axhal` 的第一直接消费者。
+- `ax-runtime`：系统 bring-up 总控，是 `axhal` 的第一直接消费者。
 - `axmm`：使用 `paging`、地址转换与内存区域信息。
 - `axtask`：使用 CPU 本地状态、时间、IRQ、TLS 与上下文相关能力。
 - `axdriver`、`axnet`、`axfs*`：通过时间、中断、设备树和平台资源完成硬件接线。
@@ -168,14 +168,14 @@ axhal = { workspace = true }
 ### 4.2 初始化约束
 `axhal` 不是普通工具库，初始化顺序必须严格遵循运行时主线：
 
-1. 先由平台入口或 `axruntime` 调用 `mem::clear_bss()` 与 `percpu::init_primary()`。
+1. 先由平台入口或 `ax-runtime` 调用 `mem::clear_bss()` 与 `percpu::init_primary()`。
 2. 再调用 `init_early()` 完成 bootarg/DTB 与平台早期初始化。
 3. 完成分配器、页表等基础设施后，再调用 `init_later()`。
 4. IRQ、TLS、SMP 等能力必须与对应 feature 和后续运行时初始化步骤对齐。
 
 ### 4.3 开发建议
 - 修改 `mem.rs` 时，要同步检查 `axalloc`、`axmm`、链接脚本与平台物理内存描述是否仍然一致。
-- 修改 `irq.rs` 时，要同步验证 `axruntime::init_interrupt()`、时钟中断注册以及上层调度器 tick 路径。
+- 修改 `irq.rs` 时，要同步验证 `ax_runtime::init_interrupt()`、时钟中断注册以及上层调度器 tick 路径。
 - 修改 `paging.rs` 时，要同步检查 `axmm`、用户态地址空间和虚拟化场景是否仍然满足接口契约。
 - 修改 `build.rs` 或 `linker.lds.S` 时，要把这类改动视为“系统启动级变更”，不能只靠单模块验证。
 
@@ -202,7 +202,7 @@ axhal = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axhal` 是 ArceOS 的硬件抽象中枢。`axruntime` 通过它完成 BSP/从核初始化，`axmm` 通过它操作页表与地址空间，`axtask` 通过它获取 CPU 本地状态、时间和中断能力。没有 `axhal`，ArceOS 的模块化运行时就失去了与真实硬件之间的统一边界。
+`axhal` 是 ArceOS 的硬件抽象中枢。`ax-runtime` 通过它完成 BSP/从核初始化，`axmm` 通过它操作页表与地址空间，`axtask` 通过它获取 CPU 本地状态、时间和中断能力。没有 `axhal`，ArceOS 的模块化运行时就失去了与真实硬件之间的统一边界。
 
 ### 6.2 StarryOS
 StarryOS 并不重新实现 HAL，而是直接复用 `axhal`。它通过 `axhal::uspace::UserContext`、`paging`、`time`、`console` 等能力实现 Linux 兼容内核路径，因此 `axhal` 在 StarryOS 中扮演的是“宿主内核底层抽象层”而不是外围工具库。

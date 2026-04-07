@@ -69,7 +69,7 @@ flowchart LR
 这份样例不是：
 
 - ArceOS 的应用入口
-- `axruntime` 的替代品
+- `ax-runtime` 的替代品
 - 可直接扩展成完整内核的通用骨架
 
 它只是 `axplat` 平台包的最小消费者。
@@ -137,7 +137,7 @@ make ARCH=<x86_64|aarch64|riscv64|loongarch64> run
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 不直接依赖这个样例，但会复用同一批平台包。它对 ArceOS 的价值在于：平台层有问题时，先用这条最小路径定位，再进入 `axruntime` 和更高层。
+ArceOS 不直接依赖这个样例，但会复用同一批平台包。它对 ArceOS 的价值在于：平台层有问题时，先用这条最小路径定位，再进入 `ax-runtime` 和更高层。
 
 ### 6.2 StarryOS
 StarryOS 同样不会直接运行它。这个样例只是帮助验证其下方共享的 `axplat` 平台栈是否最起码可启动。

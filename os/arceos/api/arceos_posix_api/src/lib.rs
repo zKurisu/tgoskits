@@ -8,7 +8,7 @@
 
 #[macro_use]
 extern crate axlog;
-extern crate axruntime;
+extern crate ax_runtime;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

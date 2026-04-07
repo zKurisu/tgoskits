@@ -24,9 +24,9 @@
 ### 1.2 初始化主线
 当前仓库中的调用链如下：
 
-1. `axruntime` 调用 `axdriver::init_drivers()`。
+1. `ax-runtime` 调用 `axdriver::init_drivers()`。
 2. `axdriver` 把输入设备收集进 `AllDevices.input`。
-3. `axruntime` 在 `feature = "input"` 下调用 `axinput::init_input(all_devices.input)`。
+3. `ax-runtime` 在 `feature = "input"` 下调用 `axinput::init_input(all_devices.input)`。
 4. `axinput` 循环 `take_one()`，把所有输入设备压入内部 `Vec`。
 5. StarryOS 等上层模块再调用 `take_inputs()` 取走整个设备列表。
 
@@ -78,7 +78,7 @@ StarryOS 的 `pseudofs/dev/event.rs` 会：
 
 - `axdriver/virtio-input`
 - `dep:axinput`
-- `axruntime/input`
+- `ax-runtime/input`
 
 因此它的整机定位是“输入功能 feature 的中间模块”，而不是一个独立发行层 API。
 

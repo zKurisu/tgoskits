@@ -527,6 +527,7 @@ name = "ax-api"
 version = "0.5.0"
 dependencies = [
  "ax-feat",
+ "ax-runtime",
  "axalloc",
  "axconfig",
  "axdisplay",
@@ -540,7 +541,6 @@ dependencies = [
  "axlog",
  "axmm",
  "axnet",
- "axruntime",
  "axsync",
  "axtask",
 ]
@@ -549,6 +549,7 @@ dependencies = [
 name = "ax-feat"
 version = "0.5.0"
 dependencies = [
+ "ax-runtime",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -561,7 +562,6 @@ dependencies = [
  "axipi",
  "axlog",
  "axnet",
- "axruntime",
  "axsync",
  "axtask",
  "kspin 0.3.1",
@@ -619,6 +619,7 @@ name = "ax-posix-api"
 version = "0.5.0"
 dependencies = [
  "ax-feat",
+ "ax-runtime",
  "axalloc",
  "axconfig",
  "axerrno",
@@ -627,7 +628,6 @@ dependencies = [
  "axio",
  "axlog",
  "axnet",
- "axruntime",
  "axsync",
  "axtask",
  "bindgen",
@@ -635,6 +635,35 @@ dependencies = [
  "lazy_static",
  "scope-local",
  "spin 0.10.0",
+]
+
+[[package]]
+name = "ax-runtime"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axbacktrace",
+ "axconfig",
+ "axdisplay",
+ "axdriver",
+ "axfs",
+ "axfs-ng",
+ "axhal",
+ "axinput",
+ "axipi",
+ "axklib",
+ "axlog",
+ "axmm",
+ "axnet",
+ "axnet-ng",
+ "axplat 0.5.1",
+ "axtask",
+ "cfg-if",
+ "chrono",
+ "crate_interface 0.5.0",
+ "ctor_bare",
+ "indoc",
+ "percpu 0.4.3",
 ]
 
 [[package]]
@@ -1546,35 +1575,6 @@ dependencies = [
  "linux-raw-sys 0.12.1",
  "spin 0.10.0",
  "tokio",
-]
-
-[[package]]
-name = "axruntime"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axbacktrace",
- "axconfig",
- "axdisplay",
- "axdriver",
- "axfs",
- "axfs-ng",
- "axhal",
- "axinput",
- "axipi",
- "axklib",
- "axlog",
- "axmm",
- "axnet",
- "axnet-ng",
- "axplat 0.5.1",
- "axtask",
- "cfg-if",
- "chrono",
- "crate_interface 0.5.0",
- "ctor_bare",
- "indoc",
- "percpu 0.4.3",
 ]
 
 [[package]]
@@ -7415,6 +7415,7 @@ name = "starry-kernel"
 version = "0.5.0"
 dependencies = [
  "ax-feat",
+ "ax-runtime",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -7430,7 +7431,6 @@ dependencies = [
  "axmm",
  "axnet-ng",
  "axpoll",
- "axruntime",
  "axsync",
  "axtask",
  "bitflags 2.11.0",

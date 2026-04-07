@@ -84,7 +84,7 @@
 ### 2.2 典型调用链
 当前仓库里最典型的使用主线是：
 
-1. `axruntime::init_drivers()` 调用 `axdriver::init_drivers()`。
+1. `ax_runtime::init_drivers()` 调用 `axdriver::init_drivers()`。
 2. `axdriver` 根据 feature 选择 `ramdisk`、`sdmmc`、`bcm2835-sdhci` 或 `virtio-blk` 路径。
 3. 设备实例被包装成 `AxBlockDevice` 放入 `AllDevices.block`。
 4. `axfs` 或 `axfs-ng` 再接手这些块设备。

@@ -14,7 +14,7 @@ Modules are **OS-related** components that are tightly bound to the design princ
 
 Most of the modules are optional, depending on the features enabled by the application. A few modules are required by all applications, as shown below:
 
-* [axruntime](../modules/axruntime/): Bootstrapping from the bare-metal environment, and initialization.
+* [ax-runtime](../modules/axruntime/): Bootstrapping from the bare-metal environment, and initialization.
 * [axhal](../modules/axhal/): Hardware abstraction layer, provides unified APIs for cross-platform.
 * [axconfig](../modules/axconfig/): Platform constants and kernel parameters, such as physical memory base, kernel load addresses, stack size, etc.
 * [axlog](../modules/axlog/): Multi-level formatted logging.

@@ -45,7 +45,7 @@
 
 ```mermaid
 flowchart TD
-    A["axruntime::init_drivers"] --> B["axdriver::init_drivers()"]
+    A["ax_runtime::init_drivers"] --> B["axdriver::init_drivers()"]
     B --> C["AllDevices::probe()"]
     C --> D{"feature = dyn ?"}
     D -- yes --> E["dyn_drivers::probe_all_devices()"]
@@ -104,7 +104,7 @@ flowchart TD
 - 封装 VirtIO、PCI、MMIO 等总线路径的探测 glue。
 
 ### 2.2 关键 API 与使用场景
-- `init_drivers()`：由 `axruntime` 调用，是系统驱动 bring-up 的总入口。
+- `init_drivers()`：由 `ax-runtime` 调用，是系统驱动 bring-up 的总入口。
 - `AllDevices`：上层子系统从中取出自己关心的设备。
 - `AxDeviceContainer::take_one()`：很多上层模块以“只取第一台设备”的方式消费设备。
 - `DriverProbe`：新增驱动或扩展总线匹配逻辑时的统一入口。
@@ -118,7 +118,7 @@ let blk = all.block.take_one();
 let net = all.net.take_one();
 ```
 
-这条模式在 `axruntime` 初始化文件系统、网络栈、显示与输入子系统时非常关键。
+这条模式在 `ax-runtime` 初始化文件系统、网络栈、显示与输入子系统时非常关键。
 
 ## 3. 依赖关系图谱
 ```mermaid
@@ -130,7 +130,7 @@ graph LR
     axdriver_base["axdriver_base / axdriver_*"] --> axdriver
     axplat_dyn["axplat-dyn (dyn 模式)"] --> axdriver
 
-    axdriver --> axruntime["axruntime"]
+    axdriver --> ax-runtime["ax-runtime"]
     axdriver --> axfs["axfs / axfs-ng"]
     axdriver --> axnet["axnet / axnet-ng"]
     axdriver --> axdisplay["axdisplay"]
@@ -146,7 +146,7 @@ graph LR
 - `axplat-dyn`：动态模型下的平台设备探测入口。
 
 ### 3.2 关键直接消费者
-- `axruntime`：初始化阶段调用 `init_drivers()`，并把设备分发到文件系统、网络、显示、输入等子系统。
+- `ax-runtime`：初始化阶段调用 `init_drivers()`，并把设备分发到文件系统、网络、显示、输入等子系统。
 - `axfs` / `axfs-ng`：消费块设备。
 - `axnet` / `axnet-ng`：消费网络设备和可选 vsock。
 - `axdisplay`、`axinput`：消费显示和输入设备。

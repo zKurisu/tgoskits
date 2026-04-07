@@ -171,7 +171,7 @@ graph TD
     B --> C[axplat]
     C --> D[axhal]
     D --> E[axtask]
-    D --> F[axruntime]
+    D --> F[ax-runtime]
     B --> G[axvcpu / arm_vcpu]
     B --> H[scope-local]
     G --> I[Axvisor]

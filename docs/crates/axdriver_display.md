@@ -49,7 +49,7 @@
 再往上一层：
 
 - `axdriver` 把具体实例包装为 `AxDisplayDevice` 放入 `AllDevices.display`。
-- `axruntime` 调用 `axdisplay::init_display(all_devices.display)`。
+- `ax-runtime` 调用 `axdisplay::init_display(all_devices.display)`。
 - `axdisplay` 提供 `framebuffer_info()` / `framebuffer_flush()`。
 - StarryOS 的 `pseudofs/dev/fb.rs` 再把这组能力包装成伪文件系统的 framebuffer 设备。
 

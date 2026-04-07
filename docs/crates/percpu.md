@@ -173,7 +173,7 @@
 
 - `axplat`
 - `axhal`
-- `axruntime`
+- `ax-runtime`
 - `axtask`
 - `axalloc`
 - `axvcpu`
@@ -189,7 +189,7 @@ graph TD
     A[percpu_macros] --> B[percpu]
     B --> C[axplat]
     C --> D[axhal]
-    D --> E[axruntime]
+    D --> E[ax-runtime]
     D --> F[axtask]
     B --> G[axvcpu]
     G --> H[axvm / Axvisor]

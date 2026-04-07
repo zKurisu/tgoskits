@@ -43,7 +43,7 @@
 
 1. `axdriver_virtio::VirtIoInputDev` 实现 `InputDriverOps`。
 2. `axdriver` 把它包装成 `AxInputDevice` 放进 `AllDevices.input`。
-3. `axruntime` 调用 `axinput::init_input(all_devices.input)`。
+3. `ax-runtime` 调用 `axinput::init_input(all_devices.input)`。
 4. StarryOS 的 `pseudofs/dev/event.rs` 再用 `axinput::take_inputs()` 取走这些设备，构造 evdev 风格的字符设备。
 
 因此，本 crate 位于“驱动契约”和“系统输入服务”之间，而不是输入服务本身。

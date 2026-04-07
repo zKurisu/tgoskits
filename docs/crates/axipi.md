@@ -64,12 +64,12 @@ flowchart TD
 - 在 IPI 中断处理函数里取出并执行待处理事件。
 
 ### 2.2 关键 API 与真实使用位置
-- `init()`：由 `axruntime/src/mp.rs` 在次核 bring-up 路径中调用，为当前 CPU 建立 IPI 队列。
-- `ipi_handler()`：由 `axruntime/src/lib.rs` 的 IRQ 处理路径调用。
+- `init()`：由 `ax-runtime/src/mp.rs` 在次核 bring-up 路径中调用，为当前 CPU 建立 IPI 队列。
+- `ipi_handler()`：由 `ax-runtime/src/lib.rs` 的 IRQ 处理路径调用。
 - `run_on_cpu()` / `run_on_each_cpu()`：是这个 crate 的核心公开 API，也是 `ax-api` / `ax-feat` 暴露 IPI 能力的底层基础。
 
 ### 2.3 使用边界
-- 它不是 SMP 启动器；启动 CPU 的逻辑在 `axruntime::start_secondary_cpus()`。
+- 它不是 SMP 启动器；启动 CPU 的逻辑在 `ax_runtime::start_secondary_cpus()`。
 - 它不是通用异步执行框架；没有 future、返回值或 work stealing。
 - 它也不是调度器；闭包何时运行只受 IPI 到达和 handler 执行控制。
 
@@ -82,7 +82,7 @@ graph LR
     lazyinit["lazyinit"] --> axipi
     percpu["percpu"] --> axipi
 
-    axipi --> axruntime["axruntime"]
+    axipi --> ax-runtime["ax-runtime"]
     axipi --> ax-api["ax-api"]
     axipi --> ax-feat["ax-feat"]
 ```
@@ -95,7 +95,7 @@ graph LR
 - `percpu`：声明每 CPU 静态存储。
 
 ### 3.2 关键直接消费者
-- `axruntime`：负责在启动链中初始化队列，并在 IRQ 处理里调用 `ipi_handler()`。
+- `ax-runtime`：负责在启动链中初始化队列，并在 IRQ 处理里调用 `ipi_handler()`。
 - `ax-api` / `ax-feat`：把 IPI 能力向上层 feature 与 API 暴露。
 
 ## 4. 开发指南
@@ -122,7 +122,7 @@ axipi = { workspace = true }
 ### 5.1 当前测试形态
 `axipi` 没有独立的 crate 内测试，当前验证主要依赖真实 SMP 路径：
 
-- `axruntime` 在启用 `ipi`/`smp`/`irq` 组合下的启动与中断处理；
+- `ax-runtime` 在启用 `ipi`/`smp`/`irq` 组合下的启动与中断处理；
 - API 层对 IPI 能力的集成；
 - 多核环境下回调能否确实落到目标 CPU。
 
@@ -134,7 +134,7 @@ axipi = { workspace = true }
 ### 5.3 集成测试重点
 - QEMU/真实多核环境下的单播与广播是否都能触发。
 - `ipi_handler()` 是否能正确 drain 多个连续事件。
-- 与 `axruntime` 的 IRQ 注册/处理中断链是否匹配。
+- 与 `ax-runtime` 的 IRQ 注册/处理中断链是否匹配。
 
 ### 5.4 覆盖率要求
 - 对 `axipi`，SMP 集成覆盖比局部行覆盖率更关键。

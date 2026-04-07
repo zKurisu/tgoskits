@@ -25,9 +25,9 @@
 ### 1.2 初始化主线
 当前仓库中的调用链非常直接：
 
-1. `axruntime` 在完成平台和内核基本初始化后调用 `axdriver::init_drivers()`。
+1. `ax-runtime` 在完成平台和内核基本初始化后调用 `axdriver::init_drivers()`。
 2. `axdriver` 把显示设备按类别收集进 `AllDevices.display`。
-3. `axruntime` 在 `feature = "display"` 下调用 `axdisplay::init_display(all_devices.display)`。
+3. `ax-runtime` 在 `feature = "display"` 下调用 `axdisplay::init_display(all_devices.display)`。
 4. `axdisplay` 从容器中取出一个设备，存入 `MAIN_DISPLAY`。
 5. `ax-api` 与 StarryOS 等更上层模块通过 `framebuffer_info()` / `framebuffer_flush()` 使用它。
 

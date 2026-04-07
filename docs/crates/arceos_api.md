@@ -109,7 +109,7 @@ let _ = (now, cpus);
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axruntime["axruntime"] --> ax-api["ax-api"]
+    ax-runtime["ax-runtime"] --> ax-api["ax-api"]
     axhal["axhal"] --> ax-api
     axalloc["axalloc"] --> ax-api
     axdma["axdma"] --> ax-api
@@ -124,7 +124,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- 核心基础：`axconfig`、`axerrno`、`ax-feat`、`axhal`、`axio`、`axlog`、`axruntime`、`axsync`。
+- 核心基础：`axconfig`、`axerrno`、`ax-feat`、`axhal`、`axio`、`axlog`、`ax-runtime`、`axsync`。
 - 可选能力：`axalloc`、`axdma`、`axtask`、`axfs`、`axnet`、`axdisplay`、`axdriver`、`axipi`、`axmm`。
 
 ### 3.2 关键直接消费者

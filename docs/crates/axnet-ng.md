@@ -167,7 +167,7 @@ StarryOS 的 `Cargo.toml` 明确把依赖名 `axnet` 绑定到 `package = "axnet
 
 | 消费者 | 使用方式 |
 | --- | --- |
-| `axruntime` | 在 `net-ng` 路径中初始化网络与可选 vsock 子系统 |
+| `ax-runtime` | 在 `net-ng` 路径中初始化网络与可选 vsock 子系统 |
 | `starry-kernel` | 作为主 socket 实现，服务 `sys_socket`、`bind`、`connect`、`accept` 等系统调用 |
 | ArceOS 上层应用链 | 经由运行时和更高层 API 间接复用 |
 
@@ -191,7 +191,7 @@ StarryOS 的 `Cargo.toml` 明确把依赖名 `axnet` 绑定到 `package = "axnet
 axnet-ng = { workspace = true }
 ```
 
-在系统镜像里，更常见的入口是启用 `axruntime` 的 `net-ng` feature，而不是手动直接调用初始化函数。
+在系统镜像里，更常见的入口是启用 `ax-runtime` 的 `net-ng` feature，而不是手动直接调用初始化函数。
 
 ### 4.2 修改前先判断自己动的是哪一层
 
@@ -215,7 +215,7 @@ axnet-ng = { workspace = true }
 
 `axnet-ng` 目录内没有独立 `tests/`。它的正确性主要依赖系统级验证：
 
-- `axruntime` 的 `net-ng` / `vsock` 初始化路径
+- `ax-runtime` 的 `net-ng` / `vsock` 初始化路径
 - StarryOS 的 socket 系统调用与 `FileLike` 封装
 - ArceOS/StarryOS 各类网络、Unix socket 与 vsock 场景
 

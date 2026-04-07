@@ -54,7 +54,7 @@ graph LR
 - `axio`
 - `axlog`
 - `axnet`
-- `axruntime`
+- `ax-runtime`
 - `axsync`
 - `axtask`
 - 另外还有 `1` 个同类项未在此展开

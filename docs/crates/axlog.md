@@ -64,8 +64,8 @@ flowchart TD
 - 提供颜色化、带时间戳和可选 CPU/task 元信息的统一日志格式。
 
 ### 2.2 关键 API 与真实使用位置
-- `init()` / `set_max_level()`：由 `axruntime/src/lib.rs` 在系统 bring-up 早期调用。
-- `LogIf`：由 `axruntime::LogIfImpl` 实现，背后再转发到 `axhal::console`、`axhal::time`、`axtask` 等模块。
+- `init()` / `set_max_level()`：由 `ax-runtime/src/lib.rs` 在系统 bring-up 早期调用。
+- `LogIf`：由 `ax_runtime::LogIfImpl` 实现，背后再转发到 `axhal::console`、`axhal::time`、`axtask` 等模块。
 - `print_fmt()`：被 `ax-api/src/imp/mod.rs` 直接使用，作为 API 层输出通道。
 - `warn!` 等宏：被 `ax-posix-api`、`axtask` 等模块直接调用。
 
@@ -82,7 +82,7 @@ graph LR
     kspin["kspin"] --> axlog
     chrono["chrono (std)"] --> axlog
 
-    axlog --> axruntime["axruntime"]
+    axlog --> ax-runtime["ax-runtime"]
     axlog --> ax-api["ax-api"]
     axlog --> arceos_posix["ax-posix-api"]
     axlog --> ax-feat["ax-feat"]
@@ -96,7 +96,7 @@ graph LR
 - `chrono`：只在 `std` 下使用。
 
 ### 3.2 关键直接消费者
-- `axruntime`：初始化 logger 并提供运行时后端实现。
+- `ax-runtime`：初始化 logger 并提供运行时后端实现。
 - `ax-api` / `ax-posix-api`：向上层 API 暴露输出与警告能力。
 - `starry-kernel`：直接复用同一套日志前端。
 
@@ -116,7 +116,7 @@ axlog = { workspace = true, features = ["std"] }
 
 ### 4.2 修改时的关键约束
 1. 修改日志格式时，要同时检查 `std` 与 `no_std` 两条路径。
-2. 修改 `LogIf` 契约时，必须同步更新 `axruntime::LogIfImpl` 这类实现方。
+2. 修改 `LogIf` 契约时，必须同步更新 `ax_runtime::LogIfImpl` 这类实现方。
 3. 修改 `print_fmt()` 锁策略时，要重新评估输出交叉与中断上下文行为。
 4. 不要把控制台驱动逻辑塞进 `axlog`；这层应该继续保持“前端 + glue”的小体量。
 
@@ -130,7 +130,7 @@ axlog = { workspace = true, features = ["std"] }
 `axlog` 没有独立的 crate 内测试；当前验证主要依赖：
 
 - `std` feature 下的 host 构建与示例使用；
-- `axruntime` 启动期对 logger 的真实初始化；
+- `ax-runtime` 启动期对 logger 的真实初始化；
 - 多模块并发输出时是否仍能保持完整日志行。
 
 ### 5.2 单元测试重点

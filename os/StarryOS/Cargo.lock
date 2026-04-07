@@ -644,7 +644,7 @@ dependencies = [
  "axinput",
  "axlog",
  "axnet",
- "axruntime",
+ "ax-runtime",
  "axsync",
  "axtask",
  "kspin",
@@ -1067,7 +1067,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axruntime"
+name = "ax-runtime"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79659a480ddcacf786119394000822567e47093ab5f01ef1952565cc5bcf256b"
@@ -5537,7 +5537,7 @@ dependencies = [
  "axmm",
  "axnet-ng",
  "axpoll",
- "axruntime",
+ "ax-runtime",
  "axsync",
  "axtask",
  "bitflags 2.11.0",

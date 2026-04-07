@@ -93,7 +93,7 @@ axmm = { version = "0.5.0", path = "modules/axmm" }
 axnet = { version = "0.5.0", path = "modules/axnet" }
 axnet-ng = { version = "0.5.0", path = "modules/axnet-ng" }
 axplat-dyn = { version = "0.5.0", default-features = false }
-axruntime = { version = "0.5.0", path = "modules/axruntime" }
+ax-runtime = { version = "0.5.0", path = "modules/axruntime" }
 axsync = { version = "0.5.0", path = "modules/axsync" }
 axtask = { version = "0.5.0", path = "modules/axtask" }
 

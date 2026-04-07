@@ -183,7 +183,7 @@ CURATED_DOCS = {
     "ax-libc",
     "axlog",
     "ax-std",
-    "axruntime",
+    "ax-runtime",
     "axmm",
     "axdriver",
     "axdriver_base",
@@ -1285,7 +1285,7 @@ def dev_steps(pkg: Package) -> list[str]:
     if style == "arceos_api":
         return [
             "优先通过该 crate 提供的稳定 API 接入能力，而不是直接深入底层 `os/arceos/modules/*` 实现。",
-            "根据目标能力开启对应 feature，并确认它们与 `axruntime`、驱动、文件系统或网络子系统的装配关系。",
+            "根据目标能力开启对应 feature，并确认它们与 `ax-runtime`、驱动、文件系统或网络子系统的装配关系。",
             "在最小消费者路径上验证 API 语义、错误码和资源释放行为是否与上层预期一致。",
         ]
     if style == "arceos_ulib":

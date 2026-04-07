@@ -75,6 +75,6 @@ What happens when "make A=examples/httpserver ARCH=riscv64 LOG=info NET=y SMP=1 
         )
     }                       
     ```
-    - Later, it calls `axplat::call_main`, which will jump to the function marked with the `axplat::main` procedural macro. In ArceOS it is the `rust_main` in `axruntime`. After some conditional initialization, `rust_main` executes `main()`. Since this main is defined by the application, symbol linkage should be established and jumped to (no context switch is needed since it's a single address space).
+    - Later, it calls `axplat::call_main`, which will jump to the function marked with the `axplat::main` procedural macro. In ArceOS it is the `rust_main` in `ax-runtime`. After some conditional initialization, `rust_main` executes `main()`. Since this main is defined by the application, symbol linkage should be established and jumped to (no context switch is needed since it's a single address space).
 
     -  Then, the user program begins executing through `ax-std`'s API. The application runs in kernel mode, without the need for syscall and context switching, resulting in higher efficiency.

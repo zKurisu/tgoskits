@@ -132,7 +132,7 @@
 
 通过 `ctor_bare` 间接接入的链路：
 
-- `ctor_bare_macros` -> `ctor_bare` -> `axruntime` -> 上层系统启动路径
+- `ctor_bare_macros` -> `ctor_bare` -> `ax-runtime` -> 上层系统启动路径
 
 ### 3.3 关系解读
 
@@ -140,7 +140,7 @@
 | --- | --- |
 | `ctor_bare_macros` | 编译期注册器 |
 | `ctor_bare` | 运行时执行器 |
-| `axruntime` | 决定调用时机的系统启动层 |
+| `ax-runtime` | 决定调用时机的系统启动层 |
 
 ## 4. 开发指南
 
@@ -196,7 +196,7 @@
 
 | 项目 | 位置 | 角色 | 说明 |
 | --- | --- | --- | --- |
-| ArceOS | 共享启动基础设施 | 构造函数登记宏 | 通过 `ctor_bare` 和 `axruntime` 间接进入启动链 |
+| ArceOS | 共享启动基础设施 | 构造函数登记宏 | 通过 `ctor_bare` 和 `ax-runtime` 间接进入启动链 |
 | StarryOS | 共享启动基础设施 | 构造函数登记宏 | 若复用同一运行时路径则间接受益 |
 | Axvisor | 共享启动基础设施 | 构造函数登记宏 | 通过共享运行时组件间接使用 |
 

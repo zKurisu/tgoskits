@@ -10,7 +10,7 @@
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axfs` 位于 `axruntime` 与旧版 `axfs_vfs` trait 生态之间，承担的是“启动期装配 + 运行期路径路由”双重职责：
+`axfs` 位于 `ax-runtime` 与旧版 `axfs_vfs` trait 生态之间，承担的是“启动期装配 + 运行期路径路由”双重职责：
 
 - 启动期，它从 `axdriver` 提供的块设备中取出第一个块设备，解析 `bootargs` 中的 `root=` 参数，扫描 GPT 或直接把整盘视为单分区，再决定根文件系统应该落在哪个分区上。
 - 运行期，它通过 `RootDirectory` 把根文件系统、额外挂载分区以及 `/proc`、`/sys` 这类伪文件树拼成一个统一视图。
@@ -31,11 +31,11 @@
 - `src/api/*`：向上提供更接近用户态或通用库风格的辅助函数。
 
 ### 1.3 启动与挂载主线
-`axruntime` 在启用 `fs` feature 后会调用 `axfs::init_filesystems()`，实际主线如下：
+`ax-runtime` 在启用 `fs` feature 后会调用 `axfs::init_filesystems()`，实际主线如下：
 
 ```mermaid
 flowchart TD
-    A["axruntime(fs)"] --> B["axfs::init_filesystems"]
+    A["ax-runtime(fs)"] --> B["axfs::init_filesystems"]
     B --> C["取第一个 block device"]
     C --> D["解析 bootargs 中 root="]
     D --> E["扫描 GPT / 回退整盘"]
@@ -107,7 +107,7 @@ graph LR
     rsext4["rsext4"] --> current
     cap_access["cap_access"] --> current
 
-    current --> axruntime["axruntime(fs)"]
+    current --> ax-runtime["ax-runtime(fs)"]
     current --> ax-api["ax-api"]
     current --> ax-posix-api["ax-posix-api"]
 ```
@@ -120,7 +120,7 @@ graph LR
 - `cap_access`：为 `fops` 提供打开后能力控制。
 
 ### 3.2 关键直接消费者
-- `axruntime`：在 `fs` feature 下初始化整个旧文件系统子系统。
+- `ax-runtime`：在 `fs` feature 下初始化整个旧文件系统子系统。
 - `ax-api`：把 `axfs::fops` 和 `axfs::api` 包装为更稳定的系统 API。
 - `ax-posix-api`：当前仓库里的 POSIX 文件接口主要仍落在 `axfs` 上。
 
@@ -136,7 +136,7 @@ graph LR
 axfs = { workspace = true }
 ```
 
-对大多数 ArceOS 使用者来说，更常见的接入点其实是 `ax-feat`、`axruntime`、`ax-api` 或 `ax-posix-api`，而不是直接把 `axfs` 当独立库调用。
+对大多数 ArceOS 使用者来说，更常见的接入点其实是 `ax-feat`、`ax-runtime`、`ax-api` 或 `ax-posix-api`，而不是直接把 `axfs` 当独立库调用。
 
 ### 4.2 改动约束
 1. 任何对 `init_filesystems()`、`parse_root_spec()`、`find_root_partition()` 的修改，都应被视为启动路径变更。

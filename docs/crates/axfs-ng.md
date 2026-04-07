@@ -35,7 +35,7 @@
 
 ```mermaid
 flowchart TD
-    A["axruntime(fs-ng)"] --> B["axfs-ng::init_filesystems"]
+    A["ax-runtime(fs-ng)"] --> B["axfs-ng::init_filesystems"]
     B --> C["取第一个 block device"]
     C --> D["fs::new_default() 选定 ext4 或 FAT"]
     D --> E["Mountpoint::new_root(&fs)"]
@@ -93,7 +93,7 @@ flowchart TD
 - 权限和所有权语义较弱，更多是把 FAT 能提供的信息适配到统一 VFS 模型里。
 
 ### 2.3 真实调用场景
-- `axruntime`：启用 `fs-ng` 时负责创建根文件系统。
+- `ax-runtime`：启用 `fs-ng` 时负责创建根文件系统。
 - `axnet-ng`：Unix domain socket 通过 `FS_CONTEXT` 和 `OpenOptions::node_type(NodeType::Socket)` 在文件系统里落 socket 节点，并把 `BindSlot` 放进 `Location::user_data()`。
 - StarryOS：文件系统调用层、`tmpfs`/`devfs`/`procfs` 等 pseudofs 挂载、非阻塞文件描述符封装，都直接围绕 `axfs-ng` 的高层对象构建。
 
@@ -114,7 +114,7 @@ graph LR
     ext4lib["lwext4_rust"] --> current
     fatlib["starry-fatfs"] --> current
 
-    current --> axruntime["axruntime(fs-ng)"]
+    current --> ax-runtime["ax-runtime(fs-ng)"]
     current --> axnet_ng["axnet-ng(unix)"]
     current --> starry_kernel["StarryOS kernel（重命名为 axfs）"]
 ```
@@ -126,7 +126,7 @@ graph LR
 - `axpoll`、`axsync`：轮询与同步原语。
 
 ### 3.2 关键直接消费者
-- `axruntime`：负责初始化。
+- `ax-runtime`：负责初始化。
 - `axnet-ng`：Unix socket 路径命名空间复用文件系统对象模型。
 - StarryOS 内核：当前最重要的真实上层消费者。
 
@@ -145,7 +145,7 @@ axfs-ng = { workspace = true, features = ["ext4"] }
 如果要让 ArceOS runtime 真正初始化它，通常还需要从 `ax-feat` 或上层构建 feature 侧启用 `fs-ng`。
 
 ### 4.2 改动约束
-1. 修改 `src/lib.rs` 的初始化路径时，要同步考虑 `axruntime` 的 `fs-ng` feature 选择逻辑。
+1. 修改 `src/lib.rs` 的初始化路径时，要同步考虑 `ax-runtime` 的 `fs-ng` feature 选择逻辑。
 2. 修改 `OpenOptions`、`FileBackend` 或 `NodeFlags` 判定时，要联动检查 StarryOS pseudofs、字符设备、Unix socket 与普通文件映射。
 3. 修改 `FsContext` 的路径解析时，要同时验证 `resolve`、`resolve_no_follow`、`resolve_parent`、`resolve_nonexistent` 四条路径。
 4. 修改 ext4/FAT 后端时，要确认统一语义是否仍与 `axfs-ng-vfs` 对齐，特别是 inode 编号、目录项缓存、链接与元数据更新。
@@ -160,7 +160,7 @@ axfs-ng = { workspace = true, features = ["ext4"] }
 `axfs-ng` 目录下当前没有独立的 `#[test]` 用例。它的正确性主要依赖：
 
 - 后端库自身测试。
-- `axruntime(fs-ng)` 启动路径。
+- `ax-runtime(fs-ng)` 启动路径。
 - StarryOS 系统调用和 pseudofs 集成路径。
 
 ### 5.2 建议的单元测试

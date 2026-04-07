@@ -14,7 +14,7 @@
 
 - 它是 x86 PC 机型的 `axplat` 实现，而不是通用 x86 抽象层。
 - 它负责把 Multiboot 入口、APIC 中断体系、TSC 时间源和 RAM/MMIO 解析组织成上层可调用的接口。
-- 它把最早期引导与后续运行期平台服务放在同一 crate 中，使 `axhal` 与 `axruntime` 可以通过统一接口消费。
+- 它把最早期引导与后续运行期平台服务放在同一 crate 中，使 `axhal` 与 `ax-runtime` 可以通过统一接口消费。
 
 因此，`axplat-x86-pc` 的价值在于“把经典 PC 平台假设精确定义出来”，而不是“适配所有 x86 机器”。
 
@@ -54,7 +54,7 @@ flowchart TD
     G --> H["trap / console / time / mem"]
     H --> I["InitIf::init_later"]
     I --> J["apic::init_primary / time::init_primary"]
-    J --> K["运行时继续进入 axhal / axruntime 主线"]
+    J --> K["运行时继续进入 axhal / ax-runtime 主线"]
 ```
 
 按实现细节看：
@@ -101,7 +101,7 @@ flowchart TD
 - 提供 x86 PC 场景下的 RAM、MMIO、SMP 和电源控制接口。
 
 ### 2.2 关键 API 与使用场景
-- `InitIfImpl`：被 `axhal` / `axruntime` 在启动时调用。
+- `InitIfImpl`：被 `axhal` / `ax-runtime` 在启动时调用。
 - `ConsoleIfImpl`：日志和控制台输出的基础。
 - `MemIfImpl`：为内核内存管理提供 RAM/MMIO 描述。
 - `TimeIfImpl`：为调度器、sleep 和 wall time 提供时间源。

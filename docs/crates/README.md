@@ -101,7 +101,7 @@
 | `axplat-x86-pc` | 组件层 | `components/axplat_crates/platforms/axplat-x86-pc` | 7 | 5 | [查看](./axplat-x86-pc.md) |
 | `axplat-x86-qemu-q35` | 平台层 | `platform/x86-qemu-q35` | 7 | 1 | [查看](./axplat-x86-qemu-q35.md) |
 | `axpoll` | 组件层 | `components/axpoll` | 0 | 5 | [查看](./axpoll.md) |
-| `axruntime` | ArceOS 层 | `os/arceos/modules/axruntime` | 20 | 4 | [查看](./axruntime.md) |
+| `ax-runtime` | ArceOS 层 | `os/arceos/modules/axruntime` | 20 | 4 | [查看](./ax-runtime.md) |
 | `axsched` | 组件层 | `components/axsched` | 1 | 1 | [查看](./axsched.md) |
 | `axsync` | ArceOS 层 | `os/arceos/modules/axsync` | 2 | 9 | [查看](./axsync.md) |
 | `axtask` | ArceOS 层 | `os/arceos/modules/axtask` | 13 | 8 | [查看](./axtask.md) |

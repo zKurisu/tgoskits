@@ -13,7 +13,7 @@
 `axbacktrace` 的职责非常聚焦：
 
 - 向下，它依赖架构相关的帧指针读取和可选的 DWARF 调试段。
-- 向上，它向 `axruntime` 的 panic 路径、`axalloc` 的 tracking 路径、`axcpu` 的 trap context 提供统一的 `Backtrace` 对象。
+- 向上，它向 `ax-runtime` 的 panic 路径、`axalloc` 的 tracking 路径、`axcpu` 的 trap context 提供统一的 `Backtrace` 对象。
 - 横向，它把“捕获栈帧”和“解析符号”拆成两个层次：不开 `dwarf` 仍可存在 `Backtrace`，但会退化为不可解析或禁用状态。
 
 所以 `axbacktrace` 解决的是“如何得到并展示回溯”，而不是“何时触发 panic”“如何恢复异常”。
@@ -63,13 +63,13 @@ flowchart TD
 - 在开启 `dwarf` 时把原始栈帧解析成函数名和源码位置。
 
 ### 2.2 关键 API 与真实使用位置
-- `init(ip_range, fp_range)`：由 `axruntime/src/lib.rs` 在启动期调用。
-- `Backtrace::capture()`：被 `axruntime/src/lang_items.rs` 的 panic 输出路径和 `axalloc/src/tracking.rs` 的分配跟踪路径直接调用。
+- `init(ip_range, fp_range)`：由 `ax-runtime/src/lib.rs` 在启动期调用。
+- `Backtrace::capture()`：被 `ax-runtime/src/lang_items.rs` 的 panic 输出路径和 `axalloc/src/tracking.rs` 的分配跟踪路径直接调用。
 - `Backtrace::capture_trap()`：被 `components/axcpu/src/*/context.rs` 的 trap context 直接调用。
 - `frames()`：适合更精细的调试输出场景，但必须依赖 `dwarf` feature。
 
 ### 2.3 使用边界
-- `axbacktrace` 不负责决定何时打印回溯；调用时机在 `axruntime`、`axcpu` 或其他上层模块。
+- `axbacktrace` 不负责决定何时打印回溯；调用时机在 `ax-runtime`、`axcpu` 或其他上层模块。
 - 它依赖帧指针链可用。若编译配置或架构路径不保留帧链，结果会受影响。
 - 它不会替你解决符号段装载问题；`dwarf` 相关段必须真实存在于最终镜像里。
 
@@ -79,7 +79,7 @@ graph LR
     axbacktrace["axbacktrace"] --> dwarf["addr2line/gimli (dwarf)"]
     axbacktrace --> spin["spin::Once"]
 
-    axbacktrace --> axruntime["axruntime panic 路径"]
+    axbacktrace --> ax-runtime["ax-runtime panic 路径"]
     axbacktrace --> axalloc["axalloc tracking"]
     axbacktrace --> axcpu["axcpu trap context"]
     axbacktrace --> starry_kernel["starry-kernel"]
@@ -91,7 +91,7 @@ graph LR
 - `addr2line`、`gimli`、`paste`：只在 `dwarf` 下启用。
 
 ### 3.2 关键直接消费者
-- `axruntime`：panic 和启动期初始化。
+- `ax-runtime`：panic 和启动期初始化。
 - `axalloc`：分配跟踪记录回溯。
 - `axcpu`：trap 上下文回溯入口。
 - `starry-kernel`：通过共享基础栈复用回溯能力。
@@ -120,7 +120,7 @@ axbacktrace = { workspace = true, features = ["dwarf"] }
 ### 5.1 当前测试形态
 `axbacktrace` 本体没有独立单元测试，当前验证主要依赖真实运行路径：
 
-- `axruntime` 的 panic 输出；
+- `ax-runtime` 的 panic 输出；
 - `axcpu` 的 trap backtrace；
 - `axalloc` tracking 对 `Backtrace::capture()` 的调用。
 

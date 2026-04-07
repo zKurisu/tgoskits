@@ -243,7 +243,7 @@ dependencies = [
  "axlog",
  "axmm",
  "axnet",
- "axruntime",
+ "ax-runtime",
  "axsync",
  "axtask",
 ]
@@ -261,7 +261,7 @@ dependencies = [
  "axio",
  "axlog",
  "axnet",
- "axruntime",
+ "ax-runtime",
  "axsync",
  "axtask",
  "bindgen",
@@ -619,7 +619,7 @@ dependencies = [
  "axipi",
  "axlog",
  "axnet",
- "axruntime",
+ "ax-runtime",
  "axsync",
  "axtask",
  "kspin",
@@ -1044,7 +1044,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axruntime"
+name = "ax-runtime"
 version = "0.5.0"
 dependencies = [
  "axalloc",

@@ -392,6 +392,7 @@ pub mod io {
 /// You should prefer to use other APIs rather than these modules. The modules
 /// here should only be used if other APIs do not meet your requirements.
 pub mod modules {
+    pub use ax_runtime;
     #[cfg(feature = "alloc")]
     pub use axalloc;
     pub use axconfig;
@@ -411,7 +412,6 @@ pub mod modules {
     pub use axmm;
     #[cfg(feature = "net")]
     pub use axnet;
-    pub use axruntime;
     pub use axsync;
     #[cfg(feature = "multitask")]
     pub use axtask;

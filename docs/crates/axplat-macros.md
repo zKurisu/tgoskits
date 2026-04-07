@@ -86,7 +86,7 @@ graph LR
     proc_macro2["proc-macro2"] --> current
 
     current --> axplat["axplat"]
-    axplat --> axruntime["axruntime"]
+    axplat --> ax-runtime["ax-runtime"]
     axplat --> hello["hello-kernel / smp-kernel / irq-kernel"]
     axplat --> oses["ArceOS / StarryOS / Axvisor 平台入口链"]
 ```
@@ -99,7 +99,7 @@ graph LR
 - `axplat`：唯一最核心的直接消费者。对外 re-export `main` / `secondary_main`，对内使用 `def_plat_interface`。
 
 ### 3.3 间接消费者
-- `axruntime`：通过 `#[axplat::main]` / `#[axplat::secondary_main]` 接入平台入口。
+- `ax-runtime`：通过 `#[axplat::main]` / `#[axplat::secondary_main]` 接入平台入口。
 - `components/axplat_crates/examples/*`：最小平台样例。
 - 通过 `axplat` 体系间接复用入口契约的 ArceOS、StarryOS 和 Axvisor 路径。
 
@@ -141,7 +141,7 @@ graph LR
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `axruntime` 明确依赖 `#[axplat::main]` / `#[axplat::secondary_main]`，因此 `axplat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
+ArceOS 通过 `ax-runtime` 明确依赖 `#[axplat::main]` / `#[axplat::secondary_main]`，因此 `axplat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
 
 ### 6.2 StarryOS
 StarryOS 并不直接面向 `axplat-macros` 编程，但只要复用同一套 `axplat` 平台栈，就会间接复用这层入口契约和平台接口展开逻辑。

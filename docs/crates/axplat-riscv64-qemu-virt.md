@@ -13,7 +13,7 @@
 这个 crate 的核心职责不是实现通用 HAL，而是把 `virt` 板级假设固化为一套可被 `axhal` 和运行时稳定调用的接口：
 
 - 向下，它直接面对 SBI、PLIC、16550 UART、Goldfish RTC 和固定的 MMIO/内存布局。
-- 向上，它并不直接服务应用，而是通过 `axplat` trait 接口被 `axhal`、`axruntime` 和平台示例内核复用。
+- 向上，它并不直接服务应用，而是通过 `axplat` trait 接口被 `axhal`、`ax-runtime` 和平台示例内核复用。
 - 在启动期，它负责最早期页表、栈、MMU 与主核/从核入口桥接；在运行期，它继续承担时间、中断、控制台、电源和内存区间查询。
 
 因此，`axplat-riscv64-qemu-virt` 应被理解为“RISC-V virt 板级 bring-up 实现”，而不是“可移植的架构抽象层”。
@@ -51,7 +51,7 @@ flowchart TD
     G --> H["trap / console / time 早期初始化"]
     H --> I["InitIf::init_later"]
     I --> J["irq::init_percpu / time::init_percpu"]
-    J --> K["运行时继续进入 axhal / axruntime 主线"]
+    J --> K["运行时继续进入 axhal / ax-runtime 主线"]
 ```
 
 更具体地说：
