@@ -18,7 +18,7 @@ ax-driver = { workspace = true, features = ["block"] }
 axerrno = { workspace = true }
 ax-hal = { workspace = true }
 ax-fs-devfs = { version = "0.3.2" }
-axfs_ramfs = { version = "0.3.2" }
+ax-fs-ramfs = { version = "0.3.2" }
 axfs_vfs = "0.3.2"
 axio = { workspace = true, features = ["alloc"] }
 cap_access = "0.3.0"

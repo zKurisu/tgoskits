@@ -1,5 +1,5 @@
 [package]
-name = "axfs_ramfs"
+name = "ax-fs-ramfs"
 description = "RAM filesystem used by ArceOS"
 documentation = "https://docs.rs/axfs_ramfs"
 keywords = ["arceos", "filesystem", "ramfs"]

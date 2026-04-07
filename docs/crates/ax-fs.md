@@ -101,7 +101,7 @@ flowchart TD
 graph LR
     ax-driver["ax-driver(block)"] --> current["ax-fs"]
     axfs_vfs["axfs_vfs"] --> current
-    axfs_ramfs["axfs_ramfs"] --> current
+    axfs_ramfs["ax-fs-ramfs"] --> current
     axfs_devfs["ax-fs-devfs"] --> current
     axfatfs["axfatfs"] --> current
     rsext4["rsext4"] --> current

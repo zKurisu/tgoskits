@@ -32,15 +32,15 @@
 ```mermaid
 graph LR
     current["arceos-fs-shell"]
+    current --> ax_fs_ramfs["ax-fs-ramfs"]
     current --> ax_std["ax-std"]
-    current --> axfs_ramfs["axfs_ramfs"]
     current --> axfs_vfs["axfs_vfs"]
     current --> crate_interface["crate_interface"]
 ```
 
 ### 3.1 直接与间接依赖
+- `ax-fs-ramfs`
 - `ax-std`
-- `axfs_ramfs`
 - `axfs_vfs`
 - `crate_interface`
 

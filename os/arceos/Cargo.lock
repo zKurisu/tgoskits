@@ -633,7 +633,7 @@ dependencies = [
  "axerrno",
  "axfatfs",
  "ax-fs-devfs",
- "axfs_ramfs",
+ "ax-fs-ramfs",
  "axfs_vfs",
  "axhal",
  "axio",
@@ -695,7 +695,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axfs_ramfs"
+name = "ax-fs-ramfs"
 version = "0.3.2"
 dependencies = [
  "axfs_vfs",

@@ -20,4 +20,4 @@ pub mod ext4fs;
 pub mod fatfs;
 
 pub use ax_fs_devfs as devfs;
-pub use axfs_ramfs as ramfs;
+pub use ax_fs_ramfs as ramfs;

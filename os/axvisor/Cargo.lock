@@ -608,7 +608,7 @@ dependencies = [
  "axerrno 0.2.2",
  "axfatfs",
  "ax-fs-devfs",
- "axfs_ramfs",
+ "ax-fs-ramfs",
  "axfs_vfs",
  "axio",
  "cap_access",
@@ -628,7 +628,7 @@ dependencies = [
  "axdriver_block 0.1.2 (git+https://github.com/arceos-org/axdriver_crates.git?tag=dev-v01)",
  "axerrno 0.1.2",
  "ax-fs-devfs",
- "axfs_ramfs",
+ "ax-fs-ramfs",
  "axfs_vfs",
  "axio",
  "axsync",
@@ -641,7 +641,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axfs_ramfs"
+name = "ax-fs-ramfs"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f50c26614485d837a3fc09a92f24a226caddc25a30df7e6aaf4bd19b304c399"

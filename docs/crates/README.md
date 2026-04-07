@@ -48,7 +48,9 @@
 | `ax-driver-virtio` | 组件层 | `components/axdriver_crates/axdriver_virtio` | 6 | 2 | [查看](./ax-driver-virtio.md) |
 | `ax-feat` | ArceOS 层 | `os/arceos/api/axfeat` | 16 | 7 | [查看](./ax-feat.md) |
 | `ax-fs` | ArceOS 层 | `os/arceos/modules/axfs` | 10 | 4 | [查看](./ax-fs.md) |
+| `ax-fs-devfs` | 组件层 | `components/axfs_crates/axfs_devfs` | 1 | 1 | [查看](./ax-fs-devfs.md) |
 | `ax-fs-ng` | ArceOS 层 | `os/arceos/modules/axfs-ng` | 10 | 4 | [查看](./ax-fs-ng.md) |
+| `ax-fs-ramfs` | 组件层 | `components/axfs_crates/axfs_ramfs` | 1 | 2 | [查看](./ax-fs-ramfs.md) |
 | `ax-hal` | ArceOS 层 | `os/arceos/modules/axhal` | 13 | 15 | [查看](./ax-hal.md) |
 | `ax-helloworld` | ArceOS 层 | `os/arceos/examples/helloworld` | 1 | 0 | [查看](./ax-helloworld.md) |
 | `ax-helloworld-myplat` | ArceOS 层 | `os/arceos/examples/helloworld-myplat` | 8 | 0 | [查看](./ax-helloworld-myplat.md) |
@@ -94,8 +96,6 @@
 | `axdriver_vsock` | 组件层 | `components/axdriver_crates/axdriver_vsock` | 1 | 2 | [查看](./axdriver_vsock.md) |
 | `axerrno` | 组件层 | `components/axerrno` | 0 | 36 | [查看](./axerrno.md) |
 | `axfs-ng-vfs` | 组件层 | `components/axfs-ng-vfs` | 2 | 3 | [查看](./axfs-ng-vfs.md) |
-| `axfs_devfs` | 组件层 | `components/axfs_crates/axfs_devfs` | 1 | 1 | [查看](./ax-fs-devfs.md) |
-| `axfs_ramfs` | 组件层 | `components/axfs_crates/axfs_ramfs` | 1 | 2 | [查看](./axfs_ramfs.md) |
 | `axfs_vfs` | 组件层 | `components/axfs_crates/axfs_vfs` | 1 | 4 | [查看](./axfs_vfs.md) |
 | `axhvc` | 组件层 | `components/axhvc` | 1 | 1 | [查看](./axhvc.md) |
 | `axio` | 组件层 | `components/axio` | 1 | 9 | [查看](./axio.md) |

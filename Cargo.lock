@@ -255,8 +255,8 @@ dependencies = [
 name = "arceos-fs-shell"
 version = "0.3.0"
 dependencies = [
+ "ax-fs-ramfs",
  "ax-std",
- "axfs_ramfs",
  "axfs_vfs",
  "crate_interface 0.5.0",
 ]
@@ -681,10 +681,10 @@ version = "0.5.0"
 dependencies = [
  "ax-driver",
  "ax-fs-devfs",
+ "ax-fs-ramfs",
  "ax-hal",
  "axerrno",
  "axfatfs",
- "axfs_ramfs",
  "axfs_vfs",
  "axio",
  "cap_access",
@@ -727,6 +727,15 @@ dependencies = [
  "slab",
  "spin 0.10.0",
  "starry-fatfs",
+]
+
+[[package]]
+name = "ax-fs-ramfs"
+version = "0.3.2"
+dependencies = [
+ "axfs_vfs",
+ "log",
+ "spin 0.9.8",
 ]
 
 [[package]]
@@ -1440,15 +1449,6 @@ dependencies = [
  "log",
  "smallvec",
  "spin 0.10.0",
-]
-
-[[package]]
-name = "axfs_ramfs"
-version = "0.3.2"
-dependencies = [
- "axfs_vfs",
- "log",
- "spin 0.9.8",
 ]
 
 [[package]]
