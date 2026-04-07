@@ -479,9 +479,10 @@ fn resolve_platform_package(
 
     if let Some(dep) = package_info.dependencies.iter().find(|dep| {
         dep.name.starts_with("axplat-")
-            && explicit_platform_features
-                .iter()
-                .any(|feature| *feature == linker_platform_name(&dep.name))
+            || dep.name.starts_with("ax-plat-")
+                && explicit_platform_features
+                    .iter()
+                    .any(|feature| *feature == linker_platform_name(&dep.name))
     }) {
         return Ok(dep.name.clone());
     }
@@ -519,7 +520,7 @@ fn target_arch_name(target: &str) -> anyhow::Result<&'static str> {
 fn default_platform_package(arch: &str) -> &'static str {
     match arch {
         "x86_64" => "axplat-x86-pc",
-        "aarch64" => "axplat-aarch64-qemu-virt",
+        "aarch64" => "ax-plat-aarch64-qemu-virt",
         "riscv64" => "axplat-riscv64-qemu-virt",
         "loongarch64" => "axplat-loongarch64-qemu-virt",
         _ => unreachable!("unsupported arch"),
@@ -529,6 +530,7 @@ fn default_platform_package(arch: &str) -> &'static str {
 fn linker_platform_name(platform_package: &str) -> &str {
     platform_package
         .strip_prefix("axplat-")
+        .or_else(|| platform_package.strip_prefix("ax-plat-"))
         .unwrap_or(platform_package)
 }
 
