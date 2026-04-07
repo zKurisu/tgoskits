@@ -9,19 +9,19 @@ license.workspace = true
 repository = "https://github.com/arceos-org/arceos/tree/main/modules/axalloc"
 
 [features]
-default = ["tlsf", "axallocator/page-alloc-256m"]
+default = ["tlsf", "ax-allocator/page-alloc-256m"]
 buddy-slab = ["dep:buddy-slab-allocator"]
-buddy = ["dep:axallocator", "axallocator/buddy"]
-slab = ["dep:axallocator", "axallocator/slab"]
-tlsf = ["dep:axallocator", "axallocator/tlsf"]
+buddy = ["dep:ax-allocator", "ax-allocator/buddy"]
+slab = ["dep:ax-allocator", "ax-allocator/slab"]
+tlsf = ["dep:ax-allocator", "ax-allocator/tlsf"]
 level-1 = []
 page-alloc-4g = [
-    "dep:axallocator",
-    "axallocator/page-alloc-4g",
+    "dep:ax-allocator",
+    "ax-allocator/page-alloc-4g",
 ] # Support up to 4GB memory capacity (default: 256MB)
 page-alloc-64g = [
-    "dep:axallocator",
-    "axallocator/page-alloc-64g",
+    "dep:ax-allocator",
+    "ax-allocator/page-alloc-64g",
 ] # Support up to 64GB memory capacity (default: 256MB)
 tracking = ["dep:percpu", "dep:axbacktrace"]
 
@@ -30,7 +30,7 @@ all-features = true
 rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
-axallocator = { workspace = true, features = ["bitmap"], optional = true }
+ax-allocator = { workspace = true, features = ["bitmap"], optional = true }
 axbacktrace = { workspace = true, optional = true }
 axerrno.workspace = true
 buddy-slab-allocator = { workspace = true, optional = true }

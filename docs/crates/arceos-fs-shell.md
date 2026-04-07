@@ -48,6 +48,7 @@ graph LR
 - `arm_pl011`
 - `arm_pl031`
 - `ax-alloc`
+- `ax-allocator`
 - `ax-api`
 - `ax-config`
 - `ax-cpu`
@@ -56,7 +57,6 @@ graph LR
 - `ax-driver`
 - `ax-driver-virtio`
 - `ax-feat`
-- `ax-fs`
 - 另外还有 `63` 个同类项未在此展开
 
 ### 3.3 被依赖情况

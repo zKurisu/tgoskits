@@ -350,7 +350,7 @@ mod tests {
 
         for crate_name in [
             "crate_interface",
-            "axallocator",
+            "ax-allocator",
             "axbacktrace",
             "lazyinit",
             "axsched",

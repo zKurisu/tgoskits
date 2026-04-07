@@ -6,13 +6,13 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/default_impl.rs`、`src/axvisor_impl.rs`、`src/page.rs`、`src/tracking.rs`
 
-`ax-alloc` 是 ArceOS 的全局分配入口。它把 `axallocator` 提供的字节分配器和页分配器包装成可直接挂到 `#[global_allocator]` 的 `GlobalAllocator`，并额外提供页级接口、使用量统计和可选的分配跟踪能力。它属于运行时叶子基础件：负责“分配”，但不负责页表建立、地址空间管理或物理内存发现，这些职责分别由 `ax-mm`、`ax-hal` 和 `ax-runtime` 承担。
+`ax-alloc` 是 ArceOS 的全局分配入口。它把 `ax-allocator` 提供的字节分配器和页分配器包装成可直接挂到 `#[global_allocator]` 的 `GlobalAllocator`，并额外提供页级接口、使用量统计和可选的分配跟踪能力。它属于运行时叶子基础件：负责“分配”，但不负责页表建立、地址空间管理或物理内存发现，这些职责分别由 `ax-mm`、`ax-hal` 和 `ax-runtime` 承担。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
 `ax-alloc` 在启动链和运行期之间扮演的是“统一分配服务”角色：
 
-- 向下，它复用 `axallocator` 或 `buddy-slab-allocator`，而不是自行实现完整分配算法。
+- 向下，它复用 `ax-allocator` 或 `buddy-slab-allocator`，而不是自行实现完整分配算法。
 - 向上，它向 `ax-runtime`、`ax-mm`、`ax-hal::paging`、`ax-driver`、`ax-dma`、`ax-api` 等模块暴露统一的堆/页分配接口。
 - 横向，它通过 `UsageKind`/`Usages` 给页表、DMA、页缓存等不同用途打标签，方便上层做统计与诊断。
 
@@ -57,7 +57,7 @@ flowchart TD
 - 对 `UsageKind::RustHeap` 的统计有特判，避免“扩堆用页”和“堆内字节分配”重复记账。
 
 ### 1.5 `hv` 与 `tracking` 分支
-- `hv`：忽略 `axallocator` 的算法 feature，转而使用 `buddy-slab-allocator`。`global_init()` 需要额外注入 `AddrTranslator`，并暴露 `alloc_dma32_pages()`。当前这一路径的 `used_bytes()`、`available_bytes()`、`used_pages()`、`available_pages()` 都返回 `0`，因为底层库没有提供对应统计。
+- `hv`：忽略 `ax-allocator` 的算法 feature，转而使用 `buddy-slab-allocator`。`global_init()` 需要额外注入 `AddrTranslator`，并暴露 `alloc_dma32_pages()`。当前这一路径的 `used_bytes()`、`available_bytes()`、`used_pages()`、`available_pages()` 都返回 `0`，因为底层库没有提供对应统计。
 - `tracking`：在 `GlobalAlloc::alloc/dealloc` 外围维护一个全局分配表，并记录 `axbacktrace::Backtrace`。`tracking::with_state()` 用每 CPU 的 `IN_GLOBAL_ALLOCATOR` 标记避免跟踪逻辑再次触发分配而递归爆栈。
 
 ## 2. 核心功能说明
@@ -81,7 +81,7 @@ flowchart TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axallocator["axallocator"] --> ax-alloc["ax-alloc"]
+    ax-allocator["ax-allocator"] --> ax-alloc["ax-alloc"]
     axbacktrace["axbacktrace (tracking)"] --> ax-alloc
     percpu["percpu (tracking)"] --> ax-alloc
     kspin["kspin"] --> ax-alloc
@@ -98,7 +98,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axallocator`：默认路径的算法库来源。
+- `ax-allocator`：默认路径的算法库来源。
 - `kspin`：保护全局分配器内部状态。
 - `axerrno`：把页对象和分配失败映射到 ArceOS 错误码。
 - `axbacktrace`、`percpu`：只在 `tracking` 下参与分配跟踪。
@@ -127,7 +127,7 @@ ax-alloc = { workspace = true }
 4. 若新增 feature，需要同步检查 `ax-feat` 与 `ax-runtime` 的 feature 传播是否正确。
 
 ### 4.3 开发建议
-- “算法选择”优先放在 `axallocator` 层，`ax-alloc` 更适合做全局装配。
+- “算法选择”优先放在 `ax-allocator` 层，`ax-alloc` 更适合做全局装配。
 - “地址空间策略”应放在 `ax-mm` 或更上层，而不是让 `ax-alloc` 变成第二个内存管理器。
 - 需要定位泄漏或大户时优先用 `tracking`，不要在分配快路径堆太多日志。
 
@@ -135,7 +135,7 @@ ax-alloc = { workspace = true }
 ### 5.1 当前测试形态
 `ax-alloc` 本体没有独立的 crate 内测试，当前验证主要依赖：
 
-- `axallocator` 自身的算法测试与压力测试。
+- `ax-allocator` 自身的算法测试与压力测试。
 - `ax-runtime` 启动链对 `global_init()` 的真实调用。
 - `StarryOS/kernel/src/pseudofs/dev/memtrack.rs` 对 tracking 路径的系统级消费。
 

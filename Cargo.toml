@@ -144,7 +144,7 @@ exclude = [
 [patch.crates-io]
 # === axerrno ===
 axerrno = { path = "components/axerrno" }
-axallocator = { path = "components/axallocator" }
+ax-allocator = { path = "components/axallocator" }
 axbacktrace = { path = "components/axbacktrace" }
 
 ax-config = { path = "os/arceos/modules/axconfig" }
@@ -325,7 +325,7 @@ ax-task = { path = "os/arceos/modules/axtask", version = "0.5.0" }
 
 # === components (actual versions) ===
 axaddrspace = { path = "components/axaddrspace", version = "0.5.0" }
-axallocator = { path = "components/axallocator", version = "0.4.0" }
+ax-allocator = { path = "components/axallocator", version = "0.4.0" }
 axbacktrace = { path = "components/axbacktrace", version = "0.3.2" }
 axdevice = { path = "components/axdevice", version = "0.4.2" }
 axdevice_base = { path = "components/axdevice_base", version = "0.4.2" }

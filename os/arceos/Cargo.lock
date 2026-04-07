@@ -387,7 +387,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axallocator"
+name = "ax-allocator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3894f6027940d4b013f1d1f9e2e61b47a9e4a7dbf1a0ba10dd33e7bb265ea733"
@@ -396,7 +396,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axallocator"
+name = "ax-allocator"
 version = "0.4.0"
 dependencies = [
  "ax_slab_allocator",

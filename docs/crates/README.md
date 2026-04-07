@@ -39,6 +39,7 @@
 | `arm_vcpu` | 组件层 | `components/arm_vcpu` | 6 | 1 | [查看](./arm_vcpu.md) |
 | `arm_vgic` | 组件层 | `components/arm_vgic` | 6 | 2 | [查看](./arm_vgic.md) |
 | `ax-alloc` | ArceOS 层 | `os/arceos/modules/axalloc` | 6 | 11 | [查看](./ax-alloc.md) |
+| `ax-allocator` | 组件层 | `components/axallocator` | 2 | 2 | [查看](./ax-allocator.md) |
 | `ax-api` | ArceOS 层 | `os/arceos/api/arceos_api` | 17 | 1 | [查看](./ax-api.md) |
 | `ax-config` | ArceOS 层 | `os/arceos/modules/axconfig` | 1 | 12 | [查看](./ax-config.md) |
 | `ax-cpu` | 组件层 | `components/axcpu` | 6 | 14 | [查看](./ax-cpu.md) |
@@ -80,7 +81,6 @@
 | `ax-sync` | ArceOS 层 | `os/arceos/modules/axsync` | 2 | 9 | [查看](./ax-sync.md) |
 | `ax-task` | ArceOS 层 | `os/arceos/modules/axtask` | 13 | 8 | [查看](./ax-task.md) |
 | `axaddrspace` | 组件层 | `components/axaddrspace` | 6 | 12 | [查看](./axaddrspace.md) |
-| `axallocator` | 组件层 | `components/axallocator` | 2 | 2 | [查看](./axallocator.md) |
 | `axbacktrace` | 组件层 | `components/axbacktrace` | 0 | 5 | [查看](./axbacktrace.md) |
 | `axbuild` | 工具层 | `scripts/axbuild` | 1 | 3 | [查看](./axbuild.md) |
 | `axconfig-gen` | 组件层 | `components/axconfig-gen/axconfig-gen` | 0 | 1 | [查看](./axconfig-gen.md) |

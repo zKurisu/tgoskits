@@ -55,7 +55,7 @@ graph LR
 - `arm_pl031`
 - `axaddrspace`
 - `ax-alloc`
-- `axallocator`
+- `ax-allocator`
 - `axbacktrace`
 - `axconfig`
 - `axconfig-gen`

@@ -67,7 +67,7 @@ graph LR
 - `arm_pl011`
 - `arm_pl031`
 - `axaddrspace`
-- `axallocator`
+- `ax-allocator`
 - `axconfig-gen`
 - `axconfig-macros`
 - `ax-cpu`

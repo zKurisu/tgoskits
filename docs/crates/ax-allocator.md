@@ -1,4 +1,4 @@
-# `axallocator` 技术文档
+# `ax-allocator` 技术文档
 
 > 路径：`components/axallocator`
 > 类型：库 crate
@@ -6,11 +6,11 @@
 > 版本：`0.2.0`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/bitmap.rs`、`src/buddy.rs`、`src/slab.rs`、`src/tlsf.rs`、`tests/allocator.rs`
 
-`axallocator` 是一个“统一接口下的多种分配算法库”。它提供页级、字节级和 ID 分配的 trait 与若干实现，供 `ax-alloc`、`ax-dma` 等上层模块挑选和组合。它属于叶子基础件：负责算法和接口，不负责全局分配器注册、锁保护、内存发现或地址空间策略。
+`ax-allocator` 是一个“统一接口下的多种分配算法库”。它提供页级、字节级和 ID 分配的 trait 与若干实现，供 `ax-alloc`、`ax-dma` 等上层模块挑选和组合。它属于叶子基础件：负责算法和接口，不负责全局分配器注册、锁保护、内存发现或地址空间策略。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axallocator` 解决的是“如何把不同分配算法放到同一套接口下复用”：
+`ax-allocator` 解决的是“如何把不同分配算法放到同一套接口下复用”：
 
 - 通过 `BaseAllocator`、`ByteAllocator`、`PageAllocator`、`IdAllocator` 定义统一抽象。
 - 通过 feature 选择具体算法实现，而不是在运行时做动态分派。
@@ -69,14 +69,14 @@
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    bitmap["bitmap-allocator"] --> axallocator["axallocator"]
-    buddy["buddy_system_allocator"] --> axallocator
-    slab["ax_slab_allocator"] --> axallocator
-    tlsf["rlsf"] --> axallocator
-    axerrno["axerrno (optional)"] --> axallocator
+    bitmap["bitmap-allocator"] --> ax-allocator["ax-allocator"]
+    buddy["buddy_system_allocator"] --> ax-allocator
+    slab["ax_slab_allocator"] --> ax-allocator
+    tlsf["rlsf"] --> ax-allocator
+    axerrno["axerrno (optional)"] --> ax-allocator
 
-    axallocator --> ax-alloc["ax-alloc"]
-    axallocator --> ax_dma["ax-dma"]
+    ax-allocator --> ax-alloc["ax-alloc"]
+    ax-allocator --> ax_dma["ax-dma"]
 ```
 
 ### 3.1 关键直接依赖
@@ -94,7 +94,7 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axallocator = { workspace = true, features = ["bitmap", "tlsf"] }
+ax-allocator = { workspace = true, features = ["bitmap", "tlsf"] }
 ```
 
 是否启用 `bitmap`、`buddy`、`slab`、`tlsf`，应由具体上层模块的使用场景决定。
@@ -106,13 +106,13 @@ axallocator = { workspace = true, features = ["bitmap", "tlsf"] }
 4. 若新增算法实现，应先判断它属于字节级、页级还是 ID 级，再决定实现哪个 trait，而不是硬往现有 trait 里塞特例。
 
 ### 4.3 开发建议
-- 需要“全局装配”时去改 `ax-alloc`，不要把 `axallocator` 写成第二个运行时模块。
+- 需要“全局装配”时去改 `ax-alloc`，不要把 `ax-allocator` 写成第二个运行时模块。
 - 需要“并发保护”时去用 `kspin`/`ax-sync`，不要在算法实现里偷偷引入全局锁。
 - 需要“错误码落到 OS 语义”时用 `axerrno` feature；纯算法测试可直接用 `AllocError`。
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
-`axallocator` 的测试覆盖在这批基础件里算比较完整：
+`ax-allocator` 的测试覆盖在这批基础件里算比较完整：
 
 - `src/bitmap.rs`：页级位图分配的单元测试。
 - `tests/allocator.rs`：用 `Vec`、`BTreeMap`、对齐随机申请等场景同时压测 buddy/slab/TLSF。
@@ -133,10 +133,10 @@ axallocator = { workspace = true, features = ["bitmap", "tlsf"] }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-在 ArceOS 中，`axallocator` 是 `ax-alloc` 和 `ax-dma` 的算法底座。它不直接参与系统 bring-up，而是为运行时分配层提供可选实现。
+在 ArceOS 中，`ax-allocator` 是 `ax-alloc` 和 `ax-dma` 的算法底座。它不直接参与系统 bring-up，而是为运行时分配层提供可选实现。
 
 ### 6.2 StarryOS
-StarryOS 主要通过共享的 ArceOS 基础栈间接受用 `axallocator`。它在 StarryOS 里仍然是算法叶子件，而不是内核内存管理模块。
+StarryOS 主要通过共享的 ArceOS 基础栈间接受用 `ax-allocator`。它在 StarryOS 里仍然是算法叶子件，而不是内核内存管理模块。
 
 ### 6.3 Axvisor
-Axvisor 当前的 `ax-alloc/hv` 主路径会切换到 `buddy-slab-allocator`，因此 `axallocator` 并不是 Axvisor 全局分配的主后端。它更多通过共享基础模块或 DMA 相关路径间接参与。
+Axvisor 当前的 `ax-alloc/hv` 主路径会切换到 `buddy-slab-allocator`，因此 `ax-allocator` 并不是 Axvisor 全局分配的主后端。它更多通过共享基础模块或 DMA 相关路径间接参与。

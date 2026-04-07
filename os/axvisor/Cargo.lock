@@ -371,7 +371,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5bb0695cfda0a651f3b44026899987c51c76063a9a807666f8f6b5e93a67966"
 dependencies = [
- "axallocator",
+ "ax-allocator",
  "axerrno 0.2.2",
  "cfg-if",
  "kspin",
@@ -381,7 +381,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axallocator"
+name = "ax-allocator"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3894f6027940d4b013f1d1f9e2e61b47a9e4a7dbf1a0ba10dd33e7bb265ea733"

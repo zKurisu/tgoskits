@@ -119,6 +119,7 @@ flowchart TB
         arm_pl031["arm_pl031\nv0.4.1"]
         arm_vcpu["arm_vcpu\nv0.5.0"]
         arm_vgic["arm_vgic\nv0.4.2"]
+        ax_allocator["ax-allocator\nv0.4.0"]
         ax_cpu["ax-cpu\nv0.5.0"]
         ax_driver_virtio["ax-driver-virtio\nv0.3.4"]
         ax_fs_devfs["ax-fs-devfs\nv0.3.2"]
@@ -133,7 +134,6 @@ flowchart TB
         ax_plat_riscv64_qemu_virt["ax-plat-riscv64-qemu-virt\nv0.5.1"]
         ax_plat_x86_pc["ax-plat-x86-pc\nv0.5.1"]
         axaddrspace["axaddrspace\nv0.5.0"]
-        axallocator["axallocator\nv0.4.0"]
         axbacktrace["axbacktrace\nv0.3.2"]
         axconfig_gen["axconfig-gen\nv0.4.1"]
         axconfig_macros["axconfig-macros\nv0.4.1"]
@@ -239,12 +239,14 @@ flowchart TB
     arm_vgic --> axerrno
     arm_vgic --> axvisor_api
     arm_vgic --> memory_addr
-    ax_alloc --> axallocator
+    ax_alloc --> ax_allocator
     ax_alloc --> axbacktrace
     ax_alloc --> axerrno
     ax_alloc --> kspin
     ax_alloc --> memory_addr
     ax_alloc --> percpu
+    ax_allocator --> axerrno
+    ax_allocator --> bitmap_allocator
     ax_api --> ax_alloc
     ax_api --> ax_config
     ax_api --> ax_display
@@ -273,10 +275,10 @@ flowchart TB
     ax_display --> ax_sync
     ax_display --> lazyinit
     ax_dma --> ax_alloc
+    ax_dma --> ax_allocator
     ax_dma --> ax_config
     ax_dma --> ax_hal
     ax_dma --> ax_mm
-    ax_dma --> axallocator
     ax_dma --> kspin
     ax_dma --> memory_addr
     ax_driver --> ax_alloc
@@ -519,8 +521,6 @@ flowchart TB
     axaddrspace --> memory_set
     axaddrspace --> page_table_entry
     axaddrspace --> page_table_multiarch
-    axallocator --> axerrno
-    axallocator --> bitmap_allocator
     axbuild --> axvmconfig
     axconfig_macros --> axconfig_gen
     axdevice --> arm_vgic
@@ -773,6 +773,7 @@ flowchart TB
     class arm_vcpu cat_comp
     class arm_vgic cat_comp
     class ax_alloc cat_arceos
+    class ax_allocator cat_comp
     class ax_api cat_arceos
     class ax_config cat_arceos
     class ax_cpu cat_comp
@@ -814,7 +815,6 @@ flowchart TB
     class ax_sync cat_arceos
     class ax_task cat_arceos
     class axaddrspace cat_comp
-    class axallocator cat_comp
     class axbacktrace cat_comp
     class axbuild cat_tool
     class axconfig_gen cat_comp
@@ -953,7 +953,7 @@ flowchart TB
     L2["<b>层级 2</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-config`、`ax-fs-devfs`、`ax-fs-ramfs`、`axbuild`、`axdriver_net`、`impl-simple-traits`、`impl-weak-partial`、`impl-weak-traits`、`kspin`、`page_table_multiarch`、`percpu`"]
     classDef ls2 fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
     class L2 ls2
-    L1["<b>层级 1</b><br/>堆叠层（依赖更底层 crate）<br/>`axallocator`、`axconfig-macros`、`axdriver_block`、`axdriver_display`、`axdriver_input`、`axdriver_vsock`、`axfs-ng-vfs`、`axfs_vfs`、`axhvc`、`axio`、`axklib`、`axplat-macros`、`axsched`、`axvmconfig`、`ctor_bare`、`define-simple-traits`、`define-weak-traits`、`fxmac_rs`、`kernel_guard`、`memory_set` …共23个"]
+    L1["<b>层级 1</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-allocator`、`axconfig-macros`、`axdriver_block`、`axdriver_display`、`axdriver_input`、`axdriver_vsock`、`axfs-ng-vfs`、`axfs_vfs`、`axhvc`、`axio`、`axklib`、`axplat-macros`、`axsched`、`axvmconfig`、`ctor_bare`、`define-simple-traits`、`define-weak-traits`、`fxmac_rs`、`kernel_guard`、`memory_set` …共23个"]
     classDef ls1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L1 ls1
     L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`arm_pl011`、`arm_pl031`、`axbacktrace`、`axconfig-gen`、`axdriver_base`、`axdriver_pci`、`axerrno`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cap_access`、`cargo-axplat`、`cpumask`、`crate_interface`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
@@ -1014,7 +1014,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `rsext4` | `0.3.0` | `components/rsext4` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `smoltcp` | `0.14.0` | `components/starry-smoltcp` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `timer_list` | `0.3.0` | `components/timer_list` |
-| 1 | 堆叠层 | 组件层 | `axallocator` | `0.4.0` | `components/axallocator` |
+| 1 | 堆叠层 | 组件层 | `ax-allocator` | `0.4.0` | `components/axallocator` |
 | 1 | 堆叠层 | 组件层 | `axconfig-macros` | `0.4.1` | `components/axconfig-gen/axconfig-macros` |
 | 1 | 堆叠层 | 组件层 | `axdriver_block` | `0.3.4` | `components/axdriver_crates/axdriver_block` |
 | 1 | 堆叠层 | 组件层 | `axdriver_display` | `0.3.4` | `components/axdriver_crates/axdriver_display` |
@@ -1136,7 +1136,7 @@ flowchart TB
 | 层级 | 数 | 成员 |
 |------|-----|------|
 | 0 | 33 | `aarch64_sysreg` `arm_pl011` `arm_pl031` `axbacktrace` `axconfig-gen` `axdriver_base` `axdriver_pci` `axerrno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
-| 1 | 23 | `axallocator` `axconfig-macros` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_vsock` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-macros` `axsched` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `memory_set` `page_table_entry` `smoltcp-fuzz` `starry-vm` |
+| 1 | 23 | `ax-allocator` `axconfig-macros` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_vsock` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-macros` `axsched` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `memory_set` `page_table_entry` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `ax-fs-devfs` `ax-fs-ramfs` `axbuild` `axdriver_net` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `kspin` `page_table_multiarch` `percpu` |
 | 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
 | 4 | 8 | `ax-plat-aarch64-peripherals` `ax-plat-loongarch64-qemu-virt` `ax-plat-x86-pc` `axdevice_base` `axplat-dyn` `axplat-x86-qemu-q35` `axvisor_api` `starry-signal` |
@@ -1181,12 +1181,13 @@ flowchart TB
 | `arm_pl031` | 0 | System Real Time Clock (RTC) Drivers for aarch64 … | — | `ax-plat-aarch64-peripherals` |
 | `arm_vcpu` | 6 | Aarch64 VCPU implementation for Arceos Hypervisor | `axaddrspace` `axdevice_base` `axerrno` `axvcpu` `axvisor_api` `percpu` | `axvm` |
 | `arm_vgic` | 5 | ARM Virtual Generic Interrupt Controller (VGIC) i… | `aarch64_sysreg` `axaddrspace` `axdevice_base` `axerrno` `axvisor_api` `memory_addr` | `axdevice` `axvm` |
-| `ax-alloc` | 3 | ArceOS global memory allocator | `axallocator` `axbacktrace` `axerrno` `kspin` `memory_addr` `percpu` | `ax-api` `ax-dma` `ax-driver` `ax-feat` `ax-fs-ng` `ax-hal` `ax-mm` `ax-posix-api` `ax-runtime` `axplat-dyn` `starry-kernel` |
+| `ax-alloc` | 3 | ArceOS global memory allocator | `ax-allocator` `axbacktrace` `axerrno` `kspin` `memory_addr` `percpu` | `ax-api` `ax-dma` `ax-driver` `ax-feat` `ax-fs-ng` `ax-hal` `ax-mm` `ax-posix-api` `ax-runtime` `axplat-dyn` `starry-kernel` |
+| `ax-allocator` | 1 | Various allocator algorithms in a unified interfa… | `axerrno` `bitmap-allocator` | `ax-alloc` `ax-dma` |
 | `ax-api` | 14 | Public APIs and types for ArceOS modules | `ax-alloc` `ax-config` `ax-display` `ax-dma` `ax-driver` `ax-feat` `ax-fs` `ax-hal` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-runtime` `ax-sync` `ax-task` `axerrno` `axio` | `ax-std` |
 | `ax-config` | 2 | Platform-specific constants and parameters for Ar… | `axconfig-macros` | `ax-api` `ax-dma` `ax-driver` `ax-feat` `ax-hal` `ax-ipi` `ax-net-ng` `ax-posix-api` `ax-runtime` `ax-task` `axvisor` `starry-kernel` |
 | `ax-cpu` | 3 | Privileged instruction and structure abstractions… | `axbacktrace` `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` | `ax-hal` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` `starry-signal` |
 | `ax-display` | 10 | ArceOS graphics module | `ax-driver` `ax-sync` `lazyinit` | `ax-api` `ax-feat` `ax-runtime` `starry-kernel` |
-| `ax-dma` | 8 | ArceOS global DMA allocator | `ax-alloc` `ax-config` `ax-hal` `ax-mm` `axallocator` `kspin` `memory_addr` | `ax-api` `ax-driver` |
+| `ax-dma` | 8 | ArceOS global DMA allocator | `ax-alloc` `ax-allocator` `ax-config` `ax-hal` `ax-mm` `kspin` `memory_addr` | `ax-api` `ax-driver` |
 | `ax-driver` | 9 | ArceOS device drivers | `ax-alloc` `ax-config` `ax-dma` `ax-driver-virtio` `ax-hal` `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_pci` `axdriver_vsock` `axerrno` `axplat-dyn` `crate_interface` | `ax-api` `ax-display` `ax-feat` `ax-fs` `ax-fs-ng` `ax-input` `ax-net` `ax-net-ng` `ax-runtime` `starry-kernel` |
 | `ax-driver-virtio` | 3 | Wrappers of some devices in the `virtio-drivers` … | `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_vsock` | `ax-driver` `axplat-dyn` |
 | `ax-feat` | 13 | Top-level feature selection for ArceOS | `ax-alloc` `ax-config` `ax-display` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-net` `ax-runtime` `ax-sync` `ax-task` `axbacktrace` `kspin` | `ax-api` `ax-libc` `ax-posix-api` `ax-std` `starry-kernel` `starryos` `starryos-test` |
@@ -1223,7 +1224,6 @@ flowchart TB
 | `ax-sync` | 8 | ArceOS synchronization primitives | `ax-task` `kspin` | `ax-api` `ax-display` `ax-feat` `ax-fs-ng` `ax-input` `ax-net` `ax-net-ng` `ax-posix-api` `starry-kernel` |
 | `ax-task` | 7 | ArceOS task management module | `ax-config` `ax-hal` `axerrno` `axpoll` `axsched` `cpumask` `crate_interface` `kernel_guard` `kspin` `lazyinit` `memory_addr` `percpu` `timer_list` | `ax-api` `ax-feat` `ax-net` `ax-net-ng` `ax-posix-api` `ax-runtime` `ax-sync` `starry-kernel` |
 | `axaddrspace` | 3 | ArceOS-Hypervisor guest address space management … | `axerrno` `lazyinit` `memory_addr` `memory_set` `page_table_entry` `page_table_multiarch` | `arm_vcpu` `arm_vgic` `axdevice` `axdevice_base` `axvcpu` `axvisor` `axvisor_api` `axvm` `riscv_vcpu` `riscv_vplic` `x86_vcpu` `x86_vlapic` |
-| `axallocator` | 1 | Various allocator algorithms in a unified interfa… | `axerrno` `bitmap-allocator` | `ax-alloc` `ax-dma` |
 | `axbacktrace` | 0 | Backtrace for ArceOS | — | `ax-alloc` `ax-cpu` `ax-feat` `ax-runtime` `starry-kernel` |
 | `axbuild` | 2 | An OS build lib toolkit used by arceos | `axvmconfig` | `axvisor` `starryos` `tg-xtask` |
 | `axconfig-gen` | 0 | A TOML-based configuration generation tool for Ar… | — | `axconfig-macros` |
@@ -1237,7 +1237,7 @@ flowchart TB
 | `axdriver_net` | 2 | Common traits and types for network device (NIC) … | `axdriver_base` `fxmac_rs` | `ax-driver` `ax-driver-virtio` |
 | `axdriver_pci` | 0 | Structures and functions for PCI bus operations | — | `ax-driver` |
 | `axdriver_vsock` | 1 | Common traits and types for vsock drivers | `axdriver_base` | `ax-driver` `ax-driver-virtio` |
-| `axerrno` | 0 | Generic error code representation. | — | `arm_vcpu` `arm_vgic` `ax-alloc` `ax-api` `ax-driver` `ax-fs` `ax-fs-ng` `ax-libc` `ax-mm` `ax-net` `ax-net-ng` `ax-posix-api` `ax-std` `ax-task` `axaddrspace` `axallocator` `axdevice` `axdevice_base` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-dyn` `axvcpu` `axvisor` `axvm` `axvmconfig` `memory_set` `page_table_multiarch` `riscv_vcpu` `riscv_vplic` `starry-kernel` `starry-vm` `x86_vcpu` `x86_vlapic` |
+| `axerrno` | 0 | Generic error code representation. | — | `arm_vcpu` `arm_vgic` `ax-alloc` `ax-allocator` `ax-api` `ax-driver` `ax-fs` `ax-fs-ng` `ax-libc` `ax-mm` `ax-net` `ax-net-ng` `ax-posix-api` `ax-std` `ax-task` `axaddrspace` `axdevice` `axdevice_base` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-dyn` `axvcpu` `axvisor` `axvm` `axvmconfig` `memory_set` `page_table_multiarch` `riscv_vcpu` `riscv_vplic` `starry-kernel` `starry-vm` `x86_vcpu` `x86_vlapic` |
 | `axfs-ng-vfs` | 1 | Virtual filesystem layer for ArceOS | `axerrno` `axpoll` | `ax-fs-ng` `ax-net-ng` `starry-kernel` |
 | `axfs_vfs` | 1 | Virtual filesystem interfaces used by ArceOS | `axerrno` | `arceos-fs-shell` `ax-fs` `ax-fs-devfs` `ax-fs-ramfs` |
 | `axhvc` | 1 | AxVisor HyperCall definitions for guest-hyperviso… | `axerrno` | `axvisor` |
@@ -1254,7 +1254,7 @@ flowchart TB
 | `axvisor_api_proc` | 0 | Procedural macros for the `axvisor_api` crate | — | `axvisor_api` |
 | `axvm` | 7 | Virtual Machine resource management crate for Arc… | `arm_vcpu` `arm_vgic` `axaddrspace` `axdevice` `axdevice_base` `axerrno` `axvcpu` `axvisor_api` `axvmconfig` `cpumask` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` `riscv_vcpu` `x86_vcpu` | `axvisor` |
 | `axvmconfig` | 1 | A simple VM configuration tool for ArceOS-Hypervi… | `axerrno` | `axbuild` `axdevice` `axdevice_base` `axvm` |
-| `bitmap-allocator` | 0 | Bit allocator based on segment tree algorithm. | — | `axallocator` |
+| `bitmap-allocator` | 0 | Bit allocator based on segment tree algorithm. | — | `ax-allocator` |
 | `bwbench-client` | 0 | A raw socket benchmark client. | — | — |
 | `cap_access` | 0 | Provide basic capability-based access control to … | — | `ax-fs` |
 | `cargo-axplat` | 0 | Manages hardware platform packages using `axplat` | — | — |
@@ -1345,7 +1345,7 @@ flowchart TB
 | `oorandom` `11.1.5` | A tiny, robust PRNG implementation. | — | — |
 | `phf_shared` `0.11.3` | Support code shared by PHF libraries | — | — |
 | `rand` `0.10.0` | Random number generators and other randomness functionality. | `starry-kernel` | — |
-| `rand` `0.8.5` | Random number generators and other randomness functionality. | `arceos-memtest` `arceos-parallel` `axallocator` `smoltcp` | — |
+| `rand` `0.8.5` | Random number generators and other randomness functionality. | `arceos-memtest` `arceos-parallel` `ax-allocator` `smoltcp` | — |
 | `rand` `0.9.2` | Random number generators and other randomness functionality. | — | — |
 | `rand_chacha` `0.3.1` | ChaCha random number generator | `smoltcp` | — |
 | `rand_chacha` `0.9.0` | ChaCha random number generator | — | — |
@@ -1494,8 +1494,8 @@ flowchart TB
 | `autocfg` `1.5.0` | Automatic cfg for Rust compiler features | `axio` | — |
 | `aws-lc-rs` `1.16.2` | aws-lc-rs is a cryptographic library using AWS-LC for its cryptographic operations. This library st… | — | — |
 | `aws-lc-sys` `0.39.1` | AWS-LC is a general-purpose cryptographic library maintained by the AWS Cryptography team for AWS a… | — | — |
-| `ax_slab_allocator` `0.4.0` | Slab allocator for `no_std` systems. Uses multiple slabs with blocks of different sizes and a linke… | `axallocator` | — |
-| `axallocator` `0.2.0` | — | — | — |
+| `ax_slab_allocator` `0.4.0` | Slab allocator for `no_std` systems. Uses multiple slabs with blocks of different sizes and a linke… | `ax-allocator` | — |
+| `ax-allocator` `0.2.0` | — | — | — |
 | `axconfig-gen` `0.2.1` | — | — | — |
 | `axconfig-macros` `0.2.1` | — | — | `axconfig-gen` |
 | `axcpu` `0.3.1` | — | — | `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` |
@@ -1519,8 +1519,8 @@ flowchart TB
 | `block-buffer` `0.10.4` | Buffer type for block processing of data | — | — |
 | `block-buffer` `0.12.0` | Buffer types for block processing of data | — | — |
 | `borsh` `1.6.1` | Binary Object Representation Serializer for Hashing | — | — |
-| `buddy-slab-allocator` `0.2.0` | — | `ax-alloc` `ax-dma` | `axallocator` |
-| `buddy_system_allocator` `0.10.0` | A bare metal allocator that uses buddy system. | `axallocator` | — |
+| `buddy-slab-allocator` `0.2.0` | — | `ax-alloc` `ax-dma` | — |
+| `buddy_system_allocator` `0.10.0` | A bare metal allocator that uses buddy system. | `ax-allocator` | — |
 | `buddy_system_allocator` `0.12.0` | A bare metal allocator that uses buddy system. | — | — |
 | `bumpalo` `3.20.2` | A fast bump allocation arena for Rust. | — | — |
 | `byte-unit` `5.2.0` | A library for interacting with units of bytes. | `axvisor` | — |
@@ -1531,7 +1531,7 @@ flowchart TB
 | `castaway` `0.2.4` | Safe, zero-cost downcasting for limited compile-time specialization. | — | — |
 | `cesu8` `1.1.0` | Convert to and from CESU-8 encoding (similar to UTF-8) | — | — |
 | `cexpr` `0.6.0` | A C expression parser and evaluator | — | — |
-| `cfg-if` `1.0.4` | A macro to ergonomically define an item depending on a large number of #[cfg] parameters. Structure… | `ax-alloc` `ax-cpu` `ax-driver` `ax-fs-ng` `ax-hal` `ax-helloworld-myplat` `ax-log` `ax-net` `ax-net-ng` `ax-runtime` `ax-task` `axaddrspace` `axallocator` `axbacktrace` `axdevice` `axfs-ng-vfs` `axvisor` `axvm` `kernel_guard` `kspin` `percpu` `percpu_macros` `riscv_vcpu` `smoltcp` `starry-kernel` `starry-signal` `x86_vcpu` | — |
+| `cfg-if` `1.0.4` | A macro to ergonomically define an item depending on a large number of #[cfg] parameters. Structure… | `ax-alloc` `ax-allocator` `ax-cpu` `ax-driver` `ax-fs-ng` `ax-hal` `ax-helloworld-myplat` `ax-log` `ax-net` `ax-net-ng` `ax-runtime` `ax-task` `axaddrspace` `axbacktrace` `axdevice` `axfs-ng-vfs` `axvisor` `axvm` `kernel_guard` `kspin` `percpu` `percpu_macros` `riscv_vcpu` `smoltcp` `starry-kernel` `starry-signal` `x86_vcpu` | — |
 | `cfg_aliases` `0.2.1` | A tiny utility to help save you a lot of effort with long winded `#[cfg()]` checks. | — | — |
 | `chrono` `0.4.44` | Date and time library for Rust | `arm_pl031` `ax-fs-ng` `ax-log` `ax-plat-loongarch64-qemu-virt` `ax-runtime` `axbuild` `starry-kernel` | — |
 | `ciborium` `0.2.2` | serde implementation of CBOR using ciborium-basic | — | — |
@@ -1562,7 +1562,7 @@ flowchart TB
 | `crate_interface` `0.3.0` | — | — | — |
 | `crc` `3.4.0` | Rust implementation of CRC with support of various standards | — | — |
 | `crc32fast` `1.5.0` | Fast, SIMD-accelerated CRC32 (IEEE) checksum computation | — | — |
-| `criterion` `0.5.1` | Statistics-driven micro-benchmarking library | `axallocator` | — |
+| `criterion` `0.5.1` | Statistics-driven micro-benchmarking library | `ax-allocator` | — |
 | `criterion-plot` `0.5.0` | Criterion's plotting library | — | — |
 | `crossterm` `0.28.1` | A crossplatform terminal library for manipulating terminals. | — | — |
 | `crossterm` `0.29.0` | A crossplatform terminal library for manipulating terminals. | — | — |
@@ -1817,7 +1817,7 @@ flowchart TB
 | `rk3568_clk` `0.1.0` | — | `axvisor` | `kspin` |
 | `rk3588-clk` `0.1.3` | — | `axvisor` | — |
 | `rkyv` `0.7.46` | Zero-copy deserialization framework for Rust | — | — |
-| `rlsf` `0.2.2` | Real-time dynamic memory allocator based on the TLSF algorithm | `axallocator` | — |
+| `rlsf` `0.2.2` | Real-time dynamic memory allocator based on the TLSF algorithm | `ax-allocator` | — |
 | `rockchip-pm` `0.4.1` | — | `axvisor` | — |
 | `rstest` `0.17.0` | Rust fixture based test framework. It use procedural macro to implement fixtures and table based te… | `smoltcp` | — |
 | `rstest_macros` `0.17.0` | Rust fixture based test framework. It use procedural macro to implement fixtures and table based te… | — | — |
