@@ -6,8 +6,8 @@ use alloc::{
 };
 use core::ptr::NonNull;
 
+use ax_driver_block::BlockDriverOps;
 use ax_plat::mem::PhysAddr;
-use axdriver_block::BlockDriverOps;
 use axerrno::AxError;
 use heapless::Vec;
 use memory_addr::PAGE_SIZE_4K;

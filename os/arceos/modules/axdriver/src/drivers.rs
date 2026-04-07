@@ -64,13 +64,13 @@ register_vsock_driver!(
 cfg_if::cfg_if! {
     if #[cfg(block_dev = "ramdisk")] {
         pub struct RamDiskDriver;
-        register_block_driver!(RamDiskDriver, axdriver_block::ramdisk::RamDisk);
+        register_block_driver!(RamDiskDriver, ax_driver_block::ramdisk::RamDisk);
 
         impl DriverProbe for RamDiskDriver {
             fn probe_global() -> Option<AxDeviceEnum> {
                 // TODO: format RAM disk
                 Some(AxDeviceEnum::from_block(
-                    axdriver_block::ramdisk::RamDisk::new(0x100_0000), // 16 MiB
+                    ax_driver_block::ramdisk::RamDisk::new(0x100_0000), // 16 MiB
                 ))
             }
         }
@@ -80,12 +80,12 @@ cfg_if::cfg_if! {
 cfg_if::cfg_if! {
     if #[cfg(block_dev = "sdmmc")] {
         pub struct SdMmcDriver;
-        register_block_driver!(SdMmcDriver, axdriver_block::sdmmc::SdMmcDriver);
+        register_block_driver!(SdMmcDriver, ax_driver_block::sdmmc::SdMmcDriver);
 
         impl DriverProbe for SdMmcDriver {
             fn probe_global() -> Option<AxDeviceEnum> {
                 let sdmmc = unsafe {
-                    axdriver_block::sdmmc::SdMmcDriver::new(
+                    ax_driver_block::sdmmc::SdMmcDriver::new(
                         ax_hal::mem::phys_to_virt(ax_config::devices::SDMMC_PADDR.into()).into(),
                     )
                 };
@@ -98,12 +98,12 @@ cfg_if::cfg_if! {
 cfg_if::cfg_if! {
     if #[cfg(block_dev = "bcm2835-sdhci")]{
         pub struct BcmSdhciDriver;
-        register_block_driver!(BcmSdhciDriver, axdriver_block::bcm2835sdhci::SDHCIDriver);
+        register_block_driver!(BcmSdhciDriver, ax_driver_block::bcm2835sdhci::SDHCIDriver);
 
         impl DriverProbe for BcmSdhciDriver {
             fn probe_global() -> Option<AxDeviceEnum> {
                 debug!("mmc probe");
-                axdriver_block::bcm2835sdhci::SDHCIDriver::try_new()
+                ax_driver_block::bcm2835sdhci::SDHCIDriver::try_new()
                     .ok()
                     .map(AxDeviceEnum::from_block)
             }

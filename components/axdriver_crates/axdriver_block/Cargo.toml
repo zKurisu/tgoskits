@@ -1,5 +1,5 @@
 [package]
-name = "axdriver_block"
+name = "ax-driver-block"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true

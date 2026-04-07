@@ -100,7 +100,7 @@ ax-task = { version = "0.5.0", path = "modules/axtask" }
 ax-allocator = { version = "0.4.0", features = ["axerrno"] }
 axbacktrace = "0.3.2"
 axdriver_base = "0.3.4"
-axdriver_block = "0.3.4"
+ax-driver-block = "0.3.4"
 axdriver_display = "0.3.4"
 axdriver_input = "0.3.4"
 axdriver_net = "0.3.4"

@@ -15,7 +15,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axdriver"
 bus-mmio = []
 bus-pci = ["dep:axdriver_pci", "dep:ax-hal", "dep:ax-config"]
 net = ["dep:axdriver_net"]
-block = ["dep:axdriver_block"]
+block = ["dep:ax-driver-block"]
 display = ["dep:axdriver_display"]
 input = ["dep:axdriver_input"]
 vsock = ["axdriver_vsock"]
@@ -29,10 +29,10 @@ virtio-net = ["net", "virtio", "ax-driver-virtio/net"]
 virtio-gpu = ["display", "virtio", "ax-driver-virtio/gpu"]
 virtio-input = ["input", "virtio", "ax-driver-virtio/input"]
 virtio-socket = ["vsock", "virtio", "ax-driver-virtio/socket"]
-ramdisk = ["block", "axdriver_block/ramdisk"]
-bcm2835-sdhci = ["block", "axdriver_block/bcm2835-sdhci"]
-sdmmc = ["block", "axdriver_block/sdmmc", "dep:ax-hal", "dep:ax-config"]
-ahci = ["block", "axdriver_block/ahci", "dep:ax-hal", "dep:ax-config"]
+ramdisk = ["block", "ax-driver-block/ramdisk"]
+bcm2835-sdhci = ["block", "ax-driver-block/bcm2835-sdhci"]
+sdmmc = ["block", "ax-driver-block/sdmmc", "dep:ax-hal", "dep:ax-config"]
+ahci = ["block", "ax-driver-block/ahci", "dep:ax-hal", "dep:ax-config"]
 ixgbe = ["net", "axdriver_net/ixgbe", "dep:ax-alloc", "dep:ax-hal", "dep:ax-dma"]
 fxmac = ["net", "axdriver_net/fxmac", "dep:ax-alloc", "dep:ax-hal", "dep:ax-dma"]
 # more devices example: e1000 = ["net", "axdriver_net/e1000"]
@@ -47,7 +47,7 @@ ax-alloc = { workspace = true, optional = true }
 ax-config = { workspace = true, optional = true }
 ax-dma = { workspace = true, optional = true }
 axdriver_base.workspace = true
-axdriver_block = { workspace = true, optional = true }
+ax-driver-block = { workspace = true, optional = true }
 axdriver_display = { workspace = true, optional = true }
 axdriver_input = { workspace = true, optional = true }
 axdriver_net = { workspace = true, optional = true }

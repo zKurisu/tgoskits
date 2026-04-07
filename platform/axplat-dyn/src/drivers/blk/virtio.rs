@@ -4,10 +4,10 @@ use alloc::format;
 use core::{marker::PhantomData, ptr::NonNull};
 
 use ax_alloc::{UsageKind, global_allocator};
+use ax_driver_block::BlockDriverOps;
 use ax_driver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};
 use ax_plat::mem::{PhysAddr, phys_to_virt};
 use axdriver_base::DeviceType;
-use axdriver_block::BlockDriverOps;
 use rdrive::{
     DriverGeneric, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
 };

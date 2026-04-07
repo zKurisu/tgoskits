@@ -22,7 +22,7 @@ ax-alloc.workspace = true
 ax-config-macros = "0.4.1"
 ax-cpu.workspace = true
 axdriver_base.workspace = true
-axdriver_block.workspace = true
+ax-driver-block.workspace = true
 ax-driver-virtio = { workspace = true, features = ["block"] }
 axerrno.workspace = true
 axklib.workspace = true

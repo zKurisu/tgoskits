@@ -499,7 +499,7 @@ dependencies = [
  "ax-config",
  "ax-dma",
  "axdriver_base",
- "axdriver_block",
+ "ax-driver-block",
  "axdriver_display",
  "axdriver_input",
  "axdriver_net",
@@ -520,7 +520,7 @@ name = "axdriver_base"
 version = "0.3.4"
 
 [[package]]
-name = "axdriver_block"
+name = "ax-driver-block"
 version = "0.3.4"
 dependencies = [
  "axdriver_base",
@@ -568,7 +568,7 @@ name = "ax-driver-virtio"
 version = "0.3.4"
 dependencies = [
  "axdriver_base",
- "axdriver_block",
+ "ax-driver-block",
  "axdriver_display",
  "axdriver_input",
  "axdriver_net",
@@ -952,7 +952,7 @@ dependencies = [
  "ax-config-macros",
  "ax-cpu",
  "axdriver_base",
- "axdriver_block",
+ "ax-driver-block",
  "ax-driver-virtio",
  "axerrno",
  "axklib",
