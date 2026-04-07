@@ -117,7 +117,7 @@ StarryOS 的 `pseudofs/dev/event.rs` 会：
 3. 如果未来要支持“多次查询设备列表”，当前 API 需要整体调整，不能只在内部偷偷 clone。
 
 ### 4.3 常见坑
-- 不要把 `axinput` 写成用户 API；当前仓库里没有 `arceos_api::input` 这样的封装层。
+- 不要把 `axinput` 写成用户 API；当前仓库里没有 `ax_api::input` 这样的封装层。
 - 不要假设调用 `take_inputs()` 后全局设备仍保留。
 - 不要在这里引入按键缓冲、poll 唤醒或 ioctl 语义；这些属于更上层事件设备实现。
 

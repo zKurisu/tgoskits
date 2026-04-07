@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::string::String;
 use core::fmt;
 
-use arceos_api::fs as api;
+use ax_api::fs as api;
 
 use super::FileType;
 use crate::io::Result;

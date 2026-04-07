@@ -94,14 +94,14 @@
 1. `ax_std::io` 直接重导出 `axio` 的 trait 与类型，把它包装成 ArceOS 应用看到的 `std::io` 风格接口。
 2. `axfs`、`axfs-ng` 的文件对象实现 `Read` / `Write` / `Seek`，复用统一的缓冲器和默认读写逻辑。
 3. `axnet`、`axnet-ng` 以及更上层 socket 封装使用 `axio` 作为同步收发 trait 的公共接口。
-4. `arceos_api`、`arceos_posix_api`、StarryOS 的 `FileLike`/用户缓冲访问对象通过 `axio` 收敛系统调用读写路径。
+4. `ax-api`、`arceos_posix_api`、StarryOS 的 `FileLike`/用户缓冲访问对象通过 `axio` 收敛系统调用读写路径。
 
 ### 2.3 `PollState` 的实际使用位置
 
 虽然 `PollState` 本身很小，但它在旧一代同步接口里承担了一个稳定契约：
 
 - `axnet` 的 TCP/UDP socket 会返回 `PollState`
-- `arceos_api` 把它重导出为 `AxPollState`
+- `ax-api` 把它重导出为 `AxPollState`
 - `arceos_posix_api` 的 `fd_ops`、`pipe`、`stdio`、`fs`、`net` 等路径都在使用它
 
 因此，`PollState` 不该被理解成“顺手放在这里的小结构体”，而应被视为同步 I/O 层与更高层轮询语义之间的兼容桥。
@@ -128,7 +128,7 @@
 直接或间接依赖 `axio` 的关键模块包括：
 
 - `ax-std`、`ax-libc`
-- `arceos_api`、`arceos_posix_api`
+- `ax-api`、`arceos_posix_api`
 - `axfs`、`axfs-ng`
 - `axnet`、`axnet-ng`
 - StarryOS 的文件、网络、pipe、用户态缓冲访问和系统调用包装层

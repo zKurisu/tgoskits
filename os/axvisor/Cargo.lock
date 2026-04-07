@@ -183,7 +183,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
-name = "arceos_api"
+name = "ax-api"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a0ec20839aa76d3a2eedd79b11e444a83db4c160135f1016ef22b6399a627be"
@@ -1022,7 +1022,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488fb97366c35a4591bd6ac8536e0d17fb32fd31f43f8e15a7fef98ca589293e"
 dependencies = [
- "arceos_api",
+ "ax-api",
  "axerrno 0.2.2",
  "axfeat",
  "axio",

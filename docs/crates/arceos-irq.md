@@ -90,7 +90,7 @@ graph LR
     test["arceos-irq"] --> ax-std["ax-std(multitask, irq)"]
     test --> axhal["axhal::asm"]
     test --> axtask["axtask::WaitQueue"]
-    ax-std --> arceos_api["arceos_api::task"]
+    ax-std --> ax-api["ax_api::task"]
 ```
 
 ### 3.1 直接依赖

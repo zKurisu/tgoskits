@@ -33,7 +33,7 @@ flowchart LR
     F --> G["join + 结果汇总"]
 ```
 
-`ax_set_current_priority()` 在 `arceos_api::task` 中最终调用的是 `axtask::set_priority(prio)`，而 `axtask` 的实现明确说明：在 CFS 下这个值是 `nice`，范围通常是 `-20..19`。
+`ax_set_current_priority()` 在 `ax_api::task` 中最终调用的是 `axtask::set_priority(prio)`，而 `axtask` 的实现明确说明：在 CFS 下这个值是 `nice`，范围通常是 `-20..19`。
 
 ### 1.3 为什么顺序断言被限定得很窄
 源码只在下面这个条件下做完成顺序断言：
@@ -79,8 +79,8 @@ flowchart LR
 ```mermaid
 graph LR
     test["arceos-priority"] --> ax-std["ax-std(alloc, multitask)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask / scheduler"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask / scheduler"]
 ```
 
 ### 3.1 直接依赖
@@ -88,7 +88,7 @@ graph LR
 - `sched-rr` / `sched-cfs`：通过 feature 透传到底层调度器。
 
 ### 3.2 关键间接依赖
-- `arceos_api::task::ax_set_current_priority`
+- `ax_api::task::ax_set_current_priority`
 - `axtask::set_priority`
 - 底层调度器实现（FIFO/RR/CFS 中的一种）
 

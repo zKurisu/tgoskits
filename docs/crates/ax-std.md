@@ -39,7 +39,7 @@
 ```mermaid
 graph LR
     current["ax-std"]
-    current --> arceos_api["arceos_api"]
+    current --> ax-api["ax-api"]
     current --> axerrno["axerrno"]
     current --> axfeat["axfeat"]
     current --> axio["axio"]
@@ -56,7 +56,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `arceos_api`
+- `ax-api`
 - `axerrno`
 - `axfeat`
 - `axio`

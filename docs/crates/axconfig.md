@@ -112,7 +112,7 @@ graph LR
 - `axruntime`：启动日志、定时器节拍与 SMP 初始化路径的关键消费者。
 - `axtask`、`axipi`：CPU 数量、默认栈大小等调度相关消费者。
 - `axdriver`、`axdma`：设备和 DMA 地址布局消费者。
-- `arceos_api`、`arceos_posix_api`：向上层重新导出或转译这些常量。
+- `ax-api`、`arceos_posix_api`：向上层重新导出或转译这些常量。
 
 ### 3.3 `plat-dyn` 的特殊性
 `plat-dyn` 不是简单的“再开一个 feature”，而是让 `axconfig` 切换到另一套常量来源。这也是它和普通功能 feature 最大的区别。

@@ -108,7 +108,7 @@ graph LR
     memory_addr["memory_addr"] --> axmm
 
     axmm --> axruntime["axruntime"]
-    axmm --> arceos_api["arceos_api"]
+    axmm --> ax-api["ax-api"]
     axmm --> axdma["axdma"]
     axmm --> starry_kernel["starry-kernel (部分复用)"]
 ```
@@ -121,13 +121,13 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axruntime`：在 `paging` 路径中调用 `init_memory_management()` 和 `init_memory_management_secondary()`。
-- `arceos_api`：在 `paging` feature 下对外再导出 `axmm`。
+- `ax-api`：在 `paging` feature 下对外再导出 `axmm`。
 - `axdma`：通过 `kernel_aspace().lock().protect(...)` 调整 DMA 映射权限。
 - StarryOS：虽然用户地址空间实现主要在 `starry-kernel` 自己的 `mm` 中，但仍会复用 `kernel_aspace()` 提供的宿主内核映射视图。
 
 ### 3.3 间接消费者
 - 启用分页的 ArceOS 样例与测试。
-- 通过 `ax-std`、`arceos_api` 或 `axruntime` 间接使用宿主页表栈的上层项目。
+- 通过 `ax-std`、`ax-api` 或 `axruntime` 间接使用宿主页表栈的上层项目。
 - Axvisor 的宿主内核路径，但不包含 guest 二级页表策略本身。
 
 ## 4. 开发指南

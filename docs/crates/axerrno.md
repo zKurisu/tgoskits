@@ -87,7 +87,7 @@ graph LR
     axerrno --> axio["axio"]
     axerrno --> axmm["axmm"]
     axerrno --> axnet["axnet/axnet-ng"]
-    axerrno --> arceos_api["arceos_api"]
+    axerrno --> ax-api["ax-api"]
     axerrno --> arceos_posix["arceos_posix_api"]
     axerrno --> starry_kernel["starry-kernel"]
     axerrno --> axvisor["axvisor"]

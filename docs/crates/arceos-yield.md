@@ -27,7 +27,7 @@ flowchart LR
     A["thread::spawn"] --> B["axtask::spawn_raw"]
     B --> C["任务执行"]
     C --> D["thread::yield_now()"]
-    D --> E["arceos_api::task::ax_yield_now"]
+    D --> E["ax_api::task::ax_yield_now"]
     E --> F["axtask::yield_now"]
     F --> G["当前 run queue 重新调度"]
 ```
@@ -79,15 +79,15 @@ flowchart LR
 ```mermaid
 graph LR
     test["arceos-yield"] --> ax-std["ax-std(multitask)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask"]
 ```
 
 ### 3.1 直接依赖
 - `ax-std(multitask)`：提供 `thread::spawn`、`thread::yield_now` 与 `available_parallelism()`。
 
 ### 3.2 关键间接依赖
-- `arceos_api::task::ax_yield_now`：连接用户侧线程 API 与内核任务 API。
+- `ax_api::task::ax_yield_now`：连接用户侧线程 API 与内核任务 API。
 - `axtask::yield_now`：真正对当前 run queue 触发让出和重新调度。
 
 ### 3.3 主要消费者

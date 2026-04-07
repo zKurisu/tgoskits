@@ -13,7 +13,7 @@
 `axalloc` 在启动链和运行期之间扮演的是“统一分配服务”角色：
 
 - 向下，它复用 `axallocator` 或 `buddy-slab-allocator`，而不是自行实现完整分配算法。
-- 向上，它向 `axruntime`、`axmm`、`axhal::paging`、`axdriver`、`axdma`、`arceos_api` 等模块暴露统一的堆/页分配接口。
+- 向上，它向 `axruntime`、`axmm`、`axhal::paging`、`axdriver`、`axdma`、`ax-api` 等模块暴露统一的堆/页分配接口。
 - 横向，它通过 `UsageKind`/`Usages` 给页表、DMA、页缓存等不同用途打标签，方便上层做统计与诊断。
 
 因此，`axalloc` 不是“内存管理本体”，而是“内存分配入口”。把它写成虚拟内存系统、页表系统或用户地址空间管理器，都会高估它的职责。
@@ -70,7 +70,7 @@ flowchart TD
 ### 2.2 关键 API 与真实使用位置
 - `global_init()` / `global_add_memory()`：由 `axruntime/src/lib.rs` 的 `init_allocator()` 调用，是 ArceOS 启动期接入堆的入口。
 - `global_allocator().alloc_pages()`：被 `axmm/src/backend/alloc.rs`、`axhal/src/paging.rs` 等页级消费者直接使用。
-- `global_allocator().alloc()` / `dealloc()`：被 `arceos_api/src/imp/mem.rs` 直接转发给更上层 API。
+- `global_allocator().alloc()` / `dealloc()`：被 `ax-api/src/imp/mem.rs` 直接转发给更上层 API。
 - `GlobalPage::alloc*()`：适合需要“拿到一段连续页并在 drop 时自动归还”的简单路径。
 
 ### 2.3 使用边界
@@ -92,7 +92,7 @@ graph LR
     axalloc --> axdriver["axdriver"]
     axalloc --> axdma["axdma"]
     axalloc --> axfsng["axfs-ng"]
-    axalloc --> arceos_api["arceos_api"]
+    axalloc --> ax-api["ax-api"]
     axalloc --> starry_kernel["starry-kernel"]
     axalloc --> axplat_dyn["axplat-dyn"]
 ```
@@ -108,7 +108,7 @@ graph LR
 - `axruntime`：启动期初始化全局分配器。
 - `axmm`、`axhal`：页级分配的主要消费者。
 - `axdriver`、`axdma`、`axfs-ng`：驱动、DMA、文件缓存等运行期场景。
-- `arceos_api` / `arceos_posix_api`：向上层 API 暴露堆能力。
+- `ax-api` / `arceos_posix_api`：向上层 API 暴露堆能力。
 - `starry-kernel`：可复用其 tracking 和页/堆分配能力。
 
 ## 4. 开发指南
@@ -118,7 +118,7 @@ graph LR
 axalloc = { workspace = true }
 ```
 
-对大多数上层模块来说，更常见的接入方式是通过 `axruntime`、`arceos_api` 或其他运行时聚合层间接使用，而不是直接把 `axalloc` 当业务库调用。
+对大多数上层模块来说，更常见的接入方式是通过 `axruntime`、`ax-api` 或其他运行时聚合层间接使用，而不是直接把 `axalloc` 当业务库调用。
 
 ### 4.2 修改时的关键约束
 1. 修改 `global_init()` 或扩堆逻辑时，要同时检查默认路径与 `hv` 路径是否保持语义一致。

@@ -194,7 +194,7 @@ CURATED_DOCS = {
     "axdriver_pci",
     "axdriver_virtio",
     "axdriver_vsock",
-    "arceos_api",
+    "ax-api",
     "arceos-affinity",
     "ax-helloworld",
     "ax-helloworld-myplat",
@@ -1151,7 +1151,7 @@ def style_scenario(pkg: Package) -> str:
     mapping = {
         "arceos_api": "面向 ArceOS 上层模块、用户库和应用接口层提供稳定能力门面，避免直接依赖过多内部模块细节。",
         "arceos_feature": "作为 ArceOS 的 feature 编排中心使用，用于把调度、网络、文件系统、设备等能力按需装配进最终镜像。",
-        "arceos_ulib": "面向应用开发者提供 `std`/libc 风格接口，是应用与底层 `arceos_api`/内核模块之间的主要边界层。",
+        "arceos_ulib": "面向应用开发者提供 `std`/libc 风格接口，是应用与底层 `ax-api`/内核模块之间的主要边界层。",
         "arceos_example": "用于展示或回归某个具体 ArceOS 能力组合，既是示例程序，也是最小 smoke test 入口。",
         "test_suite": "用于验证固定功能点、特定 bug 回归或系统语义是否符合预期，通常通过 QEMU 日志或退出状态判断成功与否。",
         "starry_entry": "用于生成和运行 StarryOS 启动镜像，把 rootfs、内核 feature 和运行参数装配到完整系统入口中。",
@@ -1291,7 +1291,7 @@ def dev_steps(pkg: Package) -> list[str]:
     if style == "arceos_ulib":
         return [
             "将该 crate 视作应用接口层，先明确是走 `ax-std` 风格还是 libc/POSIX 风格接入。",
-            "根据应用所需能力开启 feature，并确认与 `arceos_api`/系统镜像配置保持一致。",
+            "根据应用所需能力开启 feature，并确认与 `ax-api`/系统镜像配置保持一致。",
             "通过最小应用或示例程序验证线程、时间、I/O、文件系统或网络接口的语义是否正确。",
         ]
     if style == "platform":

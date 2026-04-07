@@ -4,9 +4,9 @@
 > 类型：库 crate
 > 分层：ArceOS 层 / 显示能力接线层
 > 版本：`0.3.0-preview.3`
-> 文档依据：`Cargo.toml`、`src/lib.rs`、`os/arceos/modules/axruntime/src/lib.rs`、`os/arceos/api/arceos_api/src/imp/display.rs`、`os/StarryOS/kernel/src/pseudofs/dev/fb.rs`
+> 文档依据：`Cargo.toml`、`src/lib.rs`、`os/arceos/modules/axruntime/src/lib.rs`、`os/arceos/api/ax-api/src/imp/display.rs`、`os/StarryOS/kernel/src/pseudofs/dev/fb.rs`
 
-`axdisplay` 位于 `axdriver_display` 之上、`arceos_api::display` 与 StarryOS framebuffer 设备之下，是一个非常薄的显示能力接线层。它不实现任何 GPU 驱动，也不负责多显示器管理；它做的事情只有一件：从 `axdriver` 聚合层交来的显示设备容器里取出一个主显示设备，保存为全局对象，然后向上提供帧缓冲信息和刷新接口。
+`axdisplay` 位于 `axdriver_display` 之上、`ax_api::display` 与 StarryOS framebuffer 设备之下，是一个非常薄的显示能力接线层。它不实现任何 GPU 驱动，也不负责多显示器管理；它做的事情只有一件：从 `axdriver` 聚合层交来的显示设备容器里取出一个主显示设备，保存为全局对象，然后向上提供帧缓冲信息和刷新接口。
 
 ## 1. 架构设计分析
 ### 1.1 真实定位
@@ -29,7 +29,7 @@
 2. `axdriver` 把显示设备按类别收集进 `AllDevices.display`。
 3. `axruntime` 在 `feature = "display"` 下调用 `axdisplay::init_display(all_devices.display)`。
 4. `axdisplay` 从容器中取出一个设备，存入 `MAIN_DISPLAY`。
-5. `arceos_api` 与 StarryOS 等更上层模块通过 `framebuffer_info()` / `framebuffer_flush()` 使用它。
+5. `ax-api` 与 StarryOS 等更上层模块通过 `framebuffer_info()` / `framebuffer_flush()` 使用它。
 
 ### 1.3 关键 API
 | API | 作用 |
@@ -58,7 +58,7 @@
 | --- | --- | --- |
 | `axdriver_display` / `VirtIoGpuDev` | 具体显示驱动与帧缓冲语义 | 全局主显示管理 |
 | `axdisplay` | 选择一个主显示设备并导出 framebuffer 能力 | 设备探测、模式设置、多显示器管理 |
-| `arceos_api::display` | 暴露更稳定的 API 入口 | 保存或管理设备对象 |
+| `ax_api::display` | 暴露更稳定的 API 入口 | 保存或管理设备对象 |
 | StarryOS `/dev/fb` | 把 framebuffer 能力包装成伪文件系统设备 | 驱动初始化与主设备选择 |
 
 ### 1.6 边界澄清
@@ -72,7 +72,7 @@
 - 通过 `has_display()` 提供最小存在性判断。
 
 ### 2.2 与上层 API 的关系
-`os/arceos/api/arceos_api/src/imp/display.rs` 直接把：
+`os/arceos/api/ax-api/src/imp/display.rs` 直接把：
 
 - `axdisplay::framebuffer_info()` 封装为 `ax_framebuffer_info()`
 - `axdisplay::framebuffer_flush()` 封装为 `ax_framebuffer_flush()`
@@ -146,7 +146,7 @@ StarryOS 的 `pseudofs/dev/fb.rs` 会：
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axdisplay` 是 ArceOS 本体中的显示能力模块，直接承接 `axdriver` 聚合出来的显示设备，并为 `arceos_api` 提供后端实现。
+`axdisplay` 是 ArceOS 本体中的显示能力模块，直接承接 `axdriver` 聚合出来的显示设备，并为 `ax-api` 提供后端实现。
 
 ### 6.2 StarryOS
 StarryOS 直接消费它，把 framebuffer 能力包装成 `/dev/fb` 伪设备，因此是它在当前仓库里最明确的跨项目落点。

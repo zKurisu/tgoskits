@@ -28,7 +28,7 @@
 
 ```mermaid
 flowchart LR
-    A["thread::spawn"] --> B["arceos_api::task::ax_spawn"]
+    A["thread::spawn"] --> B["ax_api::task::ax_spawn"]
     B --> C["axtask::spawn_raw"]
     C --> D["任务开始执行"]
     D --> E["ax_set_current_affinity"]
@@ -83,8 +83,8 @@ flowchart LR
 ```mermaid
 graph LR
     test["arceos-affinity"] --> ax-std["ax-std(multitask)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask"]
     test --> axhal["axhal::percpu::this_cpu_id"]
 ```
 
@@ -92,7 +92,7 @@ graph LR
 - `ax-std(multitask)`：提供线程创建、`yield_now()` 和 ArceOS 扩展任务 API 入口。
 
 ### 3.2 关键间接依赖
-- `arceos_api::task::ax_set_current_affinity`：对上层暴露亲和性设置接口。
+- `ax_api::task::ax_set_current_affinity`：对上层暴露亲和性设置接口。
 - `axtask::set_current_affinity`：实际执行亲和性更新与迁移。
 - `axhal::percpu::this_cpu_id`：用来观察当前任务实际落在哪个 CPU 上。
 

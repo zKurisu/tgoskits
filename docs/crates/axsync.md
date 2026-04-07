@@ -113,7 +113,7 @@ graph LR
     event_listener["event-listener"] --> axsync
     axtask["axtask"] --> axsync
 
-    axsync --> arceos_api["arceos_api"]
+    axsync --> ax-api["ax-api"]
     axsync --> arceos_posix_api["arceos_posix_api"]
     axsync --> axdisplay["axdisplay"]
     axsync --> axinput["axinput"]
@@ -128,14 +128,14 @@ graph LR
 - `axtask`：提供当前任务 ID、`yield_now()` 与 `block_on()`，使阻塞 mutex 真正能与调度器协作。
 
 ### 3.2 关键直接消费者
-- `arceos_api`：在 `multitask` 路径下把 `RawMutex` 作为公开类型再导出。
+- `ax-api`：在 `multitask` 路径下把 `RawMutex` 作为公开类型再导出。
 - `arceos_posix_api`：用于 pipe、fs、net、pthread mutex 等路径。
 - `axnet` / `axnet-ng`、`axinput`、`axdisplay`、`axfs-ng`：用 `Mutex` 保护全局状态或共享对象。
 - `starry-kernel`：大量复用 `axsync::Mutex`，同时与 `spin::SpinNoIrq` 并存。
 
 ### 3.3 间接消费者
-- 通过 `ax-std` / `arceos_api` 共享多任务同步路径的上层应用。
-- Axvisor，经 `ax-std` 和 `arceos_api` 间接复用统一同步原语栈。
+- 通过 `ax-std` / `ax-api` 共享多任务同步路径的上层应用。
+- Axvisor，经 `ax-std` 和 `ax-api` 间接复用统一同步原语栈。
 
 ## 4. 开发指南
 ### 4.1 依赖配置
@@ -185,4 +185,4 @@ axsync = { workspace = true, features = ["multitask"] }
 StarryOS 大量复用 `axsync::Mutex` 作为内核内部同步原语之一。因此在 StarryOS 中，`axsync` 扮演的是“兼容内核与 ArceOS 模块共享的基础锁层”。
 
 ### 6.3 Axvisor
-Axvisor 不直接实现自己的 `axsync`，而是通过 `ax-std` / `arceos_api` 间接共享同一套同步原语栈。因此 `axsync` 在 Axvisor 中属于宿主侧统一基础设施，而不是 hypervisor 专用锁库。
+Axvisor 不直接实现自己的 `axsync`，而是通过 `ax-std` / `ax-api` 间接共享同一套同步原语栈。因此 `axsync` 在 Axvisor 中属于宿主侧统一基础设施，而不是 hypervisor 专用锁库。

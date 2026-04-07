@@ -26,7 +26,7 @@
 ```mermaid
 flowchart LR
     A["thread::sleep(Duration)"] --> B["ax_std::thread::sleep"]
-    B --> C["arceos_api::task::ax_sleep_until"]
+    B --> C["ax_api::task::ax_sleep_until"]
     C --> D["axtask::sleep_until"]
     D --> E["IRQ/timer 驱动超时唤醒"]
 ```
@@ -76,8 +76,8 @@ flowchart LR
 ```mermaid
 graph LR
     test["arceos-sleep"] --> ax-std["ax-std(multitask, irq)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask"]
     axtask --> axhal["axhal time/irq"]
 ```
 

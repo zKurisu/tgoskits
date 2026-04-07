@@ -76,8 +76,8 @@ flowchart LR
 graph LR
     test["arceos-parallel"] --> ax-std["ax-std(alloc, multitask, irq)"]
     test --> rand["rand(small_rng)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask / wait queue"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask / wait queue"]
 ```
 
 ### 3.1 直接依赖

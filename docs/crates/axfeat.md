@@ -4,15 +4,15 @@
 > 类型：库 crate
 > 分层：ArceOS 层 / 编译期 feature 聚合层
 > 版本：`0.3.0-preview.3`
-> 文档依据：`Cargo.toml`、`src/lib.rs`、`os/arceos/api/arceos_api/Cargo.toml`、`os/arceos/api/arceos_posix_api/Cargo.toml`、`os/arceos/ulib/axstd/Cargo.toml`、`os/arceos/ulib/axlibc/Cargo.toml`、`os/StarryOS/kernel/Cargo.toml`
+> 文档依据：`Cargo.toml`、`src/lib.rs`、`os/arceos/api/ax-api/Cargo.toml`、`os/arceos/api/arceos_posix_api/Cargo.toml`、`os/arceos/ulib/axstd/Cargo.toml`、`os/arceos/ulib/axlibc/Cargo.toml`、`os/StarryOS/kernel/Cargo.toml`
 
-`axfeat` 是 ArceOS 体系里的“feature 配电板”。它本身几乎没有运行时代码，也不暴露复杂 API；真正的价值在于把一套顶层能力开关稳定地映射到 `axhal`、`axruntime`、`axtask`、`axdriver`、`axconfig`、`axalloc` 等具体实现 crate 上，让 `ax-std`、`ax-libc`、`arceos_api`、`arceos_posix_api` 以及 StarryOS 能用同一组 feature 词汇装配系统。
+`axfeat` 是 ArceOS 体系里的“feature 配电板”。它本身几乎没有运行时代码，也不暴露复杂 API；真正的价值在于把一套顶层能力开关稳定地映射到 `axhal`、`axruntime`、`axtask`、`axdriver`、`axconfig`、`axalloc` 等具体实现 crate 上，让 `ax-std`、`ax-libc`、`ax-api`、`arceos_posix_api` 以及 StarryOS 能用同一组 feature 词汇装配系统。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
 从源码看，`axfeat` 的实现极度克制：`src/lib.rs` 只有 crate 级文档和 `#![no_std]`，所有“逻辑”都在 `Cargo.toml` 的 feature 映射里。这说明它不是运行时门面，而是纯编译期装配层：
 
-- 向上，它为 `ax-std`、`ax-libc`、`arceos_api`、`arceos_posix_api`、`starry-kernel`、`starryos` 提供统一的能力命名。
+- 向上，它为 `ax-std`、`ax-libc`、`ax-api`、`arceos_posix_api`、`starry-kernel`、`starryos` 提供统一的能力命名。
 - 向下，它把这些顶层能力翻译成对 `axhal`、`axruntime`、`axtask`、`axsync`、`axdriver`、`axalloc`、`axfs`、`axnet` 等 crate 的 feature 组合。
 - 横向，它把“平台选择”“内存能力”“调度器”“上层协议栈”“驱动探测方式”放进一套一致的 feature 语义体系，避免每个上层 crate 都各自维护一套命名。
 
@@ -23,7 +23,7 @@
 
 ```mermaid
 flowchart LR
-    Top["ax-std / ax-libc / arceos_api / arceos_posix_api / StarryOS"] --> F["axfeat"]
+    Top["ax-std / ax-libc / ax-api / arceos_posix_api / StarryOS"] --> F["axfeat"]
     F --> HAL["axhal"]
     F --> RT["axruntime"]
     F --> TASK["axtask"]
@@ -96,7 +96,7 @@ ax-std = { workspace = true, features = ["alloc", "multitask", "net"] }
 graph LR
     ax-std["ax-std"] --> axfeat["axfeat"]
     ax-libc["ax-libc"] --> axfeat
-    arceos_api["arceos_api"] --> axfeat
+    ax-api["ax-api"] --> axfeat
     posix["arceos_posix_api"] --> axfeat
     starry_kernel["starry-kernel"] --> axfeat
     starryos["starryos"] --> axfeat
@@ -123,7 +123,7 @@ graph LR
 ### 3.2 关键消费者
 - `ax-std`：Rust 应用侧 feature 的主要入口。
 - `ax-libc`：C 应用侧 feature 的主要入口。
-- `arceos_api`、`arceos_posix_api`：稳定 API 层的 feature 汇聚点。
+- `ax-api`、`arceos_posix_api`：稳定 API 层的 feature 汇聚点。
 - `starry-kernel`、`starryos`：StarryOS 直接复用 `axfeat` 选择底层 ArceOS 能力。
 
 ### 3.3 跨 crate 传播规律
@@ -136,14 +136,14 @@ graph LR
 只有当某个能力需要跨多个顶层 crate 共享同一开关语义时，才应该把它放进 `axfeat`。典型场景包括：
 
 - 新增一个需要同时影响 `axruntime`、`axhal`、`axdriver` 的系统能力。
-- 需要让 `ax-std`、`ax-libc`、`arceos_api` 使用同样的 feature 名称。
+- 需要让 `ax-std`、`ax-libc`、`ax-api` 使用同样的 feature 名称。
 - 需要给 StarryOS 或 Axvisor 暴露统一装配入口。
 
 如果某个开关只影响单个 crate 的私有实现，优先留在该 crate 自己的 `Cargo.toml` 中。
 
 ### 4.2 新增或调整 feature 的检查清单
 1. 明确该 feature 属于平台、内存、调度、上层栈还是驱动层。
-2. 检查是否需要同步映射到 `ax-std`、`ax-libc`、`arceos_api`、`arceos_posix_api`。
+2. 检查是否需要同步映射到 `ax-std`、`ax-libc`、`ax-api`、`arceos_posix_api`。
 3. 检查 optional dependency 是否也要一起加入，否则 feature 打开后模块可能并未真正进入依赖图。
 4. 确认 feature 之间的蕴含关系是否合理，例如 `multitask` 是否需要 `alloc`，`net-ng` 是否必须依赖 `irq`。
 5. 检查 StarryOS 或其他直接消费者是否会因语义变化而失配。
@@ -172,11 +172,11 @@ graph LR
 ### 5.4 风险最高的改动
 - 改动 `plat-dyn`、`multitask`、`irq`、`paging` 的蕴含关系。
 - 改动 `fs`、`net` 等会牵动 optional dependency 的 feature。
-- 改动同名 feature 在 `ax-std`/`ax-libc`/`arceos_api` 中的镜像关系。
+- 改动同名 feature 在 `ax-std`/`ax-libc`/`ax-api` 中的镜像关系。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axfeat` 是 ArceOS 顶层 feature 语义的唯一汇聚点。`ax-std`、`ax-libc`、`arceos_api`、`arceos_posix_api` 这些面向不同上层接口的 crate，最终都靠它把能力传播到真正的内核模块。
+`axfeat` 是 ArceOS 顶层 feature 语义的唯一汇聚点。`ax-std`、`ax-libc`、`ax-api`、`arceos_posix_api` 这些面向不同上层接口的 crate，最终都靠它把能力传播到真正的内核模块。
 
 ### 6.2 StarryOS
 StarryOS 直接依赖 `axfeat` 选择底层 ArceOS 能力，而不是通过 `ax-std` 做二次封装。因此对 StarryOS 来说，`axfeat` 更像“内核能力装配词典”，而不是应用库。

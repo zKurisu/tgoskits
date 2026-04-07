@@ -31,8 +31,8 @@ uspace = ["axfeat/uspace"]
 hv = ["axfeat/hv"]
 
 # Interrupts
-irq = ["arceos_api/irq", "axfeat/irq"]
-ipi = ["arceos_api/ipi", "axfeat/ipi"]
+irq = ["ax-api/irq", "axfeat/irq"]
+ipi = ["ax-api/ipi", "axfeat/ipi"]
 
 # Custom or default platforms
 myplat = ["axfeat/myplat"]
@@ -40,7 +40,7 @@ defplat = ["axfeat/defplat"]
 plat-dyn = ["axfeat/plat-dyn"]
 
 # Memory
-alloc = ["arceos_api/alloc", "axfeat/alloc", "axio/alloc"]
+alloc = ["ax-api/alloc", "axfeat/alloc", "axio/alloc"]
 alloc-tlsf = ["axfeat/alloc-tlsf"]
 alloc-slab = ["axfeat/alloc-slab"]
 alloc-buddy = ["axfeat/alloc-buddy"]
@@ -48,27 +48,27 @@ alloc-level-1 = ["axfeat/alloc-level-1", "alloc"]
 page-alloc-64g = ["axfeat/page-alloc-64g"]                 # Support up to 64G memory capacity
 page-alloc-4g = ["axfeat/page-alloc-4g"]                   # Support up to 4G memory capacity
 paging = ["axfeat/paging"]
-dma = ["arceos_api/dma", "axfeat/dma"]
+dma = ["ax-api/dma", "axfeat/dma"]
 tls = ["axfeat/tls"]
 
 # Multi-threading and scheduler
-multitask = ["arceos_api/multitask", "axfeat/multitask"]
+multitask = ["ax-api/multitask", "axfeat/multitask"]
 task-ext = ["axfeat/task-ext"]
 sched-fifo = ["axfeat/sched-fifo"]
 sched-rr = ["axfeat/sched-rr"]
 sched-cfs = ["axfeat/sched-cfs"]
 
 # File system
-fs = ["arceos_api/fs", "axfeat/fs"]
-ext4fs = ["arceos_api/fs", "axfeat/fs"]
-fatfs = ["arceos_api/fs", "axfeat/fs"]
+fs = ["ax-api/fs", "axfeat/fs"]
+ext4fs = ["ax-api/fs", "axfeat/fs"]
+fatfs = ["ax-api/fs", "axfeat/fs"]
 
 # Networking
-net = ["arceos_api/net", "axfeat/net"]
+net = ["ax-api/net", "axfeat/net"]
 dns = []
 
 # Display
-display = ["arceos_api/display", "axfeat/display"]
+display = ["ax-api/display", "axfeat/display"]
 
 # Input
 input = ["axfeat/input"]
@@ -90,7 +90,7 @@ driver-ahci = ["axfeat/driver-ahci"]
 dwarf = ["axfeat/dwarf"]
 
 [dependencies]
-arceos_api.workspace = true
+ax-api.workspace = true
 axerrno.workspace = true
 axfeat.workspace = true
 axio.workspace = true

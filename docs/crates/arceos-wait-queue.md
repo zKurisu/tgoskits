@@ -24,7 +24,7 @@
 
 ```mermaid
 flowchart LR
-    A["AxWaitQueueHandle::new()"] --> B["arceos_api::task 封装层"]
+    A["AxWaitQueueHandle::new()"] --> B["ax_api::task 封装层"]
     B --> C["axtask::WaitQueue"]
     C --> D["wait_until / wait_timeout_until"]
     D --> E["notify_one / notify_all"]
@@ -32,7 +32,7 @@ flowchart LR
 
 具体来看：
 
-- `AxWaitQueueHandle` 在 `arceos_api::task` 中包装了 `axtask::WaitQueue`
+- `AxWaitQueueHandle` 在 `ax_api::task` 中包装了 `axtask::WaitQueue`
 - `ax_wait_queue_wait_until()` 会在有 `irq` 时走 `wait_timeout_until` 路径
 - `ax_wait_queue_wake()` 最终映射到 `notify_one(true)` 或 `notify_all(true)`
 
@@ -76,22 +76,22 @@ flowchart LR
 ```mermaid
 graph LR
     test["arceos-wait-queue"] --> ax-std["ax-std(multitask, irq)"]
-    ax-std --> arceos_api["arceos_api::task"]
-    arceos_api --> axtask["axtask::WaitQueue"]
+    ax-std --> ax-api["ax_api::task"]
+    ax-api --> axtask["axtask::WaitQueue"]
 ```
 
 ### 3.1 直接依赖
 - `ax-std(multitask, irq)`：说明本测试依赖多任务与基于中断的超时等待。
 
 ### 3.2 关键间接依赖
-- `arceos_api::task::AxWaitQueueHandle`
-- `arceos_api::task::ax_wait_queue_wait_until`
-- `arceos_api::task::ax_wait_queue_wake`
+- `ax_api::task::AxWaitQueueHandle`
+- `ax_api::task::ax_wait_queue_wait_until`
+- `ax_api::task::ax_wait_queue_wake`
 - `axtask::WaitQueue`
 
 ### 3.3 主要消费者
 - `cargo arceos test qemu` 自动发现的任务同步回归。
-- 修改 `axtask::wait_queue` 或 `arceos_api::task` 封装后的首批验证对象。
+- 修改 `axtask::wait_queue` 或 `ax_api::task` 封装后的首批验证对象。
 
 ## 4. 开发指南
 ### 4.1 推荐运行方式
@@ -137,7 +137,7 @@ cargo arceos test qemu --target riscv64gc-unknown-none-elf
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-它是 ArceOS 任务同步公开 API 的直接回归入口，重点验证 `arceos_api` 到 `axtask` 的等待队列桥接。
+它是 ArceOS 任务同步公开 API 的直接回归入口，重点验证 `ax-api` 到 `axtask` 的等待队列桥接。
 
 ### 6.2 StarryOS
 StarryOS 不直接运行它，但共享底层任务同步实现时，这类回归对发现基础语义回退依然有价值。

@@ -28,7 +28,7 @@
 ```mermaid
 flowchart LR
     A["Vec / BTreeMap / String"] --> B["ax-std(alloc)"]
-    B --> C["arceos_api / alloc glue"]
+    B --> C["ax-api / alloc glue"]
     C --> D["axalloc / 全局分配器"]
     D --> E["底层页分配与内存管理"]
 ```

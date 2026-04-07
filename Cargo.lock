@@ -348,29 +348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos_api"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axconfig",
- "axdisplay",
- "axdma",
- "axdriver",
- "axerrno",
- "axfeat",
- "axfs",
- "axhal",
- "axio",
- "axipi",
- "axlog",
- "axmm",
- "axnet",
- "axruntime",
- "axsync",
- "axtask",
-]
-
-[[package]]
 name = "arceos_posix_api"
 version = "0.5.0"
 dependencies = [
@@ -569,6 +546,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-api"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axconfig",
+ "axdisplay",
+ "axdma",
+ "axdriver",
+ "axerrno",
+ "axfeat",
+ "axfs",
+ "axhal",
+ "axio",
+ "axipi",
+ "axlog",
+ "axmm",
+ "axnet",
+ "axruntime",
+ "axsync",
+ "axtask",
+]
+
+[[package]]
 name = "ax-helloworld"
 version = "0.3.0"
 dependencies = [
@@ -626,7 +626,7 @@ dependencies = [
 name = "ax-std"
 version = "0.5.0"
 dependencies = [
- "arceos_api",
+ "ax-api",
  "axerrno",
  "axfeat",
  "axio",

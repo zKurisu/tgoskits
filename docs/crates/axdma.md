@@ -4,7 +4,7 @@
 > 类型：库 crate
 > 分层：ArceOS 层 / DMA 内存服务层
 > 版本：`0.3.0-preview.3`
-> 文档依据：`Cargo.toml`、`src/lib.rs`、`src/dma.rs`、`os/arceos/modules/axdriver/src/ixgbe.rs`、`os/arceos/modules/axdriver/src/drivers.rs`、`os/arceos/api/arceos_api/src/imp/mem.rs`、`platform/axplat-dyn/src/drivers/mod.rs`、`os/axvisor/src/driver/blk/mod.rs`
+> 文档依据：`Cargo.toml`、`src/lib.rs`、`src/dma.rs`、`os/arceos/modules/axdriver/src/ixgbe.rs`、`os/arceos/modules/axdriver/src/drivers.rs`、`os/arceos/api/ax-api/src/imp/mem.rs`、`platform/axplat-dyn/src/drivers/mod.rs`、`os/axvisor/src/driver/blk/mod.rs`
 
 `axdma` 不是驱动聚合层，也不是某类设备驱动。它的真实职责是为 ArceOS 内核提供一套全局一致的 DMA 一致性内存分配服务：从页分配器拿到内存、把页表属性改成 `UNCACHED`、给设备返回可用的总线地址，并在释放时尽可能恢复映射属性。它位于 `axalloc` / `axmm` / `axhal` 等内存基础设施之上，位于需要软件管理 DMA 缓冲的驱动之下。
 
@@ -97,7 +97,7 @@
 - 为 ArceOS API 层和部分驱动提供统一的 DMA 内存入口。
 
 ### 2.2 对上层 API 的关系
-`os/arceos/api/arceos_api/src/imp/mem.rs` 会在 `cfg_dma!` 下直接重导出：
+`os/arceos/api/ax-api/src/imp/mem.rs` 会在 `cfg_dma!` 下直接重导出：
 
 - `ax_alloc_coherent()`
 - `ax_dealloc_coherent()`
@@ -128,7 +128,7 @@
 
 ### 3.2 主要消费者
 - `os/arceos/modules/axdriver/src/ixgbe.rs`
-- `os/arceos/api/arceos_api/src/imp/mem.rs`
+- `os/arceos/api/ax-api/src/imp/mem.rs`
 
 ### 3.3 分层关系总结
 - 向下依赖内存分配和页表管理。
@@ -149,7 +149,7 @@
 1. 页级与字节级两条分配路径是否都正确设置 `UNCACHED`。
 2. `dealloc_coherent()` 是否和分配路径对称。
 3. `PHYS_BUS_OFFSET` 的平台假设是否仍成立。
-4. 直接使用者，例如 `ixgbe` 和 `arceos_api`，是否仍满足其地址与生命周期假设。
+4. 直接使用者，例如 `ixgbe` 和 `ax-api`，是否仍满足其地址与生命周期假设。
 
 ### 4.3 常见坑
 - 不要把 `axdma` 当成 IOMMU 管理器；它只做简单地址换算和一致性内存管理。
@@ -161,7 +161,7 @@
 当前主要验证路径包括：
 
 - `ixgbe` 驱动的 DMA 分配与回收。
-- `arceos_api` 的 `ax_alloc_coherent()` / `ax_dealloc_coherent()`。
+- `ax-api` 的 `ax_alloc_coherent()` / `ax_dealloc_coherent()`。
 - 小块分配和页级分配两条路径的正常工作。
 
 ### 5.2 建议补充的单元测试

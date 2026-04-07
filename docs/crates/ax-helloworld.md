@@ -38,7 +38,7 @@ graph LR
 - `ax-std`
 
 ### 3.2 间接本地依赖
-- `arceos_api`
+- `ax-api`
 - `arm_pl011`
 - `arm_pl031`
 - `axaddrspace`

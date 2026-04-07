@@ -4,9 +4,9 @@
 > 类型：库 crate
 > 分层：ArceOS 层 / ArceOS 内核模块
 > 版本：`0.3.0-preview.3`
-> 文档依据：`Cargo.toml`、`src/lib.rs`、`src/root.rs`、`src/partition.rs`、`src/dev.rs`、`src/fops.rs`、`src/fs/fatfs.rs`、`src/fs/ext4fs.rs`、`src/mounts.rs`、`os/arceos/modules/axruntime/src/lib.rs`、`os/arceos/api/arceos_api/src/imp/fs.rs`、`os/arceos/api/arceos_posix_api/src/imp/fs.rs`
+> 文档依据：`Cargo.toml`、`src/lib.rs`、`src/root.rs`、`src/partition.rs`、`src/dev.rs`、`src/fops.rs`、`src/fs/fatfs.rs`、`src/fs/ext4fs.rs`、`src/mounts.rs`、`os/arceos/modules/axruntime/src/lib.rs`、`os/arceos/api/ax-api/src/imp/fs.rs`、`os/arceos/api/arceos_posix_api/src/imp/fs.rs`
 
-`axfs` 是当前仓库中“旧文件系统栈”的系统装配器。它本身并不是一个具体文件系统实现，而是把块设备访问、分区扫描、FAT/ext4 适配、`ramfs`/`devfs` 以及根目录挂载树组合在一起，再向 ArceOS 运行时、`arceos_api` 和 `arceos_posix_api` 暴露一套统一的文件接口。
+`axfs` 是当前仓库中“旧文件系统栈”的系统装配器。它本身并不是一个具体文件系统实现，而是把块设备访问、分区扫描、FAT/ext4 适配、`ramfs`/`devfs` 以及根目录挂载树组合在一起，再向 ArceOS 运行时、`ax-api` 和 `arceos_posix_api` 暴露一套统一的文件接口。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -44,7 +44,7 @@ flowchart TD
     G --> H["挂载其余分区到 /boot 或 /<name>"]
     H --> I["构造 /proc 与 /sys 伪树"]
     I --> J["初始化 ROOT_DIR 与 CURRENT_DIR"]
-    J --> K["arceos_api / arceos_posix_api 对外复用"]
+    J --> K["ax-api / arceos_posix_api 对外复用"]
 ```
 
 几个实现细节尤其重要：
@@ -108,7 +108,7 @@ graph LR
     cap_access["cap_access"] --> current
 
     current --> axruntime["axruntime(fs)"]
-    current --> arceos_api["arceos_api"]
+    current --> ax-api["ax-api"]
     current --> arceos_posix_api["arceos_posix_api"]
 ```
 
@@ -121,7 +121,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axruntime`：在 `fs` feature 下初始化整个旧文件系统子系统。
-- `arceos_api`：把 `axfs::fops` 和 `axfs::api` 包装为更稳定的系统 API。
+- `ax-api`：把 `axfs::fops` 和 `axfs::api` 包装为更稳定的系统 API。
 - `arceos_posix_api`：当前仓库里的 POSIX 文件接口主要仍落在 `axfs` 上。
 
 ### 3.3 与相邻 crate 的关系
@@ -136,7 +136,7 @@ graph LR
 axfs = { workspace = true }
 ```
 
-对大多数 ArceOS 使用者来说，更常见的接入点其实是 `axfeat`、`axruntime`、`arceos_api` 或 `arceos_posix_api`，而不是直接把 `axfs` 当独立库调用。
+对大多数 ArceOS 使用者来说，更常见的接入点其实是 `axfeat`、`axruntime`、`ax-api` 或 `arceos_posix_api`，而不是直接把 `axfs` 当独立库调用。
 
 ### 4.2 改动约束
 1. 任何对 `init_filesystems()`、`parse_root_spec()`、`find_root_partition()` 的修改，都应被视为启动路径变更。
@@ -164,7 +164,7 @@ axfs = { workspace = true }
 - ext4 根盘启动。
 - 没有可识别文件系统时回退到 `ramfs`。
 - `/proc`、`/sys` 兼容节点能被上层正常读取。
-- `arceos_api` 与 `arceos_posix_api` 中的打开、读写、`stat`、`rename` 仍保持兼容。
+- `ax-api` 与 `arceos_posix_api` 中的打开、读写、`stat`、`rename` 仍保持兼容。
 
 ### 5.4 高风险回归点
 - 根目录挂载点存在包含关系时的路径解析。
@@ -174,7 +174,7 @@ axfs = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axfs` 仍是 ArceOS 旧 `fs` 路径的核心文件系统模块，并且当前 `arceos_api`、`arceos_posix_api` 仍直接建立在它之上。因此它在 ArceOS 中的定位依旧是“对外可见的旧文件系统栈入口”。
+`axfs` 仍是 ArceOS 旧 `fs` 路径的核心文件系统模块，并且当前 `ax-api`、`arceos_posix_api` 仍直接建立在它之上。因此它在 ArceOS 中的定位依旧是“对外可见的旧文件系统栈入口”。
 
 ### 6.2 StarryOS
 当前仓库里的 StarryOS 已转向 `axfs-ng`，并在 `Cargo.toml` 中把 `axfs-ng` 重命名为 `axfs` 使用；其 pseudofs 也建立在 `axfs-ng-vfs` 上，而不是继续复用旧 `axfs`。因此 `axfs` 对 StarryOS 来说更多是历史并行栈，而不是主干路径。
