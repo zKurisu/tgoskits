@@ -24,7 +24,7 @@ ax-feat = { version = "0.5.0" }
 
 axalloc = { version = "0.5.0" }
 axconfig = { version = "0.5.0" }
-axdisplay = { version = "0.5.0" }
+ax-display = { version = "0.5.0" }
 axdriver = { version = "0.5.0" }
 axfs = { version = "0.5.0", package = "axfs-ng" }
 axhal = { version = "0.5.0" }

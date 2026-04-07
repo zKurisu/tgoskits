@@ -483,7 +483,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdisplay"
+name = "ax-display"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ca7914beb880894bfcaa368f08790fe72346e00bbea3bff1e1d21d0aa56327f"
@@ -636,7 +636,7 @@ checksum = "58bc376f478b85111d8b9ba475040d1016708c35f15e634efbdf8f8495272bb2"
 dependencies = [
  "axalloc",
  "axbacktrace",
- "axdisplay",
+ "ax-display",
  "axdriver",
  "axfs",
  "axfs-ng",
@@ -1075,7 +1075,7 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
+ "ax-display",
  "axdriver",
  "axfs",
  "axfs-ng",
@@ -5524,7 +5524,7 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
+ "ax-display",
  "axdriver",
  "axerrno 0.2.2",
  "ax-feat",

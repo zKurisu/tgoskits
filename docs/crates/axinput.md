@@ -30,7 +30,7 @@
 4. `axinput` 循环 `take_one()`，把所有输入设备压入内部 `Vec`。
 5. StarryOS 等上层模块再调用 `take_inputs()` 取走整个设备列表。
 
-与 `axdisplay` 最大的区别在于：`axinput` 不只保留一个主设备，而是会收集容器中的所有输入设备。
+与 `ax-display` 最大的区别在于：`axinput` 不只保留一个主设备，而是会收集容器中的所有输入设备。
 
 ### 1.3 关键 API
 | API | 作用 |

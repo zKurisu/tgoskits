@@ -58,7 +58,7 @@
 | `axcpu` | 组件层 | `components/axcpu` | 6 | 14 | [查看](./axcpu.md) |
 | `axdevice` | 组件层 | `components/axdevice` | 8 | 2 | [查看](./axdevice.md) |
 | `axdevice_base` | 组件层 | `components/axdevice_base` | 3 | 8 | [查看](./axdevice_base.md) |
-| `axdisplay` | ArceOS 层 | `os/arceos/modules/axdisplay` | 3 | 4 | [查看](./axdisplay.md) |
+| `ax-display` | ArceOS 层 | `os/arceos/modules/axdisplay` | 3 | 4 | [查看](./ax-display.md) |
 | `axdma` | ArceOS 层 | `os/arceos/modules/axdma` | 7 | 2 | [查看](./axdma.md) |
 | `axdriver` | ArceOS 层 | `os/arceos/modules/axdriver` | 15 | 10 | [查看](./axdriver.md) |
 | `axdriver_base` | 组件层 | `components/axdriver_crates/axdriver_base` | 0 | 8 | [查看](./axdriver_base.md) |

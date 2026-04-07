@@ -240,7 +240,7 @@ CURATED_DOCS = {
     "axplat",
     "axplat-aarch64-bsta1000b",
     "axdevice",
-    "axdisplay",
+    "ax-display",
     "axdma",
     "axinput",
     "bwbench-client",

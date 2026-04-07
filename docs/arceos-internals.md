@@ -38,7 +38,7 @@ flowchart LR
     reusableCrates["ReusableCrates: components/*"]
     platformLayer["PlatformLayer: axplat-* + platform/*"]
     requiredModules["RequiredModules: ax-runtime axhal axconfig axlog"]
-    optionalModules["OptionalModules: axalloc axmm axtask axsync axdriver axfs axnet axdisplay"]
+    optionalModules["OptionalModules: axalloc axmm axtask axsync axdriver axfs axnet ax-display"]
     publicApi["PublicApi: ax-feat ax-api ax-posix-api"]
     userLib["UserLib: ax-std ax-libc"]
     appsAndTests["AppsAndTests: examples/* + test-suit/arceos/*"]
@@ -95,7 +95,7 @@ ArceOS 的基础骨架由四个必选模块组成：
 | `axfs-ng` | `fs-ng` | 下一代文件系统（FAT、ext4，带 LRU 缓存） |
 | `axnet` | `net` | 网络栈（基于 smoltcp） |
 | `ax-net-ng` | `net-ng` | 下一代网络栈（异步感知） |
-| `axdisplay` | `display` | 图形显示（帧缓冲） |
+| `ax-display` | `display` | 图形显示（帧缓冲） |
 | `axinput` | `input` | 输入设备管理 |
 | `axdma` | `dma` | DMA 内存分配与管理 |
 | `axipi` | `ipi` | 处理器间中断管理 |
@@ -126,7 +126,7 @@ flowchart TD
     runtimeGate["ax-runtime: 根据 feature 选择模块"]
     memPath["MemoryPath: alloc paging -> axalloc axmm"]
     taskPath["TaskPath: multitask sched-* -> axtask axsync"]
-    ioPath["IoPath: fs net display -> axdriver + axfs axnet axdisplay"]
+    ioPath["IoPath: fs net display -> axdriver + axfs axnet ax-display"]
     platformInit["PlatformInit: axhal init_early/init_later"]
     finalImage["FinalImage: 编译得到目标镜像"]
 
@@ -178,7 +178,7 @@ net = ["axdriver", "dep:axnet"]
 net-ng = ["axdriver", "dep:ax-net-ng"]
 vsock = ["dep:axnet", "dep:ax-net-ng"]
 # 显示与输入
-display = ["axdriver", "dep:axdisplay"]
+display = ["axdriver", "dep:ax-display"]
 input = ["axdriver", "dep:axinput"]
 ```
 
@@ -259,7 +259,7 @@ sequenceDiagram
 | `axmm` | `os/arceos/modules/axmm` | 地址空间、页表、映射后端 | `ax-runtime`、上层内存管理逻辑 |
 | `axtask` | `os/arceos/modules/axtask` | 调度器、任务创建、等待队列、定时器驱动的 sleep | `ax-runtime`、`axsync` |
 | `axsync` | `os/arceos/modules/axsync` | mutex 等同步原语 | `axtask`、任意并发模块 |
-| `axdriver` | `os/arceos/modules/axdriver` | 设备探测与驱动初始化 | `axfs`、`axnet`、`axdisplay` |
+| `axdriver` | `os/arceos/modules/axdriver` | 设备探测与驱动初始化 | `axfs`、`axnet`、`ax-display` |
 | `axfs` | `os/arceos/modules/axfs` | 文件系统挂载、文件/目录 API | `axdriver` |
 | `axnet` | `os/arceos/modules/axnet` | 网络栈、socket 抽象 | `axdriver` |
 | `axconfig` | `os/arceos/modules/axconfig` | 构建期常量与目标参数 | 所有模块 |

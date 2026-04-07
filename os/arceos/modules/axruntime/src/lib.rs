@@ -242,7 +242,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
         }
 
         #[cfg(feature = "display")]
-        axdisplay::init_display(all_devices.display);
+        ax_display::init_display(all_devices.display);
 
         #[cfg(feature = "input")]
         axinput::init_input(all_devices.input);

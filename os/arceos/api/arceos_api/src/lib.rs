@@ -392,12 +392,12 @@ pub mod io {
 /// You should prefer to use other APIs rather than these modules. The modules
 /// here should only be used if other APIs do not meet your requirements.
 pub mod modules {
+    #[cfg(feature = "display")]
+    pub use ax_display;
     pub use ax_runtime;
     #[cfg(feature = "alloc")]
     pub use axalloc;
     pub use axconfig;
-    #[cfg(feature = "display")]
-    pub use axdisplay;
     #[cfg(feature = "dma")]
     pub use axdma;
     #[cfg(any(feature = "fs", feature = "net", feature = "display"))]

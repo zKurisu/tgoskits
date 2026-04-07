@@ -34,7 +34,7 @@ graph LR
     current["ax-api"]
     current --> axalloc["axalloc"]
     current --> axconfig["axconfig"]
-    current --> axdisplay["axdisplay"]
+    current --> ax-display["ax-display"]
     current --> axdma["axdma"]
     current --> axdriver["axdriver"]
     current --> axerrno["axerrno"]
@@ -46,7 +46,7 @@ graph LR
 ### 3.1 直接与间接依赖
 - `axalloc`
 - `axconfig`
-- `axdisplay`
+- `ax-display`
 - `axdma`
 - `axdriver`
 - `axerrno`

@@ -76,7 +76,7 @@ graph LR
     lazyinit --> axipi["axipi"]
     lazyinit --> axfs["axfs / axfs-ng"]
     lazyinit --> axnet["axnet / ax-net-ng"]
-    lazyinit --> axdisplay["axdisplay"]
+    lazyinit --> ax-display["ax-display"]
     lazyinit --> axinput["axinput"]
     lazyinit --> axplat["多个 axplat 平台 crate"]
     lazyinit --> axvisor["axvisor"]
@@ -87,7 +87,7 @@ graph LR
 `lazyinit` 没有本地 crate 依赖，目的是保持在启动期也能轻量使用。
 
 ### 3.2 关键直接消费者
-- ArceOS 模块：`axtask`、`axmm`、`axipi`、`axfs`、`axnet`、`axdisplay`、`axinput` 等。
+- ArceOS 模块：`axtask`、`axmm`、`axipi`、`axfs`、`axnet`、`ax-display`、`axinput` 等。
 - 平台层：`axplat-x86-pc`、`axplat-aarch64-peripherals`、`axplat-riscv64-qemu-virt`、`axplat-loongarch64-qemu-virt`。
 - Axvisor：如 `vmm/timer.rs` 的 `TimerList`、DTB 缓存等。
 

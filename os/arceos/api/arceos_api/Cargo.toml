@@ -19,7 +19,7 @@ dma = ["dep:axdma", "ax-feat/dma"]
 multitask = ["axtask/multitask", "axsync/multitask", "ax-feat/multitask"]
 fs = ["dep:axfs", "dep:axdriver", "ax-feat/fs"]
 net = ["dep:axnet", "dep:axdriver", "ax-feat/net"]
-display = ["dep:axdisplay", "dep:axdriver", "ax-feat/display"]
+display = ["dep:ax-display", "dep:axdriver", "ax-feat/display"]
 
 
 # Use dummy functions if the feature is not enabled
@@ -28,7 +28,7 @@ dummy-if-not-enabled = []
 [dependencies]
 axalloc = { workspace = true, optional = true }
 axconfig.workspace = true
-axdisplay = { workspace = true, optional = true }
+ax-display = { workspace = true, optional = true }
 axdma = { workspace = true, optional = true }
 axdriver = { workspace = true, optional = true }
 axerrno.workspace = true

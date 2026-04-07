@@ -63,7 +63,7 @@ graph LR
 - `axconfig-gen`
 - `axconfig-macros`
 - `axcpu`
-- `axdisplay`
+- `ax-display`
 - 另外还有 `62` 个同类项未在此展开
 
 ### 3.3 被依赖情况

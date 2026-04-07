@@ -1,5 +1,5 @@
 [package]
-name = "axdisplay"
+name = "ax-display"
 version.workspace = true
 edition.workspace = true
 authors = ["Shiping Yuan <robert_yuan@pku.edu.com>"]

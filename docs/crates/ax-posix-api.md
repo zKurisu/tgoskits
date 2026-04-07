@@ -68,7 +68,7 @@ graph LR
 - `axconfig-gen`
 - `axconfig-macros`
 - `axcpu`
-- `axdisplay`
+- `ax-display`
 - `axdma`
 - `axdriver`
 - `axdriver_base`

@@ -25,7 +25,7 @@ tls = ["axhal/tls", "axtask?/tls"]
 plat-dyn = ["axdriver/dyn", "paging", "buddy-slab"]
 
 axdriver = ["dep:axdriver"]
-display = ["axdriver", "dep:axdisplay"]
+display = ["axdriver", "dep:ax-display"]
 fs = ["axdriver", "dep:axfs"]
 fs-ng = ["axdriver", "dep:axfs-ng"]
 input = ["axdriver", "dep:axinput"]
@@ -37,7 +37,7 @@ vsock = ["net-ng", "ax-net-ng/vsock"]
 axalloc = { workspace = true, optional = true }
 axbacktrace = { workspace = true }
 axconfig = { workspace = true }
-axdisplay = { workspace = true, optional = true }
+ax-display = { workspace = true, optional = true }
 axdriver = { workspace = true, optional = true }
 axfs = { workspace = true, optional = true }
 axfs-ng = { workspace = true, optional = true }

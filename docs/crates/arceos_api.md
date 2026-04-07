@@ -72,7 +72,7 @@
 - `task` -> `axtask`、`axsync`、`axhal::time`
 - `fs` -> `axfs`
 - `net` -> `axnet`
-- `display` -> `axdisplay`
+- `display` -> `ax-display`
 
 因此，`ax-api` 本身是薄的，但它承担了“把一组分散模块整理成统一上层接口”的体系化职责。
 
@@ -116,7 +116,7 @@ graph LR
     axtask["axtask"] --> ax-api
     axfs["axfs"] --> ax-api
     axnet["axnet"] --> ax-api
-    axdisplay["axdisplay"] --> ax-api
+    ax-display["ax-display"] --> ax-api
 
     ax-api --> ax-std["ax-std"]
     ax-api --> ax-libc["ax-libc (间接经更高层)"]
@@ -125,7 +125,7 @@ graph LR
 
 ### 3.1 关键直接依赖
 - 核心基础：`axconfig`、`axerrno`、`ax-feat`、`axhal`、`axio`、`axlog`、`ax-runtime`、`axsync`。
-- 可选能力：`axalloc`、`axdma`、`axtask`、`axfs`、`axnet`、`axdisplay`、`axdriver`、`axipi`、`axmm`。
+- 可选能力：`axalloc`、`axdma`、`axtask`、`axfs`、`axnet`、`ax-display`、`axdriver`、`axipi`、`axmm`。
 
 ### 3.2 关键直接消费者
 - `ax-std`：最重要的直接消费者，会把 `ax-api` 作为用户库的重要下层能力来源。

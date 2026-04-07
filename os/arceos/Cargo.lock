@@ -231,7 +231,7 @@ version = "0.5.0"
 dependencies = [
  "axalloc",
  "axconfig",
- "axdisplay",
+ "ax-display",
  "axdma",
  "axdriver",
  "axerrno",
@@ -467,7 +467,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdisplay"
+name = "ax-display"
 version = "0.5.0"
 dependencies = [
  "axdriver",
@@ -610,7 +610,7 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
+ "ax-display",
  "axdriver",
  "axfs",
  "axfs-ng",
@@ -1050,7 +1050,7 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
+ "ax-display",
  "axdriver",
  "axfs",
  "axfs-ng",

@@ -82,7 +82,7 @@ display = [
     "alloc",
     "paging",
     "axdriver/virtio-gpu",
-    "dep:axdisplay",
+    "dep:ax-display",
     "ax-runtime/display",
 ]
 
@@ -115,7 +115,7 @@ dwarf = ["alloc", "axbacktrace/dwarf"]
 axalloc = { workspace = true, optional = true }
 axbacktrace.workspace = true
 axconfig = { workspace = true, optional = true }
-axdisplay = { workspace = true, optional = true }
+ax-display = { workspace = true, optional = true }
 axdriver = { workspace = true, optional = true }
 axfs = { workspace = true, optional = true }
 axfs-ng = { workspace = true, optional = true }

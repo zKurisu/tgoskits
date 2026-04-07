@@ -40,7 +40,7 @@ starry-vm
 timer_list
 axalloc
 axconfig
-axdisplay
+ax-display
 axdriver
 axhal
 axsync

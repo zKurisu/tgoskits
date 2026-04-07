@@ -526,11 +526,11 @@ dependencies = [
 name = "ax-api"
 version = "0.5.0"
 dependencies = [
+ "ax-display",
  "ax-feat",
  "ax-runtime",
  "axalloc",
  "axconfig",
- "axdisplay",
  "axdma",
  "axdriver",
  "axerrno",
@@ -546,14 +546,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-display"
+version = "0.5.0"
+dependencies = [
+ "axdriver",
+ "axsync",
+ "lazyinit 0.4.2",
+ "log",
+]
+
+[[package]]
 name = "ax-feat"
 version = "0.5.0"
 dependencies = [
+ "ax-display",
  "ax-runtime",
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
  "axdriver",
  "axfs",
  "axfs-ng",
@@ -669,11 +679,11 @@ dependencies = [
 name = "ax-runtime"
 version = "0.5.0"
 dependencies = [
+ "ax-display",
  "ax-net-ng",
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
  "axdriver",
  "axfs",
  "axfs-ng",
@@ -950,16 +960,6 @@ dependencies = [
  "axerrno",
  "axvmconfig",
  "serde",
-]
-
-[[package]]
-name = "axdisplay"
-version = "0.5.0"
-dependencies = [
- "axdriver",
- "axsync",
- "lazyinit 0.4.2",
- "log",
 ]
 
 [[package]]
@@ -7414,13 +7414,13 @@ dependencies = [
 name = "starry-kernel"
 version = "0.5.0"
 dependencies = [
+ "ax-display",
  "ax-feat",
  "ax-net-ng",
  "ax-runtime",
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axdisplay",
  "axdriver",
  "axerrno",
  "axfs-ng",
