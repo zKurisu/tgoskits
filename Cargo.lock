@@ -262,21 +262,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos-helloworld-myplat"
-version = "0.3.0"
-dependencies = [
- "axplat-aarch64-bsta1000b",
- "axplat-aarch64-phytium-pi",
- "axplat-aarch64-qemu-virt",
- "axplat-aarch64-raspi",
- "axplat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt 0.5.1",
- "axplat-x86-pc",
- "axstd",
- "cfg-if",
-]
-
-[[package]]
 name = "arceos-httpclient"
 version = "0.3.0"
 dependencies = [
@@ -609,6 +594,21 @@ name = "ax-helloworld"
 version = "0.3.0"
 dependencies = [
  "axstd",
+]
+
+[[package]]
+name = "ax-helloworld-myplat"
+version = "0.3.0"
+dependencies = [
+ "axplat-aarch64-bsta1000b",
+ "axplat-aarch64-phytium-pi",
+ "axplat-aarch64-qemu-virt",
+ "axplat-aarch64-raspi",
+ "axplat-loongarch64-qemu-virt",
+ "axplat-riscv64-qemu-virt 0.5.1",
+ "axplat-x86-pc",
+ "axstd",
+ "cfg-if",
 ]
 
 [[package]]
