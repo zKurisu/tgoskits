@@ -22,12 +22,12 @@
 //! # Examples
 //!
 //! ```
-//! use ax-log::{debug, error, info, trace, warn};
+//! use ax_log::{debug, error, info, trace, warn};
 //!
 //! // Initialize the logger.
-//! ax-log::init();
+//! ax_log::init();
 //! // Set the maximum log level to `info`.
-//! ax-log::set_max_level("info");
+//! ax_log::set_max_level("info");
 //!
 //! // The following logs will be printed.
 //! error!("error");

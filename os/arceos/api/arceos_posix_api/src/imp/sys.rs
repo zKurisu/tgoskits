@@ -22,7 +22,7 @@ pub fn sys_sysconf(name: c_int) -> c_long {
             ctypes::_SC_AVPHYS_PAGES => {
                 #[cfg(feature = "alloc")]
                 {
-                    Ok(ax-alloc::global_allocator().available_pages())
+                    Ok(ax_alloc::global_allocator().available_pages())
                 }
                 #[cfg(not(feature = "alloc"))]
                 {

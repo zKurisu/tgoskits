@@ -704,12 +704,12 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "ax-cpu",
+ "ax-plat",
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-loongarch64-qemu-virt",
  "ax-plat-riscv64-qemu-virt 0.5.1",
  "ax-plat-x86-pc",
  "axconfig",
- "axplat 0.5.1",
  "axplat-dyn",
  "cfg-if",
  "fdt-parser",
@@ -865,13 +865,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-plat"
+version = "0.5.1"
+dependencies = [
+ "axplat-macros 0.3.0",
+ "bitflags 2.11.0",
+ "const-str",
+ "crate_interface 0.5.0",
+ "handler_table 0.3.2",
+ "kspin 0.3.1",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
+]
+
+[[package]]
 name = "ax-plat-aarch64-bsta1000b"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "ax-plat-aarch64-peripherals",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "dw_apb_uart",
  "kspin 0.3.1",
  "log",
@@ -887,7 +901,7 @@ dependencies = [
  "arm_pl011 0.3.0",
  "arm_pl031",
  "ax-cpu",
- "axplat 0.5.1",
+ "ax-plat",
  "int_ratio",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
@@ -900,9 +914,9 @@ name = "ax-plat-aarch64-phytium-pi"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "ax-plat-aarch64-peripherals",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -912,9 +926,9 @@ name = "ax-plat-aarch64-qemu-virt"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "ax-plat-aarch64-peripherals",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -925,9 +939,9 @@ version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "ax-cpu",
+ "ax-plat",
  "ax-plat-aarch64-peripherals",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -937,8 +951,8 @@ name = "ax-plat-loongarch64-qemu-virt"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "chrono",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
@@ -953,8 +967,8 @@ name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.0"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "axvisor_api",
  "crate_interface 0.5.0",
  "kspin 0.3.1",
@@ -972,8 +986,8 @@ name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
  "log",
@@ -989,8 +1003,8 @@ name = "ax-plat-x86-pc"
 version = "0.5.1"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",
@@ -1046,11 +1060,11 @@ dependencies = [
  "ax-mm",
  "ax-net",
  "ax-net-ng",
+ "ax-plat",
  "ax-task",
  "axbacktrace",
  "axconfig",
  "axklib",
- "axplat 0.5.1",
  "cfg-if",
  "chrono",
  "crate_interface 0.5.0",
@@ -1501,33 +1515,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat"
-version = "0.5.1"
-dependencies = [
- "axplat-macros 0.3.0",
- "bitflags 2.11.0",
- "const-str",
- "crate_interface 0.5.0",
- "handler_table 0.3.2",
- "kspin 0.3.1",
- "memory_addr 0.6.1",
- "percpu 0.4.3",
-]
-
-[[package]]
 name = "axplat-dyn"
 version = "0.5.0"
 dependencies = [
  "anyhow",
  "ax-alloc",
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
  "axdriver_base",
  "axdriver_block",
  "axdriver_virtio",
  "axerrno",
  "axklib",
- "axplat 0.5.1",
  "dma-api 0.7.1",
  "fdt-edit",
  "heapless 0.9.2",
@@ -1568,7 +1568,7 @@ checksum = "662ba689afa1972ce4addf32f7873c0aa7bc4ca11be17b69977f677805a2d356"
 dependencies = [
  "axconfig-macros 0.2.1",
  "axcpu",
- "axplat 0.3.1-pre.6",
+ "axplat",
  "kspin 0.1.1",
  "lazyinit 0.2.2",
  "log",
@@ -1584,8 +1584,8 @@ name = "axplat-x86-qemu-q35"
 version = "0.4.0"
 dependencies = [
  "ax-cpu",
+ "ax-plat",
  "axconfig-macros 0.4.1",
- "axplat 0.5.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",

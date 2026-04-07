@@ -1,6 +1,6 @@
 # `ax-plat-aarch64-phytium-pi` 技术文档
 
-> 路径：`components/axplat_crates/platforms/ax-plat-aarch64-phytium-pi`
+> 路径：`components/axplat_crates/platforms/axplat-aarch64-phytium-pi`
 > 类型：库 crate
 > 分层：组件层 / AArch64 板级平台包
 > 版本：`0.3.1-pre.6`
@@ -50,7 +50,7 @@ flowchart TD
     E --> F[enable_fp / init_boot_page_table / ax-cpu::init::init_mmu]
     F --> G[栈切到高半区]
     G --> H[hart_to_logid]
-    H --> I[axplat::call_main logical_cpu_id dtb]
+    H --> I[ax_plat::call_main logical_cpu_id dtb]
 ```
 
 这里最关键的板级逻辑是 `hart_to_logid()`：
@@ -72,7 +72,7 @@ flowchart TD
 
 几个尤其重要的边界如下：
 
-- `boot.rs` 会把 DTB 指针继续传给 `axplat::call_main()`，但本 crate 自己不解析 DTB；地址和 IRQ 仍由 `axconfig.toml` 固化。
+- `boot.rs` 会把 DTB 指针继续传给 `ax_plat::call_main()`，但本 crate 自己不解析 DTB；地址和 IRQ 仍由 `axconfig.toml` 固化。
 - `mem.rs` 会把 PCIe ECAM、32-bit MMIO、GPIO、I2C 等窗口公开给上层，但不会在本层完成总线扫描。
 - `power.rs` 的 `cpu_boot()`、`system_off()` 都走 PSCI；它不提供飞腾派专有电源管理协议。
 
@@ -86,7 +86,7 @@ flowchart TD
 
 但是实现上要区分“描述存在”和“功能落地”：
 
-- `mem.rs` 只负责把这些窗口返回给 `axplat::mem`。
+- `mem.rs` 只负责把这些窗口返回给 `ax_plat::mem`。
 - `init.rs` 只真正初始化了 PL011、Generic Timer、PSCI 和可选 GIC。
 - PCIe、GPIO、I2C 仍需要上层驱动或总线框架去消费。
 
@@ -209,7 +209,7 @@ extern crate axplat_aarch64_phytium_pi;
 
 ### 5.2 推荐测试矩阵
 
-- 启动冒烟：验证 `_start -> axplat::call_main()` 能贯通。
+- 启动冒烟：验证 `_start -> ax_plat::call_main()` 能贯通。
 - 控制台验证：确认 PL011 在早期初始化后可立即打印。
 - IRQ 验证：启用 `irq` 后验证 GIC 初始化和 timer IRQ。
 - SMP 验证：启用 `smp` 后验证 `cpu_boot()` 和逻辑 CPU ID 映射。

@@ -8,10 +8,7 @@ use std::{
 use crate::{WaitQueue, api as ax_task, current};
 
 type TestResult = Result<(), Box<dyn core::any::Any + Send>>;
-type TestJob = (
-    Box<dyn FnOnce() + Send + 'static>,
-    mpsc::Sender<TestResult>,
-);
+type TestJob = (Box<dyn FnOnce() + Send + 'static>, mpsc::Sender<TestResult>);
 
 static TEST_WORKER: OnceLock<mpsc::Sender<TestJob>> = OnceLock::new();
 

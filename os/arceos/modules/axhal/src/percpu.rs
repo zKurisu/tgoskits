@@ -1,6 +1,6 @@
 //! CPU-local data structures.
 
-pub use axplat::percpu::*;
+pub use ax_plat::percpu::*;
 
 #[percpu::def_percpu]
 static CURRENT_TASK_PTR: usize = 0;

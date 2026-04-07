@@ -4,7 +4,7 @@ use core::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
-use axplat::{
+use ax_plat::{
     irq::{HandlerTable, IpiTarget, IrqHandler, IrqIf},
     percpu::this_cpu_id,
 };

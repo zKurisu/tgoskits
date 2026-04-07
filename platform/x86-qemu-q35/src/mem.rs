@@ -14,7 +14,7 @@
 
 //! Physical memory information.
 
-use axplat::mem::{MemIf, PhysAddr, RawRange, VirtAddr, pa, va};
+use ax_plat::mem::{MemIf, PhysAddr, RawRange, VirtAddr, pa, va};
 use heapless::Vec;
 use lazyinit::LazyInit;
 use multiboot::information::{MemoryManagement, MemoryType, Multiboot, PAddr};

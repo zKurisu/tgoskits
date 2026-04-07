@@ -1,4 +1,4 @@
-# `axplat` 技术文档
+# `ax-plat` 技术文档
 
 > 路径：`components/axplat_crates/axplat`
 > 类型：库 crate
@@ -6,20 +6,20 @@
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml` 与 `components/axplat_crates/axplat/README.md`
 
-`axplat` 不是某个具体板级平台的驱动集合，而是 ArceOS 平台层对上层内核暴露的统一契约包。它把“平台初始化、物理内存描述、控制台、时间、中断、电源、每核上下文”等能力拆成稳定接口；具体 `axplat-*` 平台包通过 `crate_interface` 机制填充实现，内核只面向 `axplat` 编程，而不直接依赖某个 UART、GIC、APIC 或 PSCI/SBI 实现。
+`ax-plat` 不是某个具体板级平台的驱动集合，而是 ArceOS 平台层对上层内核暴露的统一契约包。它把“平台初始化、物理内存描述、控制台、时间、中断、电源、每核上下文”等能力拆成稳定接口；具体 `ax-plat-*` 平台包通过 `crate_interface` 机制填充实现，内核只面向 `ax-plat` 编程，而不直接依赖某个 UART、GIC、APIC 或 PSCI/SBI 实现。
 
 ## 1. 架构设计分析
 
 ### 1.1 设计目标
 
-`axplat` 的核心目标是把“平台相关代码”从“内核主体逻辑”中剥离出来，并提供一组足够小、但覆盖启动期关键路径的接口：
+`ax-plat` 的核心目标是把“平台相关代码”从“内核主体逻辑”中剥离出来，并提供一组足够小、但覆盖启动期关键路径的接口：
 
-- 启动期：把平台引导代码与内核入口解耦，统一收敛到 `axplat::call_main()` 与 `#[axplat::main]`。
+- 启动期：把平台引导代码与内核入口解耦，统一收敛到 `ax_plat::call_main()` 与 `#[ax_plat::main]`。
 - 运行期：让时钟、串口、中断、电源管理等能力通过统一 trait 访问。
-- 构建期：让同一套内核代码可以通过切换 `axplat-*` 平台包复用到 QEMU、物理板卡和教学实验平台。
+- 构建期：让同一套内核代码可以通过切换 `ax-plat-*` 平台包复用到 QEMU、物理板卡和教学实验平台。
 - 演进期：通过 trait 边界保持上层稳定，使新增平台主要表现为“实现接口”而非“修改内核”。
 
-这意味着 `axplat` 本身几乎不直接操作硬件寄存器；它真正提供的是“稳定调用面”和“平台实现接入框架”。
+这意味着 `ax-plat` 本身几乎不直接操作硬件寄存器；它真正提供的是“稳定调用面”和“平台实现接入框架”。
 
 ### 1.2 模块划分
 
@@ -36,7 +36,7 @@
 
 这种划分有两个明显特点：
 
-- `axplat` 把真正“必须跨平台统一”的部分收敛到几个小 trait，不试图抽象完整驱动栈。
+- `ax-plat` 把真正“必须跨平台统一”的部分收敛到几个小 trait，不试图抽象完整驱动栈。
 - `percpu`、`mem` 中包含少量公共算法与状态容器，因此它不只是接口定义包，也承担平台层公共工具箱的职责。
 
 ### 1.3 关键数据结构与接口契约
@@ -89,11 +89,11 @@
 
 ### 1.4 核心机制：接口定义、宏导出与动态分发
 
-`axplat` 的关键机制不是 Rust trait 对象，而是 `crate_interface` 生成的“接口调用面”：
+`ax-plat` 的关键机制不是 Rust trait 对象，而是 `crate_interface` 生成的“接口调用面”：
 
 1. 各模块用 `#[def_plat_interface]` 定义平台 trait。
 2. 具体平台包用 `#[impl_plat_interface]` 为本地零大小类型实现该 trait。
-3. 上层调用 `axplat::init::init_early()`、`axplat::time::current_ticks()` 这类函数时，实际会被 `crate_interface` 路由到具体平台实现。
+3. 上层调用 `ax_plat::init::init_early()`、`ax_plat::time::current_ticks()` 这类函数时，实际会被 `crate_interface` 路由到具体平台实现。
 
 这套设计的优势是：
 
@@ -101,24 +101,24 @@
 - 不引入堆分配、trait object 或运行时注册表。
 - 平台包可以在链接期静态接入，符合 `no_std` 启动期约束。
 
-`lib.rs` 中的 `call_main()` / `call_secondary_main()` 则把 boot stub 与内核主函数连接起来。平台包在完成最低限度的汇编或 Rust 引导后，跳入这两个函数；真正的内核主函数通过 `#[axplat::main]` 或 `#[axplat::secondary_main]` 标注，由 `axplat-macros` 生成固定符号导出。
+`lib.rs` 中的 `call_main()` / `call_secondary_main()` 则把 boot stub 与内核主函数连接起来。平台包在完成最低限度的汇编或 Rust 引导后，跳入这两个函数；真正的内核主函数通过 `#[ax_plat::main]` 或 `#[ax_plat::secondary_main]` 标注，由 `axplat-macros` 生成固定符号导出。
 
 ```mermaid
 flowchart TD
     A[平台包启动汇编或 Rust 入口] --> B[建立最小执行环境]
-    B --> C[axplat::call_main 或 call_secondary_main]
-    C --> D[#[axplat::main] / #[axplat::secondary_main] 导出的内核入口]
-    D --> E[axplat::init::init_early]
+    B --> C[ax_plat::call_main 或 call_secondary_main]
+    C --> D[#[ax_plat::main] / #[ax_plat::secondary_main] 导出的内核入口]
+    D --> E[ax_plat::init::init_early]
     E --> F[内核自身初始化]
-    F --> G[axplat::init::init_later]
-    G --> H[通过 axplat::console/time/mem/irq/power 持续访问平台能力]
+    F --> G[ax_plat::init::init_later]
+    G --> H[通过 ax_plat::console/time/mem/irq/power 持续访问平台能力]
 ```
 
 ### 1.5 辅助设计与边界
 
-`assert_str_eq!` 是 `axplat` 很容易被忽视但非常关键的编译期防错机制。平台包常用它校验 `axconfig` 中的 `PACKAGE` 字符串必须等于 crate 名，从而避免“配置文件写错，但仍勉强编译通过”的错误组合。
+`assert_str_eq!` 是 `ax-plat` 很容易被忽视但非常关键的编译期防错机制。平台包常用它校验 `axconfig` 中的 `PACKAGE` 字符串必须等于 crate 名，从而避免“配置文件写错，但仍勉强编译通过”的错误组合。
 
-同时，`axplat` 也明确保持边界克制：
+同时，`ax-plat` 也明确保持边界克制：
 
 - 不定义完整设备驱动模型。
 - 不承担内核页表策略、调度器、线程管理等高层职责。
@@ -130,7 +130,7 @@ flowchart TD
 
 ### 2.1 主要功能
 
-- 统一导出内核入口装饰器：`#[axplat::main]` 与 `#[axplat::secondary_main]`。
+- 统一导出内核入口装饰器：`#[ax_plat::main]` 与 `#[ax_plat::secondary_main]`。
 - 提供平台初始化阶段划分：早期、后期、主核、次核。
 - 提供跨平台控制台输出和最小输入能力。
 - 提供单调时间、墙钟、忙等与定时器接口。
@@ -141,33 +141,33 @@ flowchart TD
 
 ### 2.2 典型 API 使用方式
 
-对于内核作者，`axplat` 的使用方式是“只写统一接口，不碰具体平台类型”：
+对于内核作者，`ax-plat` 的使用方式是“只写统一接口，不碰具体平台类型”：
 
 ```rust
-#[axplat::main]
+#[ax_plat::main]
 fn kernel_main(cpu_id: usize, arg: usize) -> ! {
-    axplat::percpu::init_primary(cpu_id);
-    axplat::init::init_early(cpu_id, arg);
-    axplat::console_println!("hello from cpu {}", cpu_id);
-    axplat::init::init_later(cpu_id, arg);
+    ax_plat::percpu::init_primary(cpu_id);
+    ax_plat::init::init_early(cpu_id, arg);
+    ax_plat::console_println!("hello from cpu {}", cpu_id);
+    ax_plat::init::init_later(cpu_id, arg);
 
-    let now = axplat::time::monotonic_time_nanos();
-    let ram = axplat::mem::total_ram_size();
-    axplat::console_println!("time={}ns ram={} bytes", now, ram);
+    let now = ax_plat::time::monotonic_time_nanos();
+    let ram = ax_plat::mem::total_ram_size();
+    ax_plat::console_println!("time={}ns ram={} bytes", now, ram);
 
-    axplat::power::system_off();
+    ax_plat::power::system_off();
 }
 ```
 
 对于平台实现者，关键是提供各 trait 的实现，而不是改动内核：
 
 ```rust
-use axplat::impl_plat_interface;
+use ax_plat::impl_plat_interface;
 
 struct InitIfImpl;
 
 #[impl_plat_interface]
-impl axplat::init::InitIf for InitIfImpl {
+impl ax_plat::init::InitIf for InitIfImpl {
     fn init_early(cpu_id: usize, arg: usize) { /* ... */ }
     fn init_later(cpu_id: usize, arg: usize) { /* ... */ }
 }
@@ -197,37 +197,37 @@ impl axplat::init::InitIf for InitIfImpl {
 ### 3.2 被谁依赖
 
 - 所有具体平台包：如 `ax-plat-aarch64-qemu-virt`、`ax-plat-x86-pc`、`ax-plat-riscv64-qemu-virt`。
-- `ax-hal`：通过选择某个 `axplat-*` 平台包把平台实现纳入构建。
-- `components/axplat_crates/examples/*`：示例内核直接使用 `axplat` 接口与平台包。
-- 上层 ArceOS/StarryOS/Axvisor 宿主侧内核：通常通过 `ax-hal` 间接消费，而不是直接依赖 `axplat`。
+- `ax-hal`：通过选择某个 `ax-plat-*` 平台包把平台实现纳入构建。
+- `components/axplat_crates/examples/*`：示例内核直接使用 `ax-plat` 接口与平台包。
+- 上层 ArceOS/StarryOS/Axvisor 宿主侧内核：通常通过 `ax-hal` 间接消费，而不是直接依赖 `ax-plat`。
 
 ### 3.3 依赖关系示意
 
 ```mermaid
 graph TD
-    A[axplat-macros] --> B[axplat]
+    A[axplat-macros] --> B[ax-plat]
     C[crate_interface] --> B
     D[memory_addr] --> B
     E[kspin / percpu / bitflags] --> B
 
-    B --> F[axplat-* 平台包]
+    B --> F[ax-plat-* 平台包]
     F --> G[ax-hal]
     G --> H[ArceOS]
     G --> I[StarryOS]
     G --> J[Axvisor 宿主侧基础环境]
 ```
 
-需要注意，`axplat` 的“被依赖关系”更多体现为“抽象层被实现并向上传递”，而不是传统意义上直接暴露大量业务 API。
+需要注意，`ax-plat` 的“被依赖关系”更多体现为“抽象层被实现并向上传递”，而不是传统意义上直接暴露大量业务 API。
 
 ## 4. 开发指南
 
-### 4.1 为新平台实现 `axplat`
+### 4.1 为新平台实现 `ax-plat`
 
-1. 新建一个 `axplat-*` 平台 crate，并静态链接到内核镜像。
+1. 新建一个 `ax-plat-*` 平台 crate，并静态链接到内核镜像。
 2. 在平台 crate 中实现 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf`，如有中断则实现 `IrqIf`。
 3. 使用 `#[impl_plat_interface]` 挂接每个实现。
-4. 编写板级启动代码，在建立最小页表、栈、异常上下文后调用 `axplat::call_main()`。
-5. 若支持 SMP，则为次核入口调用 `axplat::call_secondary_main()`，并在 `percpu` 中完成次核注册。
+4. 编写板级启动代码，在建立最小页表、栈、异常上下文后调用 `ax_plat::call_main()`。
+5. 若支持 SMP，则为次核入口调用 `ax_plat::call_secondary_main()`，并在 `percpu` 中完成次核注册。
 6. 用 `assert_str_eq!` 校验平台包名与配置名一致，避免 `axconfig` 与 crate 错绑。
 
 ### 4.2 在内核中使用
@@ -236,13 +236,13 @@ graph TD
 
 ```toml
 [dependencies]
-axplat = { workspace = true, features = ["irq", "smp"] }
+ax-plat = { workspace = true, features = ["irq", "smp"] }
 ```
 
 构建时由上层选择合适的平台包，例如：
 
 ```bash
-cargo build -p axplat --all-features
+cargo build -p ax-plat --all-features
 ```
 
 真正的整机验证一般在平台包或 `ax-hal` 所在工程中完成，例如为某个内核选择 `aarch64-qemu-virt`、`x86-pc` 等目标平台。
@@ -258,9 +258,9 @@ cargo build -p axplat --all-features
 
 ### 5.1 当前源码中的可验证点
 
-- `mem` 模块已经包含区间重叠检测与差集算法的单元测试，是 `axplat` 当前最稳定、最适合主机侧验证的部分。
+- `mem` 模块已经包含区间重叠检测与差集算法的单元测试，是 `ax-plat` 当前最稳定、最适合主机侧验证的部分。
 - `docs.rs` 配置为 `all-features = true`，意味着文档构建默认覆盖 `irq`/`smp` 等接口可见性。
-- 真实的平台契约验证主要依赖各 `axplat-*` 平台包及示例内核的交叉构建与启动冒烟。
+- 真实的平台契约验证主要依赖各 `ax-plat-*` 平台包及示例内核的交叉构建与启动冒烟。
 
 ### 5.2 建议的测试分层
 
@@ -271,7 +271,7 @@ cargo build -p axplat --all-features
 
 ### 5.3 重点关注的风险
 
-- 接口签名变更会影响所有 `axplat-*` 平台包，属于高传播面修改。
+- 接口签名变更会影响所有 `ax-plat-*` 平台包，属于高传播面修改。
 - `irq` 和 `smp` feature 的不一致传播容易造成“接口存在但实现未编译”或“实现存在但上层未启用”的构建问题。
 - 若平台包错误实现 `phys_to_virt()`/`virt_to_phys()`，上层内存管理和设备映射会出现隐蔽错误。
 
@@ -279,10 +279,10 @@ cargo build -p axplat --all-features
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | 平台抽象基座 | `ax-hal` 下层的统一硬件契约 | 把具体板级差异隔离在 `axplat-*` 中，使 ArceOS 模块围绕统一接口开发 |
-| StarryOS | 通过 ArceOS 组件间接使用 | 宿主平台抽象层 | StarryOS 通常不直接依赖 `axplat`，而是复用 `ax-hal`/ArceOS 平台基础设施 |
-| Axvisor | 宿主环境侧的板级抽象基础 | 宿主 bring-up 支撑层 | Axvisor 的虚拟化核心不在 `axplat` 中，但 hypervisor 若运行在 ArceOS/ax-hal 栈之上，底层平台启动与控制台/时间/中断仍依赖 `axplat` 系列实现 |
+| ArceOS | 平台抽象基座 | `ax-hal` 下层的统一硬件契约 | 把具体板级差异隔离在 `ax-plat-*` 中，使 ArceOS 模块围绕统一接口开发 |
+| StarryOS | 通过 ArceOS 组件间接使用 | 宿主平台抽象层 | StarryOS 通常不直接依赖 `ax-plat`，而是复用 `ax-hal`/ArceOS 平台基础设施 |
+| Axvisor | 宿主环境侧的板级抽象基础 | 宿主 bring-up 支撑层 | Axvisor 的虚拟化核心不在 `ax-plat` 中，但 hypervisor 若运行在 ArceOS/ax-hal 栈之上，底层平台启动与控制台/时间/中断仍依赖 `ax-plat` 系列实现 |
 
 ## 7. 总结
 
-`axplat` 的价值不在“直接驱动了多少硬件”，而在它把平台依赖压缩成一套足够小且稳定的契约面：上层只看统一接口，平台侧只管实现接口，二者通过静态宏和链接期绑定组合在一起。对 ArceOS 生态而言，它是从“单个平台内核”走向“多平台复用内核”的关键分层；对后续平台扩展、示例内核维护以及 Axvisor/StarryOS 的宿主环境复用，都具有基础设施级意义。
+`ax-plat` 的价值不在“直接驱动了多少硬件”，而在它把平台依赖压缩成一套足够小且稳定的契约面：上层只看统一接口，平台侧只管实现接口，二者通过静态宏和链接期绑定组合在一起。对 ArceOS 生态而言，它是从“单个平台内核”走向“多平台复用内核”的关键分层；对后续平台扩展、示例内核维护以及 Axvisor/StarryOS 的宿主环境复用，都具有基础设施级意义。

@@ -34,7 +34,7 @@
 #![allow(missing_abi)]
 
 #[macro_use]
-extern crate ax-log;
+extern crate ax_log;
 
 #[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
@@ -67,7 +67,7 @@ unsafe extern "C" {
 struct LogIfImpl;
 
 #[crate_interface::impl_interface]
-impl ax-log::LogIf for LogIfImpl {
+impl ax_log::LogIf for LogIfImpl {
     fn console_write_str(s: &str) {
         ax_hal::console::write_bytes(s.as_bytes());
     }
@@ -113,14 +113,14 @@ fn is_init_ok() -> bool {
 /// The main entry point of the ArceOS runtime.
 ///
 /// It is called from the bootstrapping code in the specific platform crate (see
-/// [`axplat::main`]).
+/// [`ax_plat::main`]).
 ///
 /// `cpu_id` is the logic ID of the current CPU, and `arg` is passed from the
 /// bootloader (typically the device tree blob address).
 ///
 /// In multi-core environment, this function is called on the primary core, and
 /// secondary cores call [`rust_main_secondary`].
-#[cfg_attr(not(test), axplat::main)]
+#[cfg_attr(not(test), ax_plat::main)]
 pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
     #[cfg(not(feature = "plat-dyn"))]
     unsafe {
@@ -156,8 +156,8 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
         chrono::DateTime::from_timestamp_nanos(ax_hal::time::wall_time_nanos() as _),
     );
 
-    ax-log::init();
-    ax-log::set_max_level(log_level); // no effect if set `log-level-*` features
+    ax_log::init();
+    ax_log::set_max_level(log_level); // no effect if set `log-level-*` features
     info!("Logging is enabled.");
     info!("Primary CPU {cpu_id} started, arg = {arg:#x}.");
 
@@ -288,7 +288,7 @@ fn init_allocator() {
     use ax_hal::mem::{MemRegionFlags, memory_regions, phys_to_virt};
 
     info!("Initialize global memory allocator...");
-    info!("  use {} allocator.", ax-alloc::global_allocator().name());
+    info!("  use {} allocator.", ax_alloc::global_allocator().name());
 
     let mut max_region_size = 0;
     let mut max_region_paddr = 0.into();
@@ -311,7 +311,7 @@ fn init_allocator() {
     #[cfg(feature = "buddy-slab")]
     {
         struct AddrTranslatorImpl;
-        impl ax-alloc::AddrTranslator for AddrTranslatorImpl {
+        impl ax_alloc::AddrTranslator for AddrTranslatorImpl {
             fn virt_to_phys(&self, va: usize) -> Option<usize> {
                 Some(ax_hal::mem::virt_to_phys(va.into()).as_usize())
             }
@@ -321,7 +321,7 @@ fn init_allocator() {
 
         for r in memory_regions() {
             if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-                ax-alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size, &TRANSLATOR);
+                ax_alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size, &TRANSLATOR);
                 break;
             }
         }
@@ -331,7 +331,7 @@ fn init_allocator() {
     {
         for r in memory_regions() {
             if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-                ax-alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
+                ax_alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
                 break;
             }
         }
@@ -339,7 +339,7 @@ fn init_allocator() {
 
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr != max_region_paddr {
-            ax-alloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
+            ax_alloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
                 .expect("add heap memory region failed");
         }
     }

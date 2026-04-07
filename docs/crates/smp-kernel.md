@@ -6,7 +6,7 @@
 > 版本：`0.1.0`
 > 文档依据：`Cargo.toml`、`src/main.rs`、`src/init.rs`、`src/mp.rs`、`src/irq.rs`、`Makefile`、`README.md`
 
-`smp-kernel` 是 `axplat` 示例里最完整的一条 bring-up 样例。它不只验证主核启动，还验证次核 boot、`#[axplat::secondary_main]` 入口、per-CPU 数据、中断在多核上的工作方式，以及所有 CPU 完成初始化后的同步收敛。
+`smp-kernel` 是 `axplat` 示例里最完整的一条 bring-up 样例。它不只验证主核启动，还验证次核 boot、`#[ax_plat::secondary_main]` 入口、per-CPU 数据、中断在多核上的工作方式，以及所有 CPU 完成初始化后的同步收敛。
 
 因此必须先把边界说透：**它不是可复用 SMP 框架，也不是 ArceOS `ax-runtime` 的替代实现；它只是把 `axplat` 的多核启动链用最小内核样例形式跑通。**
 
@@ -15,7 +15,7 @@
 与前两个样例不同，这个 crate 已经拆成了三个明确模块：
 
 - `init.rs`：主核/次核的初始化共性与 `INITED_CPUS` 同步计数
-- `mp.rs`：次核栈、`cpu_boot()` 和 `#[axplat::secondary_main]`
+- `mp.rs`：次核栈、`cpu_boot()` 和 `#[ax_plat::secondary_main]`
 - `irq.rs`：多核场景下的定时器中断注册与 per-CPU 下一次到期时间
 
 这说明它的关注点已经从“最小启动”扩展到“多核 bring-up 协同”。
@@ -25,7 +25,7 @@
 
 ```mermaid
 flowchart TD
-    A["#[axplat::main] main"] --> B["init_kernel(primary)"]
+    A["#[ax_plat::main] main"] --> B["init_kernel(primary)"]
     B --> C["start_secondary_cpus()"]
     C --> D["init_irq()"]
     D --> E["INITED_CPUS += 1"]
@@ -38,7 +38,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["cpu_boot() 唤起次核"] --> B["#[axplat::secondary_main]"]
+    A["cpu_boot() 唤起次核"] --> B["#[ax_plat::secondary_main]"]
     B --> C["init_kernel_secondary()"]
     C --> D["INITED_CPUS += 1"]
     D --> E["等待全部 CPU 就绪"]
@@ -74,7 +74,7 @@ make ARCH=riscv64 run SMP=4
 
 - 为每个 AP 分配独立 boot stack
 - 把该栈顶虚拟地址转成物理地址
-- 调用 `axplat::power::cpu_boot(i, stack_top_paddr)`
+- 调用 `ax_plat::power::cpu_boot(i, stack_top_paddr)`
 
 这条链是 `axplat` 平台支持多核的核心契约之一。
 
@@ -97,7 +97,7 @@ make ARCH=riscv64 run SMP=4
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    sample["smp-kernel"] --> axplat["axplat"]
+    sample["smp-kernel"] --> axplat["ax-plat"]
     sample --> ax-cpu["ax-cpu"]
     sample --> percpu["percpu"]
     sample --> memaddr["memory_addr"]
@@ -117,10 +117,10 @@ graph LR
 - 各平台包的 `irq` + `smp` feature：真正提供 AP boot 与多核 IRQ 能力。
 
 ### 3.2 关键间接依赖
-- `axplat::power::cpu_boot`
-- `axplat::call_secondary_main`
-- `axplat::init::{init_early_secondary, init_later_secondary}`
-- `axplat::time::set_oneshot_timer`
+- `ax_plat::power::cpu_boot`
+- `ax_plat::call_secondary_main`
+- `ax_plat::init::{init_early_secondary, init_later_secondary}`
+- `ax_plat::time::set_oneshot_timer`
 
 ### 3.3 主要消费者
 - 平台包 SMP 能力 bring-up。

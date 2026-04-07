@@ -3,11 +3,11 @@ extern crate alloc;
 use alloc::format;
 use core::{marker::PhantomData, ptr::NonNull};
 
-use ax-alloc::{UsageKind, global_allocator};
+use ax_alloc::{UsageKind, global_allocator};
+use ax_plat::mem::{PhysAddr, phys_to_virt};
 use axdriver_base::DeviceType;
 use axdriver_block::BlockDriverOps;
 use axdriver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};
-use axplat::mem::{PhysAddr, phys_to_virt};
 use rdrive::{
     DriverGeneric, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
 };

@@ -7,7 +7,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 #[macro_use]
-extern crate ax-log;
+extern crate ax_log;
 extern crate ax_runtime;
 
 #[cfg(feature = "alloc")]

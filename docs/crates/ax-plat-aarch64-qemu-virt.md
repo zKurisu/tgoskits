@@ -1,6 +1,6 @@
 # `ax-plat-aarch64-qemu-virt` 技术文档
 
-> 路径：`components/axplat_crates/platforms/ax-plat-aarch64-qemu-virt`
+> 路径：`components/axplat_crates/platforms/axplat-aarch64-qemu-virt`
 > 类型：库 crate
 > 分层：组件层 / AArch64 板级平台包
 > 版本：`0.3.1-pre.6`
@@ -15,7 +15,7 @@
 该 crate 在 AArch64 平台栈中的位置可以概括为：
 
 - 向下：依赖 `ax-cpu`、`page_table_entry` 和 `ax-plat-aarch64-peripherals`，完成 CPU 模式切换、早期页表和通用外设接入。
-- 向上：实现 `InitIf`、`MemIf`、`PowerIf` 等 `axplat` 契约，并通过 `axplat::call_main()` 把控制权交给内核主函数。
+- 向上：实现 `InitIf`、`MemIf`、`PowerIf` 等 `axplat` 契约，并通过 `ax_plat::call_main()` 把控制权交给内核主函数。
 - 向旁：通过 `axconfig.toml` 固化 QEMU `virt` 板级的 RAM、MMIO、UART、GIC、RTC、PCI ECAM 等地址空间信息。
 
 它与 `ax-plat-aarch64-peripherals` 的区别在于：
@@ -84,8 +84,8 @@ flowchart TD
     E --> F[构造早期页表]
     F --> G[打开 MMU]
     G --> H[把 SP 调整到高半区线性映射]
-    H --> I[axplat::call_main cpu_id dtb]
-    I --> J[内核 #[axplat::main] 入口]
+    H --> I[ax_plat::call_main cpu_id dtb]
+    I --> J[内核 #[ax_plat::main] 入口]
 ```
 
 其关键步骤包括：
@@ -94,9 +94,9 @@ flowchart TD
 - 主核启动时从 `x0` 保存 DTB 指针，从 `MPIDR_EL1` 抽取逻辑 CPU ID。
 - 先在物理地址视角下建立引导栈，再切到 EL1。
 - 构造最小页表并打开 MMU，随后按 `PHYS_VIRT_OFFSET` 将栈切换到高半区虚拟地址。
-- 最终统一跳转到 `axplat::call_main()`。
+- 最终统一跳转到 `ax_plat::call_main()`。
 
-在 `smp` 打开时，`_start_secondary` 为次核提供类似但更精简的路径：次核栈由上层传入，复用引导页表，打开 MMU 后调用 `axplat::call_secondary_main()`。
+在 `smp` 打开时，`_start_secondary` 为次核提供类似但更精简的路径：次核栈由上层传入，复用引导页表，打开 MMU 后调用 `ax_plat::call_secondary_main()`。
 
 ### 1.5 早期页表与地址空间策略
 
@@ -113,7 +113,7 @@ flowchart TD
 
 ### 1.6 初始化与外设接入
 
-`init.rs` 实现了 `axplat::init::InitIf`，把板级初始化切成四段：
+`init.rs` 实现了 `ax_plat::init::InitIf`，把板级初始化切成四段：
 
 - `init_early(cpu_id, arg)`：初始化异常向量、PL011、PSCI、Generic Timer，以及可选的 PL031。
 - `init_later(cpu_id, arg)`：在 `irq` 打开时初始化 GIC，并使能定时器 IRQ。
@@ -128,7 +128,7 @@ flowchart TD
 
 ### 1.7 物理内存与 MMIO 模型
 
-`mem.rs` 直接把 QEMU `virt` 的地址布局转译成 `axplat::mem::MemIf`：
+`mem.rs` 直接把 QEMU `virt` 的地址布局转译成 `ax_plat::mem::MemIf`：
 
 - `phys_ram_ranges()` 返回从 `PHYS_MEMORY_BASE` 开始的 RAM 区。
 - `reserved_phys_ram_ranges()` 当前为空，表示该平台包不在此层单独声明保留 RAM。
@@ -243,8 +243,8 @@ graph TD
 ### 4.2 平台接入主线
 
 1. 链接本 crate，让它作为 AArch64 QEMU `virt` 的板级包进入镜像。
-2. 启动入口从 `_start` 进入，在最小页表和 MMU 建立后跳入 `axplat::call_main()`。
-3. 内核入口通过 `#[axplat::main]` 触发 `init_early()` 和 `init_later()`。
+2. 启动入口从 `_start` 进入，在最小页表和 MMU 建立后跳入 `ax_plat::call_main()`。
+3. 内核入口通过 `#[ax_plat::main]` 触发 `init_early()` 和 `init_later()`。
 4. 上层通过 `axplat` 统一接口访问串口、时间、中断和关机能力。
 
 ### 4.3 构建与调试
@@ -274,7 +274,7 @@ cargo build -p ax-plat-aarch64-qemu-virt --target aarch64-unknown-none --feature
 
 ### 5.1 推荐测试覆盖
 
-- 启动冒烟：验证 `_start` 到 `axplat::call_main()` 的完整引导链。
+- 启动冒烟：验证 `_start` 到 `ax_plat::call_main()` 的完整引导链。
 - 中断验证：在 `irq` 打开时验证 GIC 初始化、定时器 IRQ 和 UART IRQ 路径。
 - 多核验证：在 `smp` 打开时验证次核能进入 `call_secondary_main()`。
 - RTC 验证：在 `rtc` 打开时验证 `epochoffset_nanos()` 能使墙钟合理推进。

@@ -1,6 +1,6 @@
 # `ax-plat-aarch64-raspi` 技术文档
 
-> 路径：`components/axplat_crates/platforms/ax-plat-aarch64-raspi`
+> 路径：`components/axplat_crates/platforms/axplat-aarch64-raspi`
 > 类型：库 crate
 > 分层：组件层 / AArch64 板级平台包
 > 版本：`0.3.1-pre.6`
@@ -47,9 +47,9 @@ flowchart TD
     E --> F[init_boot_page_table]
     F --> G[ax-cpu::init::init_mmu]
     G --> H[栈切到高半区]
-    H --> I[axplat::call_main cpu_id dtb]
-    I --> J[axplat::init::init_early]
-    J --> K[axplat::init::init_later]
+    H --> I[ax_plat::call_main cpu_id dtb]
+    I --> J[ax_plat::init::init_early]
+    J --> K[ax_plat::init::init_later]
 ```
 
 与很多 ARM 板卡不同，树莓派 4 的次核路径由 `mp.rs` 显式实现：
@@ -72,7 +72,7 @@ flowchart TD
 
 这里最值得写清的边界有四点：
 
-- `dtb` 指针会被传给 `axplat::call_main()`，但本 crate 的 `init.rs` 并不消费 DTB；板级地址来自 `axconfig.toml`。
+- `dtb` 指针会被传给 `ax_plat::call_main()`，但本 crate 的 `init.rs` 并不消费 DTB；板级地址来自 `axconfig.toml`。
 - `mem.rs` 会把 `0..0x1000` 标记为保留区，因为这页包含 spin-table；它不是普通可分配 RAM。
 - `PowerIf::cpu_boot()` 只是对 `mp::start_secondary_cpu()` 的封装，底层不是 PSCI。
 - `PowerIf::system_off()` 当前只是 `halt()` 循环，不能把它理解成真正的硬件掉电。
@@ -214,7 +214,7 @@ extern crate axplat_aarch64_raspi;
 
 ### 5.2 推荐测试矩阵
 
-- 启动冒烟：确认 `_start -> axplat::call_main()` 能贯通。
+- 启动冒烟：确认 `_start -> ax_plat::call_main()` 能贯通。
 - 控制台验证：确认 PL011 在极早期就能输出。
 - IRQ 验证：打开 `irq` 后验证 GIC 和 timer IRQ。
 - SMP 验证：打开 `smp` 后验证 spin-table + `sev` 能拉起次核。

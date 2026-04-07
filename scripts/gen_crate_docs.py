@@ -237,7 +237,7 @@ CURATED_DOCS = {
     "ax-net",
     "ax-net-ng",
     "axpoll",
-    "axplat",
+    "ax-plat",
     "ax-plat-aarch64-bsta1000b",
     "axdevice",
     "ax-display",
@@ -246,10 +246,10 @@ CURATED_DOCS = {
     "bwbench-client",
     "cargo-axplat",
     "axplat-dyn",
-    "axplat-aarch64-qemu-virt",
+    "ax-plat-aarch64-qemu-virt",
     "ax-plat-aarch64-peripherals",
-    "axplat-aarch64-phytium-pi",
-    "axplat-aarch64-raspi",
+    "ax-plat-aarch64-phytium-pi",
+    "ax-plat-aarch64-raspi",
     "ax-plat-loongarch64-qemu-virt",
     "ax-plat-riscv64-qemu-virt",
     "ax-plat-x86-pc",
@@ -1113,7 +1113,7 @@ def doc_style(pkg: Package) -> str:
     if (
         path_matches(pkg.rel_dir, "platform/")
         or path_matches(pkg.rel_dir, "components/axplat_crates/platforms/")
-        or pkg.name.startswith("axplat")
+        or pkg.name == "ax-plat"
     ):
         return "platform"
     if path_matches(pkg.rel_dir, "os/arceos/modules/"):

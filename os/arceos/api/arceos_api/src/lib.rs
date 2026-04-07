@@ -392,6 +392,8 @@ pub mod io {
 /// You should prefer to use other APIs rather than these modules. The modules
 /// here should only be used if other APIs do not meet your requirements.
 pub mod modules {
+    #[cfg(feature = "alloc")]
+    pub use ax_alloc;
     #[cfg(feature = "display")]
     pub use ax_display;
     #[cfg(feature = "dma")]
@@ -403,6 +405,7 @@ pub mod modules {
     pub use ax_hal;
     #[cfg(feature = "ipi")]
     pub use ax_ipi;
+    pub use ax_log;
     #[cfg(feature = "paging")]
     pub use ax_mm;
     #[cfg(feature = "net")]
@@ -411,8 +414,5 @@ pub mod modules {
     pub use ax_sync;
     #[cfg(feature = "multitask")]
     pub use ax_task;
-    #[cfg(feature = "alloc")]
-    pub use ax-alloc;
     pub use axconfig;
-    pub use ax-log;
 }

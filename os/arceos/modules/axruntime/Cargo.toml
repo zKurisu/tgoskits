@@ -49,7 +49,7 @@ ax-log = { workspace = true }
 ax-mm = { workspace = true, optional = true }
 ax-net = { workspace = true, optional = true }
 ax-net-ng = { workspace = true, optional = true }
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 ax-task = { workspace = true, optional = true }
 cfg-if = { workspace = true }
 chrono = { version = "0.4", default-features = false }

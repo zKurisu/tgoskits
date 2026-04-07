@@ -60,7 +60,7 @@ flowchart TD
     E --> F[init_boot_page_table]
     F --> G[ax-cpu::init::init_mmu]
     G --> H[把栈从 boot 映射平移到 PHYS_VIRT_OFFSET]
-    H --> I[axplat::call_main cpu_id arg]
+    H --> I[ax_plat::call_main cpu_id arg]
 ```
 
 这套设计带来两个重要后果：
@@ -94,7 +94,7 @@ LoongArch QEMU virt 的中断模型在这个 crate 里被明确分层了：
 3. 将真实 IRQ 分发到 `HandlerTable`。
 4. 最后按中断类型执行 timer clear 或 EIOINTC completion。
 
-这说明该 crate 并不是“把某个现成中断控制器整体包起来”，而是把 LoongArch virt 的级联中断拓扑消化后，重新对上暴露 `axplat::irq` 语义。
+这说明该 crate 并不是“把某个现成中断控制器整体包起来”，而是把 LoongArch virt 的级联中断拓扑消化后，重新对上暴露 `ax_plat::irq` 语义。
 
 ### 1.5 与相邻层的边界
 
@@ -236,7 +236,7 @@ ax-plat-loongarch64-qemu-virt = { workspace = true, features = ["irq", "smp", "r
 
 ### 5.2 推荐测试矩阵
 
-- 启动冒烟：验证 `_start -> axplat::call_main()` 完整链路。
+- 启动冒烟：验证 `_start -> ax_plat::call_main()` 完整链路。
 - 控制台验证：确认 MMIO 16550 早期即可工作。
 - Timer 验证：确认 tick 递增、oneshot timer 和 timer IRQ 均正确。
 - RTC 验证：启用 `rtc` 后确认 `epochoffset_nanos()` 合理。

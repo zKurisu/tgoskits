@@ -23,9 +23,9 @@
 - `src/dummy.rs`：无真实平台时的占位实现。通过 `axplat` 接口提供 no-op 或 `unimplemented!()` 行为，主要用于宿主侧测试构建。
 - `src/dtb.rs`：管理 boot argument、FDT 解析与 `chosen.bootargs` 读取，负责把启动参数从引导阶段传给后续模块。
 - `src/mem.rs`：整合链接符号、平台物理内存范围和 MMIO 区域，生成统一的 `memory_regions()` 视图，并负责 `.bss` 清零。
-- `src/percpu.rs`：每 CPU 局部状态入口，维护当前任务指针并复用 `axplat::percpu` 提供的 CPU 本地能力。
+- `src/percpu.rs`：每 CPU 局部状态入口，维护当前任务指针并复用 `ax_plat::percpu` 提供的 CPU 本地能力。
 - `src/time.rs`：时间相关能力的再导出层，把时钟源、计时器和时间转换统一暴露给上层。
-- `src/irq.rs`：IRQ 处理桥接层，负责 trap handler 注册、IRQ hook、与 `axplat::irq` 的派发对接。
+- `src/irq.rs`：IRQ 处理桥接层，负责 trap handler 注册、IRQ hook、与 `ax_plat::irq` 的派发对接。
 - `src/paging.rs`：页表处理桥接层，向 `page_table_multiarch` 提供 `PagingHandlerImpl`，并在不同 ISA 下导出统一的页表类型。
 - `src/tls.rs`：内核态 TLS 布局与 `TlsArea` 管理，仅在 `tls` feature 启用时进入构建。
 - `build.rs` + `linker.lds.S`：根据 `axconfig` 注入链接脚本参数，例如内核基址、CPU 数、段布局等。
@@ -48,10 +48,10 @@ flowchart TD
     ClearBss --> PerCpu["ax-hal::percpu::init_primary"]
     PerCpu --> Early["ax-hal::init_early"]
     Early --> Dtb["dtb::init(arg)"]
-    Early --> PlatEarly["axplat::init::init_early"]
+    Early --> PlatEarly["ax_plat::init::init_early"]
     PlatEarly --> Runtime["ax-runtime 继续初始化"]
     Runtime --> Later["ax-hal::init_later"]
-    Later --> PlatLater["axplat::init::init_later"]
+    Later --> PlatLater["ax_plat::init::init_later"]
     PlatLater --> Svc["调度/驱动/文件系统/网络等上层服务初始化"]
 ```
 
@@ -59,7 +59,7 @@ flowchart TD
 
 1. `ax_runtime::rust_main()` 先调用 `ax-hal::mem::clear_bss()`。
 2. 调用 `ax-hal::percpu::init_primary(cpu_id)` 建立 BSP 的每核状态。
-3. 调用 `ax-hal::init_early(cpu_id, arg)`，内部先做 `dtb::init(arg)`，再转入 `axplat::init::init_early()`。
+3. 调用 `ax-hal::init_early(cpu_id, arg)`，内部先做 `dtb::init(arg)`，再转入 `ax_plat::init::init_early()`。
 4. 上层完成日志、分配器、页表等初始化后，调用 `ax-hal::init_later(cpu_id, arg)` 进入平台后期初始化。
 5. 若为 SMP，还会走 `init_early_secondary()` 与 `init_later_secondary()` 的从核路径。
 
@@ -89,7 +89,7 @@ flowchart TD
 - `cpu_num()`：为调度器、SMP 初始化和 CPU 亲和逻辑提供最终生效的 CPU 数。
 - `dtb::get_fdt()` / `dtb::get_chosen_bootargs()`：供驱动、文件系统和配置路径读取设备树与内核 bootargs。
 - `mem::memory_regions()`：供分配器、页表和系统内存统计使用。
-- `irq::register_irq_hook()` 与 `axplat::irq::register()`：供上层模块接入中断回调。
+- `irq::register_irq_hook()` 与 `ax_plat::irq::register()`：供上层模块接入中断回调。
 - `paging` 子模块导出的页表类型：供 `ax-mm` 和用户态地址空间管理复用。
 
 ### 2.3 典型使用方式

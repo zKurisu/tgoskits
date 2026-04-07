@@ -19,8 +19,8 @@
 `README.md` 也明确说明：通常不应直接依赖 `axplat-macros`，而应通过 `axplat` 间接使用。
 
 ### 1.2 宏入口划分
-- `#[axplat::main]` 对应的底层过程宏 `main`：导出主核入口符号 `__axplat_main`。
-- `#[axplat::secondary_main]` 对应的底层过程宏 `secondary_main`：导出从核入口符号 `__axplat_secondary_main`。
+- `#[ax_plat::main]` 对应的底层过程宏 `main`：导出主核入口符号 `__axplat_main`。
+- `#[ax_plat::secondary_main]` 对应的底层过程宏 `secondary_main`：导出从核入口符号 `__axplat_secondary_main`。
 - `#[def_plat_interface]`：只在 `axplat` 内部使用，把 trait 变成 `def_interface + call_interface` 组合。
 
 ### 1.3 最关键的生成语义
@@ -39,7 +39,7 @@
 - trait 上附着 `crate::__priv::def_interface`。
 - 为每个无 `self` 的 trait 方法生成同名自由函数，内部转发到 `crate::__priv::call_interface!(Trait::method, ...)`。
 
-因此，`def_plat_interface` 把“平台 trait 定义”转成了“trait + 全局分发函数”双重接口模型，使 `axplat::console::putchar()` 这类调用可以像普通函数一样存在，同时底层仍由唯一的平台注册实现承接。
+因此，`def_plat_interface` 把“平台 trait 定义”转成了“trait + 全局分发函数”双重接口模型，使 `ax_plat::console::putchar()` 这类调用可以像普通函数一样存在，同时底层仍由唯一的平台注册实现承接。
 
 ### 1.4 与 `axplat` 平台入口契约的关系
 `axplat` 在运行期暴露 `call_main(cpu_id, arg)` 和可选 `call_secondary_main(cpu_id)`，而这些函数又声明会调用外部 Rust 符号：
@@ -49,13 +49,13 @@
 
 `axplat-macros` 的 `main` / `secondary_main` 正是负责把用户写的 Rust 函数导出成这两个固定符号。因此：
 
-- 平台启动汇编或裸入口只需跳到 `axplat::call_main` / `call_secondary_main`。
-- 运行时实现只需用 `#[axplat::main]` / `#[axplat::secondary_main]` 标记自己的入口函数。
+- 平台启动汇编或裸入口只需跳到 `ax_plat::call_main` / `call_secondary_main`。
+- 运行时实现只需用 `#[ax_plat::main]` / `#[ax_plat::secondary_main]` 标记自己的入口函数。
 
 这就是平台包与运行时之间的链接级耦合点。
 
 ### 1.5 与 `percpu` 的边界
-`axplat-macros` 不提供 `percpu` 宏能力。`axplat::percpu` 使用的是单独的 `percpu` crate。因此在文档中不能把 `percpu` 初始化或 `#[percpu::def_percpu]` 误归为 `axplat-macros` 的职责。
+`axplat-macros` 不提供 `percpu` 宏能力。`ax_plat::percpu` 使用的是单独的 `percpu` crate。因此在文档中不能把 `percpu` 初始化或 `#[percpu::def_percpu]` 误归为 `axplat-macros` 的职责。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -64,15 +64,15 @@
 - 在编译期尽早拒绝错误签名或错误 trait 形态。
 
 ### 2.2 关键宏与使用场景
-- `#[axplat::main]`：用于主核运行时入口函数。
-- `#[axplat::secondary_main]`：用于 SMP 从核入口函数。
+- `#[ax_plat::main]`：用于主核运行时入口函数。
+- `#[ax_plat::secondary_main]`：用于 SMP 从核入口函数。
 - `#[def_plat_interface]`：用于 `axplat` 自己定义 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf`、`IrqIf` 等平台接口。
 
 ### 2.3 典型使用方式
 正常使用方式应当通过 `axplat` 提供的对外宏入口，而不是直接依赖 `axplat-macros`：
 
 ```rust
-#[axplat::main]
+#[ax_plat::main]
 fn rust_main(cpu_id: usize, arg: usize) -> ! {
     loop {}
 }
@@ -85,7 +85,7 @@ graph LR
     quote["quote"] --> current
     proc_macro2["proc-macro2"] --> current
 
-    current --> axplat["axplat"]
+    current --> axplat["ax-plat"]
     axplat --> ax-runtime["ax-runtime"]
     axplat --> hello["hello-kernel / smp-kernel / irq-kernel"]
     axplat --> oses["ArceOS / StarryOS / Axvisor 平台入口链"]
@@ -99,7 +99,7 @@ graph LR
 - `axplat`：唯一最核心的直接消费者。对外 re-export `main` / `secondary_main`，对内使用 `def_plat_interface`。
 
 ### 3.3 间接消费者
-- `ax-runtime`：通过 `#[axplat::main]` / `#[axplat::secondary_main]` 接入平台入口。
+- `ax-runtime`：通过 `#[ax_plat::main]` / `#[ax_plat::secondary_main]` 接入平台入口。
 - `components/axplat_crates/examples/*`：最小平台样例。
 - 通过 `axplat` 体系间接复用入口契约的 ArceOS、StarryOS 和 Axvisor 路径。
 
@@ -118,7 +118,7 @@ graph LR
 
 ### 4.3 开发建议
 - 修改 `main` / `secondary_main` 的符号名时，要把它视为平台入口 ABI 级变更。
-- 修改 `def_plat_interface` 的展开逻辑时，要同步检查 `axplat::__priv` 对 `crate_interface` 的再导出是否仍成立。
+- 修改 `def_plat_interface` 的展开逻辑时，要同步检查 `ax_plat::__priv` 对 `crate_interface` 的再导出是否仍成立。
 - 若未来要支持更复杂的 trait 语义，应先确认是否还适合继续维持“自由函数 + call_interface”模型。
 
 ## 5. 测试策略
@@ -131,7 +131,7 @@ graph LR
 - 展开后导出符号与 `call_interface` 调用路径是否符合预期。
 
 ### 5.3 集成测试重点
-- 用 `hello-kernel` / `smp-kernel` 验证 `_start -> axplat::call_main -> __axplat_main` 链条。
+- 用 `hello-kernel` / `smp-kernel` 验证 `_start -> ax_plat::call_main -> __axplat_main` 链条。
 - 用 `axplat` 内部 trait 接口验证 `def_plat_interface` 与 `impl_plat_interface` 的配合。
 
 ### 5.4 覆盖率要求
@@ -141,7 +141,7 @@ graph LR
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `ax-runtime` 明确依赖 `#[axplat::main]` / `#[axplat::secondary_main]`，因此 `axplat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
+ArceOS 通过 `ax-runtime` 明确依赖 `#[ax_plat::main]` / `#[ax_plat::secondary_main]`，因此 `axplat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
 
 ### 6.2 StarryOS
 StarryOS 并不直接面向 `axplat-macros` 编程，但只要复用同一套 `axplat` 平台栈，就会间接复用这层入口契约和平台接口展开逻辑。
@@ -183,7 +183,7 @@ Axvisor 同样不是直接依赖 `axplat-macros` 的业务代码，但在共享 
 graph LR
     current["axplat-macros"]
     current --> crate_interface["crate_interface"]
-    axplat["axplat"] --> current
+    axplat["ax-plat"] --> current
 ```
 
 ### 3.1 直接与间接依赖

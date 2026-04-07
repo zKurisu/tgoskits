@@ -23,7 +23,7 @@
 `src/irq.rs` 里有三块关键内容：
 
 1. `#[register_trap_handler(IRQ)] fn irq_handler(vector)`  
-   把平台收到的 IRQ 交给 `axplat::irq::handle(vector)` 分发。
+   把平台收到的 IRQ 交给 `ax_plat::irq::handle(vector)` 分发。
 2. `init_irq()`  
    注册定时器处理函数并开中断。
 3. `test_irq()`  
@@ -34,7 +34,7 @@
 ```mermaid
 flowchart LR
     A["定时器硬件触发 IRQ"] --> B["irq_handler"]
-    B --> C["axplat::irq::handle(vector)"]
+    B --> C["ax_plat::irq::handle(vector)"]
     C --> D["update_timer()"]
     D --> E["IRQ_COUNTER += 1"]
     E --> F["set_oneshot_timer(deadline)"]
@@ -81,7 +81,7 @@ flowchart LR
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    sample["irq-kernel"] --> axplat["axplat"]
+    sample["irq-kernel"] --> axplat["ax-plat"]
     sample --> ax-cpu["ax-cpu"]
     sample --> linkme["linkme / trap 注册"]
     sample --> x86["ax-plat-x86-pc(irq)"]
@@ -97,9 +97,9 @@ graph LR
 - 各平台包的 `irq` feature：真正接入板级中断控制器与定时器。
 
 ### 3.2 关键间接依赖
-- `axplat::irq::register`
-- `axplat::irq::handle`
-- `axplat::time::set_oneshot_timer`
+- `ax_plat::irq::register`
+- `ax_plat::irq::handle`
+- `ax_plat::time::set_oneshot_timer`
 - 平台配置中的 `config::devices::TIMER_IRQ`
 
 ### 3.3 主要消费者

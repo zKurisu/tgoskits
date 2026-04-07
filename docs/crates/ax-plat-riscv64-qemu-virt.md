@@ -46,7 +46,7 @@ flowchart TD
     B --> C["init_boot_page_table()"]
     C --> D["init_mmu()"]
     D --> E["切换到高半部虚拟地址"]
-    E --> F["axplat::call_main(cpu_id, dtb)"]
+    E --> F["ax_plat::call_main(cpu_id, dtb)"]
     F --> G["InitIf::init_early"]
     G --> H["trap / console / time 早期初始化"]
     H --> I["InitIf::init_later"]
@@ -59,7 +59,7 @@ flowchart TD
 1. `_start` 从引导器拿到 `hartid` 与 DTB 指针后，先建立启动栈。
 2. `init_boot_page_table()` 构造最早期 Sv39 页表，把内核物理区和高半部虚拟地址窗口都映射出来。
 3. `init_mmu()` 写 SATP、刷新 TLB，再把栈指针和入口跳转地址整体平移到高半部虚拟地址。
-4. 跳入 `axplat::call_main()`，与上层 `#[axplat::main]` 标注的运行时入口契约衔接。
+4. 跳入 `ax_plat::call_main()`，与上层 `#[ax_plat::main]` 标注的运行时入口契约衔接。
 5. `InitIf::init_early()` 先做 trap、串口和时间源初始化；`InitIf::init_later()` 再做中断和 per-CPU 时间设施初始化。
 
 ### 1.5 中断、时钟、控制台与 SMP 机制
@@ -82,7 +82,7 @@ flowchart TD
 
 #### SMP
 - `PowerIf::cpu_boot()` 依赖 SBI HSM `hart_start` 启动从核。
-- `_start_secondary` 与主核路径类似，但不再构建主页表，而是复用已有映射并跳到 `axplat::call_secondary_main()`。
+- `_start_secondary` 与主核路径类似，但不再构建主页表，而是复用已有映射并跳到 `ax_plat::call_secondary_main()`。
 - `cpu_num()` 不做动态探测，而是直接返回配置中的 `MAX_CPU_NUM`。
 
 ### 1.6 内存模型与平台假设
@@ -98,7 +98,7 @@ flowchart TD
 - 提供 `virt` 机型的内存与 MMIO 布局描述。
 
 ### 2.2 关键 API 与使用场景
-- `InitIfImpl`：供 `axplat::init::*` 和 `ax-hal` 启动路径调用。
+- `InitIfImpl`：供 `ax_plat::init::*` 和 `ax-hal` 启动路径调用。
 - `MemIfImpl`：供 `ax-hal::mem` 查询 RAM、MMIO 和地址转换。
 - `ConsoleIfImpl`：供日志和控制台输出使用。
 - `TimeIfImpl`：供 `ax-hal::time` 与调度器 tick 路径使用。
@@ -118,7 +118,7 @@ ax-plat-riscv64-qemu-virt = { workspace = true, features = ["irq", "smp", "rtc"]
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axplat["axplat"] --> current["ax-plat-riscv64-qemu-virt"]
+    axplat["ax-plat"] --> current["ax-plat-riscv64-qemu-virt"]
     ax-cpu["ax-cpu"] --> current
     axconfig["axconfig-macros / axconfig.toml"] --> current
     sbi["sbi-rt"] --> current
@@ -236,7 +236,7 @@ graph LR
     current["ax-plat-riscv64-qemu-virt"]
     current --> axconfig_macros["axconfig-macros"]
     current --> ax-cpu["ax-cpu"]
-    current --> axplat["axplat"]
+    current --> axplat["ax-plat"]
     current --> kspin["kspin"]
     current --> lazyinit["lazyinit"]
     current --> riscv_plic["riscv_plic"]

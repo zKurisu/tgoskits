@@ -193,7 +193,7 @@ ax-std = { path = "os/arceos/ulib/axstd" }
 ax-libc = { path = "os/arceos/ulib/axlibc" }
 
 # === axplat ===
-axplat = { path = "components/axplat_crates/axplat" }
+ax-plat = { path = "components/axplat_crates/axplat" }
 axplat-macros = { path = "components/axplat_crates/axplat-macros" }
 ax-plat-aarch64-bsta1000b = { path = "components/axplat_crates/platforms/axplat-aarch64-bsta1000b" }
 ax-plat-aarch64-peripherals = { path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
@@ -347,7 +347,7 @@ axbuild = { path = "scripts/axbuild", version = "0.4.0" }
 starry-kernel = { path = "os/StarryOS/kernel", version = "0.5.0" }
 
 ax-cpu = { version = "0.5.0", path = "components/axcpu" }
-axplat = { version = "0.5.1", path = "components/axplat_crates/axplat" }
+ax-plat = { version = "0.5.1", path = "components/axplat_crates/axplat" }
 ax-plat-aarch64-bsta1000b = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-bsta1000b" }
 ax-plat-aarch64-peripherals = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
 ax-plat-aarch64-phytium-pi = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-phytium-pi" }

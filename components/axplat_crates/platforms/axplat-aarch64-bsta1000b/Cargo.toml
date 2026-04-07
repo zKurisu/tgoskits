@@ -13,9 +13,9 @@ repository.workspace = true
 
 [features]
 fp-simd = ["ax-cpu/fp-simd"]
-irq = ["axplat/irq", "ax-plat-aarch64-peripherals/irq"]
+irq = ["ax-plat/irq", "ax-plat-aarch64-peripherals/irq"]
 rtc = []
-smp = ["axplat/smp", "kspin/smp"]
+smp = ["ax-plat/smp", "kspin/smp"]
 
 [dependencies]
 log = "0.4"
@@ -26,7 +26,7 @@ dw_apb_uart = "0.1"
 axconfig-macros = "0.4.1"
 ax-plat-aarch64-peripherals = { workspace = true }
 ax-cpu = { workspace = true }
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["aarch64-unknown-none"]

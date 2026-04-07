@@ -19,31 +19,31 @@ mod irq;
 use irq::*;
 
 fn init_kernel(cpu_id: usize, arg: usize) {
-    axplat::percpu::init_primary(cpu_id);
+    ax_plat::percpu::init_primary(cpu_id);
 
     // Initialize trap, console, time.
-    axplat::init::init_early(cpu_id, arg);
+    ax_plat::init::init_early(cpu_id, arg);
 
     // Initialize platform peripherals, such as IRQ handlers.
-    axplat::init::init_later(cpu_id, arg);
+    ax_plat::init::init_later(cpu_id, arg);
 }
 
-#[axplat::main]
+#[ax_plat::main]
 fn main(cpu_id: usize, arg: usize) -> ! {
     init_kernel(cpu_id, arg);
 
-    axplat::console_println!("Hello, ArceOS!");
-    axplat::console_println!("cpu_id = {cpu_id}, arg = {arg:#x}");
+    ax_plat::console_println!("Hello, ArceOS!");
+    ax_plat::console_println!("cpu_id = {cpu_id}, arg = {arg:#x}");
 
     init_irq();
     test_irq();
 
-    axplat::power::system_off();
+    ax_plat::power::system_off();
 }
 
 #[cfg(all(target_os = "none", not(test)))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    axplat::console_println!("{info}");
-    axplat::power::system_off()
+    ax_plat::console_println!("{info}");
+    ax_plat::power::system_off()
 }

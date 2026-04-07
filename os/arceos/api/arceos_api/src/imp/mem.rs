@@ -4,11 +4,11 @@ cfg_alloc! {
     use core::ptr::NonNull;
 
     pub fn ax_alloc(layout: Layout) -> Option<NonNull<u8>> {
-        ax-alloc::global_allocator().alloc(layout).ok()
+        ax_alloc::global_allocator().alloc(layout).ok()
     }
 
     pub fn ax_dealloc(ptr: NonNull<u8>, layout: Layout) {
-        ax-alloc::global_allocator().dealloc(ptr, layout)
+        ax_alloc::global_allocator().dealloc(ptr, layout)
     }
 }
 

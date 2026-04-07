@@ -15,7 +15,7 @@ smp = [
     "ax-plat-riscv64-qemu-virt?/smp",
     "ax-plat-loongarch64-qemu-virt?/smp",
     "axplat-dyn?/smp",
-    "axplat/smp",
+    "ax-plat/smp",
 ]
 irq = [
     "dep:linkme",
@@ -23,7 +23,7 @@ irq = [
     "ax-plat-aarch64-qemu-virt?/irq",
     "ax-plat-riscv64-qemu-virt?/irq",
     "ax-plat-loongarch64-qemu-virt?/irq",
-    "axplat/irq",
+    "ax-plat/irq",
     "axplat-dyn?/irq",
 ]
 fp-simd = [
@@ -61,7 +61,7 @@ ipi = ["irq"]
 ax-alloc = { workspace = true, optional = true }
 axconfig.workspace = true
 ax-cpu.workspace = true
-axplat.workspace = true
+ax-plat.workspace = true
 cfg-if.workspace = true
 fdt-parser = "0.4"
 heapless = "0.9"

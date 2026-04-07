@@ -671,7 +671,7 @@ dependencies = [
  "ax-alloc",
  "axconfig",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
  "ax-plat-loongarch64-qemu-virt",
@@ -750,7 +750,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat"
+name = "ax-plat"
 version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29d8d929fe41fcb361cf784819041f942aba4bcd2d26b9a26305df84e26b206b"
@@ -776,7 +776,7 @@ dependencies = [
  "arm-gic-driver",
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "fdt-parser",
  "heapless 0.8.0",
  "lazyinit",
@@ -804,7 +804,7 @@ dependencies = [
  "arm_pl011",
  "arm_pl031",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "int_ratio",
  "kspin",
  "lazyinit",
@@ -821,7 +821,7 @@ checksum = "dff51219e3ff388368eec683f83b5a8184b3125bac709006f6ac22e435dc07e4"
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "ax-plat-aarch64-peripherals",
  "log",
  "page_table_entry 0.5.7",
@@ -842,7 +842,7 @@ dependencies = [
  "axdriver_virtio",
  "axerrno 0.2.2",
  "axklib",
- "axplat",
+ "ax-plat",
  "dma-api 0.7.1",
  "fdt-edit",
  "heapless",
@@ -863,7 +863,7 @@ checksum = "0bb9c67d904ccf30561a6239b67411058b215cb6d6a8d3ac737e7a51230b40bf"
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "kspin",
  "lazyinit",
  "log",
@@ -889,7 +889,7 @@ version = "0.3.0"
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "axvisor_api",
  "crate_interface 0.3.0",
  "kspin",
@@ -909,7 +909,7 @@ source = "git+https://github.com/arceos-org/axplat_crates.git?tag=dev-v03#0df071
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "kspin",
  "lazyinit",
  "log",
@@ -927,7 +927,7 @@ checksum = "9df26719c444ca8302e9366b8dc5abe8735933ea756ff094e3ac5ce3b64c41a1"
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "bitflags 2.11.0",
  "heapless",
  "int_ratio",
@@ -951,7 +951,7 @@ checksum = "828cbdb755936681e60fefd3d4b16842d67a18e6ccc7661b3b9ef9e6322670cd"
 dependencies = [
  "axconfig-macros",
  "ax-cpu",
- "axplat",
+ "ax-plat",
  "bitflags 2.11.0",
  "heapless",
  "int_ratio",
@@ -994,7 +994,7 @@ dependencies = [
  "axklib",
  "ax-log",
  "axmm",
- "axplat",
+ "ax-plat",
  "axplat-aarch64-dyn",
  "ax-plat-riscv64-qemu-virt 0.3.0",
  "axplat-x86-qemu-q35",

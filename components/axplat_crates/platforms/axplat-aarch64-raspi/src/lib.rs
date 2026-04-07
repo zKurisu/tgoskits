@@ -1,7 +1,7 @@
 #![no_std]
 
 #[macro_use]
-extern crate axplat;
+extern crate ax_plat;
 
 mod boot;
 mod init;

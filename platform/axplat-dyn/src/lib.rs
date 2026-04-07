@@ -5,7 +5,7 @@
 extern crate somehal;
 
 #[macro_use]
-extern crate axplat;
+extern crate ax_plat;
 #[allow(unused_imports)]
 #[macro_use]
 extern crate log;

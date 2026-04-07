@@ -16,20 +16,20 @@ cargo +nightly add ax-cpu axplat ax-plat-x86-pc
 #### 1. Write your kernel code
 
 ```rust
-#[axplat::main]
+#[ax_plat::main]
 fn kernel_main(cpu_id: usize, arg: usize) -> ! {
     // x86_64 requires the `percpu` crate to be initialized first.
     ax-cpu::init::init_percpu(cpu_id);
     // Initialize trap, console, time.
-    axplat::init::init_early(cpu_id, arg);
+    ax_plat::init::init_early(cpu_id, arg);
     // Initialize platform peripherals (not used in this example).
-    axplat::init::init_later(cpu_id, arg);
+    ax_plat::init::init_later(cpu_id, arg);
 
     // Write your kernel code here.
-    axplat::console_println!("Hello, ArceOS!");
+    ax_plat::console_println!("Hello, ArceOS!");
 
     // Power off the system.
-    axplat::power::system_off();
+    ax_plat::power::system_off();
 }
 ```
 

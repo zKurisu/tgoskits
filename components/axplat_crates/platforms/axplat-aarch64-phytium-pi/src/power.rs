@@ -1,4 +1,4 @@
-use axplat::power::PowerIf;
+use ax_plat::power::PowerIf;
 
 struct PowerImpl;
 
@@ -11,7 +11,7 @@ impl PowerIf for PowerImpl {
     /// CPU cores on the platform).
     #[cfg(feature = "smp")]
     fn cpu_boot(cpu_id: usize, stack_top_paddr: usize) {
-        use axplat::mem::{va, virt_to_phys};
+        use ax_plat::mem::{va, virt_to_phys};
 
         use crate::config::plat::CPU_ID_LIST;
 

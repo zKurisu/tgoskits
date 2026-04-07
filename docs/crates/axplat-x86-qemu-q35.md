@@ -59,10 +59,10 @@ flowchart TD
     C --> D[设置 CR0 CR4 EFER]
     D --> E[切到 64 位 bsp_entry64]
     E --> F[rust_entry magic mbi]
-    F --> G[axplat::call_main current_cpu_id mbi]
-    G --> H[axplat::init::init_early]
+    F --> G[ax_plat::call_main current_cpu_id mbi]
+    G --> H[ax_plat::init::init_early]
     H --> I[console::init / time::init_early / mem::init]
-    I --> J[axplat::init::init_later]
+    I --> J[ax_plat::init::init_later]
     J --> K[apic::init_primary / time::init_primary]
 ```
 
@@ -226,7 +226,7 @@ AXVISOR_SMP=4 cargo build -p axplat-x86-qemu-q35 --target x86_64-unknown-none
 
 ### 5.2 推荐测试矩阵
 
-- 启动冒烟：验证 `_start -> axplat::call_main()`。
+- 启动冒烟：验证 `_start -> ax_plat::call_main()`。
 - 串口验证：确认 COM1 在最早期即可输出。
 - 内存验证：确认 Multiboot RAM 解析和低 2 MiB 保留语义。
 - IRQ 验证：确认 IOAPIC 外部中断、LAPIC timer 和 IPI 三条路径。

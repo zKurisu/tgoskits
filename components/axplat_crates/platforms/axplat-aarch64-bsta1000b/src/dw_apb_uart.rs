@@ -1,6 +1,6 @@
 //! snps,dw-apb-uart serial driver
 
-use axplat::{
+use ax_plat::{
     console::ConsoleIf,
     mem::{PhysAddr, pa},
 };

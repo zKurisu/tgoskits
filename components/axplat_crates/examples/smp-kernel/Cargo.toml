@@ -15,7 +15,7 @@ percpu.workspace = true
 const-str = "1.0"
 memory_addr = "0.6.1"
 ax-cpu = { workspace = true }
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 ax-plat-x86-pc = { path = "../../platforms/axplat-x86-pc", features = ["irq", "smp"] }

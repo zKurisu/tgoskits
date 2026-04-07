@@ -16,7 +16,7 @@
 - 处理器要求是极简的 `fn()`，没有捕获环境、没有参数、没有返回值。
 - 注册/注销/查询要尽量避免引入锁。
 
-在当前仓库里，它最真实的使用场景是 `axplat::irq` 及各平台的 `IRQ_HANDLER_TABLE`。
+在当前仓库里，它最真实的使用场景是 `ax_plat::irq` 及各平台的 `IRQ_HANDLER_TABLE`。
 
 ### 1.2 核心类型
 - `Handler = fn()`：处理函数类型，刻意限制为普通函数指针。
@@ -54,7 +54,7 @@ flowchart TD
 
 ### 2.2 关键 API 与真实使用位置
 - `HandlerTable::new()`：各平台 IRQ 子系统用它声明静态处理器表。
-- `register_handler()` / `unregister_handler()`：被 `components/axplat_crates/axplat/src/irq.rs` 的平台实现间接消费。
+- `register_handler()` / `unregister_handler()`：被 `components/axplat_crates/ax-plat/src/irq.rs` 的平台实现间接消费。
 - `handle()`：由平台 IRQ 处理路径在拿到实际 IRQ 号后调用。
 
 ### 2.3 使用边界
@@ -65,7 +65,7 @@ flowchart TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    handler_table["handler_table"] --> axplat["axplat::irq"]
+    handler_table["handler_table"] --> axplat["ax_plat::irq"]
     axplat --> x86["ax-plat-x86-pc / x86-q35"]
     axplat --> riscv["ax-plat-riscv64-qemu-virt"]
     axplat --> aarch64["ax-plat-aarch64-peripherals"]
@@ -76,7 +76,7 @@ graph LR
 这个 crate 本体没有本地 crate 依赖，保持了非常小的体量。
 
 ### 3.2 关键直接消费者
-- `axplat::irq`：把 `HandlerTable` 作为平台 IRQ 管理接口的一部分导出。
+- `ax_plat::irq`：把 `HandlerTable` 作为平台 IRQ 管理接口的一部分导出。
 - 各平台 IRQ 实现：如 `ax-plat-x86-pc`、`ax-plat-riscv64-qemu-virt` 等，都直接声明静态 `IRQ_HANDLER_TABLE`。
 
 ## 4. 开发指南
@@ -107,7 +107,7 @@ handler_table = { workspace = true }
 - 并发注册/注销与调用下的基本原子语义。
 
 ### 5.3 集成测试重点
-- 平台 IRQ 注册、注销和分发能否与 `axplat::irq` 接口匹配。
+- 平台 IRQ 注册、注销和分发能否与 `ax_plat::irq` 接口匹配。
 - IPI 或设备中断路径是否能正确查表并调用处理器。
 
 ### 5.4 覆盖率要求

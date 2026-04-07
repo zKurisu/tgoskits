@@ -14,7 +14,7 @@
 
 //! Uart 16550 serial port.
 
-use axplat::console::ConsoleIf;
+use ax_plat::console::ConsoleIf;
 use kspin::SpinNoIrq;
 use uart_16550::SerialPort;
 

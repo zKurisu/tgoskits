@@ -1,12 +1,12 @@
 # `ax-plat-aarch64-bsta1000b` 技术文档
 
-> 路径：`components/axplat_crates/platforms/ax-plat-aarch64-bsta1000b`
+> 路径：`components/axplat_crates/platforms/axplat-aarch64-bsta1000b`
 > 类型：库 crate
 > 分层：组件层 / AArch64 板级平台包
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml`、`README.md`、`axconfig.toml`、`src/boot.rs`、`src/init.rs`、`src/dw_apb_uart.rs`、`src/mem.rs`、`src/power.rs`、`src/mp.rs`、`src/misc.rs`
 
-`ax-plat-aarch64-bsta1000b` 是 Black Sesame A1000B SoC 在 `axplat` 体系里的具体板级实现。它把 A1000B 的启动入口、早期页表、固定地址空间、PSCI 多核拉起、GIC/Generic Timer 接线以及本地 DesignWare APB UART 控制台组织成一组 `axplat` 接口，使上层内核能够按统一平台契约完成 bring-up。它不是通用 AArch64 外设库，也不是完整驱动栈；它解决的是“这块板子怎样从裸机入口走到 `axplat::call_main()`，并把最小可运行平台能力交给上层”的问题。
+`ax-plat-aarch64-bsta1000b` 是 Black Sesame A1000B SoC 在 `axplat` 体系里的具体板级实现。它把 A1000B 的启动入口、早期页表、固定地址空间、PSCI 多核拉起、GIC/Generic Timer 接线以及本地 DesignWare APB UART 控制台组织成一组 `axplat` 接口，使上层内核能够按统一平台契约完成 bring-up。它不是通用 AArch64 外设库，也不是完整驱动栈；它解决的是“这块板子怎样从裸机入口走到 `ax_plat::call_main()`，并把最小可运行平台能力交给上层”的问题。
 
 ## 1. 架构设计分析
 
@@ -52,18 +52,18 @@ flowchart TD
     F --> G[init_boot_page_table]
     G --> H[ax-cpu::init::init_mmu]
     H --> I[把栈切到高半区映射]
-    I --> J[axplat::call_main cpu_id dtb]
-    J --> K[内核 #[axplat::main] 入口]
+    I --> J[ax_plat::call_main cpu_id dtb]
+    J --> K[内核 #[ax_plat::main] 入口]
 ```
 
 这个流程里有几个实现层面的重点：
 
 - 入口镜像头遵循 Linux arm64 image header 约定，方便常见引导器识别。
-- 主核从 `MPIDR_EL1` 直接截取硬件 CPU ID，并把 `x0` 里的 DTB 指针原样传给 `axplat::call_main()`。
+- 主核从 `MPIDR_EL1` 直接截取硬件 CPU ID，并把 `x0` 里的 DTB 指针原样传给 `ax_plat::call_main()`。
 - 引导页表只建立 3 个 1 GiB block：低地址设备区、下一段设备区，以及从 `0x8000_0000` 开始的普通内存区。
 - 打开 MMU 后，栈通过 `PHYS_VIRT_OFFSET` 平移到高半区，再进入上层内核逻辑。
 
-在 `smp` 打开时，`_start_secondary` 复用同一套引导页表，但次核入口更简单：固件直接给出次核栈顶物理地址，次核完成 EL 切换和 MMU 初始化后就跳入 `axplat::call_secondary_main()`。
+在 `smp` 打开时，`_start_secondary` 复用同一套引导页表，但次核入口更简单：固件直接给出次核栈顶物理地址，次核完成 EL 切换和 MMU 初始化后就跳入 `ax_plat::call_secondary_main()`。
 
 ### 1.4 与相邻层的边界
 
@@ -80,11 +80,11 @@ flowchart TD
 
 - 这个 crate 没有展开 `ax-plat-aarch64-peripherals::console_if_impl!`，因为 A1000B 控制台不是 PL011，而是本地 `dw_apb_uart` 实现。
 - `boot.rs` 会把 DTB 指针传上去，但本 crate 的 `init.rs` 并不解析 DTB；当前平台描述主要由 `axconfig.toml` 固化。
-- `misc.rs` 里确实有 QSPI reset、CPU reset 和 bootmode 读取逻辑，但这些函数没有接入 `axplat::power::system_off()`；对上层可见的电源语义仍然是 PSCI `system_off()`。
+- `misc.rs` 里确实有 QSPI reset、CPU reset 和 bootmode 读取逻辑，但这些函数没有接入 `ax_plat::power::system_off()`；对上层可见的电源语义仍然是 PSCI `system_off()`。
 
 ### 1.5 内存与设备模型
 
-`mem.rs` 把 A1000B 的板级地址布局直接翻译成 `axplat::mem::MemIf`：
+`mem.rs` 把 A1000B 的板级地址布局直接翻译成 `ax_plat::mem::MemIf`：
 
 - `phys_ram_ranges()` 返回单一 RAM 区间：从 `PHYS_MEMORY_BASE` 开始，长度为 `PHYS_MEMORY_SIZE`。
 - `reserved_phys_ram_ranges()` 当前为空，表示本层不额外声明保留 RAM。
@@ -124,7 +124,7 @@ flowchart TD
 
 从上层内核视角看，这个 crate 暴露的是 `axplat` 能力，而不是板级私有 API：
 
-- 上层调用的是 `axplat::init::init_early()`、`axplat::console_println!()`、`axplat::power::system_off()`。
+- 上层调用的是 `ax_plat::init::init_early()`、`ax_plat::console_println!()`、`ax_plat::power::system_off()`。
 - 这些调用最终才会落到本 crate 的 `InitIfImpl`、`ConsoleIfImpl`、`PowerImpl`。
 - 因此它的职责是“把 A1000B 接到 `axplat` 上”，不是“定义一套 A1000B 专用内核接口”。
 
@@ -133,7 +133,7 @@ flowchart TD
 - 没有 DTB 解析器。
 - 没有驱动模型。
 - 没有最终内核页表管理。
-- 没有把 `misc.rs` 里的复位寄存器语义提升为统一 `axplat::power` 接口。
+- 没有把 `misc.rs` 里的复位寄存器语义提升为统一 `ax_plat::power` 接口。
 
 ## 3. 依赖关系图谱
 
@@ -188,11 +188,11 @@ extern crate axplat_aarch64_bsta1000b;
 内核入口仍然写成标准 `axplat` 形式：
 
 ```rust
-#[axplat::main]
+#[ax_plat::main]
 fn kernel_main(cpu_id: usize, arg: usize) -> ! {
-    axplat::init::init_early(cpu_id, arg);
-    axplat::init::init_later(cpu_id, arg);
-    axplat::power::system_off();
+    ax_plat::init::init_early(cpu_id, arg);
+    ax_plat::init::init_later(cpu_id, arg);
+    ax_plat::power::system_off();
 }
 ```
 
@@ -207,7 +207,7 @@ fn kernel_main(cpu_id: usize, arg: usize) -> ! {
 
 对这种板级平台，调试最好按最小 bring-up 主线推进：
 
-1. 先确认 `_start -> axplat::call_main()` 能贯通。
+1. 先确认 `_start -> ax_plat::call_main()` 能贯通。
 2. 再确认早期串口能打印日志。
 3. 再打开 `irq` 验证 GIC 和定时器。
 4. 最后再打开 `smp` 验证 PSCI 次核启动。
@@ -224,7 +224,7 @@ fn kernel_main(cpu_id: usize, arg: usize) -> ! {
 
 ### 5.2 推荐测试分层
 
-- 启动冒烟：验证从 `_start` 到 `axplat::call_main()` 的完整链路。
+- 启动冒烟：验证从 `_start` 到 `ax_plat::call_main()` 的完整链路。
 - 串口验证：确认 `dw_apb_uart` 早期初始化后能立即输出日志。
 - IRQ 验证：启用 `irq` 后确认 GIC 初始化、timer IRQ 和 UART IRQ 能正常工作。
 - SMP 验证：启用 `smp` 后确认 `cpu_boot()` 能按 `CPU_ID_LIST` 拉起次核。

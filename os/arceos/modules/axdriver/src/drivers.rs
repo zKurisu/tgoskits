@@ -157,7 +157,7 @@ cfg_if::cfg_if! {
 
 cfg_if::cfg_if! {
     if #[cfg(net_dev = "fxmac")]{
-        use ax-alloc::{UsageKind, global_allocator};
+        use ax_alloc::{UsageKind, global_allocator};
         use ax_hal::mem::PAGE_SIZE_4K;
 
         #[crate_interface::impl_interface]

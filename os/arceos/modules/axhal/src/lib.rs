@@ -77,44 +77,44 @@ pub mod paging;
 /// Console input and output.
 pub mod console {
     #[cfg(feature = "irq")]
-    pub use axplat::console::irq_num;
-    pub use axplat::console::{read_bytes, write_bytes};
+    pub use ax_plat::console::irq_num;
+    pub use ax_plat::console::{read_bytes, write_bytes};
 }
 
 /// CPU power management.
 pub mod power {
     #[cfg(feature = "smp")]
-    pub use axplat::power::cpu_boot;
-    pub use axplat::power::system_off;
+    pub use ax_plat::power::cpu_boot;
+    pub use ax_plat::power::system_off;
 }
 
 /// Trap handling.
 pub mod trap {
-    pub use ax-cpu::trap::{IRQ, PAGE_FAULT, PageFaultFlags, register_trap_handler};
+    pub use ax_cpu::trap::{IRQ, PAGE_FAULT, PageFaultFlags, register_trap_handler};
 }
 
 /// CPU register states for context switching.
 ///
 /// There are two types of context:
 ///
-/// - [`TaskContext`][ax-cpu::TaskContext]: The context of a task.
-/// - [`TrapFrame`][ax-cpu::TrapFrame]: The context of an interrupt or an exception.
+/// - [`TaskContext`][ax_cpu::TaskContext]: The context of a task.
+/// - [`TrapFrame`][ax_cpu::TrapFrame]: The context of an interrupt or an exception.
 pub mod context {
-    pub use ax-cpu::{TaskContext, TrapFrame};
+    pub use ax_cpu::{TaskContext, TrapFrame};
 }
 
-pub use ax-cpu::asm;
+pub use ax_cpu::asm;
 #[cfg(feature = "uspace")]
-pub use ax-cpu::uspace;
-pub use axplat::init::init_later;
+pub use ax_cpu::uspace;
+pub use ax_plat::init::init_later;
 #[cfg(feature = "smp")]
-pub use axplat::init::{init_early_secondary, init_later_secondary};
+pub use ax_plat::init::{init_early_secondary, init_later_secondary};
 
 /// Initializes the platform and boot argument.
 /// This function should be called as early as possible.
 pub fn init_early(cpu_id: usize, arg: usize) {
     dtb::init(arg);
-    axplat::init::init_early(cpu_id, arg);
+    ax_plat::init::init_early(cpu_id, arg);
 }
 
 /// Gets the number of CPUs running in the system.
@@ -122,7 +122,7 @@ pub fn init_early(cpu_id: usize, arg: usize) {
 /// When SMP is disabled, this function always returns 1.
 ///
 /// When SMP is enabled, it's the smaller one between the platform-declared CPU
-/// number [`axplat::power::cpu_num`] and the configured maximum CPU number
+/// number [`ax_plat::power::cpu_num`] and the configured maximum CPU number
 /// `axconfig::plat::MAX_CPU_NUM`.
 ///
 /// This value is determined during the BSP initialization phase.
@@ -135,7 +135,7 @@ pub fn cpu_num() -> usize {
         /// platform crate and limited by the configured maximum CPU number.
         static CPU_NUM: Lazy<usize> = Lazy::new(|| {
             let max_cpu_num = axconfig::plat::MAX_CPU_NUM;
-            let plat_cpu_num = axplat::power::cpu_num();
+            let plat_cpu_num = ax_plat::power::cpu_num();
             let cpu_num = plat_cpu_num.min(max_cpu_num);
 
             info!("CPU number: max = {max_cpu_num}, platform = {plat_cpu_num}, use = {cpu_num}");

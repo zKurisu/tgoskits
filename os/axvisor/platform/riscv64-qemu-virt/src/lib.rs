@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate axplat;
+extern crate ax_plat;
 
 #[cfg(feature = "irq")]
 pub mod irq;

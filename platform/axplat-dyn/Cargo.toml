@@ -11,8 +11,8 @@ repository.workspace = true
 
 [features]
 default = ["smp", "irq"]
-smp = ["axplat/smp"]
-irq = ["axplat/irq"]
+smp = ["ax-plat/smp"]
+irq = ["ax-plat/irq"]
 uspace = ["somehal/uspace"]
 hv = ["somehal/hv", "ax-cpu/arm-el2"]
 
@@ -26,7 +26,7 @@ axdriver_block.workspace = true
 axdriver_virtio = { workspace = true, features = ["block"] }
 axerrno.workspace = true
 axklib.workspace = true
-axplat.workspace = true
+ax-plat.workspace = true
 dma-api = "0.7"
 fdt-edit = "0.2"
 heapless = "0.9"

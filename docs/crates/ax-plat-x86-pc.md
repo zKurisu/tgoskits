@@ -49,7 +49,7 @@ flowchart TD
     B --> C["建立临时 GDT 与页表"]
     C --> D["切到 64 位模式"]
     D --> E["bsp_entry64 -> rust_entry"]
-    E --> F["axplat::call_main(cpu_id, mbi)"]
+    E --> F["ax_plat::call_main(cpu_id, mbi)"]
     F --> G["InitIf::init_early"]
     G --> H["trap / console / time / mem"]
     H --> I["InitIf::init_later"]
@@ -61,7 +61,7 @@ flowchart TD
 
 1. `_start` 接收 Multiboot 魔数和信息指针，先在 32 位环境下准备 GDT、页表和模式切换。
 2. 进入 64 位后，把 BSP 栈切到 `BOOT_STACK` 顶，再调用 `rust_entry`。
-3. `rust_entry` 校验 Multiboot 魔数后，通过 `axplat::call_main(current_cpu_id(), mbi)` 与上层 `#[axplat::main]` 契约衔接。
+3. `rust_entry` 校验 Multiboot 魔数后，通过 `ax_plat::call_main(current_cpu_id(), mbi)` 与上层 `#[ax_plat::main]` 契约衔接。
 4. `InitIf::init_early()` 初始化 trap、串口、时间源和内存区。
 5. `InitIf::init_later()` 则进一步初始化 APIC 与 per-CPU 时间设施。
 
@@ -83,7 +83,7 @@ flowchart TD
 
 #### SMP
 - `mp.rs` 负责构造 AP 启动页，把启动代码复制到固定低地址页，再通过 INIT-SIPI-SIPI 启动 AP。
-- AP 进入长模式后会调用 `rust_entry_secondary`，再经 `axplat::call_secondary_main()` 衔接运行时。
+- AP 进入长模式后会调用 `rust_entry_secondary`，再经 `ax_plat::call_secondary_main()` 衔接运行时。
 - `PowerIf::cpu_boot()` 本质上是对这套 AP bring-up 的上层封装。
 
 ### 1.6 内存模型与平台假设
@@ -94,7 +94,7 @@ flowchart TD
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
-- 提供 Multiboot 到 `axplat::call_main()` 的最早期引导桥接。
+- 提供 Multiboot 到 `ax_plat::call_main()` 的最早期引导桥接。
 - 提供基于 COM1 的平台控制台。
 - 提供基于 TSC 和可选 RTC 的时间接口。
 - 提供基于 LAPIC / IOAPIC 的中断与 IPI 支持。
@@ -121,7 +121,7 @@ ax-plat-x86-pc = { workspace = true, features = ["irq", "smp", "rtc"] }
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axplat["axplat"] --> current["ax-plat-x86-pc"]
+    axplat["ax-plat"] --> current["ax-plat-x86-pc"]
     ax-cpu["ax-cpu"] --> current
     multiboot["multiboot"] --> current
     apic["x2apic / x86 / x86_64"] --> current
@@ -240,7 +240,7 @@ graph LR
     current["ax-plat-x86-pc"]
     current --> axconfig_macros["axconfig-macros"]
     current --> ax-cpu["ax-cpu"]
-    current --> axplat["axplat"]
+    current --> axplat["ax-plat"]
     current --> int_ratio["int_ratio"]
     current --> kspin["kspin"]
     current --> lazyinit["lazyinit"]

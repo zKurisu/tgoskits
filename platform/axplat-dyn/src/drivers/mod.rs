@@ -6,9 +6,9 @@ use alloc::{
 };
 use core::ptr::NonNull;
 
+use ax_plat::mem::PhysAddr;
 use axdriver_block::BlockDriverOps;
 use axerrno::AxError;
-use axplat::mem::PhysAddr;
 use heapless::Vec;
 use memory_addr::PAGE_SIZE_4K;
 use rdrive::probe::OnProbeError;

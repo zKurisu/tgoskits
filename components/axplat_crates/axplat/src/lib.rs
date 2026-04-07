@@ -31,17 +31,17 @@ pub mod __priv {
 /// # Example
 ///
 /// ```rust
-/// extern crate axplat;
+/// extern crate ax_plat;
 /// const A: &str = "hello";
 /// const B: &str = "hello";
-/// axplat::assert_str_eq!(A, B);
+/// ax_plat::assert_str_eq!(A, B);
 /// ```
 ///
 /// ```compile_fail
-/// extern crate axplat;
+/// extern crate ax_plat;
 /// const A: &str = "hello";
 /// const B: &str = "world";
-/// axplat::assert_str_eq!(A, B, "A and B are not equal!");
+/// ax_plat::assert_str_eq!(A, B, "A and B are not equal!");
 /// ```
 #[macro_export]
 macro_rules! assert_str_eq {
@@ -56,14 +56,14 @@ macro_rules! assert_str_eq {
     };
 }
 
-/// Call the function decorated by [`axplat::main`][main] for the primary core.
+/// Call the function decorated by [`ax_plat::main`][main] for the primary core.
 ///
 /// This function should only be called by the platform implementer, not the kernel.
 pub fn call_main(cpu_id: usize, arg: usize) -> ! {
     unsafe { __axplat_main(cpu_id, arg) }
 }
 
-/// Call the function decorated by [`axplat::secondary_main`][secondary_main] for secondary cores.
+/// Call the function decorated by [`ax_plat::secondary_main`][secondary_main] for secondary cores.
 ///
 /// This function should only be called by the platform implementer, not the kernel.
 #[cfg(feature = "smp")]

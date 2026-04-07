@@ -12,7 +12,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [features]
-irq = ["axplat/irq"]
+irq = ["ax-plat/irq"]
 
 [dependencies]
 kspin = "0.3.1"
@@ -25,7 +25,7 @@ arm_pl011 = "0.3.0"
 arm-gic-driver = "0.16"
 arm_pl031 = "0.4.1"
 ax-cpu = { workspace = true }
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["aarch64-unknown-none"]

@@ -49,7 +49,7 @@
 
 - 外设对象在系统范围内天然唯一，使用静态单例比“把设备对象传给平台实现结构体”更符合启动期约束。
 - `SpinNoIrq` 保证早期串口与 GIC 操作在尚未建立完整阻塞原语前仍可安全使用。
-- 定时器和 RTC 不直接暴露底层寄存器，而是转译成 `axplat::time` 需要的统一语义。
+- 定时器和 RTC 不直接暴露底层寄存器，而是转译成 `ax_plat::time` 需要的统一语义。
 
 ### 1.4 初始化主线
 
@@ -81,7 +81,7 @@ flowchart TD
 - `time_if_impl!`
 - `irq_if_impl!`
 
-它们会在调用方平台包中生成 `ConsoleIfImpl`、`TimeIfImpl`、`IrqIfImpl` 等零大小实现体，并通过 `#[impl_plat_interface]` 或 `#[axplat::impl_plat_interface]` 挂到 `axplat` 的接口系统上。宏展开时会直接引用调用方 crate 中的 `crate::config::devices::*` 常量，如：
+它们会在调用方平台包中生成 `ConsoleIfImpl`、`TimeIfImpl`、`IrqIfImpl` 等零大小实现体，并通过 `#[impl_plat_interface]` 或 `#[ax_plat::impl_plat_interface]` 挂到 `axplat` 的接口系统上。宏展开时会直接引用调用方 crate 中的 `crate::config::devices::*` 常量，如：
 
 - `UART_PADDR`
 - `UART_IRQ`
@@ -143,10 +143,10 @@ generic_timer::enable_irqs(timer_irq);
 
 当平台包完成宏展开后，上层内核将看到的不是 `pl011::write_bytes()` 或 `gic::handle_irq()`，而是统一的：
 
-- `axplat::console::write_bytes()`
-- `axplat::time::current_ticks()`
-- `axplat::irq::register()`
-- `axplat::power::system_off()`（通常由板级包中的 `PowerIf` 再调用 `psci`）
+- `ax_plat::console::write_bytes()`
+- `ax_plat::time::current_ticks()`
+- `ax_plat::irq::register()`
+- `ax_plat::power::system_off()`（通常由板级包中的 `PowerIf` 再调用 `psci`）
 
 因此它在系统中的价值更接近“把外设能力转译进 `axplat` 合约”。
 
@@ -207,7 +207,7 @@ graph TD
 
 该 crate 自身只定义了一个 feature：
 
-- `irq`：启用 `gic` 模块，并同时要求上层打开 `axplat/irq`。
+- `irq`：启用 `gic` 模块，并同时要求上层打开 `ax-plat/irq`。
 
 需要特别注意：
 

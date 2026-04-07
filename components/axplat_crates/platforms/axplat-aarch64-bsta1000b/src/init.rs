@@ -1,4 +1,4 @@
-use axplat::init::InitIf;
+use ax_plat::init::InitIf;
 
 #[allow(unused_imports)]
 use crate::config::devices::{GICC_PADDR, GICD_PADDR, TIMER_IRQ};
@@ -14,7 +14,7 @@ impl InitIf for InitIfImpl {
     /// and performed earliest platform configuration and initialization (e.g.,
     /// early console, clocking).
     fn init_early(_cpu_id: usize, _dtb: usize) {
-        ax-cpu::init::init_trap();
+        ax_cpu::init::init_trap();
         ax_plat_aarch64_peripherals::psci::init(PSCI_METHOD);
         super::dw_apb_uart::init_early();
         ax_plat_aarch64_peripherals::generic_timer::init_early();
@@ -23,7 +23,7 @@ impl InitIf for InitIfImpl {
     /// Initializes the platform at the early stage for secondary cores.
     #[cfg(feature = "smp")]
     fn init_early_secondary(_cpu_id: usize) {
-        ax-cpu::init::init_trap();
+        ax_cpu::init::init_trap();
     }
 
     /// Initializes the platform at the later stage for the primary core.
@@ -34,7 +34,7 @@ impl InitIf for InitIfImpl {
     fn init_later(_cpu_id: usize, _dtb: usize) {
         #[cfg(feature = "irq")]
         {
-            use axplat::mem::pa;
+            use ax_plat::mem::pa;
 
             use crate::mem::phys_to_virt;
             ax_plat_aarch64_peripherals::gic::init_gic(

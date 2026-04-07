@@ -83,7 +83,7 @@
 - 用 `LazyInit<SpinNoIrq<Pl011Uart>>` 管理全局实例
 - 在 `init_early()` 中调用 `Pl011Uart::new()` 和 `init()`
 - `putchar()` 上层额外做了 `\n -> \r\n` 转换
-- 通过 `console_if_impl!` 宏把它接到 `axplat::console::ConsoleIf`
+- 通过 `console_if_impl!` 宏把它接到 `ax_plat::console::ConsoleIf`
 
 这条调用链说明：
 

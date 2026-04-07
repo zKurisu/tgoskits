@@ -13,9 +13,9 @@ repository.workspace = true
 
 [features]
 fp-simd = ["ax-cpu/fp-simd"]
-irq = ["axplat/irq"]
+irq = ["ax-plat/irq"]
 rtc = ["dep:chrono"]
-smp = ["axplat/smp", "kspin/smp", "irq"]
+smp = ["ax-plat/smp", "kspin/smp", "irq"]
 
 [dependencies]
 chrono = { version = "0.4", default-features = false, optional = true }
@@ -28,7 +28,7 @@ uart_16550 = "0.5"
 
 axconfig-macros = "0.4.1"
 ax-cpu = { workspace = true }
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 
 [package.metadata.docs.rs]
 targets = ["loongarch64-unknown-none"]

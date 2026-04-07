@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 cfg-if = "1.0"
-axplat = { workspace = true }
+ax-plat = { workspace = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 ax-plat-x86-pc = { path = "../../platforms/axplat-x86-pc" }

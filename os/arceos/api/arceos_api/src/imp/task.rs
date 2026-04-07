@@ -111,7 +111,7 @@ cfg_task! {
         }
 
         if timeout.is_some() {
-            ax-log::warn!("ax_wait_queue_wait: the `timeout` argument is ignored without the `irq` feature");
+            ax_log::warn!("ax_wait_queue_wait: the `timeout` argument is ignored without the `irq` feature");
         }
         wq.0.wait();
         false
@@ -128,7 +128,7 @@ cfg_task! {
         }
 
         if timeout.is_some() {
-            ax-log::warn!("ax_wait_queue_wait_until: the `timeout` argument is ignored without the `irq` feature");
+            ax_log::warn!("ax_wait_queue_wait_until: the `timeout` argument is ignored without the `irq` feature");
         }
         wq.0.wait_until(until_condition);
         false

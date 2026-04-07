@@ -6,7 +6,7 @@
 > 版本：`0.1.0`
 > 文档依据：`Cargo.toml`、`src/main.rs`、`Makefile`、`README.md`
 
-`hello-kernel` 是 `axplat` 工作区里最短的“能真正跑起来”的内核样例。它显式链接一个目标平台包，调用 `axplat::percpu::init_primary()`、`axplat::init::init_early()` 和 `init_later()`，然后打印启动信息、忙等 5 秒并关机。
+`hello-kernel` 是 `axplat` 工作区里最短的“能真正跑起来”的内核样例。它显式链接一个目标平台包，调用 `ax_plat::percpu::init_primary()`、`ax_plat::init::init_early()` 和 `init_later()`，然后打印启动信息、忙等 5 秒并关机。
 
 因此它最重要的边界是：**它不是可复用内核框架，也不是上层系统应该直接继承的骨架；它只是验证 `axplat` 最小启动链是否成立的样例入口。**
 
@@ -16,7 +16,7 @@
 
 1. 通过 `cfg_if!` 选择当前架构对应的平台 crate。
 2. `init_kernel(cpu_id, arg)` 完成 per-CPU 与平台初始化。
-3. `#[axplat::main] fn main(...) -> !` 打印信息、忙等、关机。
+3. `#[ax_plat::main] fn main(...) -> !` 打印信息、忙等、关机。
 4. `panic_handler` 在 panic 时走控制台输出并关机。
 
 它几乎把“基于 `axplat` 写最小内核”压缩到了最短。
@@ -24,8 +24,8 @@
 ### 1.2 真实调用链
 ```mermaid
 flowchart LR
-    A["平台 boot 代码"] --> B["axplat::call_main"]
-    B --> C["#[axplat::main] main(cpu_id, arg)"]
+    A["平台 boot 代码"] --> B["ax_plat::call_main"]
+    B --> C["#[ax_plat::main] main(cpu_id, arg)"]
     C --> D["init_kernel()"]
     D --> E["percpu::init_primary"]
     E --> F["init_early / init_later"]
@@ -51,7 +51,7 @@ flowchart LR
 ### 2.1 实际演示的能力链
 这个样例实际覆盖的是：
 
-- 启动入口成功跳到 `#[axplat::main]`
+- 启动入口成功跳到 `#[ax_plat::main]`
 - BSP 的 per-CPU 状态已建立
 - 控制台与时间源可用
 - `busy_wait` 可以推进时间
@@ -77,7 +77,7 @@ flowchart LR
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    sample["hello-kernel"] --> axplat["axplat"]
+    sample["hello-kernel"] --> axplat["ax-plat"]
     sample --> x86["ax-plat-x86-pc"]
     sample --> a64["ax-plat-aarch64-qemu-virt"]
     sample --> rv["ax-plat-riscv64-qemu-virt"]
@@ -90,7 +90,7 @@ graph LR
 - 各平台包：提供真正的板级实现。
 
 ### 3.2 关键间接依赖
-- `axplat-macros`：支撑 `#[axplat::main]`。
+- `axplat-macros`：支撑 `#[ax_plat::main]`。
 - `ax-cpu`、串口/时钟相关底层组件：由平台包继续下接。
 
 ### 3.3 主要消费者

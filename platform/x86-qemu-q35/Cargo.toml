@@ -18,15 +18,15 @@ default = [
   "reboot-on-system-off",
 ]
 fp-simd = []
-irq = ["axplat/irq"]
+irq = ["ax-plat/irq"]
 reboot-on-system-off = []
 rtc = ["dep:x86_rtc"]
-smp = ["axplat/smp", "kspin/smp"]
+smp = ["ax-plat/smp", "kspin/smp"]
 
 [dependencies]
 axconfig-macros = "0.4.1"
 ax-cpu = { workspace = true, features = ["arm-el2"] }
-axplat.workspace = true
+ax-plat.workspace = true
 bitflags = "2.6"
 heapless = "0.9"
 int_ratio = "0.3.2"

@@ -1,7 +1,7 @@
 use core::{alloc::Layout, ptr::NonNull};
 
+use ax_alloc::{DefaultByteAllocator, UsageKind, global_allocator};
 use ax_hal::{mem::virt_to_phys, paging::MappingFlags};
-use ax-alloc::{DefaultByteAllocator, UsageKind, global_allocator};
 #[cfg(not(feature = "buddy-slab"))]
 use axallocator::{AllocError, AllocResult, BaseAllocator, ByteAllocator};
 #[cfg(feature = "buddy-slab")]

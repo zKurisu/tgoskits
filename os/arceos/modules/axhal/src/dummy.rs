@@ -1,8 +1,8 @@
 //! Dummy implementation of platform-related interfaces defined in [`axplat`].
 
 #[cfg(feature = "irq")]
-use axplat::irq::{IpiTarget, IrqHandler, IrqIf};
-use axplat::{
+use ax_plat::irq::{IpiTarget, IrqHandler, IrqIf};
+use ax_plat::{
     console::ConsoleIf,
     impl_plat_interface,
     init::InitIf,

@@ -1,4 +1,4 @@
-use axplat::mem::{PhysAddr, va, virt_to_phys};
+use ax_plat::mem::{PhysAddr, va, virt_to_phys};
 
 use crate::config::plat::CPU_ID_LIST;
 

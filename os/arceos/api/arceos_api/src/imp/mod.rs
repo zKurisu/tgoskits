@@ -35,7 +35,7 @@ mod stdio {
     }
 
     pub fn ax_console_write_fmt(args: fmt::Arguments) -> fmt::Result {
-        ax-log::print_fmt(args)
+        ax_log::print_fmt(args)
     }
 }
 

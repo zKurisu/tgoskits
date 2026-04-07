@@ -15,7 +15,7 @@
 `axplat-dyn` 在当前仓库里的位置可以概括为：
 
 - 向下：依赖 `somehal` 提供的入口宏、内存映射、控制台、时钟、中断、电源和 CPU 元数据。
-- 向上：实现 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf` 以及可选 `IrqIf`，并通过 `axplat::call_main()` / `call_secondary_main()` 把控制权交给内核入口。
+- 向上：实现 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf` 以及可选 `IrqIf`，并通过 `ax_plat::call_main()` / `call_secondary_main()` 把控制权交给内核入口。
 - 向旁：公开 `drivers` 模块，为 `ax-driver` 的 `dyn` 设备模型提供基于 `rdrive` 的设备探测与块设备封装。
 - 向链接层：通过 `build.rs` 生成 `axplat.x`，把 `linkme` 段、异常表和若干 ArceOS 约定符号补进最终镜像。
 
@@ -44,7 +44,7 @@
 
 | 装配层 | 依赖来源 | 本 crate 的落点 | 作用 |
 | --- | --- | --- | --- |
-| 启动 glue | `somehal` | `boot.rs` | 把主核/次核入口收敛到 `axplat::call_main()` / `call_secondary_main()` |
+| 启动 glue | `somehal` | `boot.rs` | 把主核/次核入口收敛到 `ax_plat::call_main()` / `call_secondary_main()` |
 | 平台契约 glue | `axplat` | `init.rs`、`console.rs`、`mem.rs`、`generic_timer.rs`、`irq.rs`、`power.rs` | 用 `#[impl_plat_interface]` 把 `somehal` 能力接到 `axplat` trait |
 | 设备 glue | `rdrive`、`rd-block`、`axdriver_virtio` | `drivers/*` | 把 FDT/PCIe/VirtIO 探测结果转成 `ax-driver` 可消费的动态块设备 |
 | 链接 glue | `build.rs`、`link.ld` | crate 根目录 | 生成 `axplat.x`，插入所需段和符号，适配 ArceOS 链接约定 |
@@ -57,19 +57,19 @@
 
 1. `#[somehal::entry(Kernel)]` 标记的 `main()` 作为主核入口。
 2. 入口尝试从 `somehal::fdt_addr_phys()` 取得 FDT 物理地址，作为 `arg` 传给内核。
-3. 主核统一跳到 `axplat::call_main(0, arg)`。
-4. 若启用 `smp`，`#[somehal::secondary_entry]` 标记的次核入口会继续调用 `axplat::call_secondary_main(cpu_id)`。
+3. 主核统一跳到 `ax_plat::call_main(0, arg)`。
+4. 若启用 `smp`，`#[somehal::secondary_entry]` 标记的次核入口会继续调用 `ax_plat::call_secondary_main(cpu_id)`。
 
 ```mermaid
 flowchart TD
     A[somehal 主核入口] --> B[读取 FDT 物理地址]
-    B --> C[axplat::call_main cpu0 arg]
-    C --> D[#[axplat::main] 内核入口]
-    D --> E[axplat::init::init_early]
+    B --> C[ax_plat::call_main cpu0 arg]
+    C --> D[#[ax_plat::main] 内核入口]
+    D --> E[ax_plat::init::init_early]
     E --> F[内核前半初始化]
-    F --> G[axplat::init::init_later]
+    F --> G[ax_plat::init::init_later]
 
-    H[somehal 次核入口] --> I[axplat::call_secondary_main cpu_id]
+    H[somehal 次核入口] --> I[ax_plat::call_secondary_main cpu_id]
 ```
 
 `init.rs` 则把 `somehal` 已经具备的基础能力重新编排成 `axplat` 生命周期：
@@ -101,7 +101,7 @@ flowchart TD
 
 #### 时间、中断与电源
 
-`generic_timer.rs` 把 `somehal::timer` 接成 `axplat::time::TimeIf`：
+`generic_timer.rs` 把 `somehal::timer` 接成 `ax_plat::time::TimeIf`：
 
 - `current_ticks()` / `ticks_to_nanos()` / `nanos_to_ticks()`：直接围绕 `ticks()` 和 `freq()` 换算。
 - `irq_num()`：取 `somehal::irq::systick_irq()`。
@@ -173,8 +173,8 @@ flowchart TD
 
 | Feature | 作用 |
 | --- | --- |
-| `smp` | 透传到 `axplat/smp`，启用次核入口、次核初始化和 `cpu_boot()` 路径 |
-| `irq` | 透传到 `axplat/irq`，编译 `irq.rs` 并启用 timer IRQ 相关接口 |
+| `smp` | 透传到 `ax-plat/smp`，启用次核入口、次核初始化和 `cpu_boot()` 路径 |
+| `irq` | 透传到 `ax-plat/irq`，编译 `irq.rs` 并启用 timer IRQ 相关接口 |
 | `uspace` | 透传到 `somehal/uspace`，说明该路径允许 `somehal` 切换到含用户态支持的构建 |
 | `hv` | 透传到 `somehal/hv` 与 `ax-cpu/arm-el2`，为 hypervisor 场景准备 CPU 模式支持 |
 
@@ -243,7 +243,7 @@ graph TD
 1. 在上层内核构建中启用 `ax-hal` 的 `plat-dyn` feature；若需要动态设备探测，再启用 `ax-driver` 的 `dyn` 相关 feature。
 2. 确保目标是裸机环境，而不是 `unix`/`windows` 宿主机构建路径。
 3. 让 `somehal` 提供入口、FDT、内存图、控制台、时钟、中断和电源实现。
-4. 由 `boot.rs` 把控制流统一转到 `axplat::call_main()`，随后上层只通过 `axplat` 接口使用平台能力。
+4. 由 `boot.rs` 把控制流统一转到 `ax_plat::call_main()`，随后上层只通过 `axplat` 接口使用平台能力。
 5. 若需要动态块设备，在适当阶段调用 `ax-driver::init_drivers()`，其内部会落到 `axplat_dyn::drivers::probe_all_devices()`。
 
 ### 4.3 维护注意事项
@@ -258,7 +258,7 @@ graph TD
 
 ### 5.1 当前有效验证面
 
-- 裸机目标上的完整启动冒烟：确认 `somehal` 入口能贯通到 `axplat::call_main()`。
+- 裸机目标上的完整启动冒烟：确认 `somehal` 入口能贯通到 `ax_plat::call_main()`。
 - 内存图验证：检查 `somehal::mem::memory_map()` 过滤出的 RAM、保留区和 MMIO 是否与上层预期一致。
 - 计时器与 IRQ 验证：确认 `init_later()` 后 timer IRQ 真正可触发。
 - 动态设备验证：确认 `ax-driver` 的 `dyn` 路径能从本 crate 获取块设备。
