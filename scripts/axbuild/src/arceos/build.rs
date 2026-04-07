@@ -1144,4 +1144,16 @@ AX_GW = "10.0.2.2"
 
         Ok(root)
     }
+
+    #[test]
+    fn resolve_platform_package_ignores_unselected_axplat_dependency() {
+        let package = resolve_platform_package(
+            "starryos-test",
+            "riscv64gc-unknown-none-elf",
+            &["qemu".to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(package, "axplat-riscv64-qemu-virt");
+    }
 }
