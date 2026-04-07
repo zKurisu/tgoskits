@@ -63,7 +63,7 @@
 在当前仓库中，真正把这些实现接进系统初始化流程的是 `os/arceos/modules/axdriver/src/drivers.rs`：
 
 - `ramdisk` 通过 `RamDiskDriver::probe_global()` 创建固定大小 16 MiB RAM 盘。
-- `sdmmc` 通过 `SdMmcDriver::new()` 使用 `axconfig::devices::SDMMC_PADDR` 对应寄存器基址。
+- `sdmmc` 通过 `SdMmcDriver::new()` 使用 `ax_config::devices::SDMMC_PADDR` 对应寄存器基址。
 - `bcm2835-sdhci` 通过 `SDHCIDriver::try_new()` 接入。
 
 需要特别注意一个实现事实：**`axdriver_block` 虽然有 `ahci` feature 和 `ahci` 模块，但当前 `ax-driver::drivers.rs` 并没有把 AHCI 探测逻辑注册进去。** 也就是说，打开 feature 并不等于当前 ArceOS 探测路径就会自动发现 AHCI 设备。

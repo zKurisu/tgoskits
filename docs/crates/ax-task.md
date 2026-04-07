@@ -123,7 +123,7 @@ let wq = ax-task::WaitQueue::new();
 graph LR
     ax-hal["ax-hal"] --> ax-task["ax-task"]
     axsched["axsched"] --> ax-task
-    axconfig["axconfig"] --> ax-task
+    axconfig["ax-config"] --> ax-task
     kernel_guard["kernel_guard"] --> ax-task
     axpoll["axpoll"] --> ax-task
     cpumask["cpumask"] --> ax-task

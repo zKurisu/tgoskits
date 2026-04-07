@@ -39,7 +39,7 @@
 ```mermaid
 graph LR
     current["ax-net-ng"]
-    current --> axconfig["axconfig"]
+    current --> axconfig["ax-config"]
     current --> ax-driver["ax-driver"]
     current --> axerrno["axerrno"]
     current --> axfs_ng["ax-fs-ng"]

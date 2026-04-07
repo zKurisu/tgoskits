@@ -20,7 +20,7 @@ mod imp;
 
 /// Platform-specific constants and parameters.
 pub mod config {
-    pub use axconfig::*;
+    pub use ax_config::*;
 }
 
 /// POSIX C types.

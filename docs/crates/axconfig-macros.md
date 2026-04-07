@@ -95,7 +95,7 @@ flowchart LR
 ```mermaid
 graph LR
     axconfig_gen["axconfig-gen"] --> macros["axconfig-macros"]
-    macros --> axconfig["axconfig"]
+    macros --> axconfig["ax-config"]
     macros --> axplat["axplat-* 平台 crate"]
     macros --> template["cargo-axplat 模板"]
 ```

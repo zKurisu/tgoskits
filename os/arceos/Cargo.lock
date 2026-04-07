@@ -230,7 +230,7 @@ name = "ax-api"
 version = "0.5.0"
 dependencies = [
  "ax-alloc",
- "axconfig",
+ "ax-config",
  "ax-display",
  "ax-dma",
  "axdriver",
@@ -253,7 +253,7 @@ name = "ax-posix-api"
 version = "0.5.0"
 dependencies = [
  "ax-alloc",
- "axconfig",
+ "ax-config",
  "axerrno",
  "ax-feat",
  "ax-fs",
@@ -420,7 +420,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axconfig"
+name = "ax-config"
 version = "0.5.0"
 dependencies = [
  "axconfig-macros",
@@ -482,7 +482,7 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "axallocator 0.4.0",
- "axconfig",
+ "ax-config",
  "axhal",
  "axmm",
  "buddy-slab-allocator",
@@ -496,7 +496,7 @@ name = "axdriver"
 version = "0.5.0"
 dependencies = [
  "ax-alloc",
- "axconfig",
+ "ax-config",
  "ax-dma",
  "axdriver_base",
  "axdriver_block",
@@ -609,7 +609,7 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "axbacktrace",
- "axconfig",
+ "ax-config",
  "ax-display",
  "axdriver",
  "ax-fs",
@@ -717,7 +717,7 @@ name = "axhal"
 version = "0.5.0"
 dependencies = [
  "ax-alloc",
- "axconfig",
+ "ax-config",
  "ax-cpu",
  "ax-plat",
  "axplat-aarch64-qemu-virt",
@@ -761,7 +761,7 @@ dependencies = [
 name = "axipi"
 version = "0.5.0"
 dependencies = [
- "axconfig",
+ "ax-config",
  "axhal",
  "kspin",
  "lazyinit",
@@ -839,7 +839,7 @@ version = "0.5.0"
 dependencies = [
  "async-channel",
  "async-trait",
- "axconfig",
+ "ax-config",
  "axdriver",
  "axerrno",
  "ax-fs-ng",
@@ -1049,7 +1049,7 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "axbacktrace",
- "axconfig",
+ "ax-config",
  "ax-display",
  "axdriver",
  "ax-fs",
@@ -1108,7 +1108,7 @@ dependencies = [
 name = "axtask"
 version = "0.5.0"
 dependencies = [
- "axconfig",
+ "ax-config",
  "axerrno",
  "axhal",
  "axpoll",

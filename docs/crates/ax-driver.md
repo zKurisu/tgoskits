@@ -123,7 +123,7 @@ let net = all.net.take_one();
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axconfig["axconfig"] --> ax-driver["ax-driver"]
+    axconfig["ax-config"] --> ax-driver["ax-driver"]
     ax-hal["ax-hal"] --> ax-driver
     ax-alloc["ax-alloc"] --> ax-driver
     ax_dma["ax-dma"] --> ax-driver

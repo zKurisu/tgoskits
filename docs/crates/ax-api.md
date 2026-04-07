@@ -33,7 +33,7 @@
 graph LR
     current["ax-api"]
     current --> ax-alloc["ax-alloc"]
-    current --> axconfig["axconfig"]
+    current --> axconfig["ax-config"]
     current --> ax-display["ax-display"]
     current --> ax_dma["ax-dma"]
     current --> ax-driver["ax-driver"]

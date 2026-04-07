@@ -210,7 +210,7 @@ CURATED_DOCS = {
     "arceos-yield",
     "ax-posix-api",
     "axbuild",
-    "axconfig",
+    "ax-config",
     "axconfig-gen",
     "axconfig-macros",
     "ax-feat",

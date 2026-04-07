@@ -2,12 +2,12 @@
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+#[cfg(feature = "ipi")]
+pub use ax_config::devices::IPI_IRQ;
 use ax_cpu::trap::{IRQ, register_trap_handler};
 #[cfg(feature = "ipi")]
 pub use ax_plat::irq::{IpiTarget, send_ipi};
 pub use ax_plat::irq::{handle, register, set_enable, unregister};
-#[cfg(feature = "ipi")]
-pub use axconfig::devices::IPI_IRQ;
 
 static IRQ_HOOK: AtomicUsize = AtomicUsize::new(0);
 

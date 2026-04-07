@@ -36,7 +36,7 @@ vsock = ["net-ng", "ax-net-ng/vsock"]
 [dependencies]
 ax-alloc = { workspace = true, optional = true }
 axbacktrace = { workspace = true }
-axconfig = { workspace = true }
+ax-config = { workspace = true }
 ax-display = { workspace = true, optional = true }
 ax-driver = { workspace = true, optional = true }
 ax-fs = { workspace = true, optional = true }

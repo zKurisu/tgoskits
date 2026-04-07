@@ -33,7 +33,7 @@ epoll = ["fd"]
 [dependencies]
 # ArceOS modules
 ax-alloc = { workspace = true, optional = true }
-axconfig.workspace = true
+ax-config.workspace = true
 ax-feat.workspace = true
 ax-fs = { workspace = true, optional = true }
 ax-hal.workspace = true

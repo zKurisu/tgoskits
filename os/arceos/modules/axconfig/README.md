@@ -1,4 +1,4 @@
-# axconfig
+# ax-config
 
 Platform-specific constants and parameters for [ArceOS](https://github.com/arceos-org/arceos).
 
@@ -8,7 +8,7 @@ Uses [`axconfig-macros`](https://docs.rs/axconfig-macros) to generate compile-ti
 
 ```toml
 [dependencies]
-axconfig = "0.2"
+ax-config = "0.2"
 ```
 
 ## License

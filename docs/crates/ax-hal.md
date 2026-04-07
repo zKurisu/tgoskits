@@ -35,7 +35,7 @@
 - `ALL_MEM_REGIONS`：统一后的物理内存区域视图，是 `ax-alloc`、`ax-runtime` 等模块做内存初始化的基础。
 - `CURRENT_TASK_PTR`：每 CPU 当前任务指针，供调度与上下文切换路径读取。
 - `IRQ_HOOK`：可注册的 IRQ 钩子，用于平台 IRQ 分发前后的附加处理。
-- `CPU_NUM`：在 `smp` 场景下，取平台声明 CPU 数与 `axconfig::plat::MAX_CPU_NUM` 的较小值。
+- `CPU_NUM`：在 `smp` 场景下，取平台声明 CPU 数与 `ax_config::plat::MAX_CPU_NUM` 的较小值。
 - `PagingHandlerImpl`：把页表帧申请/释放与地址翻译能力接到上层页表实现中。
 - `TlsArea`：内核态线程局部存储块管理对象，仅在 TLS 打开时参与主线。
 
@@ -117,7 +117,7 @@ let bootargs = ax-hal::dtb::get_chosen_bootargs();
 graph LR
     ax-cpu["ax-cpu"] --> ax-hal["ax-hal"]
     axplat["axplat / axplat-*"] --> ax-hal
-    axconfig["axconfig"] --> ax-hal
+    axconfig["ax-config"] --> ax-hal
     ax-alloc["ax-alloc (paging)"] --> ax-hal
     page_table["page_table_multiarch"] --> ax-hal
 

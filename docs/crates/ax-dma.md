@@ -60,7 +60,7 @@
 `phys_to_bus()` 的实现非常直接：
 
 - 先得到物理地址；
-- 再加上 `axconfig::plat::PHYS_BUS_OFFSET`；
+- 再加上 `ax_config::plat::PHYS_BUS_OFFSET`；
 - 最终得到总线地址。
 
 这说明当前 `ax-dma` 假设平台满足一种简单的线性总线地址模型，而不是依赖 IOMMU 做复杂映射。

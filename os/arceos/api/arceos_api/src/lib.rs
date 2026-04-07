@@ -23,7 +23,7 @@ pub use axerrno::{AxError, AxResult};
 
 /// Platform-specific constants and parameters.
 pub mod config {
-    pub use axconfig::*;
+    pub use ax_config::*;
 }
 
 /// System operations.
@@ -394,6 +394,7 @@ pub mod io {
 pub mod modules {
     #[cfg(feature = "alloc")]
     pub use ax_alloc;
+    pub use ax_config;
     #[cfg(feature = "display")]
     pub use ax_display;
     #[cfg(feature = "dma")]
@@ -414,5 +415,4 @@ pub mod modules {
     pub use ax_sync;
     #[cfg(feature = "multitask")]
     pub use ax_task;
-    pub use axconfig;
 }

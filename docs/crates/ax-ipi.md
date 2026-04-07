@@ -77,7 +77,7 @@ flowchart TD
 ```mermaid
 graph LR
     ax-hal["ax-hal (ipi)"] --> ax-ipi["ax-ipi"]
-    axconfig["axconfig"] --> ax-ipi
+    axconfig["ax-config"] --> ax-ipi
     kspin["kspin"] --> ax-ipi
     lazyinit["lazyinit"] --> ax-ipi
     percpu["percpu"] --> ax-ipi

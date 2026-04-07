@@ -34,7 +34,7 @@
 graph LR
     current["ax-posix-api"]
     current --> ax-alloc["ax-alloc"]
-    current --> axconfig["axconfig"]
+    current --> axconfig["ax-config"]
     current --> axerrno["axerrno"]
     current --> ax-feat["ax-feat"]
     current --> ax-fs["ax-fs"]

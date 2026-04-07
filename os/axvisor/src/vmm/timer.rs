@@ -22,7 +22,7 @@ use lazyinit::LazyInit;
 use timer_list::{TimeValue, TimerEvent, TimerList};
 
 static TOKEN: AtomicUsize = AtomicUsize::new(0);
-// const PERIODIC_INTERVAL_NANOS: u64 = ax_hal::time::NANOS_PER_SEC / axconfig::TICKS_PER_SEC as u64;
+// const PERIODIC_INTERVAL_NANOS: u64 = ax_hal::time::NANOS_PER_SEC / ax_config::TICKS_PER_SEC as u64;
 
 /// Represents a timer event in the virtual machine monitor (VMM).
 ///

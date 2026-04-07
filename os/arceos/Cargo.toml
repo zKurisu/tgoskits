@@ -79,7 +79,7 @@ ax-posix-api = { version = "0.5.0", path = "api/arceos_posix_api" }
 ax-feat = { version = "0.5.0", path = "api/axfeat" }
 
 ax-alloc = { version = "0.5.0", path = "modules/axalloc" }
-axconfig = { version = "0.5.0", path = "modules/axconfig" }
+ax-config = { version = "0.5.0", path = "modules/axconfig" }
 ax-display = { version = "0.5.0", path = "modules/axdisplay" }
 ax-dma = { version = "0.5.0", path = "modules/axdma" }
 ax-driver = { version = "0.5.0", path = "modules/axdriver" }

@@ -41,7 +41,7 @@
 在 `os/arceos/modules/axdriver/src/bus/pci.rs` 里，PCI 探测主线如下：
 
 1. 用 `PciRoot::new(..., Cam::Ecam)` 打开 ECAM。
-2. 从 `axconfig::devices::PCI_RANGES` 取出 32 位 MMIO 窗口，创建 `PciRangeAllocator`。
+2. 从 `ax_config::devices::PCI_RANGES` 取出 32 位 MMIO 窗口，创建 `PciRangeAllocator`。
 3. 枚举每个 bus 上的设备。
 4. 对 BAR 逐个调用 `config_pci_device()`：
    - 若 BAR 未分配地址，调用 `PciRangeAllocator::alloc()` 分配。
@@ -103,7 +103,7 @@
 
 ### 4.2 修改时要同步检查的地方
 1. `os/arceos/modules/axdriver/src/bus/pci.rs` 的枚举和 BAR 配置逻辑。
-2. `axconfig::devices::PCI_ECAM_BASE`、`PCI_RANGES`、`PCI_BUS_END` 等平台配置。
+2. `ax_config::devices::PCI_ECAM_BASE`、`PCI_RANGES`、`PCI_BUS_END` 等平台配置。
 3. `axdriver_virtio` 的 PCI 探测路径是否仍与类型再导出保持一致。
 
 ### 4.3 常见坑

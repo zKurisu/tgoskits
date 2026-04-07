@@ -49,6 +49,7 @@ graph LR
 - `arm_pl031`
 - `ax-alloc`
 - `ax-api`
+- `ax-config`
 - `ax-cpu`
 - `ax-display`
 - `ax-dma`
@@ -56,7 +57,6 @@ graph LR
 - `ax-feat`
 - `ax-fs`
 - `ax-fs-ng`
-- `ax-hal`
 - 另外还有 `63` 个同类项未在此展开
 
 ### 3.3 被依赖情况

@@ -141,8 +141,8 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
             backtrace = {}
             smp = {}
         "},
-        axconfig::ARCH,
-        axconfig::PLATFORM,
+        ax_config::ARCH,
+        ax_config::PLATFORM,
         option_env!("AX_TARGET").unwrap_or(""),
         option_env!("AX_MODE").unwrap_or(""),
         log_level,
@@ -349,7 +349,7 @@ fn init_allocator() {
 fn init_interrupt() {
     // Setup timer interrupt handler
     const PERIODIC_INTERVAL_NANOS: u64 =
-        ax_hal::time::NANOS_PER_SEC / axconfig::TICKS_PER_SEC as u64;
+        ax_hal::time::NANOS_PER_SEC / ax_config::TICKS_PER_SEC as u64;
 
     #[percpu::def_percpu]
     static NEXT_DEADLINE: u64 = 0;

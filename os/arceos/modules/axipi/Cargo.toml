@@ -12,7 +12,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axipi"
 default = []
 
 [dependencies]
-axconfig.workspace = true
+ax-config.workspace = true
 ax-hal = { workspace = true, features = ["ipi"] }
 kspin.workspace = true
 lazyinit.workspace = true

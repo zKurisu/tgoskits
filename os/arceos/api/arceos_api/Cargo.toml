@@ -27,7 +27,7 @@ dummy-if-not-enabled = []
 
 [dependencies]
 ax-alloc = { workspace = true, optional = true }
-axconfig.workspace = true
+ax-config.workspace = true
 ax-display = { workspace = true, optional = true }
 ax-dma = { workspace = true, optional = true }
 ax-driver = { workspace = true, optional = true }

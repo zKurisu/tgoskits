@@ -1145,7 +1145,7 @@ impl VmxVcpu {
             },
             EAX_FREQUENCY_INFO => {
                 /// Timer interrupt frequencyin Hz.
-                /// Todo: this should be the same as `axconfig::TIMER_FREQUENCY` defined in ArceOS's config file.
+                /// Todo: this should be the same as `ax_config::TIMER_FREQUENCY` defined in ArceOS's config file.
                 const TIMER_FREQUENCY_MHZ: u32 = 3_000;
                 let mut res = cpuid!(regs_clone.rax, regs_clone.rcx);
                 if res.eax == 0 {

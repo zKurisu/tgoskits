@@ -86,7 +86,7 @@ cfg_if::cfg_if! {
             fn probe_global() -> Option<AxDeviceEnum> {
                 let sdmmc = unsafe {
                     axdriver_block::sdmmc::SdMmcDriver::new(
-                        ax_hal::mem::phys_to_virt(axconfig::devices::SDMMC_PADDR.into()).into(),
+                        ax_hal::mem::phys_to_virt(ax_config::devices::SDMMC_PADDR.into()).into(),
                     )
                 };
                 Some(AxDeviceEnum::from_block(sdmmc))

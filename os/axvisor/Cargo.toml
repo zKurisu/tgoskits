@@ -116,7 +116,7 @@ axplat-x86-qemu-q35 = { version = "0.4.0", default-features = false, features = 
     "irq",
     "smp",
 ] }
-axconfig = { version = "0.5.0", features = ["plat-dyn"] }
+ax-config = { version = "0.5.0", features = ["plat-dyn"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 aarch64-cpu-ext = "0.1"
@@ -135,7 +135,7 @@ clap = { version = "4.6", features = ["derive"] }
 tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
-axconfig = "0.5.0"
+ax-config = "0.5.0"
 prettyplease = "0.2"
 quote = "1.0"
 syn = "2.0"

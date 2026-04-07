@@ -27,7 +27,7 @@ pub type AxTaskRef = Arc<AxTask>;
 pub type WeakAxTaskRef = Weak<AxTask>;
 
 /// The wrapper type for [`cpumask::CpuMask`] with SMP configuration.
-pub type AxCpuMask = cpumask::CpuMask<{ axconfig::plat::MAX_CPU_NUM }>;
+pub type AxCpuMask = cpumask::CpuMask<{ ax_config::plat::MAX_CPU_NUM }>;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sched-rr")] {
@@ -138,20 +138,20 @@ where
     spawn_task(TaskInner::new(f, name, stack_size))
 }
 
-/// Spawns a new task with the given name and the default stack size ([`axconfig::TASK_STACK_SIZE`]).
+/// Spawns a new task with the given name and the default stack size ([`ax_config::TASK_STACK_SIZE`]).
 ///
 /// Returns the task reference.
 pub fn spawn_with_name<F>(f: F, name: String) -> AxTaskRef
 where
     F: FnOnce() + Send + 'static,
 {
-    spawn_raw(f, name, axconfig::TASK_STACK_SIZE)
+    spawn_raw(f, name, ax_config::TASK_STACK_SIZE)
 }
 
 /// Spawns a new task with the default parameters.
 ///
 /// The default task name is an empty string. The default task stack size is
-/// [`axconfig::TASK_STACK_SIZE`].
+/// [`ax_config::TASK_STACK_SIZE`].
 ///
 /// Returns the task reference.
 pub fn spawn<F>(f: F) -> AxTaskRef
