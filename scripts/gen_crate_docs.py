@@ -204,7 +204,7 @@ CURATED_DOCS = {
     "arceos-memtest",
     "arceos-parallel",
     "arceos-priority",
-    "arceos-shell",
+    "ax-shell",
     "arceos-sleep",
     "arceos-wait-queue",
     "arceos-yield",

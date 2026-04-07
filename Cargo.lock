@@ -320,13 +320,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos-shell"
-version = "0.3.0"
-dependencies = [
- "axstd",
-]
-
-[[package]]
 name = "arceos-sleep"
 version = "0.3.0"
 dependencies = [
@@ -606,6 +599,13 @@ dependencies = [
 
 [[package]]
 name = "ax-httpserver"
+version = "0.3.0"
+dependencies = [
+ "axstd",
+]
+
+[[package]]
+name = "ax-shell"
 version = "0.3.0"
 dependencies = [
  "axstd",
