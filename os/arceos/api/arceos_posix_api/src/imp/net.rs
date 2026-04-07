@@ -6,9 +6,9 @@ use core::{
 };
 
 use ax_net::{TcpSocket, UdpSocket};
+use ax_sync::Mutex;
 use axerrno::{LinuxError, LinuxResult};
 use axio::PollState;
-use axsync::Mutex;
 
 use super::fd_ops::FileLike;
 use crate::{ctypes, utils::char_ptr_to_str};

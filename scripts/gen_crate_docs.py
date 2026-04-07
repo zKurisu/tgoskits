@@ -230,7 +230,7 @@ CURATED_DOCS = {
     "page_table_entry",
     "memory_addr",
     "memory_set",
-    "axsync",
+    "ax-sync",
     "axsched",
     "axcpu",
     "axio",

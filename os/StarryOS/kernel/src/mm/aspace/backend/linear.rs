@@ -1,8 +1,8 @@
 use alloc::sync::Arc;
 
+use ax_sync::Mutex;
 use axerrno::AxResult;
 use axhal::paging::{MappingFlags, PageSize, PageTableCursor};
-use axsync::Mutex;
 use memory_addr::{PhysAddr, PhysAddrRange, VirtAddr, VirtAddrRange};
 
 use super::{AddrSpace, Backend, BackendOps};

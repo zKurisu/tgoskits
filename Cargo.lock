@@ -533,6 +533,7 @@ dependencies = [
  "ax-fs",
  "ax-net",
  "ax-runtime",
+ "ax-sync",
  "axalloc",
  "axconfig",
  "axerrno",
@@ -541,7 +542,6 @@ dependencies = [
  "axipi",
  "axlog",
  "axmm",
- "axsync",
  "axtask",
 ]
 
@@ -550,7 +550,7 @@ name = "ax-display"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
- "axsync",
+ "ax-sync",
  "lazyinit 0.4.2",
  "log",
 ]
@@ -605,13 +605,13 @@ dependencies = [
  "ax-input",
  "ax-net",
  "ax-runtime",
+ "ax-sync",
  "axalloc",
  "axbacktrace",
  "axconfig",
  "axhal",
  "axipi",
  "axlog",
- "axsync",
  "axtask",
  "kspin 0.3.1",
 ]
@@ -640,13 +640,13 @@ name = "ax-fs-ng"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-sync",
  "axalloc",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
  "axio",
  "axpoll",
- "axsync",
  "bitflags 2.11.0",
  "cfg-if",
  "chrono",
@@ -702,7 +702,7 @@ name = "ax-input"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
- "axsync",
+ "ax-sync",
  "lazyinit 0.4.2",
  "log",
 ]
@@ -723,10 +723,10 @@ name = "ax-net"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-sync",
  "axerrno",
  "axhal",
  "axio",
- "axsync",
  "axtask",
  "cfg-if",
  "lazyinit 0.4.2",
@@ -743,13 +743,13 @@ dependencies = [
  "async-trait",
  "ax-driver",
  "ax-fs-ng",
+ "ax-sync",
  "axconfig",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
  "axio",
  "axpoll",
- "axsync",
  "axtask",
  "bitflags 2.11.0",
  "cfg-if",
@@ -771,13 +771,13 @@ dependencies = [
  "ax-fs",
  "ax-net",
  "ax-runtime",
+ "ax-sync",
  "axalloc",
  "axconfig",
  "axerrno",
  "axhal",
  "axio",
  "axlog",
- "axsync",
  "axtask",
  "bindgen",
  "flatten_objects",
@@ -834,6 +834,17 @@ dependencies = [
  "lazyinit 0.4.2",
  "lock_api",
  "spin 0.10.0",
+]
+
+[[package]]
+name = "ax-sync"
+version = "0.5.0"
+dependencies = [
+ "ax-sync",
+ "axtask",
+ "fastrand",
+ "kspin 0.3.1",
+ "lock_api",
 ]
 
 [[package]]
@@ -1582,17 +1593,6 @@ name = "axsched"
 version = "0.5.1"
 dependencies = [
  "linked_list_r4l",
-]
-
-[[package]]
-name = "axsync"
-version = "0.5.0"
-dependencies = [
- "axsync",
- "axtask",
- "fastrand",
- "kspin 0.3.1",
- "lock_api",
 ]
 
 [[package]]
@@ -7421,6 +7421,7 @@ dependencies = [
  "ax-input",
  "ax-net-ng",
  "ax-runtime",
+ "ax-sync",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -7431,7 +7432,6 @@ dependencies = [
  "axlog",
  "axmm",
  "axpoll",
- "axsync",
  "axtask",
  "bitflags 2.11.0",
  "bitmaps",

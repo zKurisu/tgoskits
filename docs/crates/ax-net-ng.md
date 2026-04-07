@@ -60,7 +60,7 @@ graph LR
 - `axhal`
 - `axio`
 - `axpoll`
-- `axsync`
+- `ax-sync`
 - `axtask`
 - `smoltcp`
 

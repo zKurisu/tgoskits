@@ -4,10 +4,10 @@ use core::{
     task::Context,
 };
 
+use ax_sync::Mutex;
 use axerrno::{AxError, AxResult, ax_bail, ax_err_type};
 use axio::prelude::*;
 use axpoll::{IoEvents, Pollable};
-use axsync::Mutex;
 use smoltcp::{
     iface::SocketHandle,
     phy::PacketMeta,

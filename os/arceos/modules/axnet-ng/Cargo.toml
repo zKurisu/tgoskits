@@ -22,7 +22,7 @@ axfs-ng-vfs = { workspace = true }
 axhal = { workspace = true }
 axio = { workspace = true }
 axpoll = { workspace = true }
-axsync = { workspace = true }
+ax-sync = { workspace = true }
 axtask = { workspace = true, features = ["irq", "multitask"] }
 bitflags = "2.9"
 cfg-if = { workspace = true }

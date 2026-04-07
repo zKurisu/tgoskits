@@ -3,8 +3,8 @@ use core::{
     mem::{ManuallyDrop, size_of},
 };
 
+use ax_sync::Mutex;
 use axerrno::LinuxResult;
-use axsync::Mutex;
 
 use crate::{ctypes, utils::check_null_mut_ptr};
 

@@ -6,10 +6,10 @@ fn main() {
         println!("cargo:rerun-if-env-changed=CARGO_FEATURE_MULTITASK");
         let (mutex_size, mutex_init) = if std::env::var("CARGO_FEATURE_MULTITASK").is_ok() {
             if cfg!(feature = "smp") {
-                // core::mem::transmute::<_, [usize; 6]>(axsync::Mutex::new(()))
+                // core::mem::transmute::<_, [usize; 6]>(ax_sync::Mutex::new(()))
                 (6, "{0, 0, 8, 0, 0, 0}")
             } else {
-                // core::mem::transmute::<_, [usize; 5]>(axsync::Mutex::new(()))
+                // core::mem::transmute::<_, [usize; 5]>(ax_sync::Mutex::new(()))
                 (5, "{0, 8, 0, 0, 0}")
             }
         } else {

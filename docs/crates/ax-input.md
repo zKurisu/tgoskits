@@ -32,7 +32,7 @@
 graph LR
     current["ax-input"]
     current --> ax-driver["ax-driver"]
-    current --> axsync["axsync"]
+    current --> ax-sync["ax-sync"]
     current --> lazyinit["lazyinit"]
     ax_feat["ax-feat"] --> current
     ax_runtime["ax-runtime"] --> current
@@ -41,7 +41,7 @@ graph LR
 
 ### 3.1 直接与间接依赖
 - `ax-driver`
-- `axsync`
+- `ax-sync`
 - `lazyinit`
 
 ### 3.2 间接本地依赖

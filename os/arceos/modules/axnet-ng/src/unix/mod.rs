@@ -6,11 +6,11 @@ use core::task::Context;
 
 use async_trait::async_trait;
 use ax_fs_ng::{FS_CONTEXT, OpenOptions};
+use ax_sync::Mutex;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::NodeType;
 use axio::{IoBuf, Read, Write};
 use axpoll::{IoEvents, Pollable};
-use axsync::Mutex;
 use axtask::future::{block_on, interruptible};
 use enum_dispatch::enum_dispatch;
 use hashbrown::HashMap;

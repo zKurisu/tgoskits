@@ -15,8 +15,8 @@ use core::{
     sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering},
 };
 
+use ax_sync::{Mutex, spin::SpinNoIrq};
 use axpoll::PollSet;
-use axsync::{Mutex, spin::SpinNoIrq};
 use axtask::{TaskExt, TaskInner};
 use extern_trait::extern_trait;
 use scope_local::{ActiveScope, Scope};

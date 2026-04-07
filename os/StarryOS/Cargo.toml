@@ -33,7 +33,7 @@ axlog = { version = "0.5.0" }
 axmm = { version = "0.5.0" }
 axnet = { version = "0.5.0", package = "ax-net-ng" }
 ax-runtime = { version = "0.5.0" }
-axsync = { version = "0.5.0" }
+ax-sync = { version = "0.5.0" }
 axtask = { version = "0.5.0" }
 
 starry-kernel = { path = "kernel", version = "0.5.0" }

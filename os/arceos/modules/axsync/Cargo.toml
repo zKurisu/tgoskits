@@ -1,5 +1,5 @@
 [package]
-name = "axsync"
+name = "ax-sync"
 version.workspace = true
 edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
@@ -18,7 +18,7 @@ kspin.workspace = true
 lock_api.workspace = true
 
 [dev-dependencies]
-axsync = { path = ".", features = ["multitask"] }
+ax-sync = { path = ".", features = ["multitask"] }
 axtask = { workspace = true, features = ["test"] }
 # FIXME: `rand` crate can not be used since https://github.com/google/zerocopy/pull/2574
 fastrand = "2.3"

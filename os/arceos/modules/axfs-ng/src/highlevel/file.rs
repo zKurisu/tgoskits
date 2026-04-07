@@ -7,6 +7,7 @@ use alloc::{
 use core::sync::atomic::{AtomicU8, Ordering};
 use core::{num::NonZeroUsize, ops::Range, task::Context};
 
+use ax_sync::Mutex;
 use axalloc::{UsageKind, global_allocator};
 use axfs_ng_vfs::{
     FileNode, Location, NodeFlags, NodePermission, NodeType, VfsError, VfsResult, path::Path,
@@ -14,7 +15,6 @@ use axfs_ng_vfs::{
 use axhal::mem::{PhysAddr, VirtAddr, virt_to_phys};
 use axio::{SeekFrom, prelude::*};
 use axpoll::{IoEvents, Pollable};
-use axsync::Mutex;
 use intrusive_collections::{LinkedList, LinkedListAtomicLink, intrusive_adapter};
 use lru::LruCache;
 use spin::RwLock;

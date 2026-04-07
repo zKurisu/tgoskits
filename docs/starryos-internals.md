@@ -29,7 +29,7 @@ flowchart LR
     starryPackage["StarryPackage: os/StarryOS/starryos"]
     kernelCore["KernelCore: entry syscall task mm file pseudofs time"]
     starryComponents["StarryComponents: starry-process starry-signal starry-vm starry-smoltcp"]
-    arceosModules["ArceosModules: axhal axtask axmm ax-fs ax-net axsync"]
+    arceosModules["ArceosModules: axhal axtask axmm ax-fs ax-net ax-sync"]
     sharedCrates["SharedCrates: components/*"]
     platformLayer["PlatformLayer: axplat-* + platform/*"]
 

@@ -13,8 +13,8 @@ use core::{
     time::Duration,
 };
 
+use ax_sync::Mutex;
 use axerrno::AxResult;
-use axsync::Mutex;
 use axtask::{
     current,
     future::{self, block_on, interruptible},

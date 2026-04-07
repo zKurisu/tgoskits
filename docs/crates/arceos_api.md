@@ -69,7 +69,7 @@
 - `stdio` -> `axhal::console` 与 `axlog`
 - `mem::alloc` -> `axalloc`
 - `mem::dma` -> `ax-dma`
-- `task` -> `axtask`、`axsync`、`axhal::time`
+- `task` -> `axtask`、`ax-sync`、`axhal::time`
 - `fs` -> `ax-fs`
 - `net` -> `ax-net`
 - `display` -> `ax-display`
@@ -124,7 +124,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- 核心基础：`axconfig`、`axerrno`、`ax-feat`、`axhal`、`axio`、`axlog`、`ax-runtime`、`axsync`。
+- 核心基础：`axconfig`、`axerrno`、`ax-feat`、`axhal`、`axio`、`axlog`、`ax-runtime`、`ax-sync`。
 - 可选能力：`axalloc`、`ax-dma`、`axtask`、`ax-fs`、`ax-net`、`ax-display`、`ax-driver`、`axipi`、`axmm`。
 
 ### 3.2 关键直接消费者

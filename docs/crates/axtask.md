@@ -129,7 +129,7 @@ graph LR
     cpumask["cpumask"] --> axtask
 
     axtask --> ax-runtime["ax-runtime"]
-    axtask --> axsync["axsync"]
+    axtask --> ax-sync["ax-sync"]
     axtask --> ax-api["ax-api"]
     axtask --> ax-posix-api["ax-posix-api"]
     axtask --> starry["starry-kernel"]
@@ -146,7 +146,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `ax-runtime`：在启动链中初始化调度器，并在 timer tick 中调用 `on_timer_tick()`。
-- `axsync`：基于 `axtask` 的阻塞/唤醒机制构建锁和同步原语。
+- `ax-sync`：基于 `axtask` 的阻塞/唤醒机制构建锁和同步原语。
 - `ax-api`、`ax-posix-api`：把任务、睡眠、等待队列等能力对外暴露。
 - `starry-kernel`：在 Linux 兼容线程模型上直接复用 `axtask`。
 - `ax-net`、`ax-net-ng`：在网络栈阻塞/异步路径上复用调度与等待能力。
@@ -211,7 +211,7 @@ axtask = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axtask` 是 ArceOS 的标准任务运行时。它为 `ax-runtime`、`axsync`、`ax-api` 和各种示例/测试提供统一的任务抽象，是系统从“单核顺序执行”迈向“可调度 OS”的关键模块。
+`axtask` 是 ArceOS 的标准任务运行时。它为 `ax-runtime`、`ax-sync`、`ax-api` 和各种示例/测试提供统一的任务抽象，是系统从“单核顺序执行”迈向“可调度 OS”的关键模块。
 
 ### 6.2 StarryOS
 StarryOS 直接复用 `axtask` 作为线程调度基础，并借助 `TaskExt` 把 Linux 兼容线程对象挂接到任务实体上。因此，`axtask` 在 StarryOS 中承担的是“底层线程调度内核”，而不是外围帮助库。

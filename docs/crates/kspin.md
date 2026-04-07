@@ -54,7 +54,7 @@
 
 ### 2.3 使用边界
 - `kspin` 不会睡眠等待，所以它不是阻塞式锁。
-- `kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `axsync` / `axtask`。
+- `kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `ax-sync` / `axtask`。
 - `kspin` 也不决定 guard 的具体语义；那部分在 `kernel_guard`。
 
 ## 3. 依赖关系图谱
@@ -67,7 +67,7 @@ graph LR
     kspin --> axlog["axlog"]
     kspin --> axmm["axmm"]
     kspin --> axtask["axtask"]
-    kspin --> axsync["axsync"]
+    kspin --> ax-sync["ax-sync"]
     kspin --> axplat["axplat / platform crates"]
     kspin --> starry["starry-kernel"]
     kspin --> axvisor["axvisor"]
@@ -79,7 +79,7 @@ graph LR
 ### 3.2 关键直接消费者
 - `axalloc`、`axipi`、`axlog`、`axmm`：系统运行时基础模块。
 - `axtask`：任务与 run queue 路径。
-- `axsync`：在非 `multitask` 路径下直接把 `SpinNoIrq` 当 `Mutex`。
+- `ax-sync`：在非 `multitask` 路径下直接把 `SpinNoIrq` 当 `Mutex`。
 - 各类平台 crate、StarryOS、Axvisor：用于平台状态和驱动共享状态保护。
 
 ## 4. 开发指南
@@ -105,7 +105,7 @@ kspin = { workspace = true, features = ["smp"] }
 ### 4.3 开发建议
 - 早期启动、IRQ 相关或显式需要本地中断保护的路径，优先选 `SpinNoIrq`。
 - 已有外层 guard 保证的极短临界区才考虑 `SpinRaw`。
-- 需要可睡眠互斥语义时不要硬用 `kspin`，应该去用 `axsync` 的阻塞 mutex。
+- 需要可睡眠互斥语义时不要硬用 `kspin`，应该去用 `ax-sync` 的阻塞 mutex。
 
 ## 5. 测试策略
 ### 5.1 当前测试形态

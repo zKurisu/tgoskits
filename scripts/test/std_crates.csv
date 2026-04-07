@@ -43,7 +43,7 @@ axconfig
 ax-display
 ax-driver
 axhal
-axsync
+ax-sync
 axtask
 ax-input
 axipi

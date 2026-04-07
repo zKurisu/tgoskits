@@ -62,7 +62,7 @@ flowchart TB
         axlog["axlog\nv0.5.0"]
         axmm["axmm\nv0.5.0"]
         ax-net["ax-net\nv0.5.0"]
-        axsync["axsync\nv0.5.0"]
+        ax-sync["ax-sync\nv0.5.0"]
         axtask["axtask\nv0.5.0"]
         bwbench_client["bwbench-client\nv0.3.0"]
         deptool["deptool\nv0.3.0"]
@@ -254,10 +254,10 @@ flowchart TB
     ax_api --> axlog
     ax_api --> axmm
     ax_api --> ax-net
-    ax_api --> axsync
+    ax_api --> ax-sync
     ax_api --> axtask
     ax_display --> ax-driver
-    ax_display --> axsync
+    ax_display --> ax-sync
     ax_display --> lazyinit
     ax_feat --> ax_display
     ax_feat --> ax_fs
@@ -272,7 +272,7 @@ flowchart TB
     ax_feat --> axipi
     ax_feat --> axlog
     ax_feat --> ax-net
-    ax_feat --> axsync
+    ax_feat --> ax-sync
     ax_feat --> axtask
     ax_feat --> kspin
     ax_fs --> ax-driver
@@ -292,7 +292,7 @@ flowchart TB
     ax_fs_ng --> axhal
     ax_fs_ng --> axio
     ax_fs_ng --> axpoll
-    ax_fs_ng --> axsync
+    ax_fs_ng --> ax-sync
     ax_fs_ng --> kspin
     ax_fs_ng --> scope_local
     ax_helloworld --> ax_std
@@ -307,7 +307,7 @@ flowchart TB
     ax_httpclient --> ax_std
     ax_httpserver --> ax_std
     ax_input --> ax-driver
-    ax_input --> axsync
+    ax_input --> ax-sync
     ax_input --> lazyinit
     ax_libc --> ax_feat
     ax_libc --> ax_posix_api
@@ -321,7 +321,7 @@ flowchart TB
     ax_net_ng --> axhal
     ax_net_ng --> axio
     ax_net_ng --> axpoll
-    ax_net_ng --> axsync
+    ax_net_ng --> ax-sync
     ax_net_ng --> axtask
     ax_net_ng --> smoltcp
     ax_posix_api --> ax_feat
@@ -334,7 +334,7 @@ flowchart TB
     ax_posix_api --> axio
     ax_posix_api --> axlog
     ax_posix_api --> ax-net
-    ax_posix_api --> axsync
+    ax_posix_api --> ax-sync
     ax_posix_api --> axtask
     ax_posix_api --> scope_local
     ax_runtime --> ax_display
@@ -473,7 +473,7 @@ flowchart TB
     ax-net --> axerrno
     ax-net --> axhal
     ax-net --> axio
-    ax-net --> axsync
+    ax-net --> ax-sync
     ax-net --> axtask
     ax-net --> lazyinit
     ax-net --> smoltcp
@@ -552,8 +552,8 @@ flowchart TB
     axplat_x86_qemu_q35 --> lazyinit
     axplat_x86_qemu_q35 --> percpu
     axsched --> linked_list_r4l
-    axsync --> axtask
-    axsync --> kspin
+    ax-sync --> axtask
+    ax-sync --> kspin
     axtask --> axconfig
     axtask --> axerrno
     axtask --> axhal
@@ -694,7 +694,7 @@ flowchart TB
     starry_kernel --> axlog
     starry_kernel --> axmm
     starry_kernel --> axpoll
-    starry_kernel --> axsync
+    starry_kernel --> ax-sync
     starry_kernel --> axtask
     starry_kernel --> kernel_guard
     starry_kernel --> kspin
@@ -837,7 +837,7 @@ flowchart TB
     class axplat_x86_qemu_q35 cat_plat
     class axpoll cat_comp
     class axsched cat_comp
-    class axsync cat_arceos
+    class ax-sync cat_arceos
     class axtask cat_arceos
     class axvcpu cat_comp
     class axvisor cat_axvisor
@@ -932,7 +932,7 @@ flowchart TB
     L9["<b>层级 9</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-driver`"]
     classDef ls9 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L9 ls9
-    L8["<b>层级 8</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-dma`、`axsync`"]
+    L8["<b>层级 8</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-dma`、`ax-sync`"]
     classDef ls8 fill:#eceff1,stroke:#455a64,stroke-width:2px,color:#000
     class L8 ls8
     L7["<b>层级 7</b><br/>堆叠层（依赖更底层 crate）<br/>`axipi`、`axmm`、`axtask`、`axvm`"]
@@ -1091,7 +1091,7 @@ flowchart TB
 | 7 | 堆叠层 | ArceOS 层 | `axtask` | `0.5.0` | `os/arceos/modules/axtask` |
 | 7 | 堆叠层 | 组件层 | `axvm` | `0.5.0` | `components/axvm` |
 | 8 | 堆叠层 | ArceOS 层 | `ax-dma` | `0.5.0` | `os/arceos/modules/axdma` |
-| 8 | 堆叠层 | ArceOS 层 | `axsync` | `0.5.0` | `os/arceos/modules/axsync` |
+| 8 | 堆叠层 | ArceOS 层 | `ax-sync` | `0.5.0` | `os/arceos/modules/axsync` |
 | 9 | 堆叠层 | ArceOS 层 | `ax-driver` | `0.5.0` | `os/arceos/modules/axdriver` |
 | 10 | 堆叠层 | ArceOS 层 | `ax-display` | `0.5.0` | `os/arceos/modules/axdisplay` |
 | 10 | 堆叠层 | ArceOS 层 | `ax-fs` | `0.5.0` | `os/arceos/modules/axfs` |
@@ -1143,7 +1143,7 @@ flowchart TB
 | 5 | 10 | `arm_vgic` `axplat-aarch64-bsta1000b` `axplat-aarch64-phytium-pi` `axplat-aarch64-qemu-virt` `axplat-aarch64-raspi` `axplat-riscv64-qemu-virt` `axplat-riscv64-qemu-virt` `axvcpu` `riscv_vplic` `x86_vlapic` |
 | 6 | 8 | `arm_vcpu` `axdevice` `axhal` `hello-kernel` `irq-kernel` `riscv_vcpu` `smp-kernel` `x86_vcpu` |
 | 7 | 4 | `axipi` `axmm` `axtask` `axvm` |
-| 8 | 2 | `ax-dma` `axsync` |
+| 8 | 2 | `ax-dma` `ax-sync` |
 | 9 | 1 | `ax-driver` |
 | 10 | 5 | `ax-display` `ax-fs` `ax-fs-ng` `ax-input` `ax-net` |
 | 11 | 1 | `ax-net-ng` |
@@ -1181,19 +1181,19 @@ flowchart TB
 | `arm_pl031` | 0 | System Real Time Clock (RTC) Drivers for aarch64 … | — | `axplat-aarch64-peripherals` |
 | `arm_vcpu` | 6 | Aarch64 VCPU implementation for Arceos Hypervisor | `axaddrspace` `axdevice_base` `axerrno` `axvcpu` `axvisor_api` `percpu` | `axvm` |
 | `arm_vgic` | 5 | ARM Virtual Generic Interrupt Controller (VGIC) i… | `aarch64_sysreg` `axaddrspace` `axdevice_base` `axerrno` `axvisor_api` `memory_addr` | `axdevice` `axvm` |
-| `ax-api` | 14 | Public APIs and types for ArceOS modules | `ax-display` `ax-feat` `ax-fs` `ax-runtime` `axalloc` `axconfig` `ax-dma` `ax-driver` `axerrno` `axhal` `axio` `axipi` `axlog` `axmm` `ax-net` `axsync` `axtask` | `ax-std` |
-| `ax-display` | 10 | ArceOS graphics module | `ax-driver` `axsync` `lazyinit` | `ax-api` `ax-feat` `ax-runtime` `starry-kernel` |
-| `ax-feat` | 13 | Top-level feature selection for ArceOS | `ax-display` `ax-fs` `ax-fs-ng` `ax-input` `ax-runtime` `axalloc` `axbacktrace` `axconfig` `ax-driver` `axhal` `axipi` `axlog` `ax-net` `axsync` `axtask` `kspin` | `ax-api` `ax-libc` `ax-posix-api` `ax-std` `starry-kernel` `starryos` `starryos-test` |
+| `ax-api` | 14 | Public APIs and types for ArceOS modules | `ax-display` `ax-feat` `ax-fs` `ax-runtime` `axalloc` `axconfig` `ax-dma` `ax-driver` `axerrno` `axhal` `axio` `axipi` `axlog` `axmm` `ax-net` `ax-sync` `axtask` | `ax-std` |
+| `ax-display` | 10 | ArceOS graphics module | `ax-driver` `ax-sync` `lazyinit` | `ax-api` `ax-feat` `ax-runtime` `starry-kernel` |
+| `ax-feat` | 13 | Top-level feature selection for ArceOS | `ax-display` `ax-fs` `ax-fs-ng` `ax-input` `ax-runtime` `axalloc` `axbacktrace` `axconfig` `ax-driver` `axhal` `axipi` `axlog` `ax-net` `ax-sync` `axtask` `kspin` | `ax-api` `ax-libc` `ax-posix-api` `ax-std` `starry-kernel` `starryos` `starryos-test` |
 | `ax-fs` | 10 | ArceOS filesystem module | `ax-driver` `axerrno` `axfs_devfs` `axfs_ramfs` `axfs_vfs` `axhal` `axio` `cap_access` `lazyinit` `rsext4` | `ax-api` `ax-feat` `ax-posix-api` `ax-runtime` |
-| `ax-fs-ng` | 10 | ArceOS filesystem module | `axalloc` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axpoll` `axsync` `kspin` `scope-local` | `ax-feat` `ax-net-ng` `ax-runtime` `starry-kernel` |
+| `ax-fs-ng` | 10 | ArceOS filesystem module | `axalloc` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axpoll` `ax-sync` `kspin` `scope-local` | `ax-feat` `ax-net-ng` `ax-runtime` `starry-kernel` |
 | `ax-helloworld` | 16 | ArceOS 示例程序 | `ax-std` | — |
 | `ax-helloworld-myplat` | 16 | ArceOS 示例程序 | `ax-std` `axplat-aarch64-bsta1000b` `axplat-aarch64-phytium-pi` `axplat-aarch64-qemu-virt` `axplat-aarch64-raspi` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` | — |
 | `ax-httpclient` | 16 | ArceOS 示例程序 | `ax-std` | — |
 | `ax-httpserver` | 16 | Simple HTTP server. Benchmark with Apache HTTP se… | `ax-std` | — |
-| `ax-input` | 10 | Input device management for ArceOS | `ax-driver` `axsync` `lazyinit` | `ax-feat` `ax-runtime` `starry-kernel` |
+| `ax-input` | 10 | Input device management for ArceOS | `ax-driver` `ax-sync` `lazyinit` | `ax-feat` `ax-runtime` `starry-kernel` |
 | `ax-libc` | 15 | ArceOS user program library for C apps | `ax-feat` `ax-posix-api` `axerrno` `axio` | — |
-| `ax-net-ng` | 11 | ArceOS network module | `ax-fs-ng` `axconfig` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axpoll` `axsync` `axtask` `smoltcp` | `ax-runtime` `starry-kernel` |
-| `ax-posix-api` | 14 | POSIX-compatible APIs for ArceOS modules | `ax-feat` `ax-fs` `ax-runtime` `axalloc` `axconfig` `axerrno` `axhal` `axio` `axlog` `ax-net` `axsync` `axtask` `scope-local` | `ax-libc` |
+| `ax-net-ng` | 11 | ArceOS network module | `ax-fs-ng` `axconfig` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axpoll` `ax-sync` `axtask` `smoltcp` | `ax-runtime` `starry-kernel` |
+| `ax-posix-api` | 14 | POSIX-compatible APIs for ArceOS modules | `ax-feat` `ax-fs` `ax-runtime` `axalloc` `axconfig` `axerrno` `axhal` `axio` `axlog` `ax-net` `ax-sync` `axtask` `scope-local` | `ax-libc` |
 | `ax-runtime` | 12 | Runtime library of ArceOS | `ax-display` `ax-fs` `ax-fs-ng` `ax-input` `ax-net-ng` `axalloc` `axbacktrace` `axconfig` `ax-driver` `axhal` `axipi` `axklib` `axlog` `axmm` `ax-net` `axplat` `axtask` `crate_interface` `ctor_bare` `percpu` | `ax-api` `ax-feat` `ax-posix-api` `starry-kernel` |
 | `ax-shell` | 16 | ArceOS 示例程序 | `ax-std` | — |
 | `ax-std` | 15 | ArceOS user library with an interface similar to … | `ax-api` `ax-feat` `axerrno` `axio` `kspin` `lazyinit` | `arceos-affinity` `arceos-display` `arceos-exception` `arceos-fs-shell` `arceos-irq` `arceos-memtest` `arceos-net-echoserver` `arceos-net-httpclient` `arceos-net-httpserver` `arceos-net-udpserver` `arceos-parallel` `arceos-priority` `arceos-sleep` `arceos-tls` `arceos-wait-queue` `arceos-yield` `ax-helloworld` `ax-helloworld-myplat` `ax-httpclient` `ax-httpserver` `ax-shell` `axvisor` |
@@ -1230,7 +1230,7 @@ flowchart TB
 | `axklib` | 1 | Small kernel-helper abstractions used across the … | `axerrno` `memory_addr` | `ax-runtime` `axplat-dyn` `axvisor` |
 | `axlog` | 3 | Macros for multi-level formatted logging used by … | `crate_interface` `kspin` | `ax-api` `ax-feat` `ax-posix-api` `ax-runtime` `starry-kernel` |
 | `axmm` | 7 | ArceOS virtual memory management module | `axalloc` `axerrno` `axhal` `kspin` `lazyinit` `memory_addr` `memory_set` `page_table_multiarch` | `ax-api` `ax-runtime` `ax-dma` `starry-kernel` |
-| `ax-net` | 10 | ArceOS network module | `ax-driver` `axerrno` `axhal` `axio` `axsync` `axtask` `lazyinit` `smoltcp` | `ax-api` `ax-feat` `ax-posix-api` `ax-runtime` |
+| `ax-net` | 10 | ArceOS network module | `ax-driver` `axerrno` `axhal` `axio` `ax-sync` `axtask` `lazyinit` `smoltcp` | `ax-api` `ax-feat` `ax-posix-api` `ax-runtime` |
 | `axplat` | 3 | This crate provides a unified abstraction layer f… | `axplat-macros` `crate_interface` `handler_table` `kspin` `memory_addr` `percpu` | `ax-runtime` `axhal` `axplat-aarch64-bsta1000b` `axplat-aarch64-peripherals` `axplat-aarch64-phytium-pi` `axplat-aarch64-qemu-virt` `axplat-aarch64-raspi` `axplat-dyn` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` `axplat-x86-qemu-q35` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `axplat-aarch64-bsta1000b` | 5 | Implementation of `axplat` hardware abstraction l… | `axconfig-macros` `axcpu` `axplat` `axplat-aarch64-peripherals` `kspin` `page_table_entry` | `ax-helloworld-myplat` |
 | `axplat-aarch64-peripherals` | 4 | ARM64 common peripheral drivers with `axplat` com… | `arm_pl011` `arm_pl031` `axcpu` `axplat` `int_ratio` `kspin` `lazyinit` | `axplat-aarch64-bsta1000b` `axplat-aarch64-phytium-pi` `axplat-aarch64-qemu-virt` `axplat-aarch64-raspi` |
@@ -1246,8 +1246,8 @@ flowchart TB
 | `axplat-x86-qemu-q35` | 4 | Hardware platform implementation for x86_64 QEMU … | `axconfig-macros` `axcpu` `axplat` `int_ratio` `kspin` `lazyinit` `percpu` | `axvisor` |
 | `axpoll` | 0 | A library for polling I/O events and waking up ta… | — | `ax-fs-ng` `ax-net-ng` `axfs-ng-vfs` `axtask` `starry-kernel` |
 | `axsched` | 1 | Various scheduler algorithms in a unified interfa… | `linked_list_r4l` | `axtask` |
-| `axsync` | 8 | ArceOS synchronization primitives | `axtask` `kspin` | `ax-api` `ax-display` `ax-feat` `ax-fs-ng` `ax-input` `ax-net-ng` `ax-posix-api` `ax-net` `starry-kernel` |
-| `axtask` | 7 | ArceOS task management module | `axconfig` `axerrno` `axhal` `axpoll` `axsched` `cpumask` `crate_interface` `kernel_guard` `kspin` `lazyinit` `memory_addr` `percpu` `timer_list` | `ax-api` `ax-feat` `ax-net-ng` `ax-posix-api` `ax-runtime` `ax-net` `axsync` `starry-kernel` |
+| `ax-sync` | 8 | ArceOS synchronization primitives | `axtask` `kspin` | `ax-api` `ax-display` `ax-feat` `ax-fs-ng` `ax-input` `ax-net-ng` `ax-posix-api` `ax-net` `starry-kernel` |
+| `axtask` | 7 | ArceOS task management module | `axconfig` `axerrno` `axhal` `axpoll` `axsched` `cpumask` `crate_interface` `kernel_guard` `kspin` `lazyinit` `memory_addr` `percpu` `timer_list` | `ax-api` `ax-feat` `ax-net-ng` `ax-posix-api` `ax-runtime` `ax-net` `ax-sync` `starry-kernel` |
 | `axvcpu` | 5 | Virtual CPU abstraction for ArceOS hypervisor | `axaddrspace` `axerrno` `axvisor_api` `memory_addr` `percpu` | `arm_vcpu` `axvisor` `axvm` `riscv_vcpu` `x86_vcpu` |
 | `axvisor` | 16 | A lightweight type-1 hypervisor based on ArceOS | `ax-std` `axaddrspace` `axbuild` `axconfig` `axdevice` `axdevice_base` `axerrno` `axhal` `axhvc` `axklib` `axplat-riscv64-qemu-virt` `axplat-x86-qemu-q35` `axvcpu` `axvisor_api` `axvm` `cpumask` `crate_interface` `kernel_guard` `kspin` `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` `riscv_vcpu` `riscv_vplic` `timer_list` | — |
 | `axvisor_api` | 4 | Basic API for components of the Hypervisor on Arc… | `axaddrspace` `axvisor_api_proc` `cpumask` `crate_interface` `memory_addr` | `arm_vcpu` `arm_vgic` `axplat-riscv64-qemu-virt` `axvcpu` `axvisor` `axvm` `riscv_vcpu` `riscv_vplic` `x86_vcpu` `x86_vlapic` |
@@ -1275,7 +1275,7 @@ flowchart TB
 | `int_ratio` | 0 | The type of ratios represented by two integers. | — | `axplat-aarch64-peripherals` `axplat-x86-pc` `axplat-x86-qemu-q35` |
 | `irq-kernel` | 6 | 可复用基础组件 | `axconfig-macros` `axcpu` `axplat` `axplat-aarch64-qemu-virt` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` | — |
 | `kernel_guard` | 1 | RAII wrappers to create a critical section with l… | `crate_interface` | `axhal` `axtask` `axvisor` `kspin` `percpu` `starry-kernel` |
-| `kspin` | 2 | Spinlocks used for kernel space that can disable … | `kernel_guard` | `ax-feat` `ax-fs-ng` `ax-std` `axalloc` `ax-dma` `axipi` `axlog` `axmm` `axplat` `axplat-aarch64-bsta1000b` `axplat-aarch64-peripherals` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` `axplat-x86-qemu-q35` `axsync` `axtask` `axvisor` `starry-kernel` `starry-process` `starry-signal` |
+| `kspin` | 2 | Spinlocks used for kernel space that can disable … | `kernel_guard` | `ax-feat` `ax-fs-ng` `ax-std` `axalloc` `ax-dma` `axipi` `axlog` `axmm` `axplat` `axplat-aarch64-bsta1000b` `axplat-aarch64-peripherals` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` `axplat-x86-qemu-q35` `ax-sync` `axtask` `axvisor` `starry-kernel` `starry-process` `starry-signal` |
 | `lazyinit` | 0 | Initialize a static value lazily. | — | `ax-display` `ax-fs` `ax-input` `ax-std` `axaddrspace` `axcpu` `axipi` `axmm` `ax-net` `axplat-aarch64-peripherals` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` `axplat-x86-qemu-q35` `axtask` `axvisor` `starry-process` |
 | `linked_list_r4l` | 0 | Linked lists that supports arbitrary removal in c… | — | `axsched` |
 | `memory_addr` | 0 | Wrappers and helper functions for physical and vi… | — | `arm_vgic` `axaddrspace` `axalloc` `axcpu` `axdevice` `ax-dma` `axhal` `axklib` `axmm` `axplat` `axplat-dyn` `axtask` `axvcpu` `axvisor` `axvisor_api` `axvm` `memory_set` `page_table_entry` `page_table_multiarch` `riscv_vcpu` `smp-kernel` `starry-kernel` `x86_vcpu` `x86_vlapic` |
@@ -1295,7 +1295,7 @@ flowchart TB
 | `smoltcp` | 0 | A TCP/IP stack designed for bare-metal, real-time… | — | `ax-net-ng` `ax-net` `smoltcp-fuzz` |
 | `smoltcp-fuzz` | 1 | 可复用基础组件 | `smoltcp` | — |
 | `smp-kernel` | 6 | 可复用基础组件 | `axconfig-macros` `axcpu` `axplat` `axplat-aarch64-qemu-virt` `axplat-loongarch64-qemu-virt` `axplat-riscv64-qemu-virt` `axplat-x86-pc` `memory_addr` `percpu` | — |
-| `starry-kernel` | 14 | A Linux-compatible OS kernel built on ArceOS unik… | `ax-display` `ax-feat` `ax-fs-ng` `ax-input` `ax-net-ng` `ax-runtime` `axalloc` `axbacktrace` `axconfig` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axlog` `axmm` `axpoll` `axsync` `axtask` `kernel_guard` `kspin` `memory_addr` `memory_set` `page_table_multiarch` `percpu` `scope-local` `starry-process` `starry-signal` `starry-vm` | `starryos` `starryos-test` |
+| `starry-kernel` | 14 | A Linux-compatible OS kernel built on ArceOS unik… | `ax-display` `ax-feat` `ax-fs-ng` `ax-input` `ax-net-ng` `ax-runtime` `axalloc` `axbacktrace` `axconfig` `ax-driver` `axerrno` `axfs-ng-vfs` `axhal` `axio` `axlog` `axmm` `axpoll` `ax-sync` `axtask` `kernel_guard` `kspin` `memory_addr` `memory_set` `page_table_multiarch` `percpu` `scope-local` `starry-process` `starry-signal` `starry-vm` | `starryos` `starryos-test` |
 | `starry-process` | 3 | Process management for Starry OS | `kspin` `lazyinit` | `starry-kernel` |
 | `starry-signal` | 4 | Signal management library for Starry OS | `axcpu` `kspin` `starry-vm` | `starry-kernel` |
 | `starry-vm` | 1 | Virtual memory management library for Starry OS | `axerrno` | `starry-kernel` `starry-signal` |
@@ -1337,7 +1337,7 @@ flowchart TB
 |--------------------------|----------------|---------------------------|---------------------------|
 | `digest` `0.10.7` | Traits for cryptographic hash functions and message authentication codes | — | — |
 | `digest` `0.11.2` | Traits for cryptographic hash functions and message authentication codes | — | — |
-| `fastrand` `2.3.0` | A simple and fast random number generator | `axsync` | — |
+| `fastrand` `2.3.0` | A simple and fast random number generator | `ax-sync` | — |
 | `getrandom` `0.2.17` | A small cross-platform library for retrieving random data from system source | — | — |
 | `getrandom` `0.3.4` | A small cross-platform library for retrieving random data from system source | — | — |
 | `getrandom` `0.4.2` | A small cross-platform library for retrieving random data from system source | — | — |
@@ -1696,7 +1696,7 @@ flowchart TB
 | `linkme-impl` `0.3.35` | Implementation detail of the linkme crate | — | — |
 | `litemap` `0.7.5` | A key-value Map implementation based on a flat, sorted Vec. | — | — |
 | `litrs` `1.0.0` | Parse and inspect Rust literals (i.e. tokens in the Rust programming language representing fixed va… | — | — |
-| `lock_api` `0.4.14` | Wrappers to create fully-featured Mutex and RwLock types. Compatible with no_std. | `ax-std` `axsync` `starry-kernel` | — |
+| `lock_api` `0.4.14` | Wrappers to create fully-featured Mutex and RwLock types. Compatible with no_std. | `ax-std` `ax-sync` `starry-kernel` | — |
 | `loongArch64` `0.2.5` | loongArch64 support for Rust | `axcpu` `axplat-loongarch64-qemu-virt` | — |
 | `lwext4_rust` `0.2.0` | lwext4 in Rust | `ax-fs-ng` | — |
 | `lzma-rs` `0.3.0` | A codec for LZMA, LZMA2 and XZ written in pure Rust | — | — |

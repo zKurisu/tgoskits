@@ -4,8 +4,8 @@ use alloc::{
 };
 
 use ax_fs::FS_CONTEXT;
+use ax_sync::Mutex;
 use axhal::uspace::UserContext;
-use axsync::Mutex;
 use axtask::{AxTaskExt, spawn_task};
 use starry_process::{Pid, Process};
 

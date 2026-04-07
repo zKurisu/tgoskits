@@ -9,8 +9,8 @@ use alloc::vec;
 use core::{cell::RefCell, ops::DerefMut};
 
 use ax_driver::prelude::*;
+use ax_sync::Mutex;
 use axhal::time::{NANOS_PER_MICROS, wall_time_nanos};
-use axsync::Mutex;
 use lazyinit::LazyInit;
 use smoltcp::{
     iface::{Config, Interface, SocketHandle, SocketSet},

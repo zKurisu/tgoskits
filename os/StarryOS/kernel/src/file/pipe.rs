@@ -5,9 +5,9 @@ use core::{
     task::Context,
 };
 
+use ax_sync::Mutex;
 use axerrno::{AxError, AxResult};
 use axpoll::{IoEvents, PollSet, Pollable};
-use axsync::Mutex;
 use axtask::{
     current,
     future::{block_on, poll_io},

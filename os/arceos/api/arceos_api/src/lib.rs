@@ -403,6 +403,7 @@ pub mod modules {
     #[cfg(feature = "net")]
     pub use ax_net;
     pub use ax_runtime;
+    pub use ax_sync;
     #[cfg(feature = "alloc")]
     pub use axalloc;
     pub use axconfig;
@@ -412,7 +413,6 @@ pub mod modules {
     pub use axlog;
     #[cfg(feature = "paging")]
     pub use axmm;
-    pub use axsync;
     #[cfg(feature = "multitask")]
     pub use axtask;
 }

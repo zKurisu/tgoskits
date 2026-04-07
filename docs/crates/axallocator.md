@@ -107,7 +107,7 @@ axallocator = { workspace = true, features = ["bitmap", "tlsf"] }
 
 ### 4.3 开发建议
 - 需要“全局装配”时去改 `axalloc`，不要把 `axallocator` 写成第二个运行时模块。
-- 需要“并发保护”时去用 `kspin`/`axsync`，不要在算法实现里偷偷引入全局锁。
+- 需要“并发保护”时去用 `kspin`/`ax-sync`，不要在算法实现里偷偷引入全局锁。
 - 需要“错误码落到 OS 语义”时用 `axerrno` feature；纯算法测试可直接用 `AllocError`。
 
 ## 5. 测试策略

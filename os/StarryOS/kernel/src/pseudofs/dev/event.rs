@@ -5,11 +5,11 @@ use core::{any::Any, task::Context, time::Duration};
 use ax_driver::prelude::{
     AxInputDevice, BaseDriverOps, DevError, Event, EventType, InputDeviceId, InputDriverOps,
 };
+use ax_sync::Mutex;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::{DeviceId, NodeFlags, NodeType, VfsResult};
 use axhal::time::wall_time;
 use axpoll::{IoEvents, Pollable};
-use axsync::Mutex;
 use bitmaps::Bitmap;
 use linux_raw_sys::{
     general::{__kernel_old_time_t, __kernel_suseconds_t},

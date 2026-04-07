@@ -39,7 +39,7 @@ graph LR
     current --> axhal["axhal"]
     current --> axio["axio"]
     current --> axpoll["axpoll"]
-    current --> axsync["axsync"]
+    current --> ax-sync["ax-sync"]
     ax_feat["ax-feat"] --> current
     ax_net_ng["ax-net-ng"] --> current
     ax_runtime["ax-runtime"] --> current
@@ -54,7 +54,7 @@ graph LR
 - `axhal`
 - `axio`
 - `axpoll`
-- `axsync`
+- `ax-sync`
 - `kspin`
 - `scope-local`
 

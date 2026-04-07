@@ -14,9 +14,9 @@ pub mod tty;
 use alloc::{format, sync::Arc};
 use core::any::Any;
 
+use ax_sync::Mutex;
 use axerrno::AxError;
 use axfs_ng_vfs::{DeviceId, Filesystem, NodeFlags, NodeType, VfsResult};
-use axsync::Mutex;
 #[cfg(feature = "dev-log")]
 pub use log::bind_dev_log;
 use rand::{Rng, SeedableRng, rngs::SmallRng};

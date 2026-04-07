@@ -7,10 +7,10 @@ use core::{
 };
 
 use ax_fs::{FS_CONTEXT, FsContext};
+use ax_sync::Mutex;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::{Location, Metadata, NodeFlags};
 use axpoll::{IoEvents, Pollable};
-use axsync::Mutex;
 use axtask::future::{block_on, poll_io};
 use linux_raw_sys::general::{AT_EMPTY_PATH, AT_FDCWD, AT_SYMLINK_NOFOLLOW};
 

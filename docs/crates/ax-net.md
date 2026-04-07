@@ -140,7 +140,7 @@
 | `ax-driver` | 提供 NIC 设备对象 |
 | `axhal` | 提供时间接口，驱动 `smoltcp::Instant` |
 | `axio` | 提供 `PollState` 与通用 I/O trait |
-| `axsync` / `spin` / `lazyinit` | 管理全局接口、`SocketSet` 与监听表 |
+| `ax-sync` / `spin` / `lazyinit` | 管理全局接口、`SocketSet` 与监听表 |
 | `axtask` | blocking 路径中的 `yield_now()` 与任务协作 |
 | `smoltcp` | 真正的 TCP/UDP/DNS/IP 协议实现 |
 
