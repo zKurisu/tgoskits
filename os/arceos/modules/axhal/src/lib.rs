@@ -51,7 +51,7 @@ cfg_if::cfg_if! {
         #[cfg(target_arch = "aarch64")]
         extern crate ax_plat_aarch64_qemu_virt;
         #[cfg(target_arch = "riscv64")]
-        extern crate axplat_riscv64_qemu_virt;
+        extern crate ax_plat_riscv64_qemu_virt;
         #[cfg(target_arch = "loongarch64")]
         extern crate ax_plat_loongarch64_qemu_virt;
     } else {

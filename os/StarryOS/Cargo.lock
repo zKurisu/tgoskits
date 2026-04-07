@@ -760,7 +760,7 @@ dependencies = [
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
  "ax-plat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt",
+ "ax-plat-riscv64-qemu-virt",
  "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
@@ -993,7 +993,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-riscv64-qemu-virt"
+name = "ax-plat-riscv64-qemu-virt"
 version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08f91aff22afadd24807e34fb94fe4d0d2c8c5b86fb89dd6ff87a8093f812518"

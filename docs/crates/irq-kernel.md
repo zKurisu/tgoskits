@@ -86,7 +86,7 @@ graph LR
     sample --> linkme["linkme / trap 注册"]
     sample --> x86["axplat-x86-pc(irq)"]
     sample --> a64["ax-plat-aarch64-qemu-virt(irq)"]
-    sample --> rv["axplat-riscv64-qemu-virt(irq)"]
+    sample --> rv["ax-plat-riscv64-qemu-virt(irq)"]
     sample --> loong["ax-plat-loongarch64-qemu-virt(irq)"]
 ```
 

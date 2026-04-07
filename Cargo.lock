@@ -667,12 +667,12 @@ version = "0.5.0"
 dependencies = [
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-loongarch64-qemu-virt",
+ "ax-plat-riscv64-qemu-virt 0.5.1",
  "axalloc",
  "axconfig",
  "axcpu 0.5.0",
  "axplat 0.5.1",
  "axplat-dyn",
- "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
@@ -702,8 +702,8 @@ dependencies = [
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-aarch64-raspi",
  "ax-plat-loongarch64-qemu-virt",
+ "ax-plat-riscv64-qemu-virt 0.5.1",
  "ax-std",
- "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "cfg-if",
 ]
@@ -896,6 +896,42 @@ dependencies = [
  "log",
  "loongArch64",
  "page_table_entry 0.8.1",
+ "uart_16550 0.5.0",
+]
+
+[[package]]
+name = "ax-plat-riscv64-qemu-virt"
+version = "0.5.0"
+dependencies = [
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "axvisor_api",
+ "crate_interface 0.5.0",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "riscv 0.14.0",
+ "riscv_goldfish",
+ "riscv_plic 0.4.0",
+ "sbi-rt",
+ "uart_16550 0.4.0",
+]
+
+[[package]]
+name = "ax-plat-riscv64-qemu-virt"
+version = "0.5.1"
+dependencies = [
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "riscv 0.16.0",
+ "riscv_goldfish",
+ "riscv_plic 0.4.0",
+ "sbi-rt",
  "uart_16550 0.5.0",
 ]
 
@@ -1502,42 +1538,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-riscv64-qemu-virt"
-version = "0.5.0"
-dependencies = [
- "axconfig-macros 0.4.1",
- "axcpu 0.5.0",
- "axplat 0.5.1",
- "axvisor_api",
- "crate_interface 0.5.0",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "riscv 0.14.0",
- "riscv_goldfish",
- "riscv_plic 0.4.0",
- "sbi-rt",
- "uart_16550 0.4.0",
-]
-
-[[package]]
-name = "axplat-riscv64-qemu-virt"
-version = "0.5.1"
-dependencies = [
- "axconfig-macros 0.4.1",
- "axcpu 0.5.0",
- "axplat 0.5.1",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "riscv 0.16.0",
- "riscv_goldfish",
- "riscv_plic 0.4.0",
- "sbi-rt",
- "uart_16550 0.5.0",
-]
-
-[[package]]
 name = "axplat-riscv64-visionfive2"
 version = "0.1.0-pre.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1691,6 +1691,7 @@ dependencies = [
  "anyhow",
  "arm-gic-driver 0.17.0",
  "ax-hal",
+ "ax-plat-riscv64-qemu-virt 0.5.0",
  "ax-std",
  "axaddrspace",
  "axbuild",
@@ -1700,7 +1701,6 @@ dependencies = [
  "axerrno",
  "axhvc",
  "axklib",
- "axplat-riscv64-qemu-virt 0.5.0",
  "axplat-x86-qemu-q35",
  "axvcpu",
  "axvisor_api",

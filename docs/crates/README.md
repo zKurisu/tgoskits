@@ -96,8 +96,8 @@
 | `axplat-dyn` | 平台层 | `platform/axplat-dyn` | 11 | 2 | [查看](./axplat-dyn.md) |
 | `ax-plat-loongarch64-qemu-virt` | 组件层 | `components/axplat_crates/platforms/axplat-loongarch64-qemu-virt` | 6 | 5 | [查看](./ax-plat-loongarch64-qemu-virt.md) |
 | `axplat-macros` | 组件层 | `components/axplat_crates/axplat-macros` | 1 | 1 | [查看](./axplat-macros.md) |
-| `axplat-riscv64-qemu-virt` | 组件层 | `components/axplat_crates/platforms/axplat-riscv64-qemu-virt` | 6 | 6 | [查看](./axplat-riscv64-qemu-virt.md) |
-| `axplat-riscv64-qemu-virt` | Axvisor 层 | `os/axvisor/platform/riscv64-qemu-virt` | 8 | 6 | [查看](./axplat-riscv64-qemu-virt.md) |
+| `ax-plat-riscv64-qemu-virt` | 组件层 | `components/axplat_crates/platforms/axplat-riscv64-qemu-virt` | 6 | 6 | [查看](./ax-plat-riscv64-qemu-virt.md) |
+| `ax-plat-riscv64-qemu-virt` | Axvisor 层 | `os/axvisor/platform/riscv64-qemu-virt` | 8 | 6 | [查看](./ax-plat-riscv64-qemu-virt.md) |
 | `axplat-x86-pc` | 组件层 | `components/axplat_crates/platforms/axplat-x86-pc` | 7 | 5 | [查看](./axplat-x86-pc.md) |
 | `axplat-x86-qemu-q35` | 平台层 | `platform/x86-qemu-q35` | 7 | 1 | [查看](./axplat-x86-qemu-q35.md) |
 | `axpoll` | 组件层 | `components/axpoll` | 0 | 5 | [查看](./axpoll.md) |

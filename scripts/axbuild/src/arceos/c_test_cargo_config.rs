@@ -336,7 +336,7 @@ mod tests {
         let patches = discover_patch_paths(&root, &root.join("os/arceos")).unwrap();
 
         assert_eq!(
-            patches.get("axplat-riscv64-qemu-virt"),
+            patches.get("ax-plat-riscv64-qemu-virt"),
             Some(&PathBuf::from(
                 "../../components/axplat_crates/platforms/axplat-riscv64-qemu-virt"
             ))

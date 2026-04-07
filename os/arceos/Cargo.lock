@@ -198,7 +198,7 @@ dependencies = [
  "axplat-aarch64-qemu-virt",
  "axplat-aarch64-raspi",
  "ax-plat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt",
+ "ax-plat-riscv64-qemu-virt",
  "axplat-x86-pc",
  "ax-std",
  "cfg-if",
@@ -723,7 +723,7 @@ dependencies = [
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
  "ax-plat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt",
+ "ax-plat-riscv64-qemu-virt",
  "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
@@ -995,7 +995,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-riscv64-qemu-virt"
+name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.1"
 dependencies = [
  "axconfig-macros",

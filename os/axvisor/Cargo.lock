@@ -675,7 +675,7 @@ dependencies = [
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
  "ax-plat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt 0.3.0 (git+https://github.com/arceos-org/axplat_crates.git?tag=dev-v03)",
+ "ax-plat-riscv64-qemu-virt 0.3.0 (git+https://github.com/arceos-org/axplat_crates.git?tag=dev-v03)",
  "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
@@ -884,7 +884,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-riscv64-qemu-virt"
+name = "ax-plat-riscv64-qemu-virt"
 version = "0.3.0"
 dependencies = [
  "axconfig-macros",
@@ -903,7 +903,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-riscv64-qemu-virt"
+name = "ax-plat-riscv64-qemu-virt"
 version = "0.3.0"
 source = "git+https://github.com/arceos-org/axplat_crates.git?tag=dev-v03#0df0713b1c20eafaeebdc6b0e194b2985e857949"
 dependencies = [
@@ -996,7 +996,7 @@ dependencies = [
  "axmm",
  "axplat",
  "axplat-aarch64-dyn",
- "axplat-riscv64-qemu-virt 0.3.0",
+ "ax-plat-riscv64-qemu-virt 0.3.0",
  "axplat-x86-qemu-q35",
  "axtask",
  "cfg-if",
@@ -1149,7 +1149,7 @@ dependencies = [
  "axdriver",
  "axerrno 0.2.2",
  "axhvc",
- "axplat-riscv64-qemu-virt 0.3.0",
+ "ax-plat-riscv64-qemu-virt 0.3.0",
  "ax-runtime",
  "axklib",
  "axplat-x86-qemu-q35",

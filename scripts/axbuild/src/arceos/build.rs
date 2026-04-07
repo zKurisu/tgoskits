@@ -520,7 +520,7 @@ fn default_platform_package(arch: &str) -> &'static str {
     match arch {
         "x86_64" => "axplat-x86-pc",
         "aarch64" => "ax-plat-aarch64-qemu-virt",
-        "riscv64" => "axplat-riscv64-qemu-virt",
+        "riscv64" => "ax-plat-riscv64-qemu-virt",
         "loongarch64" => "ax-plat-loongarch64-qemu-virt",
         _ => unreachable!("unsupported arch"),
     }
@@ -1154,6 +1154,6 @@ AX_GW = "10.0.2.2"
         )
         .unwrap();
 
-        assert_eq!(package, "axplat-riscv64-qemu-virt");
+        assert_eq!(package, "ax-plat-riscv64-qemu-virt");
     }
 }

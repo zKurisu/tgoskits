@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name = "axplat-riscv64-qemu-virt"
+name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.0"
 
 [features]

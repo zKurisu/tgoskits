@@ -122,7 +122,7 @@ publish_crate "axplat-aarch64-phytium-pi" "platforms/axplat-aarch64-phytium-pi" 
 publish_crate "axplat-x86-pc" "platforms/axplat-x86-pc" "${X86_64_TARGET}"
 
 # 6. Publish riscv64 platform crate
-publish_crate "axplat-riscv64-qemu-virt" "platforms/axplat-riscv64-qemu-virt" "${RISCV64_TARGET}"
+publish_crate "ax-plat-riscv64-qemu-virt" "platforms/axplat-riscv64-qemu-virt" "${RISCV64_TARGET}"
 
 # 7. Publish loongarch64 platform crate
 publish_crate "ax-plat-loongarch64-qemu-virt" "platforms/axplat-loongarch64-qemu-virt" "${LOONGARCH64_TARGET}"
