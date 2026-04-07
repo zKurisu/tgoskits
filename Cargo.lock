@@ -550,6 +550,7 @@ dependencies = [
  "ax-fs",
  "ax-hal",
  "ax-ipi",
+ "ax-log",
  "ax-mm",
  "ax-net",
  "ax-runtime",
@@ -558,7 +559,6 @@ dependencies = [
  "axconfig",
  "axerrno",
  "axio",
- "axlog",
 ]
 
 [[package]]
@@ -643,13 +643,13 @@ dependencies = [
  "ax-hal",
  "ax-input",
  "ax-ipi",
+ "ax-log",
  "ax-net",
  "ax-runtime",
  "ax-sync",
  "ax-task",
  "axbacktrace",
  "axconfig",
- "axlog",
  "kspin 0.3.1",
 ]
 
@@ -790,6 +790,18 @@ dependencies = [
  "axerrno",
  "axio",
  "bindgen",
+]
+
+[[package]]
+name = "ax-log"
+version = "0.5.0"
+dependencies = [
+ "ax-log",
+ "cfg-if",
+ "chrono",
+ "crate_interface 0.5.0",
+ "kspin 0.3.1",
+ "log",
 ]
 
 [[package]]
@@ -1003,6 +1015,7 @@ dependencies = [
  "ax-feat",
  "ax-fs",
  "ax-hal",
+ "ax-log",
  "ax-net",
  "ax-runtime",
  "ax-sync",
@@ -1010,7 +1023,6 @@ dependencies = [
  "axconfig",
  "axerrno",
  "axio",
- "axlog",
  "bindgen",
  "flatten_objects",
  "lazy_static",
@@ -1030,6 +1042,7 @@ dependencies = [
  "ax-hal",
  "ax-input",
  "ax-ipi",
+ "ax-log",
  "ax-mm",
  "ax-net",
  "ax-net-ng",
@@ -1037,7 +1050,6 @@ dependencies = [
  "axbacktrace",
  "axconfig",
  "axklib",
- "axlog",
  "axplat 0.5.1",
  "cfg-if",
  "chrono",
@@ -1470,18 +1482,6 @@ dependencies = [
  "axerrno",
  "memory_addr 0.6.1",
  "trait-ffi",
-]
-
-[[package]]
-name = "axlog"
-version = "0.5.0"
-dependencies = [
- "axlog",
- "cfg-if",
- "chrono",
- "crate_interface 0.5.0",
- "kspin 0.3.1",
- "log",
 ]
 
 [[package]]
@@ -7399,6 +7399,7 @@ dependencies = [
  "ax-fs-ng",
  "ax-hal",
  "ax-input",
+ "ax-log",
  "ax-mm",
  "ax-net-ng",
  "ax-runtime",
@@ -7409,7 +7410,6 @@ dependencies = [
  "axerrno",
  "axfs-ng-vfs",
  "axio",
- "axlog",
  "axpoll",
  "bitflags 2.11.0",
  "bitmaps",

@@ -642,7 +642,7 @@ dependencies = [
  "ax-fs-ng",
  "axhal",
  "ax-input",
- "axlog",
+ "ax-log",
  "axnet",
  "ax-runtime",
  "axsync",
@@ -810,7 +810,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axlog"
+name = "ax-log"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64b27e79e15984afd375b94328701719b8ab0d6ef4092a7999c8277f9b2f410d"
@@ -1082,7 +1082,7 @@ dependencies = [
  "axhal",
  "ax-input",
  "axklib",
- "axlog",
+ "ax-log",
  "axmm",
  "axnet",
  "ax-net-ng",
@@ -5533,7 +5533,7 @@ dependencies = [
  "axhal",
  "ax-input",
  "axio",
- "axlog",
+ "ax-log",
  "axmm",
  "ax-net-ng",
  "axpoll",

@@ -1,4 +1,4 @@
-# `axlog` 技术文档
+# `ax-log` 技术文档
 
 > 路径：`os/arceos/modules/axlog`
 > 类型：库 crate
@@ -6,17 +6,17 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`
 
-`axlog` 是 ArceOS 的日志前端和格式化层。它建立在 `log` crate 之上，为 `no_std` 运行时提供统一的打印宏、日志格式和后端接口，并在 `std` feature 下退化成可直接在主机环境运行的 logger。它属于运行时叶子基础件：不是串口驱动、不是 tracing 框架，也不是完整的观测平台。
+`ax-log` 是 ArceOS 的日志前端和格式化层。它建立在 `log` crate 之上，为 `no_std` 运行时提供统一的打印宏、日志格式和后端接口，并在 `std` feature 下退化成可直接在主机环境运行的 logger。它属于运行时叶子基础件：不是串口驱动、不是 tracing 框架，也不是完整的观测平台。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axlog` 的核心设计思路很克制：
+`ax-log` 的核心设计思路很克制：
 
 - 复用 `log` crate 作为上层日志语义，不自造一套新的日志 facade。
 - 用 `crate_interface` 定义 `LogIf`，把“时间、CPU ID、任务 ID、字符输出”这些平台相关能力交给外部实现。
 - 在打印时自行做串行化，避免多 CPU/多任务日志交叉。
 
-因此，`axlog` 解决的是“日志长什么样、如何输出”，不是“设备如何发字符”或“日志如何持久化”。
+因此，`ax-log` 解决的是“日志长什么样、如何输出”，不是“设备如何发字符”或“日志如何持久化”。
 
 ### 1.2 核心模块与对象
 这个 crate 基本都在 `src/lib.rs` 中完成：
@@ -35,7 +35,7 @@
   - 所有输出与环境信息都通过 `call_interface!(LogIf::...)` 获取。
   - 是否显示 CPU ID / task ID 由 `LogIf::current_cpu_id()` 和 `current_task_id()` 返回值决定。
 
-这意味着 `axlog` 不是“只能在裸机里用”的模块，它的 host 验证路径也是正式设计的一部分。
+这意味着 `ax-log` 不是“只能在裸机里用”的模块，它的 host 验证路径也是正式设计的一部分。
 
 ### 1.4 日志输出主线
 `Logger::log()` 的关键流程如下：
@@ -70,23 +70,23 @@ flowchart TD
 - `warn!` 等宏：被 `ax-posix-api`、`ax-task` 等模块直接调用。
 
 ### 2.3 使用边界
-- `axlog` 不管理串口、显示器或控制台设备；它只定义如何把字符串交给后端。
-- `axlog` 不是 tracing/span 系统，没有结构化事件树。
-- `axlog` 也不负责日志落盘、远端传输或 ring buffer。
+- `ax-log` 不管理串口、显示器或控制台设备；它只定义如何把字符串交给后端。
+- `ax-log` 不是 tracing/span 系统，没有结构化事件树。
+- `ax-log` 也不负责日志落盘、远端传输或 ring buffer。
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    log["log"] --> axlog["axlog"]
-    crate_interface["crate_interface"] --> axlog
-    kspin["kspin"] --> axlog
-    chrono["chrono (std)"] --> axlog
+    log["log"] --> ax-log["ax-log"]
+    crate_interface["crate_interface"] --> ax-log
+    kspin["kspin"] --> ax-log
+    chrono["chrono (std)"] --> ax-log
 
-    axlog --> ax-runtime["ax-runtime"]
-    axlog --> ax-api["ax-api"]
-    axlog --> arceos_posix["ax-posix-api"]
-    axlog --> ax-feat["ax-feat"]
-    axlog --> starry_kernel["starry-kernel"]
+    ax-log --> ax-runtime["ax-runtime"]
+    ax-log --> ax-api["ax-api"]
+    ax-log --> arceos_posix["ax-posix-api"]
+    ax-log --> ax-feat["ax-feat"]
+    ax-log --> starry_kernel["starry-kernel"]
 ```
 
 ### 3.1 关键直接依赖
@@ -104,21 +104,21 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axlog = { workspace = true }
+ax-log = { workspace = true }
 ```
 
 如果是主机环境验证，可显式开启 `std`：
 
 ```toml
 [dependencies]
-axlog = { workspace = true, features = ["std"] }
+ax-log = { workspace = true, features = ["std"] }
 ```
 
 ### 4.2 修改时的关键约束
 1. 修改日志格式时，要同时检查 `std` 与 `no_std` 两条路径。
 2. 修改 `LogIf` 契约时，必须同步更新 `ax_runtime::LogIfImpl` 这类实现方。
 3. 修改 `print_fmt()` 锁策略时，要重新评估输出交叉与中断上下文行为。
-4. 不要把控制台驱动逻辑塞进 `axlog`；这层应该继续保持“前端 + glue”的小体量。
+4. 不要把控制台驱动逻辑塞进 `ax-log`；这层应该继续保持“前端 + glue”的小体量。
 
 ### 4.3 开发建议
 - 需要输出普通信息时优先使用 `log` 宏；只有在确实需要绕过级别过滤时再用 `ax_print!`。
@@ -127,7 +127,7 @@ axlog = { workspace = true, features = ["std"] }
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
-`axlog` 没有独立的 crate 内测试；当前验证主要依赖：
+`ax-log` 没有独立的 crate 内测试；当前验证主要依赖：
 
 - `std` feature 下的 host 构建与示例使用；
 - `ax-runtime` 启动期对 logger 的真实初始化；
@@ -144,15 +144,15 @@ axlog = { workspace = true, features = ["std"] }
 - 多核/多任务并发输出是否发生严重 interleave。
 
 ### 5.4 覆盖率要求
-- 对 `axlog`，格式分支覆盖和运行环境覆盖比行覆盖率更重要。
+- 对 `ax-log`，格式分支覆盖和运行环境覆盖比行覆盖率更重要。
 - 任何改动 `LogIf`、输出锁或格式模板的变更，都应补至少一条系统级验证路径。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axlog` 是 ArceOS bring-up 初期最早建立的公共服务之一。它负责把启动、调度、驱动和 API 层的日志汇总到统一格式下。
+`ax-log` 是 ArceOS bring-up 初期最早建立的公共服务之一。它负责把启动、调度、驱动和 API 层的日志汇总到统一格式下。
 
 ### 6.2 StarryOS
-StarryOS 直接复用 `axlog`，因此它在 StarryOS 中也仍是日志前端层，而不是 Linux 兼容调试框架本体。
+StarryOS 直接复用 `ax-log`，因此它在 StarryOS 中也仍是日志前端层，而不是 Linux 兼容调试框架本体。
 
 ### 6.3 Axvisor
-Axvisor 当前主要通过共享的 ArceOS 运行时栈间接受用 `axlog`。它提供的是宿主侧统一日志格式，不是 hypervisor 专用观测系统。
+Axvisor 当前主要通过共享的 ArceOS 运行时栈间接受用 `ax-log`。它提供的是宿主侧统一日志格式，不是 hypervisor 专用观测系统。

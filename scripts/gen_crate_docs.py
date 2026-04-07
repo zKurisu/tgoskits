@@ -181,7 +181,7 @@ CURATED_DOCS = {
     "ax-ipi",
     "axklib",
     "ax-libc",
-    "axlog",
+    "ax-log",
     "ax-std",
     "ax-runtime",
     "ax-mm",

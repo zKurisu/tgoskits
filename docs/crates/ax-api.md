@@ -55,7 +55,7 @@ graph LR
 - `ax-hal`
 - `axio`
 - `ax-ipi`
-- `axlog`
+- `ax-log`
 - 另外还有 `5` 个同类项未在此展开
 
 ### 3.2 间接本地依赖

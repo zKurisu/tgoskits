@@ -59,7 +59,7 @@ graph LR
 - `ax-input`
 - `ax-ipi`
 - `axklib`
-- `axlog`
+- `ax-log`
 - 另外还有 `8` 个同类项未在此展开
 
 ### 3.2 间接本地依赖

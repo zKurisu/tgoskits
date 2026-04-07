@@ -45,7 +45,7 @@ ax-hal = { workspace = true }
 ax-input = { workspace = true, optional = true }
 ax-ipi = { workspace = true, optional = true }
 axklib = { workspace = true, optional = true }
-axlog = { workspace = true }
+ax-log = { workspace = true }
 ax-mm = { workspace = true, optional = true }
 ax-net = { workspace = true, optional = true }
 ax-net-ng = { workspace = true, optional = true }

@@ -78,7 +78,7 @@ StarryOS 与传统"从零写起"的宏内核不同，将大量底层职责交由
 
 - 任务与调度的基本运行时建立在 `ax-task` 之上。
 - 地址空间与页表能力复用 `ax-mm` 系列基础设施。
-- 文件系统、网络、HAL、日志等依赖 `ax-fs`、`ax-net`、`ax-hal`、`axlog` 等模块。
+- 文件系统、网络、HAL、日志等依赖 `ax-fs`、`ax-net`、`ax-hal`、`ax-log` 等模块。
 
 StarryOS 自身重点补齐"多进程、多线程、Linux syscall 语义、rootfs 用户态验证"这几部分。
 

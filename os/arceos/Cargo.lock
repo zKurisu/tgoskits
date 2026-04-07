@@ -240,7 +240,7 @@ dependencies = [
  "axhal",
  "axio",
  "axipi",
- "axlog",
+ "ax-log",
  "axmm",
  "axnet",
  "ax-runtime",
@@ -259,7 +259,7 @@ dependencies = [
  "ax-fs",
  "axhal",
  "axio",
- "axlog",
+ "ax-log",
  "axnet",
  "ax-runtime",
  "axsync",
@@ -617,7 +617,7 @@ dependencies = [
  "axhal",
  "ax-input",
  "axipi",
- "axlog",
+ "ax-log",
  "axnet",
  "ax-runtime",
  "axsync",
@@ -790,10 +790,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "axlog"
+name = "ax-log"
 version = "0.5.0"
 dependencies = [
- "axlog",
+ "ax-log",
  "cfg-if",
  "chrono",
  "crate_interface",
@@ -1058,7 +1058,7 @@ dependencies = [
  "ax-input",
  "axipi",
  "axklib",
- "axlog",
+ "ax-log",
  "axmm",
  "axnet",
  "ax-net-ng",

@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! axlog = { version = "0.1", features = ["std"] }
+//! ax-log = { version = "0.1", features = ["std"] }
 //! ```
 //!
 //! # Cargo features:
@@ -22,12 +22,12 @@
 //! # Examples
 //!
 //! ```
-//! use axlog::{debug, error, info, trace, warn};
+//! use ax-log::{debug, error, info, trace, warn};
 //!
 //! // Initialize the logger.
-//! axlog::init();
+//! ax-log::init();
 //! // Set the maximum log level to `info`.
-//! axlog::set_max_level("info");
+//! ax-log::set_max_level("info");
 //!
 //! // The following logs will be printed.
 //! error!("error");

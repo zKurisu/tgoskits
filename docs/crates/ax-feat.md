@@ -59,7 +59,7 @@ graph LR
 - `ax-hal`
 - `ax-input`
 - `ax-ipi`
-- `axlog`
+- `ax-log`
 - `ax-net`
 - 另外还有 `4` 个同类项未在此展开
 

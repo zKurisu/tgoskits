@@ -37,7 +37,7 @@ axconfig.workspace = true
 ax-feat.workspace = true
 ax-fs = { workspace = true, optional = true }
 ax-hal.workspace = true
-axlog.workspace = true
+ax-log.workspace = true
 ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 ax-sync.workspace = true

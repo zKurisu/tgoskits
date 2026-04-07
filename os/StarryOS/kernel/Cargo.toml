@@ -46,7 +46,7 @@ ax-driver.workspace = true
 ax-fs = { version = "0.5.0", package = "ax-fs-ng" }
 ax-hal.workspace = true
 ax-input = { workspace = true, optional = true }
-axlog.workspace = true
+ax-log.workspace = true
 ax-mm.workspace = true
 axnet = { version = "0.5.0", package = "ax-net-ng" }
 ax-runtime.workspace = true

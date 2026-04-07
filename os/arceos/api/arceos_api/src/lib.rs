@@ -414,5 +414,5 @@ pub mod modules {
     #[cfg(feature = "alloc")]
     pub use ax-alloc;
     pub use axconfig;
-    pub use axlog;
+    pub use ax-log;
 }

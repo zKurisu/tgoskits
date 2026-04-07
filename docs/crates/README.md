@@ -83,7 +83,7 @@
 | `axio` | 组件层 | `components/axio` | 1 | 9 | [查看](./axio.md) |
 | `ax-ipi` | ArceOS 层 | `os/arceos/modules/axipi` | 5 | 3 | [查看](./ax-ipi.md) |
 | `axklib` | 组件层 | `components/axklib` | 2 | 3 | [查看](./axklib.md) |
-| `axlog` | ArceOS 层 | `os/arceos/modules/axlog` | 2 | 5 | [查看](./axlog.md) |
+| `ax-log` | ArceOS 层 | `os/arceos/modules/axlog` | 2 | 5 | [查看](./ax-log.md) |
 | `ax-mm` | ArceOS 层 | `os/arceos/modules/axmm` | 8 | 4 | [查看](./ax-mm.md) |
 | `ax-net` | ArceOS 层 | `os/arceos/modules/axnet` | 8 | 4 | [查看](./ax-net.md) |
 | `ax-net-ng` | ArceOS 层 | `os/arceos/modules/axnet-ng` | 11 | 2 | [查看](./ax-net-ng.md) |

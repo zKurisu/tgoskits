@@ -122,7 +122,7 @@ ax-fs-ng = { workspace = true, optional = true }
 ax-hal.workspace = true
 ax-input = { workspace = true, optional = true }
 ax-ipi = { workspace = true, optional = true }
-axlog.workspace = true
+ax-log.workspace = true
 ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 ax-sync = { workspace = true, optional = true }

@@ -11,7 +11,7 @@ extern crate alloc;
 extern crate ax_runtime;
 
 #[macro_use]
-extern crate axlog;
+extern crate ax-log;
 
 pub mod entry;
 

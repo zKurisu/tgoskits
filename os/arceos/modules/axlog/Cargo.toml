@@ -1,5 +1,5 @@
 [package]
-name = "axlog"
+name = "ax-log"
 version.workspace = true
 edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
@@ -20,4 +20,4 @@ kspin.workspace = true
 log.workspace = true
 
 [dev-dependencies]
-axlog = { path = ".", features = ["std"] }
+ax-log = { path = ".", features = ["std"] }

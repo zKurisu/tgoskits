@@ -34,7 +34,7 @@
 #![allow(missing_abi)]
 
 #[macro_use]
-extern crate axlog;
+extern crate ax-log;
 
 #[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
@@ -67,7 +67,7 @@ unsafe extern "C" {
 struct LogIfImpl;
 
 #[crate_interface::impl_interface]
-impl axlog::LogIf for LogIfImpl {
+impl ax-log::LogIf for LogIfImpl {
     fn console_write_str(s: &str) {
         ax_hal::console::write_bytes(s.as_bytes());
     }
@@ -156,8 +156,8 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
         chrono::DateTime::from_timestamp_nanos(ax_hal::time::wall_time_nanos() as _),
     );
 
-    axlog::init();
-    axlog::set_max_level(log_level); // no effect if set `log-level-*` features
+    ax-log::init();
+    ax-log::set_max_level(log_level); // no effect if set `log-level-*` features
     info!("Logging is enabled.");
     info!("Primary CPU {cpu_id} started, arg = {arg:#x}.");
 

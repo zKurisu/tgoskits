@@ -88,7 +88,7 @@ ax-fs-ng = { version = "0.5.0", path = "modules/axfs-ng" }
 ax-hal = { version = "0.5.0", path = "modules/axhal" }
 ax-input = { version = "0.5.0", path = "modules/axinput" }
 ax-ipi = { version = "0.5.0", path = "modules/axipi" }
-axlog = { version = "0.5.0", path = "modules/axlog" }
+ax-log = { version = "0.5.0", path = "modules/axlog" }
 ax-mm = { version = "0.5.0", path = "modules/axmm" }
 ax-net = { version = "0.5.0", path = "modules/axnet" }
 ax-net-ng = { version = "0.5.0", path = "modules/axnet-ng" }
