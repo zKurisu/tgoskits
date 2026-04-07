@@ -78,7 +78,7 @@
 
 ### 1.5 与平台层的真实关系
 
-在当前仓库中，真实消费者是 `axplat-aarch64-peripherals` 的 `pl011.rs`：
+在当前仓库中，真实消费者是 `ax-plat-aarch64-peripherals` 的 `pl011.rs`：
 
 - 用 `LazyInit<SpinNoIrq<Pl011Uart>>` 管理全局实例
 - 在 `init_early()` 中调用 `Pl011Uart::new()` 和 `init()`
@@ -141,14 +141,14 @@
 
 它在平台层之上的传递关系可以概括为：
 
-- `arm_pl011` -> `axplat-aarch64-peripherals` -> AArch64 平台控制台实现 -> 各上层系统
+- `arm_pl011` -> `ax-plat-aarch64-peripherals` -> AArch64 平台控制台实现 -> 各上层系统
 
 ### 3.3 关系解读
 
 | 层级 | 角色 |
 | --- | --- |
 | `arm_pl011` | 叶子寄存器驱动 |
-| `axplat-aarch64-peripherals` | 把叶子驱动接成 `axplat` 可用控制台 |
+| `ax-plat-aarch64-peripherals` | 把叶子驱动接成 `axplat` 可用控制台 |
 | ArceOS/StarryOS/Axvisor 的 AArch64 平台 | 通过平台层间接获得早期串口输出能力 |
 
 ## 4. 开发指南
@@ -188,7 +188,7 @@
 当前 crate 内没有单独的 `tests/`。实际回归主要依赖：
 
 - 编译检查
-- `axplat-aarch64-peripherals` 的平台接线
+- `ax-plat-aarch64-peripherals` 的平台接线
 - 系统启动后控制台是否可用
 
 ### 5.2 建议补充的单元测试
@@ -214,7 +214,7 @@
 
 | 项目 | 位置 | 角色 | 说明 |
 | --- | --- | --- | --- |
-| ArceOS | AArch64 平台外设栈 | 控制台叶子驱动 | 经 `axplat-aarch64-peripherals` 间接接入 |
+| ArceOS | AArch64 平台外设栈 | 控制台叶子驱动 | 经 `ax-plat-aarch64-peripherals` 间接接入 |
 | StarryOS | 共享平台基础设施 | 可复用串口叶子驱动 | 复用 `axplat` 平台路径时可间接使用 |
 | Axvisor | 共享平台基础设施 | 早期控制台叶子驱动 | 若选择同一 AArch64 平台实现，可由平台层间接复用 |
 

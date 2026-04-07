@@ -196,7 +196,7 @@ ax-libc = { path = "os/arceos/ulib/axlibc" }
 axplat = { path = "components/axplat_crates/axplat" }
 axplat-macros = { path = "components/axplat_crates/axplat-macros" }
 ax-plat-aarch64-bsta1000b = { path = "components/axplat_crates/platforms/axplat-aarch64-bsta1000b" }
-axplat-aarch64-peripherals = { path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
+ax-plat-aarch64-peripherals = { path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
 ax-plat-aarch64-phytium-pi = { path = "components/axplat_crates/platforms/axplat-aarch64-phytium-pi" }
 ax-plat-aarch64-qemu-virt = { path = "components/axplat_crates/platforms/axplat-aarch64-qemu-virt" }
 ax-plat-aarch64-raspi = { path = "components/axplat_crates/platforms/axplat-aarch64-raspi" }
@@ -349,7 +349,7 @@ starry-kernel = { path = "os/StarryOS/kernel", version = "0.5.0" }
 axcpu = { version = "0.5.0", path = "components/axcpu" }
 axplat = { version = "0.5.1", path = "components/axplat_crates/axplat" }
 ax-plat-aarch64-bsta1000b = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-bsta1000b" }
-axplat-aarch64-peripherals = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
+ax-plat-aarch64-peripherals = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-peripherals" }
 ax-plat-aarch64-phytium-pi = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-phytium-pi" }
 ax-plat-aarch64-qemu-virt = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-qemu-virt" }
 ax-plat-aarch64-raspi = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-aarch64-raspi" }

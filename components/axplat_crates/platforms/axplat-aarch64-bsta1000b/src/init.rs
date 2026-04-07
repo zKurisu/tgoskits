@@ -15,9 +15,9 @@ impl InitIf for InitIfImpl {
     /// early console, clocking).
     fn init_early(_cpu_id: usize, _dtb: usize) {
         axcpu::init::init_trap();
-        axplat_aarch64_peripherals::psci::init(PSCI_METHOD);
+        ax_plat_aarch64_peripherals::psci::init(PSCI_METHOD);
         super::dw_apb_uart::init_early();
-        axplat_aarch64_peripherals::generic_timer::init_early();
+        ax_plat_aarch64_peripherals::generic_timer::init_early();
     }
 
     /// Initializes the platform at the early stage for secondary cores.
@@ -37,12 +37,12 @@ impl InitIf for InitIfImpl {
             use axplat::mem::pa;
 
             use crate::mem::phys_to_virt;
-            axplat_aarch64_peripherals::gic::init_gic(
+            ax_plat_aarch64_peripherals::gic::init_gic(
                 phys_to_virt(pa!(GICD_PADDR)),
                 phys_to_virt(pa!(GICC_PADDR)),
             );
-            axplat_aarch64_peripherals::gic::init_gicc();
-            axplat_aarch64_peripherals::generic_timer::enable_irqs(TIMER_IRQ);
+            ax_plat_aarch64_peripherals::gic::init_gicc();
+            ax_plat_aarch64_peripherals::generic_timer::enable_irqs(TIMER_IRQ);
 
             // enable UART IRQs
             crate::dw_apb_uart::init_irq();
@@ -54,8 +54,8 @@ impl InitIf for InitIfImpl {
     fn init_later_secondary(_cpu_id: usize) {
         #[cfg(feature = "irq")]
         {
-            axplat_aarch64_peripherals::gic::init_gicc();
-            axplat_aarch64_peripherals::generic_timer::enable_irqs(TIMER_IRQ);
+            ax_plat_aarch64_peripherals::gic::init_gicc();
+            ax_plat_aarch64_peripherals::generic_timer::enable_irqs(TIMER_IRQ);
         }
     }
 }

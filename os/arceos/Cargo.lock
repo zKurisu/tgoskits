@@ -882,7 +882,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "ax-plat-aarch64-peripherals",
  "dw_apb_uart",
  "kspin",
  "log",
@@ -890,7 +890,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-aarch64-peripherals"
+name = "ax-plat-aarch64-peripherals"
 version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
@@ -913,7 +913,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "ax-plat-aarch64-peripherals",
  "log",
  "page_table_entry",
 ]
@@ -925,7 +925,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "ax-plat-aarch64-peripherals",
  "log",
  "page_table_entry",
 ]
@@ -938,7 +938,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "ax-plat-aarch64-peripherals",
  "log",
  "page_table_entry",
 ]

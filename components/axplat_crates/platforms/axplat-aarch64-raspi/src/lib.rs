@@ -27,8 +27,8 @@ pub mod config {
     );
 }
 
-axplat_aarch64_peripherals::console_if_impl!(ConsoleIfImpl);
-axplat_aarch64_peripherals::time_if_impl!(TimeIfImpl);
+ax_plat_aarch64_peripherals::console_if_impl!(ConsoleIfImpl);
+ax_plat_aarch64_peripherals::time_if_impl!(TimeIfImpl);
 
 #[cfg(feature = "irq")]
-axplat_aarch64_peripherals::irq_if_impl!(IrqIfImpl);
+ax_plat_aarch64_peripherals::irq_if_impl!(IrqIfImpl);

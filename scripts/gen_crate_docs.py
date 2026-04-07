@@ -247,7 +247,7 @@ CURATED_DOCS = {
     "cargo-axplat",
     "axplat-dyn",
     "axplat-aarch64-qemu-virt",
-    "axplat-aarch64-peripherals",
+    "ax-plat-aarch64-peripherals",
     "axplat-aarch64-phytium-pi",
     "axplat-aarch64-raspi",
     "axplat-loongarch64-qemu-virt",

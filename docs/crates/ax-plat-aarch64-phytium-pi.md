@@ -15,13 +15,13 @@
 这个 crate 的职责边界非常清楚：
 
 - 自己负责启动入口、引导页表、内存布局、CPU ID 重映射和 `PowerIf`。
-- 复用 `axplat-aarch64-peripherals` 提供的 PL011、Generic Timer、GIC 和 PSCI glue。
+- 复用 `ax-plat-aarch64-peripherals` 提供的 PL011、Generic Timer、GIC 和 PSCI glue。
 - 通过 `axconfig.toml` 固化飞腾派的 UART、GIC、PCIe ECAM、GPIO、I2C 和内存地址窗口。
 - 向上只暴露 `axplat` 契约，不直接对接调度器、页表管理器或驱动框架。
 
 因此它和其他 AArch64 平台包的差异，不在于“抽象接口不同”，而在于“板级事实不同”：
 
-- 飞腾派使用 PL011，所以控制台完全复用 `axplat-aarch64-peripherals::console_if_impl!`。
+- 飞腾派使用 PL011，所以控制台完全复用 `ax-plat-aarch64-peripherals::console_if_impl!`。
 - 平台有非连续的 CPU 硬件 ID 编号，因此启动阶段必须把 MPIDR 映射成逻辑 CPU ID。
 - 平台配置里出现了完整的 PCIe ECAM 和 MMIO 窗口，但这些信息在本 crate 里只是资源描述，不是 PCIe 枚举实现。
 
@@ -35,7 +35,7 @@
 | `mem` | `MemIf` 实现 | RAM/MMIO 区间、线性映射、内核地址空间 |
 | `power` | `PowerIf` 实现 | PSCI 关机与次核拉起 |
 
-与 `ax-plat-aarch64-bsta1000b` 相比，这个 crate 本地代码更薄，因为控制台也交给了 `axplat-aarch64-peripherals`，自己主要承担板级配置和启动职责。
+与 `ax-plat-aarch64-bsta1000b` 相比，这个 crate 本地代码更薄，因为控制台也交给了 `ax-plat-aarch64-peripherals`，自己主要承担板级配置和启动职责。
 
 ### 1.3 启动主线与 CPU ID 映射
 
@@ -66,7 +66,7 @@ flowchart TD
 | 层 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
 | `axcpu` | EL 切换、MMU 打开、trap 初始化、FP 使能等 CPU 原语 | 飞腾派的 UART/GIC/PCIe 基地址、CPU ID 重映射 |
-| `axplat-aarch64-peripherals` | PL011、Generic Timer、GIC、PSCI 的通用实现与接口 glue | 飞腾派启动入口、`CPU_ID_LIST`、RAM/MMIO 窗口、PCI 资源描述 |
+| `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC、PSCI 的通用实现与接口 glue | 飞腾派启动入口、`CPU_ID_LIST`、RAM/MMIO 窗口、PCI 资源描述 |
 | `ax-plat-aarch64-phytium-pi` | 启动页表、CPU 逻辑编号、平台内存模型、`PowerIf` | 设备树解析、PCIe 枚举、驱动注册、上层 HAL 聚合 |
 | `ax-hal` | 若被上层接入，则负责统一 DTB、内存区域和运行时初始化顺序 | 飞腾派本地寄存器初始值和板级 boot stub |
 
@@ -138,7 +138,7 @@ flowchart TD
 | --- | --- |
 | `axplat` | 平台抽象接口与 `call_main()` 契约 |
 | `axcpu` | EL 切换、MMU 初始化、trap 初始化 |
-| `axplat-aarch64-peripherals` | PL011、Generic Timer、GIC、PSCI glue |
+| `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC、PSCI glue |
 | `page_table_entry` | AArch64 引导页表项构造 |
 | `axconfig-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
 | `log` | 启动日志 |
@@ -154,7 +154,7 @@ flowchart TD
 ```mermaid
 graph TD
     A[axcpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-phytium-pi]
-    C[axplat-aarch64-peripherals] --> B
+    C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-helloworld-myplat]
     E --> F[飞腾派板卡启动与调试]

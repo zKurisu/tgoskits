@@ -17,7 +17,7 @@
 具体来说：
 
 - 启动、页表和 `MemIf`/`PowerIf` 由本 crate 自己实现。
-- 控制台、时间和可选中断路径复用 `axplat-aarch64-peripherals` 的 PL011、Generic Timer、GIC glue。
+- 控制台、时间和可选中断路径复用 `ax-plat-aarch64-peripherals` 的 PL011、Generic Timer、GIC glue。
 - 次核启动不走固件接口，而是写入固定物理地址的 spin-table，并通过 `sev` 唤醒。
 - `system_off()` 当前没有真正的板级关机实现，只是打印日志后停机循环。
 
@@ -59,14 +59,14 @@ flowchart TD
 - `modify_stack_and_start()` 会在次核真正执行 `_start_secondary` 前，把栈顶从高半区虚拟地址转换回物理视角。
 - 主核把次核入口地址写进 spin-table 后，调用 `sev()` 发事件唤醒。
 
-这条主线说明：**树莓派 4 的 SMP bring-up 是本 crate 的板级职责，不属于 `axplat-aarch64-peripherals`，也不属于 `axcpu`。**
+这条主线说明：**树莓派 4 的 SMP bring-up 是本 crate 的板级职责，不属于 `ax-plat-aarch64-peripherals`，也不属于 `axcpu`。**
 
 ### 1.4 与相邻层的边界
 
 | 层 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
 | `axcpu` | EL 切换、MMU 打开、trap 初始化、cache flush、`halt()` | spin-table 地址、PL011/GIC 基地址、树莓派电源语义 |
-| `axplat-aarch64-peripherals` | PL011、Generic Timer、GIC 的通用 glue | 树莓派启动入口、spin-table SMP、内存保留区、电源管理 |
+| `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC 的通用 glue | 树莓派启动入口、spin-table SMP、内存保留区、电源管理 |
 | `ax-plat-aarch64-raspi` | 启动页表、spin-table 次核启动、`MemIf`/`PowerIf` | 设备树解析、驱动枚举、完整关机流程 |
 | `ax-hal` | 若上层接入，则负责更高层的 DTB、内存区域整合和运行时初始化 | 树莓派本地的启动寄存器和次核释放语义 |
 
@@ -139,7 +139,7 @@ flowchart TD
 | --- | --- |
 | `axplat` | 平台抽象接口与 `call_main()` 契约 |
 | `axcpu` | EL 切换、MMU 初始化、trap 初始化、cache flush、停机 |
-| `axplat-aarch64-peripherals` | PL011、Generic Timer、GIC glue |
+| `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC glue |
 | `page_table_entry` | AArch64 引导页表项构造 |
 | `aarch64-cpu` | 直接使用 `sev()` 指令唤醒次核 |
 | `axconfig-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
@@ -156,7 +156,7 @@ flowchart TD
 ```mermaid
 graph TD
     A[axcpu / page_table_entry / aarch64-cpu / axconfig-macros] --> B[ax-plat-aarch64-raspi]
-    C[axplat-aarch64-peripherals] --> B
+    C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-helloworld-myplat]
     E --> F[树莓派 4 chainboot / jtagboot]
@@ -192,7 +192,7 @@ extern crate axplat_aarch64_raspi;
 - 若改动 `CPU_SPIN_TABLE` 地址，必须把它当成板级启动协议变更，而不是普通常量调整。
 - 若改动 `PHYS_VIRT_OFFSET` 或内核基址，要同步检查 `modify_stack_and_start()` 对栈地址的物理/虚拟换算。
 - 若想真正支持关机，不能只改 `power.rs` 里的日志；需要补齐树莓派板级掉电路径。
-- 若引入新的外设支持，应优先判断它应该放在本 crate、`axplat-aarch64-peripherals`，还是更上层驱动模块里。
+- 若引入新的外设支持，应优先判断它应该放在本 crate、`ax-plat-aarch64-peripherals`，还是更上层驱动模块里。
 
 ### 4.3 一个必须牢记的事实
 

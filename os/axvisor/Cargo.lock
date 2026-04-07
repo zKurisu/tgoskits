@@ -794,7 +794,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-aarch64-peripherals"
+name = "ax-plat-aarch64-peripherals"
 version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a744097da129e66068e4fff6758726c98bf329a7182dcc65712ac80daed581ed"
@@ -822,7 +822,7 @@ dependencies = [
  "axconfig-macros",
  "axcpu",
  "axplat",
- "axplat-aarch64-peripherals",
+ "ax-plat-aarch64-peripherals",
  "log",
  "page_table_entry 0.5.7",
 ]

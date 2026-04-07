@@ -39,7 +39,7 @@
 需要特别注意的是：结构体中虽然保留了 `CR` 字段，但当前公开 API 并未直接暴露对 `CR` 的操作。这意味着该 crate 假设硬件或更早的初始化阶段已经把设备置于可工作的状态。
 
 ### 1.4 在仓库中的实际使用主线
-在本仓库里，`arm_pl031` 最重要的真实接入路径不在它自己内部，而在 `axplat-aarch64-peripherals`：
+在本仓库里，`arm_pl031` 最重要的真实接入路径不在它自己内部，而在 `ax-plat-aarch64-peripherals`：
 
 ```mermaid
 flowchart TD
@@ -98,7 +98,7 @@ let _ = secs;
 ```mermaid
 graph LR
     chrono["chrono (optional)"] --> current["arm_pl031"]
-    current --> peripherals["axplat-aarch64-peripherals"]
+    current --> peripherals["ax-plat-aarch64-peripherals"]
     peripherals --> qemuvirt["ax-plat-aarch64-qemu-virt"]
     qemuvirt --> arceos["ArceOS aarch64 平台路径"]
 ```
@@ -108,7 +108,7 @@ graph LR
 - `chrono` 是可选依赖，用于提供更方便的时间表示层。
 
 ### 3.2 关键直接消费者
-- `axplat-aarch64-peripherals`：这是本仓库中最重要的直接消费者，会在平台初始化时用 `Rtc` 标定墙钟偏移。
+- `ax-plat-aarch64-peripherals`：这是本仓库中最重要的直接消费者，会在平台初始化时用 `Rtc` 标定墙钟偏移。
 
 ### 3.3 间接消费者
 - `ax-plat-aarch64-qemu-virt` 在启用 `rtc` 时会间接使用。
@@ -127,7 +127,7 @@ arm_pl031 = { workspace = true }
 ### 4.2 使用与修改约束
 1. `Rtc::new()` 只应在平台已经完成 MMIO 映射之后调用。
 2. 若要新增对 `CR` 或更多寄存器的控制，需要先确认这是否属于该 crate 的职责，而不是应留在平台层。
-3. 若修改时间单位或返回类型，必须同步评估 `axplat-aarch64-peripherals` 中墙钟偏移计算的影响。
+3. 若修改时间单位或返回类型，必须同步评估 `ax-plat-aarch64-peripherals` 中墙钟偏移计算的影响。
 4. 对 `chrono` 路径的修改要注意 `u32` 秒到 `DateTime<Utc>` 的转换边界。
 
 ### 4.3 关键开发建议
@@ -197,7 +197,7 @@ Axvisor 的依赖图可能会间接包含 `arm_pl031`，但它更多体现为宿
 ```mermaid
 graph LR
     current["arm_pl031"]
-    axplat_aarch64_peripherals["axplat-aarch64-peripherals"] --> current
+    ax_plat_aarch64_peripherals["ax-plat-aarch64-peripherals"] --> current
 ```
 
 ### 3.1 直接与间接依赖
@@ -207,7 +207,7 @@ graph LR
 - 未检测到额外的间接本地依赖，或依赖深度主要停留在第一层。
 
 ### 3.3 被依赖情况
-- `axplat-aarch64-peripherals`
+- `ax-plat-aarch64-peripherals`
 
 ### 3.4 间接被依赖情况
 - `arceos-affinity`

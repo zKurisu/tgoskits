@@ -109,10 +109,10 @@ echo ""
 echo "Step 2: Publishing platform-specific crates with appropriate targets..."
 echo "-----------------------------------------------------------------------"
 
-# 3. Publish axplat-aarch64-peripherals (depends on axplat, needs aarch64 target)
-publish_crate "axplat-aarch64-peripherals" "platforms/axplat-aarch64-peripherals" "${AARCH64_TARGET}"
+# 3. Publish ax-plat-aarch64-peripherals (depends on axplat, needs aarch64 target)
+publish_crate "ax-plat-aarch64-peripherals" "platforms/axplat-aarch64-peripherals" "${AARCH64_TARGET}"
 
-# 4. Publish aarch64 platform crates (all depend on axplat-aarch64-peripherals)
+# 4. Publish aarch64 platform crates (all depend on ax-plat-aarch64-peripherals)
 publish_crate "axplat-aarch64-qemu-virt" "platforms/axplat-aarch64-qemu-virt" "${AARCH64_TARGET}"
 publish_crate "axplat-aarch64-raspi" "platforms/axplat-aarch64-raspi" "${AARCH64_TARGET}"
 publish_crate "axplat-aarch64-bsta1000b" "platforms/axplat-aarch64-bsta1000b" "${AARCH64_TARGET}"

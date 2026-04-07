@@ -1,4 +1,4 @@
-# `axplat-aarch64-peripherals` 技术文档
+# `ax-plat-aarch64-peripherals` 技术文档
 
 > 路径：`components/axplat_crates/platforms/axplat-aarch64-peripherals`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml`、`README.md` 以及相关平台包的调用路径
 
-`axplat-aarch64-peripherals` 是 AArch64 平台包复用的“公共外设适配层”。它并不定义完整的板级平台，也不持有启动页表、内存布局或 boot stub；它的职责是把 PL011、PL031、Generic Timer、GICv2、PSCI 这些通用外设与 `axplat` trait 体系粘合起来，使具体 `axplat-aarch64-*` 平台包只需提供设备地址、IRQ 号和初始化时序即可完成对接。
+`ax-plat-aarch64-peripherals` 是 AArch64 平台包复用的“公共外设适配层”。它并不定义完整的板级平台，也不持有启动页表、内存布局或 boot stub；它的职责是把 PL011、PL031、Generic Timer、GICv2、PSCI 这些通用外设与 `axplat` trait 体系粘合起来，使具体 `axplat-aarch64-*` 平台包只需提供设备地址、IRQ 号和初始化时序即可完成对接。
 
 ## 1. 架构设计分析
 
@@ -122,11 +122,11 @@ flowchart TD
 该 crate 几乎不会被应用或内核主体直接使用，它的典型使用者是板级平台 crate：
 
 ```rust
-axplat_aarch64_peripherals::console_if_impl!();
-axplat_aarch64_peripherals::time_if_impl!();
+ax_plat_aarch64_peripherals::console_if_impl!();
+ax_plat_aarch64_peripherals::time_if_impl!();
 
 #[cfg(feature = "irq")]
-axplat_aarch64_peripherals::irq_if_impl!();
+ax_plat_aarch64_peripherals::irq_if_impl!();
 ```
 
 然后在平台包自己的 `init.rs` 中按地址和初始化顺序调用：
@@ -179,7 +179,7 @@ generic_timer::enable_irqs(timer_irq);
 
 ```mermaid
 graph TD
-    A[arm_pl011 / arm_pl031 / arm-gic-driver / aarch64-cpu] --> B[axplat-aarch64-peripherals]
+    A[arm_pl011 / arm_pl031 / arm-gic-driver / aarch64-cpu] --> B[ax-plat-aarch64-peripherals]
     C[axplat] --> B
     D[lazyinit / kspin / int_ratio] --> B
 
@@ -219,7 +219,7 @@ graph TD
 最直接的构建方式是对该 crate 做 AArch64 裸机目标的全 feature 构建：
 
 ```bash
-cargo build -p axplat-aarch64-peripherals --target aarch64-unknown-none --all-features
+cargo build -p ax-plat-aarch64-peripherals --target aarch64-unknown-none --all-features
 ```
 
 但真正有意义的验证应放到板级平台包上进行，例如通过 `ax-plat-aarch64-qemu-virt` 运行 `hello-kernel`、`irq-kernel` 或多核示例，确认串口输出、时钟推进和中断分发都贯通。
@@ -260,4 +260,4 @@ cargo build -p axplat-aarch64-peripherals --target aarch64-unknown-none --all-fe
 
 ## 7. 总结
 
-`axplat-aarch64-peripherals` 的真正价值，在于把“跨多个 AArch64 平台都相似的外设接线逻辑”抽成一个稳定复用层：板级平台包只负责地址、IRQ 号和初始化时序，本 crate 负责把这些通用外设可靠地接入 `axplat`。它让 AArch64 平台支持不再是“每个平台重新写一遍 UART/GIC/timer glue”，而是“在统一骨架上替换配置与启动细节”。
+`ax-plat-aarch64-peripherals` 的真正价值，在于把“跨多个 AArch64 平台都相似的外设接线逻辑”抽成一个稳定复用层：板级平台包只负责地址、IRQ 号和初始化时序，本 crate 负责把这些通用外设可靠地接入 `axplat`。它让 AArch64 平台支持不再是“每个平台重新写一遍 UART/GIC/timer glue”，而是“在统一骨架上替换配置与启动细节”。

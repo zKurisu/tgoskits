@@ -6,7 +6,7 @@
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml`、`README.md`、`axconfig.toml` 及相关上层调用路径
 
-`ax-plat-aarch64-qemu-virt` 是 QEMU ARM64 `virt` 机器在 `axplat` 体系下的具体板级实现。它不是通用外设驱动库，而是把启动入口、早期页表、物理内存布局、PSCI 启停、QEMU `virt` 设备地址表以及 `axplat-aarch64-peripherals` 提供的 PL011/GIC/Generic Timer/PL031 glue 组合成一个可以直接被内核链接的完整平台包。
+`ax-plat-aarch64-qemu-virt` 是 QEMU ARM64 `virt` 机器在 `axplat` 体系下的具体板级实现。它不是通用外设驱动库，而是把启动入口、早期页表、物理内存布局、PSCI 启停、QEMU `virt` 设备地址表以及 `ax-plat-aarch64-peripherals` 提供的 PL011/GIC/Generic Timer/PL031 glue 组合成一个可以直接被内核链接的完整平台包。
 
 ## 1. 架构设计分析
 
@@ -14,13 +14,13 @@
 
 该 crate 在 AArch64 平台栈中的位置可以概括为：
 
-- 向下：依赖 `axcpu`、`page_table_entry` 和 `axplat-aarch64-peripherals`，完成 CPU 模式切换、早期页表和通用外设接入。
+- 向下：依赖 `axcpu`、`page_table_entry` 和 `ax-plat-aarch64-peripherals`，完成 CPU 模式切换、早期页表和通用外设接入。
 - 向上：实现 `InitIf`、`MemIf`、`PowerIf` 等 `axplat` 契约，并通过 `axplat::call_main()` 把控制权交给内核主函数。
 - 向旁：通过 `axconfig.toml` 固化 QEMU `virt` 板级的 RAM、MMIO、UART、GIC、RTC、PCI ECAM 等地址空间信息。
 
-它与 `axplat-aarch64-peripherals` 的区别在于：
+它与 `ax-plat-aarch64-peripherals` 的区别在于：
 
-- `axplat-aarch64-peripherals` 只负责“通用外设怎么接进 `axplat`”；
+- `ax-plat-aarch64-peripherals` 只负责“通用外设怎么接进 `axplat`”；
 - 本 crate 负责“QEMU `virt` 这块板子从哪启动、地址在哪里、次核怎么拉起、内核线性映射怎么建”。
 
 ### 1.2 模块划分
@@ -64,7 +64,7 @@
 
 #### 外设单例
 
-虽然这些对象定义在 `axplat-aarch64-peripherals` 中，但在本平台运行时构成其实际外设后端：
+虽然这些对象定义在 `ax-plat-aarch64-peripherals` 中，但在本平台运行时构成其实际外设后端：
 
 - PL011 串口单例
 - GIC 控制器与 IRQ 分发表
@@ -198,7 +198,7 @@ flowchart TD
 | --- | --- |
 | `axplat` | 平台抽象接口目标 |
 | `axcpu` | EL 切换、MMU 初始化和 CPU 辅助操作 |
-| `axplat-aarch64-peripherals` | PL011/GIC/Generic Timer/PL031/PSCI glue |
+| `ax-plat-aarch64-peripherals` | PL011/GIC/Generic Timer/PL031/PSCI glue |
 | `page_table_entry` | AArch64 页表项构造 |
 | `axconfig-macros` | 编译期导入 `axconfig.toml` 配置 |
 | `log` | 调试输出 |
@@ -216,7 +216,7 @@ flowchart TD
 ```mermaid
 graph TD
     A[axcpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-qemu-virt]
-    C[axplat-aarch64-peripherals] --> B
+    C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-hal]
     B --> F[hello-kernel / irq-kernel / smp-kernel]

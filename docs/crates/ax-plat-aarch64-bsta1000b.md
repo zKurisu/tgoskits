@@ -15,7 +15,7 @@
 这个 crate 在 A1000B 平台栈中的位置可以概括为：
 
 - 向下依赖 `axcpu` 提供 EL 切换、MMU 打开、trap 初始化和缓存/停机等 CPU 原语。
-- 横向复用 `axplat-aarch64-peripherals` 提供的 PSCI、Generic Timer 和 GIC glue。
+- 横向复用 `ax-plat-aarch64-peripherals` 提供的 PSCI、Generic Timer 和 GIC glue。
 - 自己补上 A1000B 特有的启动代码、内存布局、CPU 硬件 ID 列表，以及非 PL011 的 `dw_apb_uart` 控制台实现。
 - 向上实现 `InitIf`、`MemIf`、`PowerIf`，并通过 `TimeIf` / `IrqIf` 宏展开接入 `axplat`。
 
@@ -67,18 +67,18 @@ flowchart TD
 
 ### 1.4 与相邻层的边界
 
-这份文档最需要澄清的，是它和 `axcpu`、`axplat`、`axplat-aarch64-peripherals`、`ax-hal` 之间的边界：
+这份文档最需要澄清的，是它和 `axcpu`、`axplat`、`ax-plat-aarch64-peripherals`、`ax-hal` 之间的边界：
 
 | 层 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
 | `axcpu` | EL 切换、MMU 打开、trap 初始化、FP 使能、`halt()` 等 CPU 原语 | A1000B 的 UART/GIC 基地址、RAM 布局、PSCI CPU ID 选择 |
-| `axplat-aarch64-peripherals` | PSCI、Generic Timer、GIC 的通用 glue 与 `TimeIf`/`IrqIf` 宏 | A1000B 启动汇编、引导页表、DW APB UART、板级内存布局 |
+| `ax-plat-aarch64-peripherals` | PSCI、Generic Timer、GIC 的通用 glue 与 `TimeIf`/`IrqIf` 宏 | A1000B 启动汇编、引导页表、DW APB UART、板级内存布局 |
 | `ax-plat-aarch64-bsta1000b` | 启动入口、页表、板级地址配置、本地控制台、`MemIf`/`PowerIf` | 调度、页表管理策略、驱动枚举、上层 HAL 聚合 |
 | `ax-hal` | 若上层选择接入，则负责 DTB、全局内存视图、运行时初始化顺序整合 | 早期板级寄存器初始化和 SoC 复位寄存器语义 |
 
 尤其需要注意三点：
 
-- 这个 crate 没有展开 `axplat-aarch64-peripherals::console_if_impl!`，因为 A1000B 控制台不是 PL011，而是本地 `dw_apb_uart` 实现。
+- 这个 crate 没有展开 `ax-plat-aarch64-peripherals::console_if_impl!`，因为 A1000B 控制台不是 PL011，而是本地 `dw_apb_uart` 实现。
 - `boot.rs` 会把 DTB 指针传上去，但本 crate 的 `init.rs` 并不解析 DTB；当前平台描述主要由 `axconfig.toml` 固化。
 - `misc.rs` 里确实有 QSPI reset、CPU reset 和 bootmode 读取逻辑，但这些函数没有接入 `axplat::power::system_off()`；对上层可见的电源语义仍然是 PSCI `system_off()`。
 
@@ -105,7 +105,7 @@ flowchart TD
 - 为 A1000B 提供可直接链接的 ARM64 启动入口。
 - 建立最小可用引导页表，并负责 MMU 打开前后的栈切换。
 - 提供基于 `dw_apb_uart` 的控制台输入输出。
-- 通过 `axplat-aarch64-peripherals` 接入 PSCI、Generic Timer 和 GIC。
+- 通过 `ax-plat-aarch64-peripherals` 接入 PSCI、Generic Timer 和 GIC。
 - 暴露平台 RAM、MMIO、线性映射和内核地址空间边界。
 - 在 `smp` 打开时，基于 PSCI `cpu_on()` 拉起次核。
 
@@ -143,7 +143,7 @@ flowchart TD
 | --- | --- |
 | `axplat` | 目标平台抽象接口与 `call_main()` 契约 |
 | `axcpu` | EL 切换、MMU 初始化、trap 初始化、缓存/停机辅助 |
-| `axplat-aarch64-peripherals` | PSCI、Generic Timer、GIC 及 `TimeIf`/`IrqIf` glue |
+| `ax-plat-aarch64-peripherals` | PSCI、Generic Timer、GIC 及 `TimeIf`/`IrqIf` glue |
 | `dw_apb_uart` | A1000B 控制台所用的 DesignWare 8250 UART 驱动 |
 | `page_table_entry` | 构造 AArch64 引导页表项 |
 | `axconfig-macros` | 把 `axconfig.toml` 变成 `config` 常量模块 |
@@ -161,7 +161,7 @@ flowchart TD
 ```mermaid
 graph TD
     A[axcpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-bsta1000b]
-    C[axplat-aarch64-peripherals] --> B
+    C[ax-plat-aarch64-peripherals] --> B
     D[dw_apb_uart / kspin] --> B
     E[axplat] --> B
     B --> F[ax-helloworld-myplat]
