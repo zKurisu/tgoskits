@@ -495,12 +495,22 @@ fn run_single_c_qemu_test(
     arch: &str,
     features: &str,
 ) -> anyhow::Result<()> {
+    let make_args = [
+        format!("A={}", app_path.display()),
+        format!("ARCH={}", arch),
+        format!("FEATURES={}", features),
+        "ACCEL=n".to_string(),
+    ];
+
     StdCommand::new("make")
         .current_dir(arceos_dir)
-        .arg(format!("A={}", app_path.display()))
-        .arg(format!("ARCH={}", arch))
-        .arg(format!("FEATURES={}", features))
-        .arg("ACCEL=n")
+        .args(&make_args)
+        .arg("defconfig")
+        .exec()?;
+
+    StdCommand::new("make")
+        .current_dir(arceos_dir)
+        .args(&make_args)
         .arg("run")
         .exec()
 }
