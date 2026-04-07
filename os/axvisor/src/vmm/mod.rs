@@ -55,7 +55,7 @@ pub fn init() {
     // Initialize guest VM according to config file.
     config::init_guest_vms();
 
-    // Setup vcpus, spawn axtask for primary VCpu.
+    // Setup vCPUs, spawn an ax-task for the primary vCPU.
     info!("Setting up vcpus...");
     for vm in vm_list::get_vm_list() {
         vcpus::setup_vm_primary_vcpu(vm);

@@ -62,4 +62,4 @@ timer_list = { workspace = true, optional = true }
 
 [dev-dependencies]
 ax-hal = { workspace = true, features = ["fp-simd"] }
-ax-task = { path = ".", features = ["test", "multitask"] }
+ax-task = { path = ".", package = "ax-task", features = ["test", "multitask"] }

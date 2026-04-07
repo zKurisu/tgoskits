@@ -3,7 +3,7 @@
 //! This crate provides the platform-side glue that implements the small set
 //! of kernel helper functions defined in `axklib`. The implementation is
 //! intentionally minimal: it forwards memory mapping requests to `axmm`,
-//! delegates timing to `axhal`, and wires IRQ operations to `axhal` when the
+//! delegates timing to `ax-hal`, and wires IRQ operations to `ax-hal` when the
 //! `irq` feature is enabled.
 //!
 //! The implementation uses the `impl_trait!` helper to generate the FFI
@@ -27,7 +27,7 @@ impl_trait! {
             ax_mm::iomap(addr, size)
         }
 
-        /// Busy-wait for the given duration by calling into `axhal`.
+        /// Busy-wait for the given duration by calling into `ax-hal`.
         ///
         /// Short delays are serviced by the hardware abstraction layer's
         /// busy-wait implementation. This is suitable for small spin waits

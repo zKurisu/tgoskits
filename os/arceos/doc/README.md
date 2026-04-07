@@ -15,7 +15,7 @@ Modules are **OS-related** components that are tightly bound to the design princ
 Most of the modules are optional, depending on the features enabled by the application. A few modules are required by all applications, as shown below:
 
 * [ax-runtime](../modules/axruntime/): Bootstrapping from the bare-metal environment, and initialization.
-* [axhal](../modules/axhal/): Hardware abstraction layer, provides unified APIs for cross-platform.
+* [ax-hal](../modules/axhal/): Hardware abstraction layer, provides unified APIs for cross-platform.
 * [axconfig](../modules/axconfig/): Platform constants and kernel parameters, such as physical memory base, kernel load addresses, stack size, etc.
 * [axlog](../modules/axlog/): Multi-level formatted logging.
 
@@ -28,7 +28,7 @@ Other optional modules and their corresponding features are as follows:
 | [ax-fs](../modules/axfs) | fs | ArceOS filesystem module. |
 | [ax-net](../modules/ax-net) | net | ArceOS network module. |
 | [axdriver](../modules/axdriver) | driver-*, fs, net, display | ArceOS device drivers. |
-| [axtask](../modules/axtask) | multitask | ArceOS task management module. |
+| [ax-task](../modules/axtask) | multitask | ArceOS task management module. |
 | [axsync](../modules/axsync) | multitask | ArceOS synchronization primitives. |
 
 See [arceos-apps](https://github.com/arceos-org/arceos-apps) for example applications and their required modules and features.
