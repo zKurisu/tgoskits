@@ -96,7 +96,7 @@
 
 - 向下：无本地依赖。
 - 向上：被所有类别层、总线适配层和聚合层共享。
-- 向旁：通过 `axdriver::prelude` 间接进入 `ax-display`、`axinput`、`axnet`、`ax-fs` 等上层模块。
+- 向旁：通过 `axdriver::prelude` 间接进入 `ax-display`、`ax-input`、`axnet`、`ax-fs` 等上层模块。
 
 ## 4. 开发指南
 ### 4.1 何时应该修改本 crate
@@ -140,7 +140,7 @@
 这是当前仓库中最主要的直接消费方。ArceOS 通过 `axdriver` 聚合层把它作为整个驱动体系的公共接口底座。
 
 ### 6.2 StarryOS
-StarryOS 不是直接围绕 `axdriver_base` 写业务逻辑，而是通过共享的 `axdriver`、`ax-display`、`axinput` 等模块间接复用这套基础契约。
+StarryOS 不是直接围绕 `axdriver_base` 写业务逻辑，而是通过共享的 `axdriver`、`ax-display`、`ax-input` 等模块间接复用这套基础契约。
 
 ### 6.3 Axvisor
 当前仓库里没有看到 Axvisor 直接把 `axdriver_base` 当作其核心设备管理接口。即便未来在某些宿主兼容路径中复用它，它也只会扮演“共享驱动契约层”，而不是虚拟机设备分发中心。

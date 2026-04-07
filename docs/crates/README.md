@@ -79,7 +79,7 @@
 | `axfs_vfs` | 组件层 | `components/axfs_crates/axfs_vfs` | 1 | 4 | [查看](./axfs_vfs.md) |
 | `axhal` | ArceOS 层 | `os/arceos/modules/axhal` | 13 | 15 | [查看](./axhal.md) |
 | `axhvc` | 组件层 | `components/axhvc` | 1 | 1 | [查看](./axhvc.md) |
-| `axinput` | ArceOS 层 | `os/arceos/modules/axinput` | 3 | 3 | [查看](./axinput.md) |
+| `ax-input` | ArceOS 层 | `os/arceos/modules/axinput` | 3 | 3 | [查看](./ax-input.md) |
 | `axio` | 组件层 | `components/axio` | 1 | 9 | [查看](./axio.md) |
 | `axipi` | ArceOS 层 | `os/arceos/modules/axipi` | 5 | 3 | [查看](./axipi.md) |
 | `axklib` | 组件层 | `components/axklib` | 2 | 3 | [查看](./axklib.md) |

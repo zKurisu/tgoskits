@@ -242,7 +242,7 @@ CURATED_DOCS = {
     "axdevice",
     "ax-display",
     "axdma",
-    "axinput",
+    "ax-input",
     "bwbench-client",
     "cargo-axplat",
     "axplat-dyn",

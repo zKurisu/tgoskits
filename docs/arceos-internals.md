@@ -96,7 +96,7 @@ ArceOS 的基础骨架由四个必选模块组成：
 | `axnet` | `net` | 网络栈（基于 smoltcp） |
 | `ax-net-ng` | `net-ng` | 下一代网络栈（异步感知） |
 | `ax-display` | `display` | 图形显示（帧缓冲） |
-| `axinput` | `input` | 输入设备管理 |
+| `ax-input` | `input` | 输入设备管理 |
 | `axdma` | `dma` | DMA 内存分配与管理 |
 | `axipi` | `ipi` | 处理器间中断管理 |
 
@@ -179,7 +179,7 @@ net-ng = ["axdriver", "dep:ax-net-ng"]
 vsock = ["dep:axnet", "dep:ax-net-ng"]
 # 显示与输入
 display = ["axdriver", "dep:ax-display"]
-input = ["axdriver", "dep:axinput"]
+input = ["axdriver", "dep:ax-input"]
 ```
 
 这意味着对开发者而言：**ArceOS 的"功能是否存在"本质上是编译期装配问题，而非运行时开关问题。**
@@ -268,7 +268,7 @@ sequenceDiagram
 | `ax-net-ng` | `os/arceos/modules/axnet-ng` | 下一代网络栈（异步感知，基于 starry-smoltcp） | `axdriver` |
 | `axdma` | `os/arceos/modules/axdma` | DMA 内存分配与管理 | `ax-runtime`、`axmm` |
 | `axipi` | `os/arceos/modules/axipi` | 处理器间中断管理 | `axhal` |
-| `axinput` | `os/arceos/modules/axinput` | 输入设备管理与事件分发 | `axdriver` |
+| `ax-input` | `os/arceos/modules/axinput` | 输入设备管理与事件分发 | `axdriver` |
 
 ### 4.2 模块交互
 

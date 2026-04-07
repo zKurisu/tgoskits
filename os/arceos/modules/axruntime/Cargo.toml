@@ -28,7 +28,7 @@ axdriver = ["dep:axdriver"]
 display = ["axdriver", "dep:ax-display"]
 fs = ["axdriver", "dep:ax-fs"]
 fs-ng = ["axdriver", "dep:ax-fs-ng"]
-input = ["axdriver", "dep:axinput"]
+input = ["axdriver", "dep:ax-input"]
 net = ["axdriver", "dep:axnet"]
 net-ng = ["axdriver", "dep:ax-net-ng"]
 vsock = ["net-ng", "ax-net-ng/vsock"]
@@ -42,7 +42,7 @@ axdriver = { workspace = true, optional = true }
 ax-fs = { workspace = true, optional = true }
 ax-fs-ng = { workspace = true, optional = true }
 axhal = { workspace = true }
-axinput = { workspace = true, optional = true }
+ax-input = { workspace = true, optional = true }
 axipi = { workspace = true, optional = true }
 axklib = { workspace = true, optional = true }
 axlog = { workspace = true }

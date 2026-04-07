@@ -1,5 +1,5 @@
 [package]
-name = "axinput"
+name = "ax-input"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

@@ -91,7 +91,7 @@ input = [
     "alloc",
     "paging",
     "axdriver/virtio-input",
-    "dep:axinput",
+    "dep:ax-input",
     "ax-runtime/input",
 ]
 
@@ -120,7 +120,7 @@ axdriver = { workspace = true, optional = true }
 ax-fs = { workspace = true, optional = true }
 ax-fs-ng = { workspace = true, optional = true }
 axhal.workspace = true
-axinput = { workspace = true, optional = true }
+ax-input = { workspace = true, optional = true }
 axipi = { workspace = true, optional = true }
 axlog.workspace = true
 axnet = { workspace = true, optional = true }

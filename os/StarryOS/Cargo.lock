@@ -641,7 +641,7 @@ dependencies = [
  "ax-fs",
  "ax-fs-ng",
  "axhal",
- "axinput",
+ "ax-input",
  "axlog",
  "axnet",
  "ax-runtime",
@@ -775,7 +775,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axinput"
+name = "ax-input"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d428f3a9213a7269d0960cf08786cb69fdfaec657e65d82c158daf39171b3725"
@@ -1080,7 +1080,7 @@ dependencies = [
  "ax-fs",
  "ax-fs-ng",
  "axhal",
- "axinput",
+ "ax-input",
  "axklib",
  "axlog",
  "axmm",
@@ -5531,7 +5531,7 @@ dependencies = [
  "ax-fs-ng",
  "axfs-ng-vfs",
  "axhal",
- "axinput",
+ "ax-input",
  "axio",
  "axlog",
  "axmm",

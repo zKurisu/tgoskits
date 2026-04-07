@@ -562,13 +562,13 @@ dependencies = [
  "ax-display",
  "ax-fs",
  "ax-fs-ng",
+ "ax-input",
  "ax-runtime",
  "axalloc",
  "axbacktrace",
  "axconfig",
  "axdriver",
  "axhal",
- "axinput",
  "axipi",
  "axlog",
  "axnet",
@@ -659,6 +659,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-input"
+version = "0.5.0"
+dependencies = [
+ "axdriver",
+ "axsync",
+ "lazyinit 0.4.2",
+ "log",
+]
+
+[[package]]
 name = "ax-libc"
 version = "0.5.0"
 dependencies = [
@@ -727,13 +737,13 @@ dependencies = [
  "ax-display",
  "ax-fs",
  "ax-fs-ng",
+ "ax-input",
  "ax-net-ng",
  "axalloc",
  "axbacktrace",
  "axconfig",
  "axdriver",
  "axhal",
- "axinput",
  "axipi",
  "axklib",
  "axlog",
@@ -1218,16 +1228,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
-]
-
-[[package]]
-name = "axinput"
-version = "0.5.0"
-dependencies = [
- "axdriver",
- "axsync",
- "lazyinit 0.4.2",
- "log",
 ]
 
 [[package]]
@@ -7417,6 +7417,7 @@ dependencies = [
  "ax-display",
  "ax-feat",
  "ax-fs-ng",
+ "ax-input",
  "ax-net-ng",
  "ax-runtime",
  "axalloc",
@@ -7426,7 +7427,6 @@ dependencies = [
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
- "axinput",
  "axio",
  "axlog",
  "axmm",

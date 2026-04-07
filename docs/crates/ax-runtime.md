@@ -56,7 +56,7 @@ graph LR
 - `ax-fs`
 - `ax-fs-ng`
 - `axhal`
-- `axinput`
+- `ax-input`
 - `axipi`
 - `axklib`
 - `axlog`
