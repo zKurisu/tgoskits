@@ -1,5 +1,5 @@
 [package]
-name = "axnet-ng"
+name = "ax-net-ng"
 version.workspace = true
 edition.workspace = true
 authors = ["Mivik <mivikq@gmail.com>"]

@@ -16,7 +16,7 @@
 
 - 对具体文件系统实现者：提供 `FilesystemOps`、`DirNodeOps`、`FileNodeOps` 三组 trait，作为 ext4、FAT、tmpfs、devfs、procfs 等后端的落点。
 - 对高层文件接口：提供 `Location`、`Mountpoint`、`Metadata`、`NodeFlags`、`Path`/`PathBuf` 等“有状态对象”，让上层不必自己重新维护挂载树或路径解析。
-- 对跨项目消费者：ArceOS 的 `axfs-ng`、`axnet-ng` 的 Unix socket、StarryOS 的 pseudofs 都可以在同一套节点语义上工作。
+- 对跨项目消费者：ArceOS 的 `axfs-ng`、`ax-net-ng` 的 Unix socket、StarryOS 的 pseudofs 都可以在同一套节点语义上工作。
 
 ### 1.2 模块划分
 - `src/fs.rs`：定义 `FilesystemOps`、`Filesystem` 和 `StatFs`。这是“一个文件系统实例”的外部门面。
@@ -61,7 +61,7 @@ graph TD
 `DirEntry::user_data()`/`Location::user_data()` 暴露了一个 `TypeMap`。这不是装饰性接口：
 
 - `axfs-ng::CachedFile` 会把共享页缓存状态挂在这里。
-- `axnet-ng` 的 Unix socket 会把 `BindSlot` 挂在 socket 节点上。
+- `ax-net-ng` 的 Unix socket 会把 `BindSlot` 挂在 socket 节点上。
 
 也就是说，它是新栈跨层协作的重要扩展点。
 
@@ -91,7 +91,7 @@ graph TD
 
 ### 2.4 真实使用场景
 - `axfs-ng` 用它组织 ext4/FAT 根文件系统、任务局部 cwd 与页缓存共享。
-- `axnet-ng` 用它把 Unix socket 地址映射到文件节点。
+- `ax-net-ng` 用它把 Unix socket 地址映射到文件节点。
 - StarryOS 用它实现 `tmpfs`、`devfs`、`procfs`、`sysfs` 一类 pseudofs，并支撑文件系统调用层。
 
 ## 3. 依赖关系图谱
@@ -101,7 +101,7 @@ graph LR
     axpoll["axpoll"] --> current
 
     current --> axfs_ng["axfs-ng"]
-    current --> axnet_ng["axnet-ng"]
+    current --> axnet_ng["ax-net-ng"]
     current --> starry_pseudofs["StarryOS pseudofs / file layer"]
 ```
 
@@ -112,7 +112,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axfs-ng`：最主要的高层消费者。
-- `axnet-ng`：把 socket 地址空间接到文件系统对象模型里。
+- `ax-net-ng`：把 socket 地址空间接到文件系统对象模型里。
 - StarryOS：在 pseudofs、文件描述符层和设备节点模型中大量使用。
 
 ### 3.3 关键边界关系

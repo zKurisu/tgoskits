@@ -857,7 +857,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axnet-ng"
+name = "ax-net-ng"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6cce504cad6fa11f9096f93af06799f65f1bb802001052106446ceebeabbe50a"
@@ -1085,7 +1085,7 @@ dependencies = [
  "axlog",
  "axmm",
  "axnet",
- "axnet-ng",
+ "ax-net-ng",
  "axplat",
  "axtask",
  "cfg-if",
@@ -5535,7 +5535,7 @@ dependencies = [
  "axio",
  "axlog",
  "axmm",
- "axnet-ng",
+ "ax-net-ng",
  "axpoll",
  "ax-runtime",
  "axsync",

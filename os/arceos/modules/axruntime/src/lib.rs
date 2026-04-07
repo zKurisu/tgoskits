@@ -232,10 +232,10 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
 
         cfg_if::cfg_if! {
             if #[cfg(feature = "net-ng")] {
-                axnet_ng::init_network(all_devices.net);
+                ax_net_ng::init_network(all_devices.net);
 
                 #[cfg(feature = "vsock")]
-                axnet_ng::init_vsock(all_devices.vsock);
+                ax_net_ng::init_vsock(all_devices.vsock);
             } else if #[cfg(feature = "net")] {
                 axnet::init_network(all_devices.net);
             }

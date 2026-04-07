@@ -75,7 +75,7 @@ graph LR
     lazyinit --> axmm["axmm"]
     lazyinit --> axipi["axipi"]
     lazyinit --> axfs["axfs / axfs-ng"]
-    lazyinit --> axnet["axnet / axnet-ng"]
+    lazyinit --> axnet["axnet / ax-net-ng"]
     lazyinit --> axdisplay["axdisplay"]
     lazyinit --> axinput["axinput"]
     lazyinit --> axplat["多个 axplat 平台 crate"]

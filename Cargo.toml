@@ -176,7 +176,7 @@ axfs_devfs = { path = "components/axfs_crates/axfs_devfs" }
 axfs = { path = "os/arceos/modules/axfs" }
 axfs-ng = { path = "os/arceos/modules/axfs-ng" }
 axnet = { path = "os/arceos/modules/axnet" }
-axnet-ng = { path = "os/arceos/modules/axnet-ng" }
+ax-net-ng = { path = "os/arceos/modules/axnet-ng" }
 axalloc = { path = "os/arceos/modules/axalloc" }
 axdriver = { path = "os/arceos/modules/axdriver" }
 axinput = { path = "os/arceos/modules/axinput" }
@@ -317,7 +317,7 @@ axipi = { path = "os/arceos/modules/axipi", version = "0.5.0" }
 axlog = { path = "os/arceos/modules/axlog", version = "0.5.0" }
 axmm = { path = "os/arceos/modules/axmm", version = "0.5.0" }
 axnet = { path = "os/arceos/modules/axnet", version = "0.5.0" }
-axnet-ng = { path = "os/arceos/modules/axnet-ng", version = "0.5.0" }
+ax-net-ng = { path = "os/arceos/modules/axnet-ng", version = "0.5.0" }
 axplat-dyn = { path = "platform/axplat-dyn", version = "0.5.0", default-features = false }
 ax-runtime = { path = "os/arceos/modules/axruntime", version = "0.5.0" }
 axsync = { path = "os/arceos/modules/axsync", version = "0.5.0" }

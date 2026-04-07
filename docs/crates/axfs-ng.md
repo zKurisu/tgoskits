@@ -42,7 +42,7 @@ flowchart TD
     E --> F["ROOT_FS_CONTEXT = FsContext(root_location)"]
     F --> G["FS_CONTEXT 以 scope-local 方式提供给任务"]
     G --> H["OpenOptions / File / FsContext::resolve"]
-    H --> I["StarryOS、axnet-ng 等上层复用"]
+    H --> I["StarryOS、ax-net-ng 等上层复用"]
 ```
 
 这里有三个实现要点：
@@ -94,7 +94,7 @@ flowchart TD
 
 ### 2.3 真实调用场景
 - `ax-runtime`：启用 `fs-ng` 时负责创建根文件系统。
-- `axnet-ng`：Unix domain socket 通过 `FS_CONTEXT` 和 `OpenOptions::node_type(NodeType::Socket)` 在文件系统里落 socket 节点，并把 `BindSlot` 放进 `Location::user_data()`。
+- `ax-net-ng`：Unix domain socket 通过 `FS_CONTEXT` 和 `OpenOptions::node_type(NodeType::Socket)` 在文件系统里落 socket 节点，并把 `BindSlot` 放进 `Location::user_data()`。
 - StarryOS：文件系统调用层、`tmpfs`/`devfs`/`procfs` 等 pseudofs 挂载、非阻塞文件描述符封装，都直接围绕 `axfs-ng` 的高层对象构建。
 
 ### 2.4 真实限制与注意事项
@@ -115,7 +115,7 @@ graph LR
     fatlib["starry-fatfs"] --> current
 
     current --> ax-runtime["ax-runtime(fs-ng)"]
-    current --> axnet_ng["axnet-ng(unix)"]
+    current --> axnet_ng["ax-net-ng(unix)"]
     current --> starry_kernel["StarryOS kernel（重命名为 axfs）"]
 ```
 
@@ -127,7 +127,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `ax-runtime`：负责初始化。
-- `axnet-ng`：Unix socket 路径命名空间复用文件系统对象模型。
+- `ax-net-ng`：Unix socket 路径命名空间复用文件系统对象模型。
 - StarryOS 内核：当前最重要的真实上层消费者。
 
 ### 3.3 与相邻 crate 的关系

@@ -70,9 +70,9 @@
 
 这不是额外的协议实现，而是为了在保持同步 `accept()` 语义的同时，适配 `smoltcp` 原生 socket 集合工作方式。
 
-### 1.6 与 `axnet-ng` 的代际差异
+### 1.6 与 `ax-net-ng` 的代际差异
 
-| 维度 | `axnet` | `axnet-ng` |
+| 维度 | `axnet` | `ax-net-ng` |
 | --- | --- | --- |
 | 总体定位 | 第一代同步 IP 网络模块 | 第二代统一 socket 服务层 |
 | 地址族 | IP/TCP/UDP/DNS | IP + Unix domain + vsock |
@@ -81,7 +81,7 @@
 | 等待方式 | 轮询接口并 `yield_now()` | `poll_io` + waker + timeout |
 | 主要消费者 | `ax-api`、`ax-posix-api`、老一代 ArceOS 路径 | `ax-runtime net-ng` 与 StarryOS 主 socket 层 |
 
-所以，`axnet` 不是“`axnet-ng` 的轻量别名”，而是更早一代、边界更窄的 IP 网络封装。
+所以，`axnet` 不是“`ax-net-ng` 的轻量别名”，而是更早一代、边界更窄的 IP 网络封装。
 
 ## 2. 核心功能说明
 
@@ -215,7 +215,7 @@ axnet = { workspace = true }
 
 ### 6.2 StarryOS
 
-当前仓库中的 StarryOS 并不直接使用这个 `axnet` crate。相反，`os/StarryOS/Cargo.toml` 与 `os/StarryOS/kernel/Cargo.toml` 都把依赖名 `axnet` 绑定到了 `package = "axnet-ng"`，说明 StarryOS 已经切换到第二代网络层。
+当前仓库中的 StarryOS 并不直接使用这个 `axnet` crate。相反，`os/StarryOS/Cargo.toml` 与 `os/StarryOS/kernel/Cargo.toml` 都把依赖名 `axnet` 绑定到了 `package = "ax-net-ng"`，说明 StarryOS 已经切换到第二代网络层。
 
 ### 6.3 Axvisor
 

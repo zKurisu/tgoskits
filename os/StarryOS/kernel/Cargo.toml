@@ -48,7 +48,7 @@ axhal.workspace = true
 axinput = { workspace = true, optional = true }
 axlog.workspace = true
 axmm.workspace = true
-axnet = { version = "0.5.0", package = "axnet-ng" }
+axnet = { version = "0.5.0", package = "ax-net-ng" }
 ax-runtime.workspace = true
 axsync.workspace = true
 axtask.workspace = true

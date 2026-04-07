@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/net_buf.rs`、`src/fxmac.rs`、`src/ixgbe.rs`、`components/axdriver_crates/axdriver_virtio/src/net.rs`、`os/arceos/modules/axdriver/src/drivers.rs`
 
-`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `axnet`、`axnet-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `axdriver`、`axdriver_virtio` 等承担。
+`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `axnet`、`ax-net-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `axdriver`、`axdriver_virtio` 等承担。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -16,7 +16,7 @@
 - `net_buf.rs` 提供通用网络缓冲区模型。
 - `fxmac.rs` 和 `ixgbe.rs` 在 feature 打开时提供具体网卡实现。
 
-因此它既不是纯接口层，也不是完整网络子系统。真正的 TCP/IP、socket、协议栈和接口管理在 `axnet` / `axnet-ng` 中。
+因此它既不是纯接口层，也不是完整网络子系统。真正的 TCP/IP、socket、协议栈和接口管理在 `axnet` / `ax-net-ng` 中。
 
 ### 1.2 关键接口与对象
 | 符号 | 作用 | 备注 |
@@ -88,7 +88,7 @@
 - `ixgbe` 与 `fxmac` 的缓冲来源完全不同，但都收敛到 `NetBufPtr` 接口，这正是本 crate 的统一价值。
 
 ### 2.3 对上层的意义
-对 `axnet` / `axnet-ng` 来说，它们并不关心底层设备是 VirtIO、Intel 82599 还是 Phytium FXmac，只需要按 `NetDriverOps` 拿到：
+对 `axnet` / `ax-net-ng` 来说，它们并不关心底层设备是 VirtIO、Intel 82599 还是 Phytium FXmac，只需要按 `NetDriverOps` 拿到：
 
 - 一个 MAC 地址；
 - 一个可收发的网卡；
@@ -115,7 +115,7 @@
 ### 3.3 分层关系总结
 - 向下可接不同 NIC 实现。
 - 向上统一暴露网卡语义。
-- 由 `axdriver` 决定设备探测与聚合，由 `axnet`/`axnet-ng` 决定协议栈语义。
+- 由 `axdriver` 决定设备探测与聚合，由 `axnet`/`ax-net-ng` 决定协议栈语义。
 
 ## 4. 开发指南
 ### 4.1 何时应该改这里
@@ -143,7 +143,7 @@
 该 crate 没有独立测试目录，当前有效验证主要来自：
 
 - `virtio-net`、`ixgbe`、`fxmac` 的整机 bring-up。
-- `axnet` / `axnet-ng` 的网络收发路径。
+- `axnet` / `ax-net-ng` 的网络收发路径。
 - `NetBufPool` 在不同驱动上的缓冲回收行为。
 
 ### 5.2 建议补充的单元测试
@@ -163,7 +163,7 @@
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 是当前仓库里最主要的直接消费者：`axdriver` 负责把设备接进来，`axnet` / `axnet-ng` 负责把它们变成网络能力。
+ArceOS 是当前仓库里最主要的直接消费者：`axdriver` 负责把设备接进来，`axnet` / `ax-net-ng` 负责把它们变成网络能力。
 
 ### 6.2 StarryOS
 StarryOS 当前并没有把 `axdriver_net` 当成独立网络栈；若复用网络能力，也主要是通过共享的 ArceOS 底层模块链路间接使用。

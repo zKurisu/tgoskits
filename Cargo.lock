@@ -615,6 +615,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-net-ng"
+version = "0.5.0"
+dependencies = [
+ "async-channel",
+ "async-trait",
+ "axconfig",
+ "axdriver",
+ "axerrno",
+ "axfs-ng",
+ "axfs-ng-vfs",
+ "axhal",
+ "axio",
+ "axpoll",
+ "axsync",
+ "axtask",
+ "bitflags 2.11.0",
+ "cfg-if",
+ "enum_dispatch",
+ "event-listener",
+ "hashbrown 0.16.1",
+ "lazy_static",
+ "log",
+ "ringbuf",
+ "spin 0.10.0",
+ "starry-smoltcp",
+]
+
+[[package]]
 name = "ax-posix-api"
 version = "0.5.0"
 dependencies = [
@@ -641,6 +669,7 @@ dependencies = [
 name = "ax-runtime"
 version = "0.5.0"
 dependencies = [
+ "ax-net-ng",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -655,7 +684,6 @@ dependencies = [
  "axlog",
  "axmm",
  "axnet",
- "axnet-ng",
  "axplat 0.5.1",
  "axtask",
  "cfg-if",
@@ -1273,34 +1301,6 @@ dependencies = [
  "cfg-if",
  "lazyinit 0.4.2",
  "log",
- "spin 0.10.0",
- "starry-smoltcp",
-]
-
-[[package]]
-name = "axnet-ng"
-version = "0.5.0"
-dependencies = [
- "async-channel",
- "async-trait",
- "axconfig",
- "axdriver",
- "axerrno",
- "axfs-ng",
- "axfs-ng-vfs",
- "axhal",
- "axio",
- "axpoll",
- "axsync",
- "axtask",
- "bitflags 2.11.0",
- "cfg-if",
- "enum_dispatch",
- "event-listener",
- "hashbrown 0.16.1",
- "lazy_static",
- "log",
- "ringbuf",
  "spin 0.10.0",
  "starry-smoltcp",
 ]
@@ -7415,6 +7415,7 @@ name = "starry-kernel"
 version = "0.5.0"
 dependencies = [
  "ax-feat",
+ "ax-net-ng",
  "ax-runtime",
  "axalloc",
  "axbacktrace",
@@ -7429,7 +7430,6 @@ dependencies = [
  "axio",
  "axlog",
  "axmm",
- "axnet-ng",
  "axpoll",
  "axsync",
  "axtask",

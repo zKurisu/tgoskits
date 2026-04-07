@@ -86,7 +86,7 @@
 | `axlog` | ArceOS 层 | `os/arceos/modules/axlog` | 2 | 5 | [查看](./axlog.md) |
 | `axmm` | ArceOS 层 | `os/arceos/modules/axmm` | 8 | 4 | [查看](./axmm.md) |
 | `axnet` | ArceOS 层 | `os/arceos/modules/axnet` | 8 | 4 | [查看](./axnet.md) |
-| `axnet-ng` | ArceOS 层 | `os/arceos/modules/axnet-ng` | 11 | 2 | [查看](./axnet-ng.md) |
+| `ax-net-ng` | ArceOS 层 | `os/arceos/modules/axnet-ng` | 11 | 2 | [查看](./ax-net-ng.md) |
 | `axplat` | 组件层 | `components/axplat_crates/axplat` | 6 | 15 | [查看](./axplat.md) |
 | `axplat-aarch64-bsta1000b` | 组件层 | `components/axplat_crates/platforms/axplat-aarch64-bsta1000b` | 6 | 1 | [查看](./axplat-aarch64-bsta1000b.md) |
 | `axplat-aarch64-peripherals` | 组件层 | `components/axplat_crates/platforms/axplat-aarch64-peripherals` | 7 | 4 | [查看](./axplat-aarch64-peripherals.md) |

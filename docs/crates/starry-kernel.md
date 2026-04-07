@@ -120,7 +120,7 @@ graph LR
     axtask["axtask"] --> starry
     axmm["axmm"] --> starry
     axfs["axfs-ng / axfs-ng-vfs"] --> starry
-    axnet["axnet-ng"] --> starry
+    axnet["ax-net-ng"] --> starry
     starry_process["starry-process"] --> starry
     starry_signal["starry-signal"] --> starry
     starry_vm["starry-vm"] --> starry
@@ -134,7 +134,7 @@ graph LR
 - `axhal`：用户态上下文、页表、trap、时间与控制台基础能力。
 - `axtask`：底层线程调度、`TaskExt` 和阻塞/唤醒机制。
 - `axfs-ng`、`axfs-ng-vfs`：文件系统与路径解析。
-- `axnet-ng`：网络与 socket 路径的底层支撑。
+- `ax-net-ng`：网络与 socket 路径的底层支撑。
 - `starry-process`、`starry-signal`、`starry-vm`：分别承接进程模型、信号模型和用户内存安全访问。
 
 ### 3.2 关键直接消费者

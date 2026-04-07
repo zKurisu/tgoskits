@@ -30,8 +30,8 @@ fs = ["axdriver", "dep:axfs"]
 fs-ng = ["axdriver", "dep:axfs-ng"]
 input = ["axdriver", "dep:axinput"]
 net = ["axdriver", "dep:axnet"]
-net-ng = ["axdriver", "dep:axnet-ng"]
-vsock = ["net-ng", "axnet-ng/vsock"]
+net-ng = ["axdriver", "dep:ax-net-ng"]
+vsock = ["net-ng", "ax-net-ng/vsock"]
 
 [dependencies]
 axalloc = { workspace = true, optional = true }
@@ -48,7 +48,7 @@ axklib = { workspace = true, optional = true }
 axlog = { workspace = true }
 axmm = { workspace = true, optional = true }
 axnet = { workspace = true, optional = true }
-axnet-ng = { workspace = true, optional = true }
+ax-net-ng = { workspace = true, optional = true }
 axplat = { workspace = true }
 axtask = { workspace = true, optional = true }
 cfg-if = { workspace = true }

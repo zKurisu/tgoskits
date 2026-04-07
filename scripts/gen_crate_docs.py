@@ -235,7 +235,7 @@ CURATED_DOCS = {
     "axcpu",
     "axio",
     "axnet",
-    "axnet-ng",
+    "ax-net-ng",
     "axpoll",
     "axplat",
     "axplat-aarch64-bsta1000b",
