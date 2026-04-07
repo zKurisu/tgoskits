@@ -118,7 +118,7 @@ pub type MutexGuard<'a, T> = lock_api::MutexGuard<'a, RawMutex, T>;
 mod tests {
     use std::sync::Once;
 
-    use axtask as thread;
+    use ax_task as thread;
 
     use crate::Mutex;
 

@@ -1,5 +1,5 @@
 #[cfg(feature = "ax-std")]
-use std::os::arceos::modules::axhal;
+use std::os::arceos::modules::ax_hal;
 
 pub fn assert_irq_enabled() {
     #[cfg(feature = "ax-std")]

@@ -22,7 +22,7 @@ fn raise_break_exception() {
 
 #[cfg(feature = "ax-std")]
 fn raise_page_fault() {
-    use std::os::arceos::modules::axhal;
+    use std::os::arceos::modules::ax_hal;
 
     use ax_hal::{mem::VirtAddr, paging::MappingFlags};
 

@@ -531,6 +531,7 @@ dependencies = [
  "ax-driver",
  "ax-feat",
  "ax-fs",
+ "ax-hal",
  "ax-ipi",
  "ax-mm",
  "ax-net",
@@ -540,7 +541,6 @@ dependencies = [
  "axalloc",
  "axconfig",
  "axerrno",
- "axhal",
  "axio",
  "axlog",
 ]
@@ -559,11 +559,11 @@ dependencies = [
 name = "ax-dma"
 version = "0.5.0"
 dependencies = [
+ "ax-hal",
  "ax-mm",
  "axalloc",
  "axallocator 0.4.0",
  "axconfig",
- "axhal",
  "buddy-slab-allocator",
  "kspin 0.3.1",
  "log",
@@ -575,6 +575,7 @@ name = "ax-driver"
 version = "0.5.0"
 dependencies = [
  "ax-dma",
+ "ax-hal",
  "axalloc",
  "axconfig",
  "axdriver_base",
@@ -586,7 +587,6 @@ dependencies = [
  "axdriver_virtio",
  "axdriver_vsock",
  "axerrno",
- "axhal",
  "axplat-dyn",
  "cfg-if",
  "crate_interface 0.5.0",
@@ -602,6 +602,7 @@ dependencies = [
  "ax-driver",
  "ax-fs",
  "ax-fs-ng",
+ "ax-hal",
  "ax-input",
  "ax-ipi",
  "ax-net",
@@ -611,7 +612,6 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axhal",
  "axlog",
  "kspin 0.3.1",
 ]
@@ -621,12 +621,12 @@ name = "ax-fs"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-hal",
  "axerrno",
  "axfatfs",
  "axfs_devfs",
  "axfs_ramfs",
  "axfs_vfs",
- "axhal",
  "axio",
  "cap_access",
  "lazyinit 0.4.2",
@@ -640,11 +640,11 @@ name = "ax-fs-ng"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-hal",
  "ax-sync",
  "axalloc",
  "axerrno",
  "axfs-ng-vfs",
- "axhal",
  "axio",
  "axpoll",
  "bitflags 2.11.0",
@@ -659,6 +659,31 @@ dependencies = [
  "slab",
  "spin 0.10.0",
  "starry-fatfs",
+]
+
+[[package]]
+name = "ax-hal"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axconfig",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "axplat-aarch64-qemu-virt",
+ "axplat-dyn",
+ "axplat-loongarch64-qemu-virt",
+ "axplat-riscv64-qemu-virt 0.5.1",
+ "axplat-x86-pc",
+ "cfg-if",
+ "fdt-parser",
+ "heapless 0.9.2",
+ "kernel_guard 0.3.3",
+ "linkme",
+ "log",
+ "memory_addr 0.6.1",
+ "page_table_multiarch 0.8.1",
+ "percpu 0.4.3",
+ "spin 0.10.0",
 ]
 
 [[package]]
@@ -711,8 +736,8 @@ dependencies = [
 name = "ax-ipi"
 version = "0.5.0"
 dependencies = [
+ "ax-hal",
  "axconfig",
- "axhal",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
  "log",
@@ -734,9 +759,9 @@ dependencies = [
 name = "ax-mm"
 version = "0.5.0"
 dependencies = [
+ "ax-hal",
  "axalloc",
  "axerrno",
- "axhal",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
  "log",
@@ -750,10 +775,10 @@ name = "ax-net"
 version = "0.5.0"
 dependencies = [
  "ax-driver",
+ "ax-hal",
  "ax-sync",
  "ax-task",
  "axerrno",
- "axhal",
  "axio",
  "cfg-if",
  "lazyinit 0.4.2",
@@ -770,12 +795,12 @@ dependencies = [
  "async-trait",
  "ax-driver",
  "ax-fs-ng",
+ "ax-hal",
  "ax-sync",
  "ax-task",
  "axconfig",
  "axerrno",
  "axfs-ng-vfs",
- "axhal",
  "axio",
  "axpoll",
  "bitflags 2.11.0",
@@ -796,6 +821,7 @@ version = "0.5.0"
 dependencies = [
  "ax-feat",
  "ax-fs",
+ "ax-hal",
  "ax-net",
  "ax-runtime",
  "ax-sync",
@@ -803,7 +829,6 @@ dependencies = [
  "axalloc",
  "axconfig",
  "axerrno",
- "axhal",
  "axio",
  "axlog",
  "bindgen",
@@ -821,6 +846,7 @@ dependencies = [
  "ax-driver",
  "ax-fs",
  "ax-fs-ng",
+ "ax-hal",
  "ax-input",
  "ax-ipi",
  "ax-mm",
@@ -830,7 +856,6 @@ dependencies = [
  "axalloc",
  "axbacktrace",
  "axconfig",
- "axhal",
  "axklib",
  "axlog",
  "axplat 0.5.1",
@@ -878,10 +903,10 @@ dependencies = [
 name = "ax-task"
 version = "0.5.0"
 dependencies = [
+ "ax-hal",
  "ax-task",
  "axconfig",
  "axerrno",
- "axhal",
  "axpoll",
  "axsched",
  "cfg-if",
@@ -1264,31 +1289,6 @@ dependencies = [
  "axerrno",
  "bitflags 2.11.0",
  "log",
-]
-
-[[package]]
-name = "axhal"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axconfig",
- "axcpu 0.5.0",
- "axplat 0.5.1",
- "axplat-aarch64-qemu-virt",
- "axplat-dyn",
- "axplat-loongarch64-qemu-virt",
- "axplat-riscv64-qemu-virt 0.5.1",
- "axplat-x86-pc",
- "cfg-if",
- "fdt-parser",
- "heapless 0.9.2",
- "kernel_guard 0.3.3",
- "linkme",
- "log",
- "memory_addr 0.6.1",
- "page_table_multiarch 0.8.1",
- "percpu 0.4.3",
- "spin 0.10.0",
 ]
 
 [[package]]
@@ -1690,6 +1690,7 @@ dependencies = [
  "aarch64-cpu-ext",
  "anyhow",
  "arm-gic-driver 0.17.0",
+ "ax-hal",
  "ax-std",
  "axaddrspace",
  "axbuild",
@@ -1697,7 +1698,6 @@ dependencies = [
  "axdevice",
  "axdevice_base",
  "axerrno",
- "axhal",
  "axhvc",
  "axklib",
  "axplat-riscv64-qemu-virt 0.5.0",
@@ -7418,6 +7418,7 @@ dependencies = [
  "ax-driver",
  "ax-feat",
  "ax-fs-ng",
+ "ax-hal",
  "ax-input",
  "ax-mm",
  "ax-net-ng",
@@ -7429,7 +7430,6 @@ dependencies = [
  "axconfig",
  "axerrno",
  "axfs-ng-vfs",
- "axhal",
  "axio",
  "axlog",
  "axpoll",
