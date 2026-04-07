@@ -6,7 +6,7 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`build.rs`、`src/lib.rs`、`src/driver_dyn_config.rs`、`README.md`
 
-`axconfig` 是 ArceOS 的平台常量入口。它不负责解析命令行、不负责运行时热更新，也不负责系统初始化；它做的事情只有一件：把构建阶段确定下来的平台参数导出成 Rust 常量，供 `axhal`、`axruntime`、`axtask`、`axdriver`、`arceos_posix_api` 等模块在编译期和运行期直接读取。
+`axconfig` 是 ArceOS 的平台常量入口。它不负责解析命令行、不负责运行时热更新，也不负责系统初始化；它做的事情只有一件：把构建阶段确定下来的平台参数导出成 Rust 常量，供 `axhal`、`axruntime`、`axtask`、`axdriver`、`ax-posix-api` 等模块在编译期和运行期直接读取。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -30,7 +30,7 @@ flowchart TD
     D["feature = plat-dyn"] --> E["driver_dyn_config.rs"]
     E --> C
 
-    C --> F["axhal / axruntime / axtask / axdriver / arceos_posix_api"]
+    C --> F["axhal / axruntime / axtask / axdriver / ax-posix-api"]
 ```
 
 具体行为如下：
@@ -62,7 +62,7 @@ flowchart TD
 - `axhal/build.rs` 用 `PLATFORM`、`plat::KERNEL_BASE_VADDR`、`plat::MAX_CPU_NUM` 生成链接脚本参数。
 - `axdriver` 用 `devices::*` 完成 MMIO、PCI、SDMMC 等设备探测参数绑定。
 - `axdma` 用 `plat::PHYS_BUS_OFFSET` 计算总线地址映射。
-- `arceos_posix_api` 用 `TASK_STACK_SIZE`、`plat::MAX_CPU_NUM` 实现 `getrlimit` 和 `sysconf`。
+- `ax-posix-api` 用 `TASK_STACK_SIZE`、`plat::MAX_CPU_NUM` 实现 `getrlimit` 和 `sysconf`。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -100,7 +100,7 @@ graph LR
     axconfig --> axtask["axtask"]
     axconfig --> axdriver["axdriver"]
     axconfig --> axdma["axdma"]
-    axconfig --> posix["arceos_posix_api"]
+    axconfig --> posix["ax-posix-api"]
 ```
 
 ### 3.1 关键直接依赖
@@ -112,7 +112,7 @@ graph LR
 - `axruntime`：启动日志、定时器节拍与 SMP 初始化路径的关键消费者。
 - `axtask`、`axipi`：CPU 数量、默认栈大小等调度相关消费者。
 - `axdriver`、`axdma`：设备和 DMA 地址布局消费者。
-- `ax-api`、`arceos_posix_api`：向上层重新导出或转译这些常量。
+- `ax-api`、`ax-posix-api`：向上层重新导出或转译这些常量。
 
 ### 3.3 `plat-dyn` 的特殊性
 `plat-dyn` 不是简单的“再开一个 feature”，而是让 `axconfig` 切换到另一套常量来源。这也是它和普通功能 feature 最大的区别。
@@ -142,7 +142,7 @@ graph LR
 - 默认路径：`AX_CONFIG_PATH` 指向自定义配置时能否生成正确常量。
 - 回退路径：未设置 `AX_CONFIG_PATH` 时是否能使用 `dummy.toml` 完成最小构建。
 - `plat-dyn` 路径：`driver_dyn_config.rs` 导出的常量是否满足 `axhal`、`axruntime`、`axdriver` 需求。
-- 关键消费者：`axtask`、`axruntime`、`axdriver`、`arceos_posix_api` 是否继续通过。
+- 关键消费者：`axtask`、`axruntime`、`axdriver`、`ax-posix-api` 是否继续通过。
 
 ### 5.3 集成测试建议
 - ArceOS 最小样例启动，确认 `ARCH`、`PLATFORM`、`TICKS_PER_SEC` 被正确消费。

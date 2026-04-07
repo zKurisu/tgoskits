@@ -124,7 +124,7 @@ graph LR
     axdriver["axdriver"] --> axruntime
 
     axruntime --> ax-api["ax-api"]
-    axruntime --> arceos_posix_api["arceos_posix_api"]
+    axruntime --> ax-posix-api["ax-posix-api"]
     axruntime --> axfeat["axfeat"]
     axruntime --> starry_kernel["starry-kernel"]
     axruntime --> ax-std["ax-std (间接)"]
@@ -140,7 +140,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `ax-api` / `axfeat`：通过 feature 聚合把运行时纳入最终镜像。
-- `arceos_posix_api`：作为 POSIX 兼容 API 层，与 `axruntime` 共享 bring-up 结果。
+- `ax-posix-api`：作为 POSIX 兼容 API 层，与 `axruntime` 共享 bring-up 结果。
 - `starry-kernel`：显式依赖 `axruntime`，把 Linux 兼容内核主体挂到同一运行时模型上。
 - `ax-std`：通常不是直接依赖 `axruntime`，但会通过 `ax-api` / `axfeat` 间接复用。
 

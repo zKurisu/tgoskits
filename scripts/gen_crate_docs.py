@@ -208,7 +208,7 @@ CURATED_DOCS = {
     "arceos-sleep",
     "arceos-wait-queue",
     "arceos-yield",
-    "arceos_posix_api",
+    "ax-posix-api",
     "axbuild",
     "axconfig",
     "axconfig-gen",

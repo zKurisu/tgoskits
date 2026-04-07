@@ -38,14 +38,14 @@
 ```mermaid
 graph LR
     current["ax-libc"]
-    current --> arceos_posix_api["arceos_posix_api"]
+    current --> ax-posix-api["ax-posix-api"]
     current --> axerrno["axerrno"]
     current --> axfeat["axfeat"]
     current --> axio["axio"]
 ```
 
 ### 3.1 直接与间接依赖
-- `arceos_posix_api`
+- `ax-posix-api`
 - `axerrno`
 - `axfeat`
 - `axio`

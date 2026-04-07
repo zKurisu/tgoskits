@@ -39,7 +39,7 @@ flowchart LR
     platformLayer["PlatformLayer: axplat-* + platform/*"]
     requiredModules["RequiredModules: axruntime axhal axconfig axlog"]
     optionalModules["OptionalModules: axalloc axmm axtask axsync axdriver axfs axnet axdisplay"]
-    publicApi["PublicApi: axfeat ax-api arceos_posix_api"]
+    publicApi["PublicApi: axfeat ax-api ax-posix-api"]
     userLib["UserLib: ax-std ax-libc"]
     appsAndTests["AppsAndTests: examples/* + test-suit/arceos/*"]
     upperSystems["UpperSystems: StarryOS AxVisor"]
@@ -191,7 +191,7 @@ ArceOS 提供三种不同粒度的对外接口：
 | 接口层 | 目录 | 适合谁使用 | 特点 |
 | --- | --- | --- | --- |
 | `ax-api` | `os/arceos/api/arceos_api` | 内核模块、系统软件、需要直接使用 ArceOS 能力的上层系统 | 提供 `sys`、`time`、`mem`、`task`、`fs`、`net`、`display` 等明确分类的 API |
-| `arceos_posix_api` | `os/arceos/api/arceos_posix_api` | 需要 POSIX 风格接口的用户层或兼容层 | 更接近 C / POSIX 习惯 |
+| `ax-posix-api` | `os/arceos/api/arceos_posix_api` | 需要 POSIX 风格接口的用户层或兼容层 | 更接近 C / POSIX 习惯 |
 | `ax-std` / `ax-libc` | `os/arceos/ulib/*` | 应用开发者 | 分别提供 Rust 风格 mini-std 与 libc 风格接口 |
 
 `ax-api` 的组织方式很直接：按能力域导出稳定函数。例如：
@@ -524,7 +524,7 @@ fn main() {
 - `os/arceos/api/arceos_posix_api` — 提供 POSIX 风格的 syscall 封装，覆盖文件 I/O、socket、epoll、pthread、pipe、时间等类别。
 - `os/arceos/ulib/axlibc` — 将上述 API 编译为静态库，供 C 程序链接使用。
 
-`arceos_posix_api` 支持的主要 syscall 类别：
+`ax-posix-api` 支持的主要 syscall 类别：
 
 | 类别 | 典型接口 |
 | --- | --- |

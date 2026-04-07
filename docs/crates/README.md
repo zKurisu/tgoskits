@@ -34,7 +34,6 @@
 | `arceos-tls` | 测试层 | `test-suit/arceos/rust/task/tls` | 1 | 0 | [查看](./arceos-tls.md) |
 | `arceos-wait-queue` | 测试层 | `test-suit/arceos/rust/task/wait_queue` | 1 | 0 | [查看](./arceos-wait-queue.md) |
 | `arceos-yield` | 测试层 | `test-suit/arceos/rust/task/yield` | 1 | 0 | [查看](./arceos-yield.md) |
-| `arceos_posix_api` | ArceOS 层 | `os/arceos/api/arceos_posix_api` | 13 | 1 | [查看](./arceos_posix_api.md) |
 | `arm_pl011` | 组件层 | `components/arm_pl011` | 0 | 1 | [查看](./arm_pl011.md) |
 | `arm_pl031` | 组件层 | `components/arm_pl031` | 0 | 1 | [查看](./arm_pl031.md) |
 | `arm_vcpu` | 组件层 | `components/arm_vcpu` | 6 | 1 | [查看](./arm_vcpu.md) |
@@ -45,6 +44,7 @@
 | `ax-httpclient` | ArceOS 层 | `os/arceos/examples/httpclient` | 1 | 0 | [查看](./ax-httpclient.md) |
 | `ax-httpserver` | ArceOS 层 | `os/arceos/examples/httpserver` | 1 | 0 | [查看](./ax-httpserver.md) |
 | `ax-libc` | ArceOS 层 | `os/arceos/ulib/axlibc` | 4 | 0 | [查看](./ax-libc.md) |
+| `ax-posix-api` | ArceOS 层 | `os/arceos/api/arceos_posix_api` | 13 | 1 | [查看](./ax-posix-api.md) |
 | `ax-shell` | ArceOS 层 | `os/arceos/examples/shell` | 1 | 0 | [查看](./ax-shell.md) |
 | `ax-std` | ArceOS 层 | `os/arceos/ulib/axstd` | 6 | 22 | [查看](./ax-std.md) |
 | `axaddrspace` | 组件层 | `components/axaddrspace` | 6 | 12 | [查看](./axaddrspace.md) |

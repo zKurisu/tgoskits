@@ -131,7 +131,7 @@ graph LR
     axtask --> axruntime["axruntime"]
     axtask --> axsync["axsync"]
     axtask --> ax-api["ax-api"]
-    axtask --> arceos_posix_api["arceos_posix_api"]
+    axtask --> ax-posix-api["ax-posix-api"]
     axtask --> starry["starry-kernel"]
     axtask --> axvisor["axvisor (via ax-std/indirect)"]
 ```
@@ -147,7 +147,7 @@ graph LR
 ### 3.2 关键直接消费者
 - `axruntime`：在启动链中初始化调度器，并在 timer tick 中调用 `on_timer_tick()`。
 - `axsync`：基于 `axtask` 的阻塞/唤醒机制构建锁和同步原语。
-- `ax-api`、`arceos_posix_api`：把任务、睡眠、等待队列等能力对外暴露。
+- `ax-api`、`ax-posix-api`：把任务、睡眠、等待队列等能力对外暴露。
 - `starry-kernel`：在 Linux 兼容线程模型上直接复用 `axtask`。
 - `axnet`、`axnet-ng`：在网络栈阻塞/异步路径上复用调度与等待能力。
 

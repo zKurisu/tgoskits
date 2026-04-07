@@ -134,7 +134,7 @@ graph TD
     B[percpu] --> A
     A --> C[StarryOS kernel]
     A --> D[axfs-ng]
-    A --> E[arceos_posix_api fd]
+    A --> E[ax-posix-api fd]
     C --> F[TaskExt 切换 Scope]
 ```
 

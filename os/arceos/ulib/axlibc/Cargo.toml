@@ -23,39 +23,39 @@ crate-type = ["staticlib"]
 default = []
 
 # Multicore
-smp = ["arceos_posix_api/smp"]
+smp = ["ax-posix-api/smp"]
 
 # Floating point/SIMD
 fp-simd = ["axfeat/fp-simd"]
 
 # Interrupts
-irq = ["arceos_posix_api/irq", "axfeat/irq"]
+irq = ["ax-posix-api/irq", "axfeat/irq"]
 
 # Custom or default platforms
 myplat = ["axfeat/myplat"]
 defplat = ["axfeat/defplat"]
 
 # Memory
-alloc = ["arceos_posix_api/alloc"]
+alloc = ["ax-posix-api/alloc"]
 tls = ["alloc", "axfeat/tls"]
 
 # Multi-task
-multitask = ["arceos_posix_api/multitask"]
+multitask = ["ax-posix-api/multitask"]
 
 # File system
-fs = ["arceos_posix_api/fs", "fd"]
+fs = ["ax-posix-api/fs", "fd"]
 
 # Networking
-net = ["arceos_posix_api/net", "fd"]
+net = ["ax-posix-api/net", "fd"]
 
 # Libc features
 fd = []
-pipe = ["arceos_posix_api/pipe"]
-select = ["arceos_posix_api/select"]
-epoll = ["arceos_posix_api/epoll"]
+pipe = ["ax-posix-api/pipe"]
+select = ["ax-posix-api/select"]
+epoll = ["ax-posix-api/epoll"]
 
 [dependencies]
-arceos_posix_api.workspace = true
+ax-posix-api.workspace = true
 axerrno.workspace = true
 axfeat.workspace = true
 axio.workspace = true

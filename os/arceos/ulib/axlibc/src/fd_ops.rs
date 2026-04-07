@@ -1,6 +1,6 @@
 use core::ffi::c_int;
 
-use arceos_posix_api::{sys_close, sys_dup, sys_dup2, sys_fcntl};
+use ax_posix_api::{sys_close, sys_dup, sys_dup2, sys_fcntl};
 use axerrno::LinuxError;
 
 use crate::{ctypes, utils::e};

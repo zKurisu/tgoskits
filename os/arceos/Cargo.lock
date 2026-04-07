@@ -249,7 +249,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos_posix_api"
+name = "ax-posix-api"
 version = "0.5.0"
 dependencies = [
  "axalloc",
@@ -782,7 +782,7 @@ dependencies = [
 name = "axlibc"
 version = "0.5.0"
 dependencies = [
- "arceos_posix_api",
+ "ax-posix-api",
  "axerrno",
  "axfeat",
  "axio",

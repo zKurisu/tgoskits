@@ -108,7 +108,7 @@ graph LR
 - `axruntime`：启动期初始化全局分配器。
 - `axmm`、`axhal`：页级分配的主要消费者。
 - `axdriver`、`axdma`、`axfs-ng`：驱动、DMA、文件缓存等运行期场景。
-- `ax-api` / `arceos_posix_api`：向上层 API 暴露堆能力。
+- `ax-api` / `ax-posix-api`：向上层 API 暴露堆能力。
 - `starry-kernel`：可复用其 tracking 和页/堆分配能力。
 
 ## 4. 开发指南

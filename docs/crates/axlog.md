@@ -67,7 +67,7 @@ flowchart TD
 - `init()` / `set_max_level()`：由 `axruntime/src/lib.rs` 在系统 bring-up 早期调用。
 - `LogIf`：由 `axruntime::LogIfImpl` 实现，背后再转发到 `axhal::console`、`axhal::time`、`axtask` 等模块。
 - `print_fmt()`：被 `ax-api/src/imp/mod.rs` 直接使用，作为 API 层输出通道。
-- `warn!` 等宏：被 `arceos_posix_api`、`axtask` 等模块直接调用。
+- `warn!` 等宏：被 `ax-posix-api`、`axtask` 等模块直接调用。
 
 ### 2.3 使用边界
 - `axlog` 不管理串口、显示器或控制台设备；它只定义如何把字符串交给后端。
@@ -84,7 +84,7 @@ graph LR
 
     axlog --> axruntime["axruntime"]
     axlog --> ax-api["ax-api"]
-    axlog --> arceos_posix["arceos_posix_api"]
+    axlog --> arceos_posix["ax-posix-api"]
     axlog --> axfeat["axfeat"]
     axlog --> starry_kernel["starry-kernel"]
 ```
@@ -97,7 +97,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axruntime`：初始化 logger 并提供运行时后端实现。
-- `ax-api` / `arceos_posix_api`：向上层 API 暴露输出与警告能力。
+- `ax-api` / `ax-posix-api`：向上层 API 暴露输出与警告能力。
 - `starry-kernel`：直接复用同一套日志前端。
 
 ## 4. 开发指南

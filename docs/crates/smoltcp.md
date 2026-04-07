@@ -96,7 +96,7 @@
 2. `axnet` / `axnet-ng` 将其适配成 `smoltcp::phy::Device`
 3. `smoltcp::iface::Interface` 与 `SocketSet` 负责推进协议状态机
 4. `axnet` / `axnet-ng` 把 `smoltcp` socket 封装成系统友好的同步 socket 接口
-5. `ax-api`、`arceos_posix_api`、StarryOS socket 子系统继续向上暴露用户可见语义
+5. `ax-api`、`ax-posix-api`、StarryOS socket 子系统继续向上暴露用户可见语义
 
 ### 2.3 质量保障资产也是实现的一部分
 

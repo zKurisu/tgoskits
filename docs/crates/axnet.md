@@ -79,7 +79,7 @@
 | 设备视图 | `smoltcp` 直接面对 Ethernet 设备 | `Router`/`Device` 先做路由、loopback、ARP，再把 IP 包交给 `smoltcp` |
 | readiness 语义 | `axio::PollState` | `axpoll::IoEvents` |
 | 等待方式 | 轮询接口并 `yield_now()` | `poll_io` + waker + timeout |
-| 主要消费者 | `ax-api`、`arceos_posix_api`、老一代 ArceOS 路径 | `axruntime net-ng` 与 StarryOS 主 socket 层 |
+| 主要消费者 | `ax-api`、`ax-posix-api`、老一代 ArceOS 路径 | `axruntime net-ng` 与 StarryOS 主 socket 层 |
 
 所以，`axnet` 不是“`axnet-ng` 的轻量别名”，而是更早一代、边界更窄的 IP 网络封装。
 
@@ -110,7 +110,7 @@
 
 - `axruntime` 在启用老一代 `net` 路径时调用 `axnet::init_network(all_devices.net)`
 - `ax-api` 直接导出 TCP、UDP、DNS 与 `ax_poll_interfaces()`
-- `arceos_posix_api` 用它实现 socket、`select`、`epoll` 等 POSIX 兼容接口
+- `ax-posix-api` 用它实现 socket、`select`、`epoll` 等 POSIX 兼容接口
 - `ax-std` 再经由更高层 API 把网络能力暴露给 ArceOS 应用
 
 与之相对，当运行时选择 `net-ng` 时，初始化入口会切换到 `axnet_ng::init_network()`，这正好体现了两代实现的并存关系。
@@ -150,7 +150,7 @@
 | --- | --- |
 | `axruntime` | 在老一代 `net` 路径中初始化网络子系统 |
 | `ax-api` | 暴露 ArceOS 级 TCP/UDP/DNS 接口 |
-| `arceos_posix_api` | 实现 POSIX 风格 socket 与多路复用路径 |
+| `ax-posix-api` | 实现 POSIX 风格 socket 与多路复用路径 |
 | `axfeat` | 通过 feature 传播把网络能力装入最终镜像 |
 
 ### 3.3 与样例程序的关系
@@ -191,7 +191,7 @@ axnet = { workspace = true }
 
 `axnet` 目录内没有独立的 crate 内 `tests/`。它的正确性主要依赖系统级验证：
 
-- `ax-api` / `arceos_posix_api` 的网络调用路径
+- `ax-api` / `ax-posix-api` 的网络调用路径
 - 启用 `net` 的 ArceOS 示例与应用
 - 宿主机侧网络连通和吞吐验证
 
@@ -204,14 +204,14 @@ axnet = { workspace = true }
 ### 5.3 推荐集成验证
 
 - 用 `ax-httpclient` / `ax-httpserver` 验证 TCP 主路径
-- 用 POSIX socket 调用路径验证 `arceos_posix_api`
+- 用 POSIX socket 调用路径验证 `ax-posix-api`
 - 用 `bench_transmit` / `bench_receive` + `bwbench-client` 验证吞吐基准路径
 
 ## 6. 跨项目定位
 
 ### 6.1 ArceOS
 
-`axnet` 是 ArceOS 老一代网络装配链的重要组成部分。它直接服务 `ax-api`、`arceos_posix_api` 和运行时 `net` 路径，是早期同步 IP 网络能力的核心封装。
+`axnet` 是 ArceOS 老一代网络装配链的重要组成部分。它直接服务 `ax-api`、`ax-posix-api` 和运行时 `net` 路径，是早期同步 IP 网络能力的核心封装。
 
 ### 6.2 StarryOS
 

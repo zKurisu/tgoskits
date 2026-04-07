@@ -348,29 +348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos_posix_api"
-version = "0.5.0"
-dependencies = [
- "axalloc",
- "axconfig",
- "axerrno",
- "axfeat",
- "axfs",
- "axhal",
- "axio",
- "axlog",
- "axnet",
- "axruntime",
- "axsync",
- "axtask",
- "bindgen",
- "flatten_objects",
- "lazy_static",
- "scope-local",
- "spin 0.10.0",
-]
-
-[[package]]
 name = "arm-gic-driver"
 version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -608,11 +585,34 @@ dependencies = [
 name = "ax-libc"
 version = "0.5.0"
 dependencies = [
- "arceos_posix_api",
+ "ax-posix-api",
  "axerrno",
  "axfeat",
  "axio",
  "bindgen",
+]
+
+[[package]]
+name = "ax-posix-api"
+version = "0.5.0"
+dependencies = [
+ "axalloc",
+ "axconfig",
+ "axerrno",
+ "axfeat",
+ "axfs",
+ "axhal",
+ "axio",
+ "axlog",
+ "axnet",
+ "axruntime",
+ "axsync",
+ "axtask",
+ "bindgen",
+ "flatten_objects",
+ "lazy_static",
+ "scope-local",
+ "spin 0.10.0",
 ]
 
 [[package]]
