@@ -1,8 +1,8 @@
 [package]
-name = "axplat-macros"
+name = "ax-plat-macros"
 version = "0.3.0"
 description = "Procedural macros for the `axplat` crate"
-documentation = "https://docs.rs/axplat-macros"
+documentation = "https://docs.rs/ax-plat-macros"
 keywords = ["arceos", "os", "hal", "embedded", "macros"]
 categories = ["development-tools::procedural-macro-helpers"]
 edition.workspace = true

@@ -21,7 +21,7 @@ bitflags = "2.6"
 crate_interface = "0.5.0"
 handler_table = { version = "0.3.2", optional = true }
 const-str = "1.0"
-axplat-macros = { workspace = true }
+ax-plat-macros = { workspace = true }
 kspin = "0.3.1"
 percpu.workspace = true
 

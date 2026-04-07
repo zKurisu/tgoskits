@@ -265,7 +265,7 @@ graph LR
 - `axbacktrace`
 - `axconfig-gen`
 - `axerrno`
-- `axplat-macros`
+- `ax-plat-macros`
 - `crate_interface`
 - `handler_table`
 - `kernel_guard`

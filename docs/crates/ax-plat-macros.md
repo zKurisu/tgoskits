@@ -1,4 +1,4 @@
-# `axplat-macros` 技术文档
+# `ax-plat-macros` 技术文档
 
 > 路径：`components/axplat_crates/axplat-macros`
 > 类型：过程宏库
@@ -6,7 +6,7 @@
 > 版本：`0.1.0`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`
 
-`axplat-macros` 是 `axplat` 体系的过程宏实现层。它的作用非常集中：一类宏把内核/运行时入口函数导出为固定符号名，另一类宏把 `axplat` 内部的平台 trait 接口转换成 `crate_interface` 风格的可调用分发表。这个 crate 本身几乎没有运行时逻辑，但它决定了平台入口契约和平台接口调用方式的生成语义。
+`ax-plat-macros` 是 `axplat` 体系的过程宏实现层。它的作用非常集中：一类宏把内核/运行时入口函数导出为固定符号名，另一类宏把 `axplat` 内部的平台 trait 接口转换成 `crate_interface` 风格的可调用分发表。这个 crate 本身几乎没有运行时逻辑，但它决定了平台入口契约和平台接口调用方式的生成语义。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -16,7 +16,7 @@
 - `def_plat_interface`：把平台 trait 接口接到 `crate_interface` 调用机制，服务运行期平台能力分发。
 - 它本身不提供 `percpu`、不负责板级初始化，也不包含任何硬件抽象实现。
 
-`README.md` 也明确说明：通常不应直接依赖 `axplat-macros`，而应通过 `axplat` 间接使用。
+`README.md` 也明确说明：通常不应直接依赖 `ax-plat-macros`，而应通过 `axplat` 间接使用。
 
 ### 1.2 宏入口划分
 - `#[ax_plat::main]` 对应的底层过程宏 `main`：导出主核入口符号 `__axplat_main`。
@@ -47,7 +47,7 @@
 - `__axplat_main(cpu_id, arg) -> !`
 - `__axplat_secondary_main(cpu_id) -> !`
 
-`axplat-macros` 的 `main` / `secondary_main` 正是负责把用户写的 Rust 函数导出成这两个固定符号。因此：
+`ax-plat-macros` 的 `main` / `secondary_main` 正是负责把用户写的 Rust 函数导出成这两个固定符号。因此：
 
 - 平台启动汇编或裸入口只需跳到 `ax_plat::call_main` / `call_secondary_main`。
 - 运行时实现只需用 `#[ax_plat::main]` / `#[ax_plat::secondary_main]` 标记自己的入口函数。
@@ -55,7 +55,7 @@
 这就是平台包与运行时之间的链接级耦合点。
 
 ### 1.5 与 `percpu` 的边界
-`axplat-macros` 不提供 `percpu` 宏能力。`ax_plat::percpu` 使用的是单独的 `percpu` crate。因此在文档中不能把 `percpu` 初始化或 `#[percpu::def_percpu]` 误归为 `axplat-macros` 的职责。
+`ax-plat-macros` 不提供 `percpu` 宏能力。`ax_plat::percpu` 使用的是单独的 `percpu` crate。因此在文档中不能把 `percpu` 初始化或 `#[percpu::def_percpu]` 误归为 `ax-plat-macros` 的职责。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -69,7 +69,7 @@
 - `#[def_plat_interface]`：用于 `axplat` 自己定义 `InitIf`、`ConsoleIf`、`MemIf`、`TimeIf`、`PowerIf`、`IrqIf` 等平台接口。
 
 ### 2.3 典型使用方式
-正常使用方式应当通过 `axplat` 提供的对外宏入口，而不是直接依赖 `axplat-macros`：
+正常使用方式应当通过 `axplat` 提供的对外宏入口，而不是直接依赖 `ax-plat-macros`：
 
 ```rust
 #[ax_plat::main]
@@ -81,7 +81,7 @@ fn rust_main(cpu_id: usize, arg: usize) -> ! {
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    syn["syn"] --> current["axplat-macros"]
+    syn["syn"] --> current["ax-plat-macros"]
     quote["quote"] --> current
     proc_macro2["proc-macro2"] --> current
 
@@ -113,7 +113,7 @@ graph LR
 ### 4.2 常见误用
 - 误以为 `main` / `secondary_main` 会生成包装函数：实际上它们只附加导出符号。
 - 在 trait 方法里带 `&self`、`&mut self` 或 receiver：`def_plat_interface` 会直接拒绝。
-- 直接依赖 `axplat-macros`：虽然可以，但不符合设计意图，也会绕过 `axplat` 的封装边界。
+- 直接依赖 `ax-plat-macros`：虽然可以，但不符合设计意图，也会绕过 `axplat` 的封装边界。
 - 写出“类型上等价但字符串不完全一致”的签名：当前实现基于 token 到字符串的比较，存在比真正类型系统更苛刻的签名判定。
 
 ### 4.3 开发建议
@@ -135,28 +135,28 @@ graph LR
 - 用 `axplat` 内部 trait 接口验证 `def_plat_interface` 与 `impl_plat_interface` 的配合。
 
 ### 5.4 覆盖率要求
-- 对 `axplat-macros`，重点不是运行时覆盖率，而是“宏展开语义覆盖率”。
+- 对 `ax-plat-macros`，重点不是运行时覆盖率，而是“宏展开语义覆盖率”。
 - 至少要覆盖成功展开、编译期拒绝和链接契约成立三类路径。
 - 任何修改导出符号或 trait 展开策略的变更，都应增加 compile-pass / compile-fail 级测试。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-ArceOS 通过 `ax-runtime` 明确依赖 `#[ax_plat::main]` / `#[ax_plat::secondary_main]`，因此 `axplat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
+ArceOS 通过 `ax-runtime` 明确依赖 `#[ax_plat::main]` / `#[ax_plat::secondary_main]`，因此 `ax-plat-macros` 在 ArceOS 中承担的是“平台入口契约的宏实现层”。
 
 ### 6.2 StarryOS
-StarryOS 并不直接面向 `axplat-macros` 编程，但只要复用同一套 `axplat` 平台栈，就会间接复用这层入口契约和平台接口展开逻辑。
+StarryOS 并不直接面向 `ax-plat-macros` 编程，但只要复用同一套 `axplat` 平台栈，就会间接复用这层入口契约和平台接口展开逻辑。
 
 ### 6.3 Axvisor
-Axvisor 同样不是直接依赖 `axplat-macros` 的业务代码，但在共享 `axplat` / `ax-hal` 体系时，会间接依赖这层宏生成的链接和接口约定。因此它在 Axvisor 中仍然是基础设施层，而不是业务层。
-# `axplat-macros` 技术文档
+Axvisor 同样不是直接依赖 `ax-plat-macros` 的业务代码，但在共享 `axplat` / `ax-hal` 体系时，会间接依赖这层宏生成的链接和接口约定。因此它在 Axvisor 中仍然是基础设施层，而不是业务层。
+# `ax-plat-macros` 技术文档
 
-> 路径：`components/axplat_crates/axplat-macros`
+> 路径：`components/axplat_crates/ax-plat-macros`
 > 类型：过程宏库
 > 分层：组件层 / 可复用基础组件
 > 版本：`0.1.0`
 > 文档依据：当前仓库源码、`Cargo.toml` 与 `components/axplat_crates/axplat-macros/README.md`
 
-`axplat-macros` 的核心定位是：Procedural macros for the `axplat` crate
+`ax-plat-macros` 的核心定位是：Procedural macros for the `axplat` crate
 
 ## 1. 架构设计分析
 - 目录角色：可复用基础组件
@@ -181,7 +181,7 @@ Axvisor 同样不是直接依赖 `axplat-macros` 的业务代码，但在共享 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    current["axplat-macros"]
+    current["ax-plat-macros"]
     current --> crate_interface["crate_interface"]
     axplat["ax-plat"] --> current
 ```
@@ -219,10 +219,10 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axplat-macros = { workspace = true }
+ax-plat-macros = { workspace = true }
 
 # 如果在仓库外独立验证，也可以显式绑定本地路径：
-# axplat-macros = { path = "components/axplat_crates/axplat-macros" }
+# ax-plat-macros = { path = "components/axplat_crates/ax-plat-macros" }
 ```
 
 ### 4.2 初始化流程
@@ -249,10 +249,10 @@ axplat-macros = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axplat-macros` 主要通过 `arceos-affinity`、`ax-helloworld`、`ax-helloworld-myplat`、`ax-httpclient`、`ax-httpserver`、`arceos-irq` 等（另有 26 项） 等上层 crate 被 ArceOS 间接复用，通常处于更底层的公共依赖层。
+`ax-plat-macros` 主要通过 `arceos-affinity`、`ax-helloworld`、`ax-helloworld-myplat`、`ax-httpclient`、`ax-httpserver`、`arceos-irq` 等（另有 26 项） 等上层 crate 被 ArceOS 间接复用，通常处于更底层的公共依赖层。
 
 ### 6.2 StarryOS
-`axplat-macros` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。
+`ax-plat-macros` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。
 
 ### 6.3 Axvisor
-`axplat-macros` 主要通过 `axvisor` 等上层 crate 被 Axvisor 间接复用，通常处于更底层的公共依赖层。
+`ax-plat-macros` 主要通过 `axvisor` 等上层 crate 被 Axvisor 间接复用，通常处于更底层的公共依赖层。

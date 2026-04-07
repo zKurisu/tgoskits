@@ -90,7 +90,7 @@ graph LR
 - 各平台包：提供真正的板级实现。
 
 ### 3.2 关键间接依赖
-- `axplat-macros`：支撑 `#[ax_plat::main]`。
+- `ax-plat-macros`：支撑 `#[ax_plat::main]`。
 - `ax-cpu`、串口/时钟相关底层组件：由平台包继续下接。
 
 ### 3.3 主要消费者

@@ -150,7 +150,7 @@ flowchart TD
 仓库中直接或间接依赖它的关键模块包括：
 
 - `axplat`
-- `axplat-macros`
+- `ax-plat-macros`
 - `ax-log`
 - `ax-runtime`
 - `ax-task`

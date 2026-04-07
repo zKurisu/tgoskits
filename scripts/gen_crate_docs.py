@@ -254,7 +254,7 @@ CURATED_DOCS = {
     "ax-plat-riscv64-qemu-virt",
     "ax-plat-x86-pc",
     "axplat-x86-qemu-q35",
-    "axplat-macros",
+    "ax-plat-macros",
     "arm_vcpu",
     "arm_vgic",
     "arm_pl011",

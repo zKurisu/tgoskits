@@ -101,7 +101,7 @@
 | `axio` | 组件层 | `components/axio` | 1 | 9 | [查看](./ax-io.md) |
 | `axklib` | 组件层 | `components/axklib` | 2 | 3 | [查看](./axklib.md) |
 | `axplat-dyn` | 平台层 | `platform/axplat-dyn` | 11 | 2 | [查看](./axplat-dyn.md) |
-| `axplat-macros` | 组件层 | `components/axplat_crates/axplat-macros` | 1 | 1 | [查看](./axplat-macros.md) |
+| `ax-plat-macros` | 组件层 | `components/axplat_crates/axplat-macros` | 1 | 1 | [查看](./ax-plat-macros.md) |
 | `axplat-x86-qemu-q35` | 平台层 | `platform/x86-qemu-q35` | 7 | 1 | [查看](./axplat-x86-qemu-q35.md) |
 | `axpoll` | 组件层 | `components/axpoll` | 0 | 5 | [查看](./axpoll.md) |
 | `axsched` | 组件层 | `components/axsched` | 1 | 1 | [查看](./axsched.md) |

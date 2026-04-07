@@ -114,12 +114,12 @@ flowchart TD
 
 因此 `cargo-axplat` 在构建流程中的角色是“定位配置来源”，而不是“生成最终配置”或“参与交叉编译”。
 
-### 1.6 与 `axplat`、`axplat-macros` 和工具链的边界
+### 1.6 与 `axplat`、`ax-plat-macros` 和工具链的边界
 
 `cargo-axplat` 的边界要分三层看：
 
 - 与 `axplat` 的边界：`cargo-axplat` 本身没有直接依赖 `axplat` 作为运行时库；它只是为将来依赖 `axplat` 的平台包写模板和清单。
-- 与 `axplat-macros` 的边界：生成模板只依赖 `axplat`，并通过 `axplat` 间接使用重导出的宏；工具自身从不直接链接 `axplat-macros`。
+- 与 `ax-plat-macros` 的边界：生成模板只依赖 `axplat`，并通过 `axplat` 间接使用重导出的宏；工具自身从不直接链接 `ax-plat-macros`。
 - 与宿主机工具链的边界：它会调用 `cargo new`、`cargo add`、`cargo metadata`，但不会替你运行 `axconfig-gen`、`rustc` 交叉编译、QEMU 或其它镜像工具。
 
 还有一个非常关键的边界是：

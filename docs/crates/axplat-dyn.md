@@ -150,12 +150,12 @@ flowchart TD
 - 当前有效覆盖面主要是块设备；网络、显示等类别并没有在本 crate 中提供同等级的动态探测路径。
 - `VirtIO` block 路径里的 `enable_irq()` / `disable_irq()` 仍是 `todo!()`，说明它更偏向当前可用的基础探测和阻塞 I/O 路径，而非完整中断驱动栈。
 
-### 1.7 与 `axplat`、`axplat-macros` 和工具链的边界
+### 1.7 与 `axplat`、`ax-plat-macros` 和工具链的边界
 
 `axplat-dyn` 的边界必须明确区分：
 
 - 与 `axplat` 的边界：`axplat` 定义的是稳定平台契约和入口调用面；`axplat-dyn` 只是其中一个实现者，并不改变接口定义。
-- 与 `axplat-macros` 的边界：本 crate 不直接依赖 `axplat-macros`，只通过 `axplat` 重新导出的 `#[impl_plat_interface]` 和入口宏参与体系。
+- 与 `ax-plat-macros` 的边界：本 crate 不直接依赖 `ax-plat-macros`，只通过 `axplat` 重新导出的 `#[impl_plat_interface]` 和入口宏参与体系。
 - 与 `somehal` 的边界：真正的“平台事实来源”在 `somehal`，包括入口、内存图、时钟、IRQ、电源与 CPU 元数据；`axplat-dyn` 负责转译，而不是重新探测 CPU 模式或自己管理整套启动环境。
 - 与 `cargo-axplat` / `axconfig-gen` 的边界：当前源码中保留了一段被注释掉的 `config` 模块草稿，但现行实现并没有启用 `axconfig.toml -> AX_CONFIG_PATH -> include_configs!` 这条常规平台包主线，因此它不属于典型 `axplat-*` 配置化平台生态。
 
@@ -286,4 +286,4 @@ graph TD
 
 ## 7. 总结
 
-`axplat-dyn` 的价值不在“又实现了一套新的板级常量配置”，而在它把 `somehal` 的运行时平台事实和 `rdrive` 的设备探测能力拼成了 `axplat`/`ax-driver` 能消费的标准形态。它既不是常规 `axplat-*` 平台包，也不是运行时装卸模块，而是一条面向动态平台事实和动态驱动模型的桥接路径。理解这一点，是读懂它与 `axplat`、`axplat-macros`、`cargo-axplat` 及上层构建系统边界的关键。
+`axplat-dyn` 的价值不在“又实现了一套新的板级常量配置”，而在它把 `somehal` 的运行时平台事实和 `rdrive` 的设备探测能力拼成了 `axplat`/`ax-driver` 能消费的标准形态。它既不是常规 `axplat-*` 平台包，也不是运行时装卸模块，而是一条面向动态平台事实和动态驱动模型的桥接路径。理解这一点，是读懂它与 `axplat`、`ax-plat-macros`、`cargo-axplat` 及上层构建系统边界的关键。

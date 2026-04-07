@@ -865,7 +865,7 @@ dependencies = [
 name = "ax-plat"
 version = "0.5.1"
 dependencies = [
- "axplat-macros",
+ "ax-plat-macros",
  "bitflags 2.11.0",
  "const-str",
  "crate_interface",
@@ -986,7 +986,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-macros"
+name = "ax-plat-macros"
 version = "0.3.0"
 dependencies = [
  "proc-macro2",

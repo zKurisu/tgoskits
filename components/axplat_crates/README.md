@@ -5,7 +5,7 @@ Reusable crates used for [ArceOS](https://github.com/arceos-org/arceos) Hardware
 ## Library crates
 
 * [axplat](./axplat)
-* [axplat-macros](./axplat-macros)
+* [ax-plat-macros](./ax-plat-macros)
 * [ax-plat-aarch64-peripherals](./platforms/axplat-aarch64-peripherals)
 
 ## Platform-specific crates

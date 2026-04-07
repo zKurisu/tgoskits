@@ -14,9 +14,9 @@ pub mod percpu;
 pub mod power;
 pub mod time;
 
-pub use axplat_macros::main;
+pub use ax_plat_macros::main;
 #[cfg(feature = "smp")]
-pub use axplat_macros::secondary_main;
+pub use ax_plat_macros::secondary_main;
 pub use crate_interface::impl_interface as impl_plat_interface;
 
 #[doc(hidden)]

@@ -101,7 +101,7 @@
 - 不引入堆分配、trait object 或运行时注册表。
 - 平台包可以在链接期静态接入，符合 `no_std` 启动期约束。
 
-`lib.rs` 中的 `call_main()` / `call_secondary_main()` 则把 boot stub 与内核主函数连接起来。平台包在完成最低限度的汇编或 Rust 引导后，跳入这两个函数；真正的内核主函数通过 `#[ax_plat::main]` 或 `#[ax_plat::secondary_main]` 标注，由 `axplat-macros` 生成固定符号导出。
+`lib.rs` 中的 `call_main()` / `call_secondary_main()` 则把 boot stub 与内核主函数连接起来。平台包在完成最低限度的汇编或 Rust 引导后，跳入这两个函数；真正的内核主函数通过 `#[ax_plat::main]` 或 `#[ax_plat::secondary_main]` 标注，由 `ax-plat-macros` 生成固定符号导出。
 
 ```mermaid
 flowchart TD
@@ -186,7 +186,7 @@ impl ax_plat::init::InitIf for InitIfImpl {
 
 | 依赖 | 作用 |
 | --- | --- |
-| `axplat-macros` | 提供 `main`、`secondary_main` 以及平台接口相关宏的过程宏实现 |
+| `ax-plat-macros` | 提供 `main`、`secondary_main` 以及平台接口相关宏的过程宏实现 |
 | `crate_interface` | 生成接口定义与实现绑定代码，是平台抽象的核心连接层 |
 | `memory_addr` | 提供 `PhysAddr`、`VirtAddr`、地址转换辅助类型 |
 | `bitflags` | 定义 `MemRegionFlags` |
@@ -205,7 +205,7 @@ impl ax_plat::init::InitIf for InitIfImpl {
 
 ```mermaid
 graph TD
-    A[axplat-macros] --> B[ax-plat]
+    A[ax-plat-macros] --> B[ax-plat]
     C[crate_interface] --> B
     D[memory_addr] --> B
     E[kspin / percpu / bitflags] --> B
