@@ -3,12 +3,12 @@
 # Inputs:
 #   - `FEATURES`: a list of features to be enabled split by spaces or commas.
 #     The features can be selected from the crate `axfeat` or the user library
-#     (crate `axstd` or `axlibc`).
+#     (crate `axstd` or `ax-libc`).
 #   - `APP_FEATURES`: a list of features to be enabled for the Rust app.
 #
 # Outputs:
 #   - `AX_FEAT`: features to be enabled for ArceOS modules (crate `axfeat`).
-#   - `LIB_FEAT`: features to be enabled for the user library (crate `axstd`, `axlibc`).
+#   - `LIB_FEAT`: features to be enabled for the user library (crate `axstd`, `ax-libc`).
 #   - `APP_FEAT`: features to be enabled for the Rust app.
 
 ifeq ($(APP_TYPE),c)

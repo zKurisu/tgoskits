@@ -16,7 +16,7 @@ homepage.workspace = true
 repository = "https://github.com/arceos-org/arceos/tree/main/ulib/axlibc"
 
 [lib]
-name = "axlibc"
+name = "ax_libc"
 crate-type = ["staticlib"]
 
 [features]

@@ -89,7 +89,7 @@ ifneq ($(wildcard $(APP)/Cargo.toml),)
   AX_LIB ?= axstd
 else
   APP_TYPE := c
-  AX_LIB ?= axlibc
+  AX_LIB ?= ax-libc
 endif
 
 .DEFAULT_GOAL := all
