@@ -196,7 +196,7 @@ flowchart TD
 | `somehal` | 提供真实平台事实与入口宏，是本 crate 的核心下层 |
 | `axcpu` | 在 `hv` 等场景提供 CPU 模式支持 |
 | `axklib` | 提供 `iomap()` 等内核内存映射辅助 |
-| `axalloc` | 为 `VirtIO` DMA 路径提供页分配 |
+| `ax-alloc` | 为 `VirtIO` DMA 路径提供页分配 |
 | `rdrive`、`rd-block` | 提供运行时设备探测与块设备抽象 |
 | `axdriver_block`、`axdriver_virtio`、`axdriver_base` | 将探测结果转接为 ArceOS 驱动接口 |
 | `dma-api` | 为设备 DMA 提供抽象接口 |

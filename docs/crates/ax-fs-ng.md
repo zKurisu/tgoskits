@@ -32,7 +32,7 @@
 ```mermaid
 graph LR
     current["ax-fs-ng"]
-    current --> axalloc["axalloc"]
+    current --> ax-alloc["ax-alloc"]
     current --> ax-driver["ax-driver"]
     current --> axerrno["axerrno"]
     current --> axfs_ng_vfs["axfs-ng-vfs"]
@@ -47,7 +47,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `axalloc`
+- `ax-alloc`
 - `ax-driver`
 - `axerrno`
 - `axfs-ng-vfs`

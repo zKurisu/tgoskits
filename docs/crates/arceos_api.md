@@ -67,7 +67,7 @@
 - `sys` -> `ax-hal::cpu_num`、`ax-hal::power::system_off`
 - `time` -> `ax-hal::time`
 - `stdio` -> `ax-hal::console` 与 `axlog`
-- `mem::alloc` -> `axalloc`
+- `mem::alloc` -> `ax-alloc`
 - `mem::dma` -> `ax-dma`
 - `task` -> `ax-task`、`ax-sync`、`ax-hal::time`
 - `fs` -> `ax-fs`
@@ -111,7 +111,7 @@ let _ = (now, cpus);
 graph LR
     ax-runtime["ax-runtime"] --> ax-api["ax-api"]
     ax-hal["ax-hal"] --> ax-api
-    axalloc["axalloc"] --> ax-api
+    ax-alloc["ax-alloc"] --> ax-api
     ax_dma["ax-dma"] --> ax-api
     ax-task["ax-task"] --> ax-api
     ax-fs["ax-fs"] --> ax-api
@@ -125,7 +125,7 @@ graph LR
 
 ### 3.1 关键直接依赖
 - 核心基础：`axconfig`、`axerrno`、`ax-feat`、`ax-hal`、`axio`、`axlog`、`ax-runtime`、`ax-sync`。
-- 可选能力：`axalloc`、`ax-dma`、`ax-task`、`ax-fs`、`ax-net`、`ax-display`、`ax-driver`、`ax-ipi`、`ax-mm`。
+- 可选能力：`ax-alloc`、`ax-dma`、`ax-task`、`ax-fs`、`ax-net`、`ax-display`、`ax-driver`、`ax-ipi`、`ax-mm`。
 
 ### 3.2 关键直接消费者
 - `ax-std`：最重要的直接消费者，会把 `ax-api` 作为用户库的重要下层能力来源。

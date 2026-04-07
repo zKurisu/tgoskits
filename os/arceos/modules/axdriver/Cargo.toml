@@ -21,7 +21,7 @@ input = ["dep:axdriver_input"]
 vsock = ["axdriver_vsock"]
 
 # Enabled by features `virtio-*`
-virtio = ["dep:axdriver_virtio", "dep:axalloc", "dep:ax-hal", "dep:axconfig"]
+virtio = ["dep:axdriver_virtio", "dep:ax-alloc", "dep:ax-hal", "dep:axconfig"]
 
 # various types of drivers
 virtio-blk = ["block", "virtio", "axdriver_virtio/block"]
@@ -33,8 +33,8 @@ ramdisk = ["block", "axdriver_block/ramdisk"]
 bcm2835-sdhci = ["block", "axdriver_block/bcm2835-sdhci"]
 sdmmc = ["block", "axdriver_block/sdmmc", "dep:ax-hal", "dep:axconfig"]
 ahci = ["block", "axdriver_block/ahci", "dep:ax-hal", "dep:axconfig"]
-ixgbe = ["net", "axdriver_net/ixgbe", "dep:axalloc", "dep:ax-hal", "dep:ax-dma"]
-fxmac = ["net", "axdriver_net/fxmac", "dep:axalloc", "dep:ax-hal", "dep:ax-dma"]
+ixgbe = ["net", "axdriver_net/ixgbe", "dep:ax-alloc", "dep:ax-hal", "dep:ax-dma"]
+fxmac = ["net", "axdriver_net/fxmac", "dep:ax-alloc", "dep:ax-hal", "dep:ax-dma"]
 # more devices example: e1000 = ["net", "axdriver_net/e1000"]
 
 irq = []
@@ -43,7 +43,7 @@ dyn = ["dep:axerrno", "dep:axplat-dyn"]
 default = ["bus-pci"]
 
 [dependencies]
-axalloc = { workspace = true, optional = true }
+ax-alloc = { workspace = true, optional = true }
 axconfig = { workspace = true, optional = true }
 ax-dma = { workspace = true, optional = true }
 axdriver_base.workspace = true

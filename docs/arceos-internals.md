@@ -38,7 +38,7 @@ flowchart LR
     reusableCrates["ReusableCrates: components/*"]
     platformLayer["PlatformLayer: axplat-* + platform/*"]
     requiredModules["RequiredModules: ax-runtime ax-hal axconfig axlog"]
-    optionalModules["OptionalModules: axalloc ax-mm ax-task ax-sync ax-driver ax-fs ax-net ax-display"]
+    optionalModules["OptionalModules: ax-alloc ax-mm ax-task ax-sync ax-driver ax-fs ax-net ax-display"]
     publicApi["PublicApi: ax-feat ax-api ax-posix-api"]
     userLib["UserLib: ax-std ax-libc"]
     appsAndTests["AppsAndTests: examples/* + test-suit/arceos/*"]
@@ -86,7 +86,7 @@ ArceOS 的基础骨架由四个必选模块组成：
 
 | 模块 | 典型 feature | 作用 |
 | --- | --- | --- |
-| `axalloc` | `alloc` | 全局内存分配器（支持 TLSF、buddy、slab 等策略） |
+| `ax-alloc` | `alloc` | 全局内存分配器（支持 TLSF、buddy、slab 等策略） |
 | `ax-mm` | `paging` | 地址空间与页表管理 |
 | `ax-task` | `multitask`、`sched-*` | 任务创建、调度（FIFO/RR/CFS）、sleep、wait queue |
 | `ax-sync` | `multitask` | mutex、信号量等同步原语 |
@@ -124,7 +124,7 @@ flowchart TD
     appRequest["AppRequest: 应用 Cargo.toml 申请 feature"]
     axstdAxfeat["ax-std or ax-feat: 暴露统一 feature 开关"]
     runtimeGate["ax-runtime: 根据 feature 选择模块"]
-    memPath["MemoryPath: alloc paging -> axalloc ax-mm"]
+    memPath["MemoryPath: alloc paging -> ax-alloc ax-mm"]
     taskPath["TaskPath: multitask sched-* -> ax-task ax-sync"]
     ioPath["IoPath: fs net display -> ax-driver + ax-fs ax-net ax-display"]
     platformInit["PlatformInit: ax-hal init_early/init_later"]
@@ -154,7 +154,7 @@ ax-std = { workspace = true, features = ["alloc", "multitask", "net"], optional 
 ```toml
 [features]
 # 内存
-alloc = ["dep:axalloc"]
+alloc = ["dep:ax-alloc"]
 paging = ["dep:ax-mm"]
 dma = ["dep:ax-dma"]
 # 并发
@@ -166,7 +166,7 @@ ipi = ["dep:ax-ipi", "ax-hal/ipi"]
 irq = ["ax-hal/irq"]
 rtc = ["ax-hal/rtc"]
 # 虚拟化
-hv = ["ax-hal/hv", "axalloc/hv"]
+hv = ["ax-hal/hv", "ax-alloc/hv"]
 # 平台
 plat-dyn = ["ax-hal/plat-dyn"]
 ax-driver = ["dep:ax-driver"]
@@ -253,9 +253,9 @@ sequenceDiagram
 
 | 组件 | 目录 | 关键职责 | 常见联动对象 |
 | --- | --- | --- | --- |
-| `ax-runtime` | `os/arceos/modules/axruntime` | 系统主入口、初始化顺序、主核/从核协同 | `ax-hal`、`axlog`、`axalloc`、`ax-mm`、`ax-task`、`ax-driver` |
+| `ax-runtime` | `os/arceos/modules/axruntime` | 系统主入口、初始化顺序、主核/从核协同 | `ax-hal`、`axlog`、`ax-alloc`、`ax-mm`、`ax-task`、`ax-driver` |
 | `ax-hal` | `os/arceos/modules/axhal` | CPU、内存、时间、中断、页表、TLS、DTB 等硬件抽象 | 平台 crate、`ax-runtime` |
-| `axalloc` | `os/arceos/modules/axalloc` | 全局堆分配、DMA 相关地址转换 | `ax-runtime`、`ax-mm` |
+| `ax-alloc` | `os/arceos/modules/axalloc` | 全局堆分配、DMA 相关地址转换 | `ax-runtime`、`ax-mm` |
 | `ax-mm` | `os/arceos/modules/axmm` | 地址空间、页表、映射后端 | `ax-runtime`、上层内存管理逻辑 |
 | `ax-task` | `os/arceos/modules/axtask` | 调度器、任务创建、等待队列、定时器驱动的 sleep | `ax-runtime`、`ax-sync` |
 | `ax-sync` | `os/arceos/modules/axsync` | mutex 等同步原语 | `ax-task`、任意并发模块 |
@@ -275,7 +275,7 @@ sequenceDiagram
 ArceOS 的模块间交互可归纳为四条主线，覆盖从系统启动到应用调用的完整数据与控制流：
 
 1. 启动主线  
-   `ax-runtime -> ax-hal -> axalloc/ax-mm -> ax-task -> ax-driver -> ax-fs/ax-net`
+   `ax-runtime -> ax-hal -> ax-alloc/ax-mm -> ax-task -> ax-driver -> ax-fs/ax-net`
 
 2. API 主线  
    `ax-std/arceos_api -> ax-task/ax-fs/ax-net/... -> ax-hal`
@@ -575,7 +575,7 @@ make A=examples/helloworld ARCH=riscv64 debug
 优化 ArceOS 时，通常从以下方向切入：
 
 - 启动路径：减少不必要的模块初始化，检查 `ax-runtime` 中的 feature 分支。
-- 内存路径：关注 `axalloc`、`ax-mm` 以及是否存在过度映射或不必要分配。
+- 内存路径：关注 `ax-alloc`、`ax-mm` 以及是否存在过度映射或不必要分配。
 - 调度路径：分析 `ax-task` 调度器选择与 wait queue 唤醒开销。
 - I/O 路径：检查 `ax-driver -> ax-fs/ax-net` 的调用链是否存在多余层次。
 - 跨系统影响：若模块被 StarryOS 或 AxVisor 复用，优化不能仅看 ArceOS 自身的表现。

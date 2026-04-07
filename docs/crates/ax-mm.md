@@ -6,7 +6,7 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/aspace.rs`、`src/backend/mod.rs`、`src/backend/linear.rs`、`src/backend/alloc.rs`
 
-`ax-mm` 是 ArceOS 的虚拟内存管理模块。它把 `ax-hal::paging::PageTable` 提供的页表能力、`memory_set` 提供的区间元数据管理，以及 `axalloc` 提供的物理页框分配整合成统一的地址空间抽象 `AddrSpace`，负责建立和维护宿主内核自己的虚拟地址空间。
+`ax-mm` 是 ArceOS 的虚拟内存管理模块。它把 `ax-hal::paging::PageTable` 提供的页表能力、`memory_set` 提供的区间元数据管理，以及 `ax-alloc` 提供的物理页框分配整合成统一的地址空间抽象 `AddrSpace`，负责建立和维护宿主内核自己的虚拟地址空间。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -61,7 +61,7 @@ flowchart TD
 `ax-mm` 提供两种典型映射模式：
 
 - **线性映射**：通过固定 `pa_va_offset` 计算物理地址，适合内核镜像区、直映区和大部分平台内存映射。
-- **分配式映射**：通过 `axalloc::global_allocator()` 分配物理页框，可选择：
+- **分配式映射**：通过 `ax-alloc::global_allocator()` 分配物理页框，可选择：
   - `populate = true`：映射创建时立即分配并建立页表项。
   - `populate = false`：先建立“占位”区域，等实际访问触发缺页后，再在 `handle_page_fault()` 中补页并 remap。
 
@@ -104,7 +104,7 @@ aspace.protect(va.into(), mmio_size, flags)?;
 graph LR
     ax-hal["ax-hal::paging / mem / asm"] --> ax-mm["ax-mm"]
     memory_set["memory_set"] --> ax-mm
-    axalloc["axalloc"] --> ax-mm
+    ax-alloc["ax-alloc"] --> ax-mm
     memory_addr["memory_addr"] --> ax-mm
 
     ax-mm --> ax-runtime["ax-runtime"]
@@ -116,7 +116,7 @@ graph LR
 ### 3.1 关键直接依赖
 - `ax-hal`：提供页表类型、地址转换、内核地址空间布局和写根页表指令。
 - `memory_set`：保存虚拟区间元数据，并通过 backend trait 协作执行映射。
-- `axalloc`：为 `Alloc` backend 提供物理页框来源。
+- `ax-alloc`：为 `Alloc` backend 提供物理页框来源。
 - `memory_addr`、`axerrno`、`kspin`、`lazyinit`：分别提供地址类型、错误、锁和全局单例初始化。
 
 ### 3.2 关键直接消费者

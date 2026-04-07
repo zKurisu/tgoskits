@@ -29,7 +29,7 @@
 flowchart LR
     A["Vec / BTreeMap / String"] --> B["ax-std(alloc)"]
     B --> C["ax-api / alloc glue"]
-    C --> D["axalloc / 全局分配器"]
+    C --> D["ax-alloc / 全局分配器"]
     D --> E["底层页分配与内存管理"]
 ```
 
@@ -81,7 +81,7 @@ flowchart LR
 graph LR
     test["arceos-memtest"] --> ax-std["ax-std(alloc)"]
     test --> rand["rand(small_rng)"]
-    ax-std --> axalloc["axalloc / 全局分配器链"]
+    ax-std --> ax-alloc["ax-alloc / 全局分配器链"]
 ```
 
 ### 3.1 直接依赖
@@ -89,12 +89,12 @@ graph LR
 - `rand(small_rng)`：用固定种子生成可复现的数据集。
 
 ### 3.2 关键间接依赖
-- `axalloc`：真正承接用户侧堆分配。
+- `ax-alloc`：真正承接用户侧堆分配。
 - `Vec`、`BTreeMap`、`String`：分别代表顺序容器、树形容器和字符串对象的典型分配形态。
 
 ### 3.3 主要消费者
 - `cargo arceos test qemu` 自动发现的内存/分配基础回归。
-- 调整 `axalloc` 或更底层内存管理实现后的 smoke test。
+- 调整 `ax-alloc` 或更底层内存管理实现后的 smoke test。
 
 ## 4. 开发指南
 ### 4.1 推荐运行方式

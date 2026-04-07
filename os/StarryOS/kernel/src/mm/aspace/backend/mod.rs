@@ -6,7 +6,7 @@ use ax_hal::{
     paging::{MappingFlags, PageSize, PageTable, PageTableCursor},
 };
 use ax_sync::Mutex;
-use axalloc::{UsageKind, global_allocator};
+use ax-alloc::{UsageKind, global_allocator};
 use axerrno::{AxError, AxResult};
 use enum_dispatch::enum_dispatch;
 use memory_addr::{DynPageIter, PAGE_SIZE_4K, PhysAddr, VirtAddr, VirtAddrRange};

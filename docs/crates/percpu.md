@@ -175,7 +175,7 @@
 - `ax-hal`
 - `ax-runtime`
 - `ax-task`
-- `axalloc`
+- `ax-alloc`
 - `axvcpu`
 - `axvm`
 - `arm_vcpu`

@@ -1,4 +1,4 @@
-# axalloc
+# ax-alloc
 
 ArceOS global memory allocator. Provides [`GlobalAllocator`] implementing [`core::alloc::GlobalAlloc`] for use with `#[global_allocator]`.
 

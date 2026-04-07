@@ -101,10 +101,10 @@ fn run_memory_analysis() {
     );
 
     let from = STAMPED_GENERATION.load(Ordering::SeqCst);
-    let to = axalloc::current_generation();
+    let to = ax-alloc::current_generation();
 
     let mut allocations: BTreeMap<MemoryCategory, Vec<Layout>> = BTreeMap::new();
-    axalloc::allocations_in(from..to, |info| {
+    ax-alloc::allocations_in(from..to, |info| {
         let category = MemoryCategory::new(&info.backtrace);
         allocations.entry(category).or_default().push(info.layout);
     });
@@ -142,14 +142,14 @@ impl DeviceOps for MemTrack {
         if offset == 0 && !buf.is_empty() {
             match buf {
                 b"start\n" => {
-                    let generation = axalloc::current_generation();
+                    let generation = ax-alloc::current_generation();
                     STAMPED_GENERATION.store(generation, Ordering::SeqCst);
                     ax_println!("Memory allocation generation stamped: {}", generation);
-                    axalloc::enable_tracking();
+                    ax-alloc::enable_tracking();
                 }
                 b"end\n" => {
                     run_memory_analysis();
-                    axalloc::disable_tracking();
+                    ax-alloc::disable_tracking();
                 }
                 _ => {}
             }

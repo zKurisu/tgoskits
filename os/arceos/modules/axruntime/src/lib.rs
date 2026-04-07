@@ -288,7 +288,7 @@ fn init_allocator() {
     use ax_hal::mem::{MemRegionFlags, memory_regions, phys_to_virt};
 
     info!("Initialize global memory allocator...");
-    info!("  use {} allocator.", axalloc::global_allocator().name());
+    info!("  use {} allocator.", ax-alloc::global_allocator().name());
 
     let mut max_region_size = 0;
     let mut max_region_paddr = 0.into();
@@ -311,7 +311,7 @@ fn init_allocator() {
     #[cfg(feature = "buddy-slab")]
     {
         struct AddrTranslatorImpl;
-        impl axalloc::AddrTranslator for AddrTranslatorImpl {
+        impl ax-alloc::AddrTranslator for AddrTranslatorImpl {
             fn virt_to_phys(&self, va: usize) -> Option<usize> {
                 Some(ax_hal::mem::virt_to_phys(va.into()).as_usize())
             }
@@ -321,7 +321,7 @@ fn init_allocator() {
 
         for r in memory_regions() {
             if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-                axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size, &TRANSLATOR);
+                ax-alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size, &TRANSLATOR);
                 break;
             }
         }
@@ -331,7 +331,7 @@ fn init_allocator() {
     {
         for r in memory_regions() {
             if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
-                axalloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
+                ax-alloc::global_init(phys_to_virt(r.paddr).as_usize(), r.size);
                 break;
             }
         }
@@ -339,7 +339,7 @@ fn init_allocator() {
 
     for r in memory_regions() {
         if r.flags.contains(MemRegionFlags::FREE) && r.paddr != max_region_paddr {
-            axalloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
+            ax-alloc::global_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
                 .expect("add heap memory region failed");
         }
     }

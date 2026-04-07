@@ -208,7 +208,7 @@ make PLAT_CONFIG=$(pwd)/configs/custom/x86_64-pc-oslab.toml A=examples/httpserve
 ```toml
 # In Cargo.toml
 [dependencies]
-axalloc = { git = "https://github.com/arceos-org/arceos.git", tag = "v0.2.0" } # modules/axalloc
+ax-alloc = { git = "https://github.com/arceos-org/arceos.git", tag = "v0.2.0" } # modules/axalloc
 ax-hal = { git = "https://github.com/arceos-org/arceos.git", tag = "v0.2.0" } # modules/axhal
 ```
 

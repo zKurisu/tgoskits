@@ -48,7 +48,7 @@
 | `ax-shell` | ArceOS 层 | `os/arceos/examples/shell` | 1 | 0 | [查看](./ax-shell.md) |
 | `ax-std` | ArceOS 层 | `os/arceos/ulib/axstd` | 6 | 22 | [查看](./ax-std.md) |
 | `axaddrspace` | 组件层 | `components/axaddrspace` | 6 | 12 | [查看](./axaddrspace.md) |
-| `axalloc` | ArceOS 层 | `os/arceos/modules/axalloc` | 6 | 11 | [查看](./axalloc.md) |
+| `ax-alloc` | ArceOS 层 | `os/arceos/modules/axalloc` | 6 | 11 | [查看](./ax-alloc.md) |
 | `axallocator` | 组件层 | `components/axallocator` | 2 | 2 | [查看](./axallocator.md) |
 | `axbacktrace` | 组件层 | `components/axbacktrace` | 0 | 5 | [查看](./axbacktrace.md) |
 | `axbuild` | 工具层 | `scripts/axbuild` | 1 | 3 | [查看](./axbuild.md) |

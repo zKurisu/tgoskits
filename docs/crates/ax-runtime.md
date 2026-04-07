@@ -33,7 +33,7 @@
 ```mermaid
 graph LR
     current["ax-runtime"]
-    current --> axalloc["axalloc"]
+    current --> ax-alloc["ax-alloc"]
     current --> axbacktrace["axbacktrace"]
     current --> axconfig["axconfig"]
     current --> ax-display["ax-display"]
@@ -48,7 +48,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `axalloc`
+- `ax-alloc`
 - `axbacktrace`
 - `axconfig`
 - `ax-display`

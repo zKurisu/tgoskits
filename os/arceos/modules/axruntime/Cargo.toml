@@ -11,9 +11,9 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axruntime"
 [features]
 default = []
 
-alloc = ["dep:axalloc"]
+alloc = ["dep:ax-alloc"]
 dma = ["paging"]
-buddy-slab = ["axalloc/buddy-slab"]
+buddy-slab = ["ax-alloc/buddy-slab"]
 ipi = ["dep:ax-ipi"]
 irq = ["ax-hal/irq", "ax-task?/irq", "dep:percpu"]
 multitask = ["ax-task/multitask"]
@@ -34,7 +34,7 @@ net-ng = ["ax-driver", "dep:ax-net-ng"]
 vsock = ["net-ng", "ax-net-ng/vsock"]
 
 [dependencies]
-axalloc = { workspace = true, optional = true }
+ax-alloc = { workspace = true, optional = true }
 axbacktrace = { workspace = true }
 axconfig = { workspace = true }
 ax-display = { workspace = true, optional = true }

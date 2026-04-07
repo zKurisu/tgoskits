@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::format;
 use core::{marker::PhantomData, ptr::NonNull};
 
-use axalloc::{UsageKind, global_allocator};
+use ax-alloc::{UsageKind, global_allocator};
 use axdriver_base::DeviceType;
 use axdriver_block::BlockDriverOps;
 use axdriver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};

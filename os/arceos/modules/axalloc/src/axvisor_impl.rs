@@ -27,7 +27,7 @@ const PAGE_SIZE: usize = 0x1000;
 /// The global allocator used by ArceOS for axvisor.
 ///
 /// This is an adapter around the buddy_slab_allocator::GlobalAllocator that provides
-/// compatibility with the original axalloc API and address translation support.
+/// compatibility with the original ax-alloc API and address translation support.
 pub struct GlobalAllocator {
     inner: SpinNoIrq<buddy_slab_allocator::GlobalAllocator<PAGE_SIZE>>,
     usages: SpinNoIrq<Usages>,

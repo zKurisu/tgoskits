@@ -6,7 +6,7 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/dma.rs`、`os/arceos/modules/axdriver/src/ixgbe.rs`、`os/arceos/modules/axdriver/src/drivers.rs`、`os/arceos/api/ax-api/src/imp/mem.rs`、`platform/axplat-dyn/src/drivers/mod.rs`、`os/axvisor/src/driver/blk/mod.rs`
 
-`ax-dma` 不是驱动聚合层，也不是某类设备驱动。它的真实职责是为 ArceOS 内核提供一套全局一致的 DMA 一致性内存分配服务：从页分配器拿到内存、把页表属性改成 `UNCACHED`、给设备返回可用的总线地址，并在释放时尽可能恢复映射属性。它位于 `axalloc` / `ax-mm` / `ax-hal` 等内存基础设施之上，位于需要软件管理 DMA 缓冲的驱动之下。
+`ax-dma` 不是驱动聚合层，也不是某类设备驱动。它的真实职责是为 ArceOS 内核提供一套全局一致的 DMA 一致性内存分配服务：从页分配器拿到内存、把页表属性改成 `UNCACHED`、给设备返回可用的总线地址，并在释放时尽可能恢复映射属性。它位于 `ax-alloc` / `ax-mm` / `ax-hal` 等内存基础设施之上，位于需要软件管理 DMA 缓冲的驱动之下。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -74,7 +74,7 @@
 但要特别注意一个实现事实：
 
 - `ax-driver/Cargo.toml` 中 `fxmac` feature 也声明了 `dep:ax-dma`；
-- 可是 `os/arceos/modules/axdriver/src/drivers.rs` 里的 `FXmacDriver` glue 实际使用的是 `axalloc::global_allocator().alloc_pages(..., UsageKind::Dma)`，并没有直接调用 `ax-dma` 的 coherent allocator。
+- 可是 `os/arceos/modules/axdriver/src/drivers.rs` 里的 `FXmacDriver` glue 实际使用的是 `ax-alloc::global_allocator().alloc_pages(..., UsageKind::Dma)`，并没有直接调用 `ax-dma` 的 coherent allocator。
 
 这说明在当前代码树里，**`ax-dma` 不是所有 DMA 驱动的唯一后端**，而是其中一条已被明确使用的 DMA 服务路径。
 
@@ -117,7 +117,7 @@
 ### 3.1 直接依赖
 | 依赖 | 作用 |
 | --- | --- |
-| `axalloc` | 全局页分配器与 DMA 用页申请 |
+| `ax-alloc` | 全局页分配器与 DMA 用页申请 |
 | `axallocator` / `buddy-slab-allocator` | 字节级分配器实现 |
 | `axconfig` | 提供 `PHYS_BUS_OFFSET` |
 | `ax-hal` | 提供物理地址与页表标志相关能力 |

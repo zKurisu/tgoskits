@@ -9,7 +9,7 @@ use core::{num::NonZeroUsize, ops::Range, task::Context};
 
 use ax_hal::mem::{PhysAddr, VirtAddr, virt_to_phys};
 use ax_sync::Mutex;
-use axalloc::{UsageKind, global_allocator};
+use ax-alloc::{UsageKind, global_allocator};
 use axfs_ng_vfs::{
     FileNode, Location, NodeFlags, NodePermission, NodeType, VfsError, VfsResult, path::Path,
 };

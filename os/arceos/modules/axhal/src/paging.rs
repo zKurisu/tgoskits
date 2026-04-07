@@ -1,6 +1,6 @@
 //! Page table manipulation.
 
-use axalloc::{UsageKind, global_allocator};
+use ax-alloc::{UsageKind, global_allocator};
 use memory_addr::{PAGE_SIZE_4K, PhysAddr, VirtAddr};
 use page_table_multiarch::PagingHandler;
 #[doc(no_inline)]

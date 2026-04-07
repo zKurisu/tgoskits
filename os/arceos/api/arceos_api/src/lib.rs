@@ -412,7 +412,7 @@ pub mod modules {
     #[cfg(feature = "multitask")]
     pub use ax_task;
     #[cfg(feature = "alloc")]
-    pub use axalloc;
+    pub use ax-alloc;
     pub use axconfig;
     pub use axlog;
 }

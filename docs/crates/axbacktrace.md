@@ -13,7 +13,7 @@
 `axbacktrace` 的职责非常聚焦：
 
 - 向下，它依赖架构相关的帧指针读取和可选的 DWARF 调试段。
-- 向上，它向 `ax-runtime` 的 panic 路径、`axalloc` 的 tracking 路径、`axcpu` 的 trap context 提供统一的 `Backtrace` 对象。
+- 向上，它向 `ax-runtime` 的 panic 路径、`ax-alloc` 的 tracking 路径、`axcpu` 的 trap context 提供统一的 `Backtrace` 对象。
 - 横向，它把“捕获栈帧”和“解析符号”拆成两个层次：不开 `dwarf` 仍可存在 `Backtrace`，但会退化为不可解析或禁用状态。
 
 所以 `axbacktrace` 解决的是“如何得到并展示回溯”，而不是“何时触发 panic”“如何恢复异常”。
@@ -64,7 +64,7 @@ flowchart TD
 
 ### 2.2 关键 API 与真实使用位置
 - `init(ip_range, fp_range)`：由 `ax-runtime/src/lib.rs` 在启动期调用。
-- `Backtrace::capture()`：被 `ax-runtime/src/lang_items.rs` 的 panic 输出路径和 `axalloc/src/tracking.rs` 的分配跟踪路径直接调用。
+- `Backtrace::capture()`：被 `ax-runtime/src/lang_items.rs` 的 panic 输出路径和 `ax-alloc/src/tracking.rs` 的分配跟踪路径直接调用。
 - `Backtrace::capture_trap()`：被 `components/axcpu/src/*/context.rs` 的 trap context 直接调用。
 - `frames()`：适合更精细的调试输出场景，但必须依赖 `dwarf` feature。
 
@@ -80,7 +80,7 @@ graph LR
     axbacktrace --> spin["spin::Once"]
 
     axbacktrace --> ax-runtime["ax-runtime panic 路径"]
-    axbacktrace --> axalloc["axalloc tracking"]
+    axbacktrace --> ax-alloc["ax-alloc tracking"]
     axbacktrace --> axcpu["axcpu trap context"]
     axbacktrace --> starry_kernel["starry-kernel"]
 ```
@@ -92,7 +92,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `ax-runtime`：panic 和启动期初始化。
-- `axalloc`：分配跟踪记录回溯。
+- `ax-alloc`：分配跟踪记录回溯。
 - `axcpu`：trap 上下文回溯入口。
 - `starry-kernel`：通过共享基础栈复用回溯能力。
 
@@ -122,7 +122,7 @@ axbacktrace = { workspace = true, features = ["dwarf"] }
 
 - `ax-runtime` 的 panic 输出；
 - `axcpu` 的 trap backtrace；
-- `axalloc` tracking 对 `Backtrace::capture()` 的调用。
+- `ax-alloc` tracking 对 `Backtrace::capture()` 的调用。
 
 ### 5.2 单元测试重点
 - `Frame::read()` 与 `adjust_ip()` 的边界行为。

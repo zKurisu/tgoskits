@@ -33,7 +33,7 @@
 ```mermaid
 graph LR
     current["ax-posix-api"]
-    current --> axalloc["axalloc"]
+    current --> ax-alloc["ax-alloc"]
     current --> axconfig["axconfig"]
     current --> axerrno["axerrno"]
     current --> ax-feat["ax-feat"]
@@ -45,7 +45,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `axalloc`
+- `ax-alloc`
 - `axconfig`
 - `axerrno`
 - `ax-feat`

@@ -12,7 +12,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axmm"
 copy = ["page_table_multiarch/copy-from"]
 
 [dependencies]
-axalloc.workspace = true
+ax-alloc.workspace = true
 axerrno.workspace = true
 ax-hal = { workspace = true, features = ["paging"] }
 kspin.workspace = true

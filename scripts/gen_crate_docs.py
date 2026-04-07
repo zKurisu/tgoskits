@@ -174,7 +174,7 @@ CURATED_DOCS = {
     "starryos",
     "starryos-test",
     "axvisor",
-    "axalloc",
+    "ax-alloc",
     "axallocator",
     "axbacktrace",
     "axerrno",

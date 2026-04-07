@@ -1,4 +1,4 @@
-# `axalloc` 技术文档
+# `ax-alloc` 技术文档
 
 > 路径：`os/arceos/modules/axalloc`
 > 类型：库 crate
@@ -6,17 +6,17 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/default_impl.rs`、`src/axvisor_impl.rs`、`src/page.rs`、`src/tracking.rs`
 
-`axalloc` 是 ArceOS 的全局分配入口。它把 `axallocator` 提供的字节分配器和页分配器包装成可直接挂到 `#[global_allocator]` 的 `GlobalAllocator`，并额外提供页级接口、使用量统计和可选的分配跟踪能力。它属于运行时叶子基础件：负责“分配”，但不负责页表建立、地址空间管理或物理内存发现，这些职责分别由 `ax-mm`、`ax-hal` 和 `ax-runtime` 承担。
+`ax-alloc` 是 ArceOS 的全局分配入口。它把 `axallocator` 提供的字节分配器和页分配器包装成可直接挂到 `#[global_allocator]` 的 `GlobalAllocator`，并额外提供页级接口、使用量统计和可选的分配跟踪能力。它属于运行时叶子基础件：负责“分配”，但不负责页表建立、地址空间管理或物理内存发现，这些职责分别由 `ax-mm`、`ax-hal` 和 `ax-runtime` 承担。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axalloc` 在启动链和运行期之间扮演的是“统一分配服务”角色：
+`ax-alloc` 在启动链和运行期之间扮演的是“统一分配服务”角色：
 
 - 向下，它复用 `axallocator` 或 `buddy-slab-allocator`，而不是自行实现完整分配算法。
 - 向上，它向 `ax-runtime`、`ax-mm`、`ax-hal::paging`、`ax-driver`、`ax-dma`、`ax-api` 等模块暴露统一的堆/页分配接口。
 - 横向，它通过 `UsageKind`/`Usages` 给页表、DMA、页缓存等不同用途打标签，方便上层做统计与诊断。
 
-因此，`axalloc` 不是“内存管理本体”，而是“内存分配入口”。把它写成虚拟内存系统、页表系统或用户地址空间管理器，都会高估它的职责。
+因此，`ax-alloc` 不是“内存管理本体”，而是“内存分配入口”。把它写成虚拟内存系统、页表系统或用户地址空间管理器，都会高估它的职责。
 
 ### 1.2 内部模块划分
 - `src/lib.rs`：顶层 feature 分流与公共类型定义。声明 `UsageKind`、`Usages`，并在默认实现与 `hv` 实现之间切换。
@@ -74,27 +74,27 @@ flowchart TD
 - `GlobalPage::alloc*()`：适合需要“拿到一段连续页并在 drop 时自动归还”的简单路径。
 
 ### 2.3 使用边界
-- `axalloc` 不负责扫描物理内存，也不决定哪些区域可以加到堆里；这些输入由 `ax-runtime` 和 `ax-hal` 提供。
-- `axalloc` 不负责地址映射策略；页表和地址空间对象依然在 `ax-mm` 层。
+- `ax-alloc` 不负责扫描物理内存，也不决定哪些区域可以加到堆里；这些输入由 `ax-runtime` 和 `ax-hal` 提供。
+- `ax-alloc` 不负责地址映射策略；页表和地址空间对象依然在 `ax-mm` 层。
 - `Usages` 是统计视图，不是安全边界或配额系统。
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axallocator["axallocator"] --> axalloc["axalloc"]
-    axbacktrace["axbacktrace (tracking)"] --> axalloc
-    percpu["percpu (tracking)"] --> axalloc
-    kspin["kspin"] --> axalloc
+    axallocator["axallocator"] --> ax-alloc["ax-alloc"]
+    axbacktrace["axbacktrace (tracking)"] --> ax-alloc
+    percpu["percpu (tracking)"] --> ax-alloc
+    kspin["kspin"] --> ax-alloc
 
-    axalloc --> ax-runtime["ax-runtime"]
-    axalloc --> ax-mm["ax-mm"]
-    axalloc --> ax-hal["ax-hal/paging"]
-    axalloc --> ax-driver["ax-driver"]
-    axalloc --> ax_dma["ax-dma"]
-    axalloc --> axfsng["ax-fs-ng"]
-    axalloc --> ax-api["ax-api"]
-    axalloc --> starry_kernel["starry-kernel"]
-    axalloc --> axplat_dyn["axplat-dyn"]
+    ax-alloc --> ax-runtime["ax-runtime"]
+    ax-alloc --> ax-mm["ax-mm"]
+    ax-alloc --> ax-hal["ax-hal/paging"]
+    ax-alloc --> ax-driver["ax-driver"]
+    ax-alloc --> ax_dma["ax-dma"]
+    ax-alloc --> axfsng["ax-fs-ng"]
+    ax-alloc --> ax-api["ax-api"]
+    ax-alloc --> starry_kernel["starry-kernel"]
+    ax-alloc --> axplat_dyn["axplat-dyn"]
 ```
 
 ### 3.1 关键直接依赖
@@ -115,10 +115,10 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axalloc = { workspace = true }
+ax-alloc = { workspace = true }
 ```
 
-对大多数上层模块来说，更常见的接入方式是通过 `ax-runtime`、`ax-api` 或其他运行时聚合层间接使用，而不是直接把 `axalloc` 当业务库调用。
+对大多数上层模块来说，更常见的接入方式是通过 `ax-runtime`、`ax-api` 或其他运行时聚合层间接使用，而不是直接把 `ax-alloc` 当业务库调用。
 
 ### 4.2 修改时的关键约束
 1. 修改 `global_init()` 或扩堆逻辑时，要同时检查默认路径与 `hv` 路径是否保持语义一致。
@@ -127,13 +127,13 @@ axalloc = { workspace = true }
 4. 若新增 feature，需要同步检查 `ax-feat` 与 `ax-runtime` 的 feature 传播是否正确。
 
 ### 4.3 开发建议
-- “算法选择”优先放在 `axallocator` 层，`axalloc` 更适合做全局装配。
-- “地址空间策略”应放在 `ax-mm` 或更上层，而不是让 `axalloc` 变成第二个内存管理器。
+- “算法选择”优先放在 `axallocator` 层，`ax-alloc` 更适合做全局装配。
+- “地址空间策略”应放在 `ax-mm` 或更上层，而不是让 `ax-alloc` 变成第二个内存管理器。
 - 需要定位泄漏或大户时优先用 `tracking`，不要在分配快路径堆太多日志。
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
-`axalloc` 本体没有独立的 crate 内测试，当前验证主要依赖：
+`ax-alloc` 本体没有独立的 crate 内测试，当前验证主要依赖：
 
 - `axallocator` 自身的算法测试与压力测试。
 - `ax-runtime` 启动链对 `global_init()` 的真实调用。
@@ -152,15 +152,15 @@ axalloc = { workspace = true }
 - Axvisor 的 `hv` 组合下分配器初始化与地址翻译可用。
 
 ### 5.4 覆盖率要求
-- 对 `axalloc`，比单纯行覆盖率更重要的是 feature 组合覆盖。
+- 对 `ax-alloc`，比单纯行覆盖率更重要的是 feature 组合覆盖。
 - 至少应覆盖当前实际启用的字节分配算法，以及 `tracking`、`hv`、`level-1` 这些高风险分支。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axalloc` 是 ArceOS 运行时里的标准全局分配模块。它直接服务 `ax-runtime`、`ax-mm`、`ax-hal`、驱动和 API 层，是系统从“知道有哪些内存区域”走到“可以分配内存”的关键一环。
+`ax-alloc` 是 ArceOS 运行时里的标准全局分配模块。它直接服务 `ax-runtime`、`ax-mm`、`ax-hal`、驱动和 API 层，是系统从“知道有哪些内存区域”走到“可以分配内存”的关键一环。
 
 ### 6.2 StarryOS
-StarryOS 复用 `axalloc` 作为共享堆/页分配基础，并在 `memtrack` 场景中消费其 tracking 能力。因此它在 StarryOS 中仍是叶子基础件，而不是 Linux 兼容内存子系统本体。
+StarryOS 复用 `ax-alloc` 作为共享堆/页分配基础，并在 `memtrack` 场景中消费其 tracking 能力。因此它在 StarryOS 中仍是叶子基础件，而不是 Linux 兼容内存子系统本体。
 
 ### 6.3 Axvisor
-Axvisor 通过 `hv` 路径复用 `axalloc`，重点是地址翻译友好的宿主侧分配。它承担的是 Hypervisor 运行时分配服务，不是 guest 物理内存管理器或二级页表策略层。
+Axvisor 通过 `hv` 路径复用 `ax-alloc`，重点是地址翻译友好的宿主侧分配。它承担的是 Hypervisor 运行时分配服务，不是 guest 物理内存管理器或二级页表策略层。

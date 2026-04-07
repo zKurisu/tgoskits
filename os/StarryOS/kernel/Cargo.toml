@@ -17,7 +17,7 @@ repository.workspace = true
 [features]
 dev-log = []
 input = ["dep:ax-input", "ax-feat/input"]
-memtrack = ["ax-feat/dwarf", "axalloc/tracking", "dep:gimli"]
+memtrack = ["ax-feat/dwarf", "ax-alloc/tracking", "dep:gimli"]
 vsock = ["ax-feat/vsock"]
 
 [dependencies]
@@ -39,7 +39,7 @@ ax-feat = { workspace = true, features = [
     "net-ng",
 ] }
 
-axalloc.workspace = true
+ax-alloc.workspace = true
 axconfig.workspace = true
 ax-display.workspace = true
 ax-driver.workspace = true

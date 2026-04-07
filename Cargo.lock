@@ -523,9 +523,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-alloc"
+version = "0.5.0"
+dependencies = [
+ "axallocator 0.4.0",
+ "axbacktrace",
+ "axerrno",
+ "buddy-slab-allocator",
+ "cfg-if",
+ "kspin 0.3.1",
+ "log",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
+ "strum 0.27.2",
+]
+
+[[package]]
 name = "ax-api"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-display",
  "ax-dma",
  "ax-driver",
@@ -538,7 +555,6 @@ dependencies = [
  "ax-runtime",
  "ax-sync",
  "ax-task",
- "axalloc",
  "axconfig",
  "axerrno",
  "axio",
@@ -559,9 +575,9 @@ dependencies = [
 name = "ax-dma"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-hal",
  "ax-mm",
- "axalloc",
  "axallocator 0.4.0",
  "axconfig",
  "buddy-slab-allocator",
@@ -574,9 +590,9 @@ dependencies = [
 name = "ax-driver"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-dma",
  "ax-hal",
- "axalloc",
  "axconfig",
  "axdriver_base",
  "axdriver_block",
@@ -598,6 +614,7 @@ dependencies = [
 name = "ax-feat"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-display",
  "ax-driver",
  "ax-fs",
@@ -609,7 +626,6 @@ dependencies = [
  "ax-runtime",
  "ax-sync",
  "ax-task",
- "axalloc",
  "axbacktrace",
  "axconfig",
  "axlog",
@@ -639,10 +655,10 @@ dependencies = [
 name = "ax-fs-ng"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-driver",
  "ax-hal",
  "ax-sync",
- "axalloc",
  "axerrno",
  "axfs-ng-vfs",
  "axio",
@@ -665,11 +681,11 @@ dependencies = [
 name = "ax-hal"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-loongarch64-qemu-virt",
  "ax-plat-riscv64-qemu-virt 0.5.1",
  "ax-plat-x86-pc",
- "axalloc",
  "axconfig",
  "axcpu 0.5.0",
  "axplat 0.5.1",
@@ -759,8 +775,8 @@ dependencies = [
 name = "ax-mm"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-hal",
- "axalloc",
  "axerrno",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
@@ -962,6 +978,7 @@ dependencies = [
 name = "ax-posix-api"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-feat",
  "ax-fs",
  "ax-hal",
@@ -969,7 +986,6 @@ dependencies = [
  "ax-runtime",
  "ax-sync",
  "ax-task",
- "axalloc",
  "axconfig",
  "axerrno",
  "axio",
@@ -985,6 +1001,7 @@ dependencies = [
 name = "ax-runtime"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-display",
  "ax-driver",
  "ax-fs",
@@ -996,7 +1013,6 @@ dependencies = [
  "ax-net",
  "ax-net-ng",
  "ax-task",
- "axalloc",
  "axbacktrace",
  "axconfig",
  "axklib",
@@ -1096,22 +1112,6 @@ dependencies = [
  "page_table_multiarch 0.8.1",
  "spin 0.10.0",
  "x86",
-]
-
-[[package]]
-name = "axalloc"
-version = "0.5.0"
-dependencies = [
- "axallocator 0.4.0",
- "axbacktrace",
- "axerrno",
- "buddy-slab-allocator",
- "cfg-if",
- "kspin 0.3.1",
- "log",
- "memory_addr 0.6.1",
- "percpu 0.4.3",
- "strum 0.27.2",
 ]
 
 [[package]]
@@ -1519,7 +1519,7 @@ name = "axplat-dyn"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "axalloc",
+ "ax-alloc",
  "axconfig-macros 0.4.1",
  "axcpu 0.5.0",
  "axdriver_base",
@@ -7414,6 +7414,7 @@ dependencies = [
 name = "starry-kernel"
 version = "0.5.0"
 dependencies = [
+ "ax-alloc",
  "ax-display",
  "ax-driver",
  "ax-feat",
@@ -7425,7 +7426,6 @@ dependencies = [
  "ax-runtime",
  "ax-sync",
  "ax-task",
- "axalloc",
  "axbacktrace",
  "axconfig",
  "axerrno",

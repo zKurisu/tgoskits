@@ -32,7 +32,7 @@
 
 ### 1.3 关键数据结构与全局对象
 - `BOOTARG`：保存引导阶段传入的参数，后续由 DTB/FDT 解析流程读取。
-- `ALL_MEM_REGIONS`：统一后的物理内存区域视图，是 `axalloc`、`ax-runtime` 等模块做内存初始化的基础。
+- `ALL_MEM_REGIONS`：统一后的物理内存区域视图，是 `ax-alloc`、`ax-runtime` 等模块做内存初始化的基础。
 - `CURRENT_TASK_PTR`：每 CPU 当前任务指针，供调度与上下文切换路径读取。
 - `IRQ_HOOK`：可注册的 IRQ 钩子，用于平台 IRQ 分发前后的附加处理。
 - `CPU_NUM`：在 `smp` 场景下，取平台声明 CPU 数与 `axconfig::plat::MAX_CPU_NUM` 的较小值。
@@ -118,7 +118,7 @@ graph LR
     axcpu["axcpu"] --> ax-hal["ax-hal"]
     axplat["axplat / axplat-*"] --> ax-hal
     axconfig["axconfig"] --> ax-hal
-    axalloc["axalloc (paging)"] --> ax-hal
+    ax-alloc["ax-alloc (paging)"] --> ax-hal
     page_table["page_table_multiarch"] --> ax-hal
 
     ax-hal --> ax-runtime["ax-runtime"]
@@ -134,7 +134,7 @@ graph LR
 - `axcpu`：提供 ISA 级 trap、上下文与汇编抽象。
 - `axconfig`：提供 `MAX_CPU_NUM`、平台名、地址布局等静态配置。
 - `page_table_multiarch`：在 `paging` feature 下提供多架构页表核心实现。
-- `axalloc`：在页表/虚拟化路径下承担帧或内存块来源。
+- `ax-alloc`：在页表/虚拟化路径下承担帧或内存块来源。
 
 ### 3.2 关键间接依赖
 - 各类驱动基础组件，如 `axdriver_base`、`axdriver_virtio` 等，会通过 `axplat` 与上层模块间接参与平台 bring-up。
@@ -174,7 +174,7 @@ ax-hal = { workspace = true }
 4. IRQ、TLS、SMP 等能力必须与对应 feature 和后续运行时初始化步骤对齐。
 
 ### 4.3 开发建议
-- 修改 `mem.rs` 时，要同步检查 `axalloc`、`ax-mm`、链接脚本与平台物理内存描述是否仍然一致。
+- 修改 `mem.rs` 时，要同步检查 `ax-alloc`、`ax-mm`、链接脚本与平台物理内存描述是否仍然一致。
 - 修改 `irq.rs` 时，要同步验证 `ax_runtime::init_interrupt()`、时钟中断注册以及上层调度器 tick 路径。
 - 修改 `paging.rs` 时，要同步检查 `ax-mm`、用户态地址空间和虚拟化场景是否仍然满足接口契约。
 - 修改 `build.rs` 或 `linker.lds.S` 时，要把这类改动视为“系统启动级变更”，不能只靠单模块验证。

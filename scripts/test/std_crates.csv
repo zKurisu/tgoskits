@@ -38,7 +38,7 @@ starry-signal
 smoltcp
 starry-vm
 timer_list
-axalloc
+ax-alloc
 axconfig
 ax-display
 ax-driver

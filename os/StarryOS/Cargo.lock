@@ -350,7 +350,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axalloc"
+name = "ax-alloc"
 version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f5bb0695cfda0a651f3b44026899987c51c76063a9a807666f8f6b5e93a67966"
@@ -500,7 +500,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aea5c6b6a48e7283ede40784ded0eedd371e98d59faf97e7d9f4a73dcec4fe00"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axconfig",
  "axdriver_base",
  "axdriver_block",
@@ -634,7 +634,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58bc376f478b85111d8b9ba475040d1016708c35f15e634efbdf8f8495272bb2"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axbacktrace",
  "ax-display",
  "axdriver",
@@ -676,7 +676,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8da9b07f29bfffb5b7230f66507a6153b158f523675020152b6dfa3d6b73df9f"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axdriver",
  "axerrno 0.2.2",
  "axfs-ng-vfs",
@@ -753,7 +753,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "281f69e09ddb6eb04b7695fc8bdf5a58c760c630443aca8e69abc65ded5642da"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axconfig",
  "axcpu",
  "axplat",
@@ -827,7 +827,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36e9513a2db8f0ad60733581f0ecd77c8c7f7db7b5fcaa1784752504ad924e00"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axerrno 0.2.2",
  "axhal",
  "kspin",
@@ -942,7 +942,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e6762cfd943160d0baa8c2db303adc2b10d1dc3fb754bb8b6b364ac37c7ad2a"
 dependencies = [
  "anyhow",
- "axalloc",
+ "ax-alloc",
  "axconfig-macros",
  "axcpu",
  "axdriver_base",
@@ -1072,7 +1072,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79659a480ddcacf786119394000822567e47093ab5f01ef1952565cc5bcf256b"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axbacktrace",
  "axconfig",
  "ax-display",
@@ -5521,7 +5521,7 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 name = "starry-kernel"
 version = "0.2.0-preview.2"
 dependencies = [
- "axalloc",
+ "ax-alloc",
  "axbacktrace",
  "axconfig",
  "ax-display",
