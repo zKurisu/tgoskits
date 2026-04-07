@@ -668,12 +668,12 @@ dependencies = [
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-loongarch64-qemu-virt",
  "ax-plat-riscv64-qemu-virt 0.5.1",
+ "ax-plat-x86-pc",
  "axalloc",
  "axconfig",
  "axcpu 0.5.0",
  "axplat 0.5.1",
  "axplat-dyn",
- "axplat-x86-pc",
  "cfg-if",
  "fdt-parser",
  "heapless 0.9.2",
@@ -703,8 +703,8 @@ dependencies = [
  "ax-plat-aarch64-raspi",
  "ax-plat-loongarch64-qemu-virt",
  "ax-plat-riscv64-qemu-virt 0.5.1",
+ "ax-plat-x86-pc",
  "ax-std",
- "axplat-x86-pc",
  "cfg-if",
 ]
 
@@ -933,6 +933,29 @@ dependencies = [
  "riscv_plic 0.4.0",
  "sbi-rt",
  "uart_16550 0.5.0",
+]
+
+[[package]]
+name = "ax-plat-x86-pc"
+version = "0.5.1"
+dependencies = [
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "bitflags 2.11.0",
+ "heapless 0.9.2",
+ "int_ratio",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "multiboot",
+ "percpu 0.4.3",
+ "raw-cpuid 11.6.0",
+ "uart_16550 0.5.0",
+ "x2apic",
+ "x86",
+ "x86_64",
+ "x86_rtc",
 ]
 
 [[package]]
@@ -1554,29 +1577,6 @@ dependencies = [
  "riscv_plic 0.2.0",
  "sbi-rt",
  "uart_16550 0.4.0",
-]
-
-[[package]]
-name = "axplat-x86-pc"
-version = "0.5.1"
-dependencies = [
- "axconfig-macros 0.4.1",
- "axcpu 0.5.0",
- "axplat 0.5.1",
- "bitflags 2.11.0",
- "heapless 0.9.2",
- "int_ratio",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "multiboot",
- "percpu 0.4.3",
- "raw-cpuid 11.6.0",
- "uart_16550 0.5.0",
- "x2apic",
- "x86",
- "x86_64",
- "x86_rtc",
 ]
 
 [[package]]

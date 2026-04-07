@@ -40,7 +40,7 @@ flowchart LR
 ### 1.3 为什么要显式 `extern crate` 平台包
 这里没有默认平台自动选择逻辑，而是按架构显式链接：
 
-- `axplat-x86-pc`
+- `ax-plat-x86-pc`
 - `ax-plat-aarch64-qemu-virt`
 - `ax-plat-riscv64-qemu-virt`
 - `ax-plat-loongarch64-qemu-virt`
@@ -78,7 +78,7 @@ flowchart LR
 ```mermaid
 graph LR
     sample["hello-kernel"] --> axplat["axplat"]
-    sample --> x86["axplat-x86-pc"]
+    sample --> x86["ax-plat-x86-pc"]
     sample --> a64["ax-plat-aarch64-qemu-virt"]
     sample --> rv["ax-plat-riscv64-qemu-virt"]
     sample --> loong["ax-plat-loongarch64-qemu-virt"]

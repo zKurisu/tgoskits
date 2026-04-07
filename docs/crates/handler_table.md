@@ -66,7 +66,7 @@ flowchart TD
 ```mermaid
 graph LR
     handler_table["handler_table"] --> axplat["axplat::irq"]
-    axplat --> x86["axplat-x86-pc / x86-q35"]
+    axplat --> x86["ax-plat-x86-pc / x86-q35"]
     axplat --> riscv["ax-plat-riscv64-qemu-virt"]
     axplat --> aarch64["ax-plat-aarch64-peripherals"]
     axplat --> loongarch["ax-plat-loongarch64-qemu-virt"]
@@ -77,7 +77,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - `axplat::irq`：把 `HandlerTable` 作为平台 IRQ 管理接口的一部分导出。
-- 各平台 IRQ 实现：如 `axplat-x86-pc`、`ax-plat-riscv64-qemu-virt` 等，都直接声明静态 `IRQ_HANDLER_TABLE`。
+- 各平台 IRQ 实现：如 `ax-plat-x86-pc`、`ax-plat-riscv64-qemu-virt` 等，都直接声明静态 `IRQ_HANDLER_TABLE`。
 
 ## 4. 开发指南
 ### 4.1 依赖配置

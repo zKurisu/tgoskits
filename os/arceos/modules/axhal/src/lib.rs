@@ -47,7 +47,7 @@ cfg_if::cfg_if! {
     }
     else if #[cfg(all(target_os = "none", feature = "defplat"))] {
         #[cfg(target_arch = "x86_64")]
-        extern crate axplat_x86_pc;
+        extern crate ax_plat_x86_pc;
         #[cfg(target_arch = "aarch64")]
         extern crate ax_plat_aarch64_qemu_virt;
         #[cfg(target_arch = "riscv64")]

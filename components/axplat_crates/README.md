@@ -10,7 +10,7 @@ Reusable crates used for [ArceOS](https://github.com/arceos-org/arceos) Hardware
 
 ## Platform-specific crates
 
-* [x] [axplat-x86-pc](./platforms/axplat-x86-pc)
+* [x] [ax-plat-x86-pc](./platforms/axplat-x86-pc)
 * [x] [axplat-riscv-qemu-virt](./platforms/axplat-riscv-qemu-virt)
 * [x] [axplat-aarch64-qemu-virt](./platforms/axplat-aarch64-qemu-virt)
 * [x] [axplat-aarch64-raspi](./platforms/axplat-aarch64-raspi)

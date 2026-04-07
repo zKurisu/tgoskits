@@ -84,7 +84,7 @@ graph LR
     sample["irq-kernel"] --> axplat["axplat"]
     sample --> axcpu["axcpu"]
     sample --> linkme["linkme / trap 注册"]
-    sample --> x86["axplat-x86-pc(irq)"]
+    sample --> x86["ax-plat-x86-pc(irq)"]
     sample --> a64["ax-plat-aarch64-qemu-virt(irq)"]
     sample --> rv["ax-plat-riscv64-qemu-virt(irq)"]
     sample --> loong["ax-plat-loongarch64-qemu-virt(irq)"]

@@ -14,7 +14,7 @@
 
 当前仓库里的真实使用场景也印证了这个定位：
 
-- `axplat-x86-pc/src/time.rs` 用它把纳秒转换为 LAPIC ticks。
+- `ax-plat-x86-pc/src/time.rs` 用它把纳秒转换为 LAPIC ticks。
 - `ax-plat-aarch64-peripherals/src/generic_timer.rs` 用它在 `CNTPCT` ticks 与纳秒之间双向转换。
 
 ### 1.2 核心类型
@@ -50,7 +50,7 @@ numerator / denominator ~= mult / (1 << shift)
 - 支持快速取倒数 `inverse()`。
 
 ### 2.2 关键 API 与真实使用位置
-- `Ratio::new()`：在 `axplat-x86-pc`、`axplat-x86-qemu-q35`、`ax-plat-aarch64-peripherals` 的时间初始化代码中使用。
+- `Ratio::new()`：在 `ax-plat-x86-pc`、`axplat-x86-qemu-q35`、`ax-plat-aarch64-peripherals` 的时间初始化代码中使用。
 - `mul_trunc()`：平台时间路径用来把 deadline 或 tick 值做快速转换。
 - `inverse()`：AArch64 generic timer 初始化时直接通过现有比例求反比率。
 - `Ratio::zero()`：常作为静态变量的初始化哨兵值。
@@ -63,7 +63,7 @@ numerator / denominator ~= mult / (1 << shift)
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    int_ratio["int_ratio"] --> x86pc["axplat-x86-pc"]
+    int_ratio["int_ratio"] --> x86pc["ax-plat-x86-pc"]
     int_ratio --> x86q35["axplat-x86-qemu-q35"]
     int_ratio --> aarch64["ax-plat-aarch64-peripherals"]
 ```
@@ -72,7 +72,7 @@ graph LR
 `int_ratio` 没有本地 crate 依赖，体量非常小。
 
 ### 3.2 关键直接消费者
-- `axplat-x86-pc` / `axplat-x86-qemu-q35`：LAPIC 计时换算。
+- `ax-plat-x86-pc` / `axplat-x86-qemu-q35`：LAPIC 计时换算。
 - `ax-plat-aarch64-peripherals`：ARM generic timer 的 ticks / nanos 双向换算。
 
 ## 4. 开发指南

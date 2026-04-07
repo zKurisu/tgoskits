@@ -252,7 +252,7 @@ CURATED_DOCS = {
     "axplat-aarch64-raspi",
     "ax-plat-loongarch64-qemu-virt",
     "ax-plat-riscv64-qemu-virt",
-    "axplat-x86-pc",
+    "ax-plat-x86-pc",
     "axplat-x86-qemu-q35",
     "axplat-macros",
     "arm_vcpu",

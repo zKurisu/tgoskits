@@ -10,7 +10,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axhal"
 
 [features]
 smp = [
-    "axplat-x86-pc?/smp",
+    "ax-plat-x86-pc?/smp",
     "ax-plat-aarch64-qemu-virt?/smp",
     "ax-plat-riscv64-qemu-virt?/smp",
     "ax-plat-loongarch64-qemu-virt?/smp",
@@ -19,7 +19,7 @@ smp = [
 ]
 irq = [
     "dep:linkme",
-    "axplat-x86-pc?/irq",
+    "ax-plat-x86-pc?/irq",
     "ax-plat-aarch64-qemu-virt?/irq",
     "ax-plat-riscv64-qemu-virt?/irq",
     "ax-plat-loongarch64-qemu-virt?/irq",
@@ -28,13 +28,13 @@ irq = [
 ]
 fp-simd = [
     "axcpu/fp-simd",
-    "axplat-x86-pc?/fp-simd",
+    "ax-plat-x86-pc?/fp-simd",
     "ax-plat-aarch64-qemu-virt?/fp-simd",
     "ax-plat-riscv64-qemu-virt?/fp-simd",
     "ax-plat-loongarch64-qemu-virt?/fp-simd",
 ]
 rtc = [
-    "axplat-x86-pc?/rtc",
+    "ax-plat-x86-pc?/rtc",
     "ax-plat-aarch64-qemu-virt?/rtc",
     "ax-plat-riscv64-qemu-virt?/rtc",
     "ax-plat-loongarch64-qemu-virt?/rtc",
@@ -48,7 +48,7 @@ hv = ["paging", "axcpu/arm-el2", "percpu/arm-el2", "axplat-dyn?/hv"]
 myplat = []
 plat-dyn = ["axplat-dyn"]
 defplat = [
-    "dep:axplat-x86-pc",
+    "dep:ax-plat-x86-pc",
     "dep:ax-plat-aarch64-qemu-virt",
     "dep:ax-plat-riscv64-qemu-virt",
     "dep:ax-plat-loongarch64-qemu-virt",
@@ -74,7 +74,7 @@ percpu.workspace = true
 spin.workspace = true
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-axplat-x86-pc = { workspace = true, optional = true }
+ax-plat-x86-pc = { workspace = true, optional = true }
 
 [target.'cfg(target_os = "none")'.dependencies]
 axplat-dyn = { workspace = true, optional = true }

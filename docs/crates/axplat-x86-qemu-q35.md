@@ -12,9 +12,9 @@
 
 ### 1.1 真实定位
 
-这个 crate 和仓库里另一个 `axplat-x86-pc` 很容易被混淆，但它们的定位并不相同：
+这个 crate 和仓库里另一个 `ax-plat-x86-pc` 很容易被混淆，但它们的定位并不相同：
 
-- `axplat-x86-pc` 位于 `components/axplat_crates`，更偏 ArceOS 侧的标准 PC 参考平台。
+- `ax-plat-x86-pc` 位于 `components/axplat_crates`，更偏 ArceOS 侧的标准 PC 参考平台。
 - `axplat-x86-qemu-q35` 位于根目录 `platform/`，是 Axvisor 当前 x86_64 宿主平台依赖。
 - 前者走 `axplat_crates` 的常规平台组织方式；后者把 Q35 和 Axvisor 的构建约束直接内嵌进自己的 `build.rs` 与链接脚本。
 
@@ -105,9 +105,9 @@ flowchart TD
 
 这里最重要的边界澄清是：**这个 crate 是 Axvisor 的宿主板级平台，而不是 Axvisor 的虚拟化核心。** 它负责把 x86_64 Q35 宿主机带起来，但不会负责任何客户机运行时语义。
 
-### 1.6 与 `axplat-x86-pc` 的差异
+### 1.6 与 `ax-plat-x86-pc` 的差异
 
-| 维度 | `axplat-x86-pc` | `axplat-x86-qemu-q35` |
+| 维度 | `ax-plat-x86-pc` | `axplat-x86-qemu-q35` |
 | --- | --- | --- |
 | 代码位置 | `components/axplat_crates/platforms` | 根目录 `platform/` |
 | 主要消费者 | ArceOS `ax-hal` 默认 x86 平台 | Axvisor x86_64 宿主平台 |

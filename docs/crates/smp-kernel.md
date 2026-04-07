@@ -102,7 +102,7 @@ graph LR
     sample --> percpu["percpu"]
     sample --> memaddr["memory_addr"]
     sample --> conststr["const-str"]
-    sample --> x86["axplat-x86-pc(irq,smp)"]
+    sample --> x86["ax-plat-x86-pc(irq,smp)"]
     sample --> a64["ax-plat-aarch64-qemu-virt(irq,smp)"]
     sample --> rv["ax-plat-riscv64-qemu-virt(irq,smp)"]
     sample --> loong["ax-plat-loongarch64-qemu-virt(irq,smp)"]

@@ -15,7 +15,7 @@ axcpu = { workspace = true }
 axplat = { workspace = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-axplat-x86-pc = { path = "../../platforms/axplat-x86-pc", features = ["irq"] }
+ax-plat-x86-pc = { path = "../../platforms/axplat-x86-pc", features = ["irq"] }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 ax-plat-aarch64-qemu-virt = { path = "../../platforms/axplat-aarch64-qemu-virt", features = ["irq"] }

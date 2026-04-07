@@ -1,4 +1,4 @@
-# `axplat-x86-pc` 技术文档
+# `ax-plat-x86-pc` 技术文档
 
 > 路径：`components/axplat_crates/platforms/axplat-x86-pc`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.3.1-pre.6`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/boot.rs`、`src/init.rs`、`src/mem.rs`、`src/console.rs`、`src/time.rs`、`src/apic.rs`、`src/mp.rs`、`src/power.rs`、`src/multiboot.S`
 
-`axplat-x86-pc` 是 `axplat` 在 x86 Standard PC / Multiboot 场景上的平台实现。它把 Multiboot 引导、临时页表、COM1 串口、TSC、LAPIC/IOAPIC、多核启动以及 PC 风格电源控制整合成 `axplat` 约定的接口，是 ArceOS x86 默认平台路径中的经典板级实现。
+`ax-plat-x86-pc` 是 `axplat` 在 x86 Standard PC / Multiboot 场景上的平台实现。它把 Multiboot 引导、临时页表、COM1 串口、TSC、LAPIC/IOAPIC、多核启动以及 PC 风格电源控制整合成 `axplat` 约定的接口，是 ArceOS x86 默认平台路径中的经典板级实现。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -16,7 +16,7 @@
 - 它负责把 Multiboot 入口、APIC 中断体系、TSC 时间源和 RAM/MMIO 解析组织成上层可调用的接口。
 - 它把最早期引导与后续运行期平台服务放在同一 crate 中，使 `ax-hal` 与 `ax-runtime` 可以通过统一接口消费。
 
-因此，`axplat-x86-pc` 的价值在于“把经典 PC 平台假设精确定义出来”，而不是“适配所有 x86 机器”。
+因此，`ax-plat-x86-pc` 的价值在于“把经典 PC 平台假设精确定义出来”，而不是“适配所有 x86 机器”。
 
 ### 1.2 内部模块划分
 - `src/lib.rs`：平台入口总装。定义 `rust_entry` / `rust_entry_secondary`，并汇总各个 `*IfImpl`。
@@ -113,7 +113,7 @@ flowchart TD
 
 ```toml
 [dependencies]
-axplat-x86-pc = { workspace = true, features = ["irq", "smp", "rtc"] }
+ax-plat-x86-pc = { workspace = true, features = ["irq", "smp", "rtc"] }
 ```
 
 在 ArceOS/StarryOS 的常见 x86 构建路径里，这个选择通常由 `ax-hal` 的平台 feature 或 make/xtask 的平台包变量进一步驱动。
@@ -121,7 +121,7 @@ axplat-x86-pc = { workspace = true, features = ["irq", "smp", "rtc"] }
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axplat["axplat"] --> current["axplat-x86-pc"]
+    axplat["axplat"] --> current["ax-plat-x86-pc"]
     axcpu["axcpu"] --> current
     multiboot["multiboot"] --> current
     apic["x2apic / x86 / x86_64"] --> current
@@ -154,7 +154,7 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axplat-x86-pc = { workspace = true, features = ["irq", "smp"] }
+ax-plat-x86-pc = { workspace = true, features = ["irq", "smp"] }
 ```
 
 ### 4.2 初始化与改动约束
@@ -189,14 +189,14 @@ axplat-x86-pc = { workspace = true, features = ["irq", "smp"] }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axplat-x86-pc` 是 ArceOS 在传统 x86 PC / Multiboot 场景上的关键平台包之一。它把 x86 bring-up 的复杂度收束进 `axplat` 接口，是 x86 版本 ArceOS 的板级基座。
+`ax-plat-x86-pc` 是 ArceOS 在传统 x86 PC / Multiboot 场景上的关键平台包之一。它把 x86 bring-up 的复杂度收束进 `axplat` 接口，是 x86 版本 ArceOS 的板级基座。
 
 ### 6.2 StarryOS
 StarryOS 在 x86 默认平台路径中也会复用这条 `axplat` 实现。因此它在 StarryOS 中承担的是板级 bring-up 与平台设施角色，而不是 Linux 兼容语义层。
 
 ### 6.3 Axvisor
-Axvisor 的主 x86 manifest 更明确地偏向 `axplat-x86-qemu-q35`，因此 `axplat-x86-pc` 在 Axvisor 中更适合作为“通用 PC / Multiboot 参考实现”来理解，而不是其当前主平台实现。
-# `axplat-x86-pc` 技术文档
+Axvisor 的主 x86 manifest 更明确地偏向 `axplat-x86-qemu-q35`，因此 `ax-plat-x86-pc` 在 Axvisor 中更适合作为“通用 PC / Multiboot 参考实现”来理解，而不是其当前主平台实现。
+# `ax-plat-x86-pc` 技术文档
 
 > 路径：`components/axplat_crates/platforms/axplat-x86-pc`
 > 类型：库 crate
@@ -204,7 +204,7 @@ Axvisor 的主 x86 manifest 更明确地偏向 `axplat-x86-qemu-q35`，因此 `a
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml` 与 `components/axplat_crates/platforms/axplat-x86-pc/README.md`
 
-`axplat-x86-pc` 的核心定位是：Implementation of `axplat` hardware abstraction layer for x86 Standard PC machine.
+`ax-plat-x86-pc` 的核心定位是：Implementation of `axplat` hardware abstraction layer for x86 Standard PC machine.
 
 ## 1. 架构设计分析
 - 目录角色：可复用基础组件
@@ -237,7 +237,7 @@ Axvisor 的主 x86 manifest 更明确地偏向 `axplat-x86-qemu-q35`，因此 `a
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    current["axplat-x86-pc"]
+    current["ax-plat-x86-pc"]
     current --> axconfig_macros["axconfig-macros"]
     current --> axcpu["axcpu"]
     current --> axplat["axplat"]
@@ -312,10 +312,10 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axplat-x86-pc = { workspace = true }
+ax-plat-x86-pc = { workspace = true }
 
 # 如果在仓库外独立验证，也可以显式绑定本地路径：
-# axplat-x86-pc = { path = "components/axplat_crates/platforms/axplat-x86-pc" }
+# ax-plat-x86-pc = { path = "components/axplat_crates/platforms/axplat-x86-pc" }
 ```
 
 ### 4.2 初始化流程
@@ -342,10 +342,10 @@ axplat-x86-pc = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axplat-x86-pc` 不在 ArceOS 目录内部，但被 `ax-helloworld-myplat`、`ax-hal` 等 ArceOS crate 直接依赖，说明它是该系统的共享构件或底层服务。
+`ax-plat-x86-pc` 不在 ArceOS 目录内部，但被 `ax-helloworld-myplat`、`ax-hal` 等 ArceOS crate 直接依赖，说明它是该系统的共享构件或底层服务。
 
 ### 6.2 StarryOS
-`axplat-x86-pc` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。
+`ax-plat-x86-pc` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。
 
 ### 6.3 Axvisor
-`axplat-x86-pc` 主要通过 `axvisor` 等上层 crate 被 Axvisor 间接复用，通常处于更底层的公共依赖层。
+`ax-plat-x86-pc` 主要通过 `axvisor` 等上层 crate 被 Axvisor 间接复用，通常处于更底层的公共依赖层。

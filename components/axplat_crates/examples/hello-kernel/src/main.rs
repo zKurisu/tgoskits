@@ -3,7 +3,7 @@
 
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "x86_64")] {
-        extern crate axplat_x86_pc;
+        extern crate ax_plat_x86_pc;
     } else if #[cfg(target_arch = "aarch64")] {
         extern crate ax_plat_aarch64_qemu_virt;
     } else if #[cfg(target_arch = "riscv64")] {

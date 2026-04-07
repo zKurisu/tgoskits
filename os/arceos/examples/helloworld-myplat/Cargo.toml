@@ -5,7 +5,7 @@ edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 
 [features]
-x86-pc = ["dep:axplat-x86-pc"]
+x86-pc = ["dep:ax-plat-x86-pc"]
 aarch64-raspi4 = ["dep:ax-plat-aarch64-raspi"]
 aarch64-qemu-virt = ["dep:ax-plat-aarch64-qemu-virt"]
 aarch64-bsta1000b = ["dep:ax-plat-aarch64-bsta1000b"]
@@ -18,7 +18,7 @@ cfg-if.workspace = true
 ax-std = { workspace = true, features = ["myplat"], optional = true }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-axplat-x86-pc = { workspace = true, features = ["smp", "irq"], optional = true }
+ax-plat-x86-pc = { workspace = true, features = ["smp", "irq"], optional = true }
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 ax-plat-aarch64-qemu-virt = { workspace = true, features = ["smp", "irq"], optional = true }

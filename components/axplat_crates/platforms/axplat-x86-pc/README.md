@@ -1,6 +1,6 @@
-# axplat-x86-pc
+# ax-plat-x86-pc
 
-[![Crates.io](https://img.shields.io/crates/v/axplat-x86-pc)](https://crates.io/crates/axplat-x86-pc)
+[![Crates.io](https://img.shields.io/crates/v/ax-plat-x86-pc)](https://crates.io/crates/ax-plat-x86-pc)
 [![CI](https://github.com/arceos-org/axplat_crates/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arceos-org/axplat_crates/actions/workflows/ci.yml)
 
 Implementation of [axplat](https://github.com/arceos-org/axplat_crates/tree/main/axplat) hardware abstraction layer for x86 Standard PC machine.
@@ -8,7 +8,7 @@ Implementation of [axplat](https://github.com/arceos-org/axplat_crates/tree/main
 ## Install
 
 ```bash
-cargo +nightly add axcpu axplat axplat-x86-pc
+cargo +nightly add axcpu axplat ax-plat-x86-pc
 ```
 
 ## Usage
@@ -37,7 +37,7 @@ fn kernel_main(cpu_id: usize, arg: usize) -> ! {
 
 ```rust
 // Can be located at any dependency crate.
-extern crate axplat_x86_pc;
+extern crate ax_plat_x86_pc;
 ```
 
 #### 3. Use a linker script like the following

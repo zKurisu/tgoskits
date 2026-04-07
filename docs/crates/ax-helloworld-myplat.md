@@ -37,7 +37,7 @@ graph LR
     current --> axplat_aarch64_raspi["ax-plat-aarch64-raspi"]
     current --> ax_plat_loongarch64_qemu_virt["ax-plat-loongarch64-qemu-virt"]
     current --> ax_plat_riscv64_qemu_virt["ax-plat-riscv64-qemu-virt"]
-    current --> axplat_x86_pc["axplat-x86-pc"]
+    current --> ax_plat_x86_pc["ax-plat-x86-pc"]
     current --> ax-std["ax-std"]
 ```
 
@@ -48,7 +48,7 @@ graph LR
 - `ax-plat-aarch64-raspi`
 - `ax-plat-loongarch64-qemu-virt`
 - `ax-plat-riscv64-qemu-virt`
-- `axplat-x86-pc`
+- `ax-plat-x86-pc`
 - `ax-std`
 
 ### 3.2 间接本地依赖
