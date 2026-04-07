@@ -83,7 +83,7 @@ fn test_sleep() {
 
 #[cfg(feature = "ax-std")]
 fn test_wait_queue() {
-    use std::os::arceos::modules::axtask;
+    use std::os::arceos::modules::ax_task;
 
     use ax_task::WaitQueue;
 

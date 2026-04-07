@@ -536,13 +536,13 @@ dependencies = [
  "ax-net",
  "ax-runtime",
  "ax-sync",
+ "ax-task",
  "axalloc",
  "axconfig",
  "axerrno",
  "axhal",
  "axio",
  "axlog",
- "axtask",
 ]
 
 [[package]]
@@ -607,12 +607,12 @@ dependencies = [
  "ax-net",
  "ax-runtime",
  "ax-sync",
+ "ax-task",
  "axalloc",
  "axbacktrace",
  "axconfig",
  "axhal",
  "axlog",
- "axtask",
  "kspin 0.3.1",
 ]
 
@@ -751,10 +751,10 @@ version = "0.5.0"
 dependencies = [
  "ax-driver",
  "ax-sync",
+ "ax-task",
  "axerrno",
  "axhal",
  "axio",
- "axtask",
  "cfg-if",
  "lazyinit 0.4.2",
  "log",
@@ -771,13 +771,13 @@ dependencies = [
  "ax-driver",
  "ax-fs-ng",
  "ax-sync",
+ "ax-task",
  "axconfig",
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
  "axio",
  "axpoll",
- "axtask",
  "bitflags 2.11.0",
  "cfg-if",
  "enum_dispatch",
@@ -799,13 +799,13 @@ dependencies = [
  "ax-net",
  "ax-runtime",
  "ax-sync",
+ "ax-task",
  "axalloc",
  "axconfig",
  "axerrno",
  "axhal",
  "axio",
  "axlog",
- "axtask",
  "bindgen",
  "flatten_objects",
  "lazy_static",
@@ -826,6 +826,7 @@ dependencies = [
  "ax-mm",
  "ax-net",
  "ax-net-ng",
+ "ax-task",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -833,7 +834,6 @@ dependencies = [
  "axklib",
  "axlog",
  "axplat 0.5.1",
- "axtask",
  "cfg-if",
  "chrono",
  "crate_interface 0.5.0",
@@ -868,10 +868,35 @@ name = "ax-sync"
 version = "0.5.0"
 dependencies = [
  "ax-sync",
- "axtask",
+ "ax-task",
  "fastrand",
  "kspin 0.3.1",
  "lock_api",
+]
+
+[[package]]
+name = "ax-task"
+version = "0.5.0"
+dependencies = [
+ "ax-task",
+ "axconfig",
+ "axerrno",
+ "axhal",
+ "axpoll",
+ "axsched",
+ "cfg-if",
+ "cpumask",
+ "crate_interface 0.5.0",
+ "extern-trait",
+ "futures-util",
+ "kernel_guard 0.3.3",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "memory_addr 0.6.1",
+ "percpu 0.4.3",
+ "spin 0.10.0",
+ "timer_list",
 ]
 
 [[package]]
@@ -1593,31 +1618,6 @@ name = "axsched"
 version = "0.5.1"
 dependencies = [
  "linked_list_r4l",
-]
-
-[[package]]
-name = "axtask"
-version = "0.5.0"
-dependencies = [
- "axconfig",
- "axerrno",
- "axhal",
- "axpoll",
- "axsched",
- "axtask",
- "cfg-if",
- "cpumask",
- "crate_interface 0.5.0",
- "extern-trait",
- "futures-util",
- "kernel_guard 0.3.3",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "memory_addr 0.6.1",
- "percpu 0.4.3",
- "spin 0.10.0",
- "timer_list",
 ]
 
 [[package]]
@@ -7423,6 +7423,7 @@ dependencies = [
  "ax-net-ng",
  "ax-runtime",
  "ax-sync",
+ "ax-task",
  "axalloc",
  "axbacktrace",
  "axconfig",
@@ -7432,7 +7433,6 @@ dependencies = [
  "axio",
  "axlog",
  "axpoll",
- "axtask",
  "bitflags 2.11.0",
  "bitmaps",
  "bytemuck",

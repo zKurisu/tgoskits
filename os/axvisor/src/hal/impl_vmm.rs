@@ -1,4 +1,4 @@
-use std::os::arceos::modules::{axhal, axtask};
+use std::os::arceos::modules::{ax_task, axhal};
 
 use axaddrspace::{HostPhysAddr, HostVirtAddr};
 use axerrno::{AxResult, ax_err_type};

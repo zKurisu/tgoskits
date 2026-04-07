@@ -27,7 +27,7 @@ pub mod fdt;
 use core::sync::atomic::{AtomicUsize, Ordering};
 use std::os::arceos::{
     api::task::{self, AxWaitQueueHandle},
-    modules::axtask,
+    modules::ax_task,
 };
 
 use axerrno::{AxResult, ax_err_type};
