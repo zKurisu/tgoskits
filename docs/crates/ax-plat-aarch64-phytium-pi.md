@@ -140,7 +140,7 @@ flowchart TD
 | `ax-cpu` | EL 切换、MMU 初始化、trap 初始化 |
 | `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC、PSCI glue |
 | `page_table_entry` | AArch64 引导页表项构造 |
-| `axconfig-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
+| `ax-config-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
 | `log` | 启动日志 |
 
 ### 3.2 主要消费者
@@ -153,7 +153,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A[ax-cpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-phytium-pi]
+    A[ax-cpu / page_table_entry / ax-config-macros] --> B[ax-plat-aarch64-phytium-pi]
     C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-helloworld-myplat]

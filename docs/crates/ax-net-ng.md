@@ -72,7 +72,7 @@ graph LR
 - `axallocator`
 - `axbacktrace`
 - `axconfig-gen`
-- `axconfig-macros`
+- `ax-config-macros`
 - `ax-cpu`
 - `ax-dma`
 - `axdriver_base`

@@ -66,7 +66,7 @@ graph LR
 - `ax-allocator`
 - `axbacktrace`
 - `axconfig-gen`
-- `axconfig-macros`
+- `ax-config-macros`
 - `ax-cpu`
 - `ax-display`
 - `ax-dma`

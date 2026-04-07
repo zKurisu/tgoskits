@@ -23,7 +23,7 @@ riscv_plic = "0.4.0"
 sbi-rt = { version = "0.0.3", features = ["legacy"] }
 uart_16550 = "0.4.0"
 
-axconfig-macros = "0.4.1"
+ax-config-macros = "0.4.1"
 ax-cpu = { workspace = true }
 ax-plat = { workspace = true }
 axvisor_api = "0.5.0"

@@ -59,7 +59,7 @@ graph LR
 - `axbacktrace`
 - `axconfig`
 - `axconfig-gen`
-- `axconfig-macros`
+- `ax-config-macros`
 - `ax-cpu`
 - `ax-display`
 - `ax-dma`

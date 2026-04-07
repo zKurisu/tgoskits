@@ -142,7 +142,7 @@ flowchart TD
 | `ax-plat-aarch64-peripherals` | PL011、Generic Timer、GIC glue |
 | `page_table_entry` | AArch64 引导页表项构造 |
 | `aarch64-cpu` | 直接使用 `sev()` 指令唤醒次核 |
-| `axconfig-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
+| `ax-config-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
 | `log` | 启动与停机日志 |
 
 ### 3.2 主要消费者
@@ -155,7 +155,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A[ax-cpu / page_table_entry / aarch64-cpu / axconfig-macros] --> B[ax-plat-aarch64-raspi]
+    A[ax-cpu / page_table_entry / aarch64-cpu / ax-config-macros] --> B[ax-plat-aarch64-raspi]
     C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-helloworld-myplat]

@@ -433,7 +433,7 @@ version = "0.3.0-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15f74d126fc479e4a5acd4389e7ef2c9176c41e7ea3c54e985a7468489b494fb"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
 ]
 
 [[package]]
@@ -447,7 +447,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axconfig-macros"
+name = "ax-config-macros"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b2decc5437a10ddb659f0fbd819b9308362ea1d11455ddb5a1c47ea3973920d"
@@ -927,7 +927,7 @@ version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dff51219e3ff388368eec683f83b5a8184b3125bac709006f6ac22e435dc07e4"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
@@ -943,7 +943,7 @@ checksum = "0e6762cfd943160d0baa8c2db303adc2b10d1dc3fb754bb8b6b364ac37c7ad2a"
 dependencies = [
  "anyhow",
  "ax-alloc",
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "axdriver_base",
  "axdriver_block",
@@ -969,7 +969,7 @@ version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bb9c67d904ccf30561a6239b67411058b215cb6d6a8d3ac737e7a51230b40bf"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "chrono",
@@ -998,7 +998,7 @@ version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08f91aff22afadd24807e34fb94fe4d0d2c8c5b86fb89dd6ff87a8093f812518"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "kspin",
@@ -1017,7 +1017,7 @@ version = "0.1.0-pre.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "662ba689afa1972ce4addf32f7873c0aa7bc4ca11be17b69977f677805a2d356"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "kspin",
@@ -1036,7 +1036,7 @@ version = "0.3.1-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9df26719c444ca8302e9366b8dc5abe8735933ea756ff094e3ac5ce3b64c41a1"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "bitflags 2.11.0",

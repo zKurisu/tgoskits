@@ -42,6 +42,7 @@
 | `ax-allocator` | 组件层 | `components/axallocator` | 2 | 2 | [查看](./ax-allocator.md) |
 | `ax-api` | ArceOS 层 | `os/arceos/api/arceos_api` | 17 | 1 | [查看](./ax-api.md) |
 | `ax-config` | ArceOS 层 | `os/arceos/modules/axconfig` | 1 | 12 | [查看](./ax-config.md) |
+| `ax-config-macros` | 组件层 | `components/axconfig-gen/axconfig-macros` | 1 | 12 | [查看](./ax-config-macros.md) |
 | `ax-cpu` | 组件层 | `components/axcpu` | 6 | 14 | [查看](./ax-cpu.md) |
 | `ax-display` | ArceOS 层 | `os/arceos/modules/axdisplay` | 3 | 4 | [查看](./ax-display.md) |
 | `ax-dma` | ArceOS 层 | `os/arceos/modules/axdma` | 7 | 2 | [查看](./ax-dma.md) |
@@ -84,7 +85,6 @@
 | `axbacktrace` | 组件层 | `components/axbacktrace` | 0 | 5 | [查看](./axbacktrace.md) |
 | `axbuild` | 工具层 | `scripts/axbuild` | 1 | 3 | [查看](./axbuild.md) |
 | `axconfig-gen` | 组件层 | `components/axconfig-gen/axconfig-gen` | 0 | 1 | [查看](./axconfig-gen.md) |
-| `axconfig-macros` | 组件层 | `components/axconfig-gen/axconfig-macros` | 1 | 12 | [查看](./axconfig-macros.md) |
 | `axdevice` | 组件层 | `components/axdevice` | 8 | 2 | [查看](./axdevice.md) |
 | `axdevice_base` | 组件层 | `components/axdevice_base` | 3 | 8 | [查看](./axdevice_base.md) |
 | `axdriver_base` | 组件层 | `components/axdriver_crates/axdriver_base` | 0 | 8 | [查看](./axdriver_base.md) |

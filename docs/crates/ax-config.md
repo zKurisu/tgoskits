@@ -14,7 +14,7 @@
 
 - `build.rs` 只做 Cargo 级依赖追踪，监听 `AX_CONFIG_PATH` 及其指向文件的变化。
 - `src/lib.rs` 根据是否开启 `plat-dyn` 选择两条实现路径。
-- 默认路径通过 `axconfig_macros::include_configs!` 把 TOML 配置直接展开为常量。
+- 默认路径通过 `ax_config_macros::include_configs!` 把 TOML 配置直接展开为常量。
 - `plat-dyn` 路径则改为导出手写的 `driver_dyn_config.rs` 常量集合。
 
 这意味着 `ax-config` 本质上是“编译期常量视图”，而不是“配置生成器”或“配置服务”。
@@ -24,7 +24,7 @@
 
 ```mermaid
 flowchart TD
-    A["AX_CONFIG_PATH / fallback dummy.toml"] --> B["axconfig-macros::include_configs!"]
+    A["AX_CONFIG_PATH / fallback dummy.toml"] --> B["ax-config-macros::include_configs!"]
     B --> C["ax-config 常量模块"]
 
     D["feature = plat-dyn"] --> E["driver_dyn_config.rs"]
@@ -37,7 +37,7 @@ flowchart TD
 
 1. 默认模式  
    `src/lib.rs` 通过  
-   `axconfig_macros::include_configs!(path_env = "AX_CONFIG_PATH", fallback = "dummy.toml")`  
+   `ax_config_macros::include_configs!(path_env = "AX_CONFIG_PATH", fallback = "dummy.toml")`  
    在编译期读取 TOML，并生成 `ARCH`、`PLATFORM`、`TASK_STACK_SIZE`、`devices::*`、`plat::*` 等常量。
 
 2. `plat-dyn` 模式  
@@ -76,14 +76,14 @@ flowchart TD
 
 1. `axbuild` 或人工流程生成/指定 `.axconfig.toml`
 2. Cargo 通过 `AX_CONFIG_PATH` 把配置文件路径传给 `ax-config`
-3. `axconfig-macros` 在编译期把 TOML 展开成 Rust 常量
+3. `ax-config-macros` 在编译期把 TOML 展开成 Rust 常量
 4. `ax-hal`、`ax-runtime`、`ax-task`、`ax-driver` 等模块直接读取这些常量
 
 这也解释了为什么 `ax-config` 自身没有初始化函数：它的“初始化”已经在编译阶段完成了。
 
-### 2.3 与 `axconfig-gen` / `axconfig-macros` 的边界
+### 2.3 与 `axconfig-gen` / `ax-config-macros` 的边界
 - `axconfig-gen` 负责解析、合并、重写配置文件，是宿主机构建工具。
-- `axconfig-macros` 负责把配置文本展开成 Rust 代码，是编译期宏层。
+- `ax-config-macros` 负责把配置文本展开成 Rust 代码，是编译期宏层。
 - `ax-config` 负责对外暴露最终常量，是目标镜像中的只读常量入口。
 
 三者是串联关系，不是替代关系。
@@ -92,7 +92,7 @@ flowchart TD
 ```mermaid
 graph LR
     gen["axconfig-gen / axbuild"] --> toml[".axconfig.toml"]
-    toml --> macros["axconfig-macros"]
+    toml --> macros["ax-config-macros"]
     macros --> ax-config["ax-config"]
 
     ax-config --> ax-hal["ax-hal"]
@@ -104,7 +104,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axconfig-macros`：默认路径下的核心依赖，负责把 TOML 展开成常量。
+- `ax-config-macros`：默认路径下的核心依赖，负责把 TOML 展开成常量。
 - `const-str`：仅在 `plat-dyn` 路径下启用，用来在常量上下文解析 `SMP` 环境变量。
 
 ### 3.2 关键直接消费者

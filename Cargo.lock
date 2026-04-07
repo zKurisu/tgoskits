@@ -580,8 +580,18 @@ dependencies = [
 name = "ax-config"
 version = "0.5.0"
 dependencies = [
- "axconfig-macros 0.4.1",
+ "ax-config-macros",
  "const-str",
+]
+
+[[package]]
+name = "ax-config-macros"
+version = "0.4.1"
+dependencies = [
+ "axconfig-gen 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -937,10 +947,10 @@ dependencies = [
 name = "ax-plat-aarch64-bsta1000b"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
- "axconfig-macros 0.4.1",
  "dw_apb_uart",
  "kspin 0.3.1",
  "log",
@@ -968,10 +978,10 @@ dependencies = [
 name = "ax-plat-aarch64-phytium-pi"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
- "axconfig-macros 0.4.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -980,10 +990,10 @@ dependencies = [
 name = "ax-plat-aarch64-qemu-virt"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
- "axconfig-macros 0.4.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -993,10 +1003,10 @@ name = "ax-plat-aarch64-raspi"
 version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
- "axconfig-macros 0.4.1",
  "log",
  "page_table_entry 0.8.1",
 ]
@@ -1005,9 +1015,9 @@ dependencies = [
 name = "ax-plat-loongarch64-qemu-virt"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "chrono",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
@@ -1021,9 +1031,9 @@ dependencies = [
 name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.0"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "axvisor_api",
  "crate_interface 0.5.0",
  "kspin 0.3.1",
@@ -1040,9 +1050,9 @@ dependencies = [
 name = "ax-plat-riscv64-qemu-virt"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "kspin 0.3.1",
  "lazyinit 0.4.2",
  "log",
@@ -1057,9 +1067,9 @@ dependencies = [
 name = "ax-plat-x86-pc"
 version = "0.5.1"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",
@@ -1302,16 +1312,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axconfig-macros"
-version = "0.4.1"
-dependencies = [
- "axconfig-gen 0.4.1",
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
 name = "axcpu"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1520,10 +1520,10 @@ version = "0.5.0"
 dependencies = [
  "anyhow",
  "ax-alloc",
+ "ax-config-macros",
  "ax-cpu",
  "ax-driver-virtio",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "axdriver_base",
  "axdriver_block",
  "axerrno",
@@ -1566,7 +1566,7 @@ version = "0.1.0-pre.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "662ba689afa1972ce4addf32f7873c0aa7bc4ca11be17b69977f677805a2d356"
 dependencies = [
- "axconfig-macros 0.2.1",
+ "axconfig-macros",
  "axcpu",
  "axplat",
  "kspin 0.1.1",
@@ -1583,9 +1583,9 @@ dependencies = [
 name = "axplat-x86-qemu-q35"
 version = "0.4.0"
 dependencies = [
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
- "axconfig-macros 0.4.1",
  "bitflags 2.11.0",
  "heapless 0.9.2",
  "int_ratio",

@@ -127,7 +127,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axconfig-macros"
+name = "ax-config-macros"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b2decc5437a10ddb659f0fbd819b9308362ea1d11455ddb5a1c47ea3973920d"
@@ -180,7 +180,7 @@ dependencies = [
 name = "axplat-aarch64-bsta1000b"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
@@ -211,7 +211,7 @@ dependencies = [
 name = "axplat-aarch64-phytium-pi"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
@@ -223,7 +223,7 @@ dependencies = [
 name = "axplat-aarch64-qemu-virt"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
@@ -236,7 +236,7 @@ name = "axplat-aarch64-raspi"
 version = "0.3.1-pre.6"
 dependencies = [
  "aarch64-cpu",
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "ax-plat-aarch64-peripherals",
@@ -248,7 +248,7 @@ dependencies = [
 name = "ax-plat-loongarch64-qemu-virt"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "chrono",
@@ -274,7 +274,7 @@ dependencies = [
 name = "ax-plat-riscv64-qemu-virt"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "kspin",
@@ -291,7 +291,7 @@ dependencies = [
 name = "ax-plat-x86-pc"
 version = "0.3.1-pre.6"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "bitflags 2.11.0",
@@ -747,7 +747,7 @@ checksum = "6045ea39e8d2862506c0dff6c65d068da362335df698bb1634033492740d2170"
 name = "irq-kernel"
 version = "0.1.0"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "axplat-aarch64-qemu-virt",
@@ -1171,7 +1171,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 name = "smp-kernel"
 version = "0.1.0"
 dependencies = [
- "axconfig-macros",
+ "ax-config-macros",
  "ax-cpu",
  "ax-plat",
  "axplat-aarch64-qemu-virt",

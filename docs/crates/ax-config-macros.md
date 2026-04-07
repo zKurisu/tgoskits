@@ -1,4 +1,4 @@
-# `axconfig-macros` 技术文档
+# `ax-config-macros` 技术文档
 
 > 路径：`components/axconfig-gen/axconfig-macros`
 > 类型：过程宏库
@@ -6,11 +6,11 @@
 > 版本：`0.2.1`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`tests/example_config.rs`、`README.md`、`os/arceos/modules/axconfig/src/lib.rs`、`components/axplat_crates/platforms/axplat-aarch64-qemu-virt/src/lib.rs`
 
-`axconfig-macros` 把 TOML 配置文本直接变成 Rust 常量定义，是 `axconfig*` 链路中的“编译期翻译器”。它不生成配置文件，也不保存任何运行时状态；它的职责是在宏展开阶段读取配置文本，调用 `axconfig-gen` 解析后输出等价的 Rust 代码。
+`ax-config-macros` 把 TOML 配置文本直接变成 Rust 常量定义，是 `axconfig*` 链路中的“编译期翻译器”。它不生成配置文件，也不保存任何运行时状态；它的职责是在宏展开阶段读取配置文本，调用 `axconfig-gen` 解析后输出等价的 Rust 代码。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-从源码可见，`axconfig-macros` 只暴露两个过程宏：
+从源码可见，`ax-config-macros` 只暴露两个过程宏：
 
 - `parse_configs!`：把一段 TOML 文本直接展开成 Rust 常量代码。
 - `include_configs!`：按路径或环境变量读取 TOML 文件，再把文件内容交给 `parse_configs!`。
@@ -19,7 +19,7 @@
 
 ```mermaid
 flowchart LR
-    A["配置文本 / 配置文件"] --> B["axconfig-macros"]
+    A["配置文本 / 配置文件"] --> B["ax-config-macros"]
     B --> C["axconfig-gen::Config::from_toml"]
     C --> D["dump(OutputFormat::Rust)"]
     D --> E["Rust 常量模块"]
@@ -41,7 +41,7 @@ flowchart LR
      - `include_configs!(path_env = "AX_CONFIG_PATH")`
      - `include_configs!(path_env = "AX_CONFIG_PATH", fallback = "defconfig.toml")`
    - 以 `CARGO_MANIFEST_DIR` 为根目录拼接路径。
-   - 读取文件内容后，重新生成一段 `::axconfig_macros::parse_configs!(...)` 调用。
+   - 读取文件内容后，重新生成一段 `::ax_config_macros::parse_configs!(...)` 调用。
 
 这个设计使得 `include_configs!` 本质上只是文件读取包装层，而真正的 TOML 解析与代码生成统一落到 `parse_configs!`。
 
@@ -64,7 +64,7 @@ flowchart LR
   - 使用 `include_configs!(path_env = "AX_CONFIG_PATH", fallback = "axconfig.toml")`
   - 作用是把板级默认配置或外部覆盖配置编进平台 crate。
 
-这说明 `axconfig-macros` 既服务“最终常量模块”，也服务“平台自身配置模块”。
+这说明 `ax-config-macros` 既服务“最终常量模块”，也服务“平台自身配置模块”。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -83,7 +83,7 @@ flowchart LR
 这也是为什么 `axconfig` 可以在不手写常量的前提下，直接导出 `ARCH`、`TASK_STACK_SIZE`、`devices::*`、`plat::*`。
 
 ### 2.3 构建期与运行期边界
-`axconfig-macros` 完全运行在编译期：
+`ax-config-macros` 完全运行在编译期：
 
 - 它读取的是构建机文件系统，不是目标镜像文件系统。
 - 它输出的是编译进最终产物的 Rust 代码，不是运行时可重新加载的配置。
@@ -94,7 +94,7 @@ flowchart LR
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axconfig_gen["axconfig-gen"] --> macros["axconfig-macros"]
+    axconfig_gen["axconfig-gen"] --> macros["ax-config-macros"]
     macros --> axconfig["ax-config"]
     macros --> axplat["axplat-* 平台 crate"]
     macros --> template["cargo-axplat 模板"]
@@ -153,10 +153,10 @@ graph LR
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axconfig-macros` 是 ArceOS 配置常量链的编译期核心之一。`axconfig` 和平台 crate 都依赖它把 TOML 变成最终的 Rust 常量模块。
+`ax-config-macros` 是 ArceOS 配置常量链的编译期核心之一。`axconfig` 和平台 crate 都依赖它把 TOML 变成最终的 Rust 常量模块。
 
 ### 6.2 StarryOS
-StarryOS 复用 ArceOS 平台和配置链时，会间接受到 `axconfig-macros` 的影响，但它并不把这个 crate 当成运行时模块使用。
+StarryOS 复用 ArceOS 平台和配置链时，会间接受到 `ax-config-macros` 的影响，但它并不把这个 crate 当成运行时模块使用。
 
 ### 6.3 Axvisor
-Axvisor 在动态平台或共享平台 crate 的构建链中，也会间接受益于 `axconfig-macros` 的展开能力；不过这仍然是编译期复用，不是运行时依赖。
+Axvisor 在动态平台或共享平台 crate 的构建链中，也会间接受益于 `ax-config-macros` 的展开能力；不过这仍然是编译期复用，不是运行时依赖。

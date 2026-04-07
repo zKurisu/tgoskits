@@ -64,7 +64,7 @@
 
 | 模板文件 | 作用 | 生成后的意义 |
 | --- | --- | --- |
-| `_Cargo.toml` | 依赖和 feature 骨架 | 为生成 crate 注入 `axplat`、`axconfig-macros` 依赖，以及 `irq`/`smp` feature |
+| `_Cargo.toml` | 依赖和 feature 骨架 | 为生成 crate 注入 `axplat`、`ax-config-macros` 依赖，以及 `irq`/`smp` feature |
 | `axconfig.toml` | 平台配置骨架 | 预留 `arch`、`platform`、`package` 以及 `plat`/`devices` 配置项 |
 | `build.rs` | 配置变更监听 | 监听 `AX_CONFIG_PATH`，为后续编译期配置注入做准备 |
 | `src/lib.rs` | 平台包根模块 | 引入 `config`、校验 `PACKAGE`、提供 `_start` 占位入口 |
@@ -110,7 +110,7 @@ flowchart TD
 2. 若用户没有直接给 `PLAT_CONFIG` 路径，就执行 `cargo axplat info -C <manifest_dir> -c <PLAT_PACKAGE>`。
 3. 该命令只输出平台包的 `axconfig.toml` 路径。
 4. 随后真正的配置合并由 `axconfig-gen` 完成，再写出 `.axconfig.toml`。
-5. 构建阶段通过 `AX_CONFIG_PATH` 把这个结果喂给平台包自身的 `build.rs` 与 `axconfig_macros::include_configs!`。
+5. 构建阶段通过 `AX_CONFIG_PATH` 把这个结果喂给平台包自身的 `build.rs` 与 `ax_config_macros::include_configs!`。
 
 因此 `cargo-axplat` 在构建流程中的角色是“定位配置来源”，而不是“生成最终配置”或“参与交叉编译”。
 

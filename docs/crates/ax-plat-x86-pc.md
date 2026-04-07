@@ -238,7 +238,7 @@ Axvisor 的主 x86 manifest 更明确地偏向 `axplat-x86-qemu-q35`，因此 `a
 ```mermaid
 graph LR
     current["ax-plat-x86-pc"]
-    current --> axconfig_macros["axconfig-macros"]
+    current --> axconfig_macros["ax-config-macros"]
     current --> ax-cpu["ax-cpu"]
     current --> axplat["ax-plat"]
     current --> int_ratio["int_ratio"]
@@ -253,7 +253,7 @@ graph LR
 ```
 
 ### 3.1 直接与间接依赖
-- `axconfig-macros`
+- `ax-config-macros`
 - `ax-cpu`
 - `axplat`
 - `int_ratio`

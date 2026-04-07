@@ -32,7 +32,7 @@
 | `init` | `InitIf` 实现 | 主核/次核的早期与后期初始化顺序 |
 | `mem` | `MemIf` 实现 | RAM/MMIO 区间、线性映射、内核地址空间范围 |
 | `power` | `PowerIf` 实现 | `cpu_boot()`、`system_off()`、`cpu_num()` |
-| `config` | 平台常量 | `axconfig.toml` 经 `axconfig_macros::include_configs!` 生成的 `plat` / `devices` / `mem` 常量 |
+| `config` | 平台常量 | `axconfig.toml` 经 `ax_config_macros::include_configs!` 生成的 `plat` / `devices` / `mem` 常量 |
 
 ### 1.3 关键数据结构与全局对象
 
@@ -200,7 +200,7 @@ flowchart TD
 | `ax-cpu` | EL 切换、MMU 初始化和 CPU 辅助操作 |
 | `ax-plat-aarch64-peripherals` | PL011/GIC/Generic Timer/PL031/PSCI glue |
 | `page_table_entry` | AArch64 页表项构造 |
-| `axconfig-macros` | 编译期导入 `axconfig.toml` 配置 |
+| `ax-config-macros` | 编译期导入 `axconfig.toml` 配置 |
 | `log` | 调试输出 |
 
 ### 3.2 主要消费者
@@ -215,7 +215,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A[ax-cpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-qemu-virt]
+    A[ax-cpu / page_table_entry / ax-config-macros] --> B[ax-plat-aarch64-qemu-virt]
     C[ax-plat-aarch64-peripherals] --> B
     D[axplat] --> B
     B --> E[ax-hal]

@@ -6,7 +6,7 @@
 > 版本：`0.2.1`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/main.rs`、`src/config.rs`、`src/output.rs`、`src/ty.rs`、`src/value.rs`、`src/tests.rs`、`README.md`
 
-`axconfig-gen` 是 ArceOS 配置链路里的“配置编译器”。它运行在宿主机上，负责把一组带类型注释的 TOML 规格文件解析成统一配置，再输出成新的 TOML 文件或 Rust 常量代码；`axconfig-macros` 直接复用它的库接口，而 `axbuild` 则直接调用其可执行文件生成 `.axconfig.toml`。
+`axconfig-gen` 是 ArceOS 配置链路里的“配置编译器”。它运行在宿主机上，负责把一组带类型注释的 TOML 规格文件解析成统一配置，再输出成新的 TOML 文件或 Rust 常量代码；`ax-config-macros` 直接复用它的库接口，而 `axbuild` 则直接调用其可执行文件生成 `.axconfig.toml`。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -78,8 +78,8 @@ flowchart TD
 
 这套接口正是 `axbuild` 生成 `.axconfig.toml` 时调用的基础。
 
-### 2.3 与 `axconfig-macros` 的关系
-`axconfig-macros` 并没有自己重新实现 TOML 解析器，而是直接调用：
+### 2.3 与 `ax-config-macros` 的关系
+`ax-config-macros` 并没有自己重新实现 TOML 解析器，而是直接调用：
 
 - `Config::from_toml`
 - `Config::dump(OutputFormat::Rust)`
@@ -90,7 +90,7 @@ flowchart TD
 ```mermaid
 graph LR
     cli["axbuild / 手工命令"] --> exe["axconfig-gen 可执行文件"]
-    macros["axconfig-macros"] --> lib["axconfig-gen 库接口"]
+    macros["ax-config-macros"] --> lib["axconfig-gen 库接口"]
     exe --> lib
     lib --> out["TOML / Rust 常量代码"]
 ```
@@ -100,12 +100,12 @@ graph LR
 - `clap`：提供 CLI 参数解析。
 
 ### 3.2 关键直接消费者
-- `axconfig-macros`：直接复用库接口，把 TOML 转成 Rust 代码。
+- `ax-config-macros`：直接复用库接口，把 TOML 转成 Rust 代码。
 - `axbuild`：通过执行 `axconfig-gen` 命令生成最终 `.axconfig.toml`。
 - 人工构建流程：开发者也可以直接用命令行查看、修改、生成配置。
 
 ### 3.3 间接消费者
-- `axconfig`：通过 `axconfig-macros` 或构建链间接使用它的输出。
+- `axconfig`：通过 `ax-config-macros` 或构建链间接使用它的输出。
 - 依赖 `axconfig` 的所有内核模块：间接受益于它生成的常量。
 
 ## 4. 开发指南
@@ -116,7 +116,7 @@ graph LR
 
 ### 4.2 修改时的关键约束
 1. 新增类型时，必须同时修改 `ty.rs`、`value.rs` 和 `output.rs`。
-2. 任何改变输出格式的改动，都要考虑 `axconfig-macros` 和 `axconfig` 的兼容性。
+2. 任何改变输出格式的改动，都要考虑 `ax-config-macros` 和 `axconfig` 的兼容性。
 3. `merge()` 与 `update()` 语义不同：前者拒绝重复键，后者只更新已知键并返回未触达/多余项。
 4. 不要把运行时平台逻辑放进这里，它应该保持为纯宿主侧工具。
 
@@ -154,7 +154,7 @@ axconfig-gen configs/defconfig.toml configs/board/qemu-aarch64.toml \
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axconfig-gen` 是 ArceOS 配置链路的生成核心。无论是 `axbuild` 生成 `.axconfig.toml`，还是 `axconfig-macros` 生成 Rust 常量，底层都依赖它的解析与输出逻辑。
+`axconfig-gen` 是 ArceOS 配置链路的生成核心。无论是 `axbuild` 生成 `.axconfig.toml`，还是 `ax-config-macros` 生成 Rust 常量，底层都依赖它的解析与输出逻辑。
 
 ### 6.2 StarryOS
 StarryOS 不直接把 `axconfig-gen` 当运行时依赖使用，但只要沿用同一套 ArceOS 平台配置和构建装配链，就会间接受到它的输出格式和类型系统影响。

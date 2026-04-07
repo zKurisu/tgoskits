@@ -8,5 +8,5 @@ irq = ["ax-plat/irq"]
 smp = ["ax-plat/smp"]
 
 [dependencies]
-axconfig-macros = "0.2"
+ax-config-macros = "0.2"
 ax-plat = "0.3"

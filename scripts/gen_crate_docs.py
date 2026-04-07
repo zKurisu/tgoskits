@@ -212,7 +212,7 @@ CURATED_DOCS = {
     "axbuild",
     "ax-config",
     "axconfig-gen",
-    "axconfig-macros",
+    "ax-config-macros",
     "ax-feat",
     "ax-fs",
     "ax-fs-ng",

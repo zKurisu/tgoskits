@@ -146,7 +146,7 @@ flowchart TD
 | `ax-plat-aarch64-peripherals` | PSCI、Generic Timer、GIC 及 `TimeIf`/`IrqIf` glue |
 | `dw_apb_uart` | A1000B 控制台所用的 DesignWare 8250 UART 驱动 |
 | `page_table_entry` | 构造 AArch64 引导页表项 |
-| `axconfig-macros` | 把 `axconfig.toml` 变成 `config` 常量模块 |
+| `ax-config-macros` | 把 `axconfig.toml` 变成 `config` 常量模块 |
 | `kspin` | 串口访问的无中断自旋锁 |
 | `log` | 启动和错误日志 |
 
@@ -160,7 +160,7 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A[ax-cpu / page_table_entry / axconfig-macros] --> B[ax-plat-aarch64-bsta1000b]
+    A[ax-cpu / page_table_entry / ax-config-macros] --> B[ax-plat-aarch64-bsta1000b]
     C[ax-plat-aarch64-peripherals] --> B
     D[dw_apb_uart / kspin] --> B
     E[axplat] --> B

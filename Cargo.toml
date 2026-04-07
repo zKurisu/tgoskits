@@ -282,7 +282,7 @@ axklib = { path = "components/axklib" }
 range-alloc-arceos = { path = "components/range-alloc-arceos" }
 cpumask = { path = "components/cpumask" }
 axconfig-gen = { path = "components/axconfig-gen/axconfig-gen" }
-axconfig-macros = { path = "components/axconfig-gen/axconfig-macros" }
+ax-config-macros = { path = "components/axconfig-gen/axconfig-macros" }
 
 # === drivers ===
 # fxmac_rs = { path = "components/fxmac_rs", version = "0.2.1" }
