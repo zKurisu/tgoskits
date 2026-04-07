@@ -54,7 +54,7 @@
 - `ax-driver` 才负责“枚举和派发”。
 
 ### 1.5 与 VirtIO 路径的关系
-`axdriver_virtio::probe_pci_device()` 和 `os/arceos/modules/axdriver/src/virtio.rs` 会继续基于 `PciRoot`、`DeviceFunction`、`DeviceFunctionInfo` 做 VirtIO PCI 设备识别。因此 `axdriver_pci` 也是 VirtIO PCI 探测路径的底层依赖。
+`ax_driver_virtio::probe_pci_device()` 和 `os/arceos/modules/axdriver/src/virtio.rs` 会继续基于 `PciRoot`、`DeviceFunction`、`DeviceFunctionInfo` 做 VirtIO PCI 设备识别。因此 `axdriver_pci` 也是 VirtIO PCI 探测路径的底层依赖。
 
 ### 1.6 边界澄清
 最关键的边界是：**`axdriver_pci` 是 PCI 总线访问辅助层，不是通用驱动聚合层，也不是完整的 PCI 设备管理子系统。**
@@ -104,7 +104,7 @@
 ### 4.2 修改时要同步检查的地方
 1. `os/arceos/modules/axdriver/src/bus/pci.rs` 的枚举和 BAR 配置逻辑。
 2. `ax_config::devices::PCI_ECAM_BASE`、`PCI_RANGES`、`PCI_BUS_END` 等平台配置。
-3. `axdriver_virtio` 的 PCI 探测路径是否仍与类型再导出保持一致。
+3. `ax-driver-virtio` 的 PCI 探测路径是否仍与类型再导出保持一致。
 
 ### 4.3 常见坑
 - 不要把 `PciRangeAllocator` 当成通用内存分配器；它只适合启动期 BAR 窗口。

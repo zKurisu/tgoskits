@@ -4,10 +4,10 @@ use alloc::format;
 use core::{marker::PhantomData, ptr::NonNull};
 
 use ax_alloc::{UsageKind, global_allocator};
+use ax_driver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};
 use ax_plat::mem::{PhysAddr, phys_to_virt};
 use axdriver_base::DeviceType;
 use axdriver_block::BlockDriverOps;
-use axdriver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};
 use rdrive::{
     DriverGeneric, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
 };
@@ -15,7 +15,7 @@ use rdrive::{
 use super::PlatformDeviceBlock;
 use crate::drivers::iomap;
 
-type Device<T> = axdriver_virtio::VirtIoBlkDev<VirtIoHalImpl, T>;
+type Device<T> = ax_driver_virtio::VirtIoBlkDev<VirtIoHalImpl, T>;
 
 module_driver!(
     name: "Virtio Block",
@@ -46,7 +46,7 @@ fn probe(info: FdtInfo<'_>, plat_dev: PlatformDevice) -> Result<(), OnProbeError
     let mmio_base = iomap(mmio_base, mmio_size)?.as_ptr();
 
     let (ty, transport) =
-        axdriver_virtio::probe_mmio_device(mmio_base, mmio_size).ok_or(OnProbeError::NotMatch)?;
+        ax_driver_virtio::probe_mmio_device(mmio_base, mmio_size).ok_or(OnProbeError::NotMatch)?;
 
     if ty != DeviceType::Block {
         return Err(OnProbeError::NotMatch);

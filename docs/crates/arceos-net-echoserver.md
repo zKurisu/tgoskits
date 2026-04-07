@@ -48,9 +48,9 @@ graph LR
 - `ax-display`
 - `ax-dma`
 - `ax-driver`
+- `ax-driver-virtio`
 - `ax-feat`
 - `ax-fs`
-- `ax-fs-ng`
 - 另外还有 `66` 个同类项未在此展开
 
 ### 3.3 被依赖情况

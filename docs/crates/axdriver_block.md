@@ -79,7 +79,7 @@
 - 提供统一的块设备 trait `BlockDriverOps`。
 - 为 RAM 盘、SD/MMC、BCM2835 SDHCI、AHCI 等设备提供可选实现入口。
 - 复用 `axdriver_base` 的名称、类别和错误模型。
-- 作为 `axdriver_virtio::VirtIoBlkDev` 与 `platform/axplat-dyn` 动态块设备包装的共同契约。
+- 作为 `ax_driver_virtio::VirtIoBlkDev` 与 `platform/axplat-dyn` 动态块设备包装的共同契约。
 
 ### 2.2 典型调用链
 当前仓库里最典型的使用主线是：

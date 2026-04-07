@@ -26,7 +26,7 @@
 - `src/drivers.rs`：定义 `DriverProbe` trait，并按 feature 注册 VirtIO、ramdisk、sdmmc、bcm2835、ixgbe、fxmac 等驱动探测入口。
 - `src/bus/pci.rs`：静态模型下的 PCI 总线枚举、BAR 配置和按驱动逐个 probe。
 - `src/bus/mmio.rs`：静态模型下的 MMIO 设备扫描，主要服务 VirtIO MMIO 路径。
-- `src/virtio.rs`：VirtIO 通用探测与 `VirtIoHalImpl`，连接 `ax-alloc`、`ax-hal` 和 `axdriver_virtio`。
+- `src/virtio.rs`：VirtIO 通用探测与 `VirtIoHalImpl`，连接 `ax-alloc`、`ax-hal` 和 `ax-driver-virtio`。
 - `src/ixgbe.rs`：ixgbe 的平台 HAL glue，连接 `ax-dma` 和网卡驱动。
 - `src/structs/mod.rs`、`src/structs/static.rs`、`src/structs/dyn.rs`：定义 `AxDeviceEnum`、`AxDeviceContainer` 以及静态/动态两种 `Ax*Device` 类型模型。
 - `src/dummy.rs`：在某一设备类别启用但未选中具体驱动时，提供 `dummy` 占位类型。

@@ -213,7 +213,7 @@ axdriver_block = { path = "components/axdriver_crates/axdriver_block" }
 axdriver_display = { path = "components/axdriver_crates/axdriver_display" }
 axdriver_net = { path = "components/axdriver_crates/axdriver_net" }
 axdriver_pci = { path = "components/axdriver_crates/axdriver_pci" }
-axdriver_virtio = { path = "components/axdriver_crates/axdriver_virtio" }
+ax-driver-virtio = { path = "components/axdriver_crates/axdriver_virtio" }
 axdriver_input = { path = "components/axdriver_crates/axdriver_input" }
 axdriver_vsock = { path = "components/axdriver_crates/axdriver_vsock" }
 
@@ -362,7 +362,7 @@ axdriver_display = { version = "0.3.4", path = "components/axdriver_crates/axdri
 axdriver_input = { version = "0.3.4", path = "components/axdriver_crates/axdriver_input" }
 axdriver_net = { version = "0.3.4", path = "components/axdriver_crates/axdriver_net" }
 axdriver_pci = { version = "0.3.4", path = "components/axdriver_crates/axdriver_pci" }
-axdriver_virtio = { version = "0.3.4", path = "components/axdriver_crates/axdriver_virtio" }
+ax-driver-virtio = { version = "0.3.4", path = "components/axdriver_crates/axdriver_virtio" }
 axdriver_vsock = { version = "0.3.4", path = "components/axdriver_crates/axdriver_vsock" }
 crate_interface = {version = "0.5.0", path = "components/crate_interface" }
 

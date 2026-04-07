@@ -41,7 +41,7 @@
 `VsockConnId::listening(local_port)` 还提供了一个特殊构造，用于表达“仅监听某个本地端口”的连接标识。
 
 ### 1.4 当前主要实现路径
-当前仓库里，`axdriver_virtio::VirtIoSocketDev` 是主要实现：
+当前仓库里，`ax_driver_virtio::VirtIoSocketDev` 是主要实现：
 
 - 它内部使用 `virtio_drivers::device::socket::VsockConnectionManager`。
 - `connect()` / `send()` / `recv()` 等操作都被翻译到底层 VirtIO socket 管理器。
@@ -73,7 +73,7 @@
 - `recv_avail()` 把“当前可读字节数”单独抽成接口，说明上层可能需要先探测再读。
 
 ### 2.3 当前实现范围
-本 crate 目前只定义契约，不内建任何具体设备实现。当前仓库里的实际实现来自 `axdriver_virtio::VirtIoSocketDev`，也就是说，它本身是纯类别层。
+本 crate 目前只定义契约，不内建任何具体设备实现。当前仓库里的实际实现来自 `ax_driver_virtio::VirtIoSocketDev`，也就是说，它本身是纯类别层。
 
 ## 3. 依赖关系图谱
 ### 3.1 直接依赖
@@ -90,7 +90,7 @@
 ### 3.3 分层关系总结
 - 向下不耦合任何具体总线。
 - 向上作为 `ax-net-ng` 的一个设备能力来源。
-- 真正的设备探测和 transport 建立仍由 `ax-driver` 与 `axdriver_virtio` 负责。
+- 真正的设备探测和 transport 建立仍由 `ax-driver` 与 `ax-driver-virtio` 负责。
 
 ## 4. 开发指南
 ### 4.1 何时修改这里

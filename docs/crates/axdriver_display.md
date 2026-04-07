@@ -19,7 +19,7 @@
 它在分层上位于：
 
 - `axdriver_base` 之上：继承统一的 `BaseDriverOps`。
-- 具体显示驱动之下：例如 `axdriver_virtio::VirtIoGpuDev` 会实现它。
+- 具体显示驱动之下：例如 `ax_driver_virtio::VirtIoGpuDev` 会实现它。
 - `ax-display` 之下：上层模块通过 `AxDisplayDevice` 使用它，而不是直接接触具体 GPU 驱动类型。
 
 ### 1.2 关键类型
@@ -39,7 +39,7 @@
 因此，`FrameBuffer` 只是“对一段可写图像内存的访问句柄”，不是图形 API。
 
 ### 1.4 与上下层的接线关系
-在当前仓库中，最典型的实现来自 `axdriver_virtio::VirtIoGpuDev`：
+在当前仓库中，最典型的实现来自 `ax_driver_virtio::VirtIoGpuDev`：
 
 - `try_new()` 内部调用 `virtio_drivers::device::gpu::VirtIOGpu`。
 - 通过 `setup_framebuffer()` 建立帧缓冲。

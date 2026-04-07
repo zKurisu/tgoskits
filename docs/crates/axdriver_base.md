@@ -19,7 +19,7 @@
 这意味着它在驱动栈中的位置很明确：
 
 - 它不是 `ax-driver` 那样的驱动聚合层。
-- 它不是 `axdriver_pci` 或 `axdriver_virtio` 那样的总线/传输层。
+- 它不是 `axdriver_pci` 或 `ax-driver-virtio` 那样的总线/传输层。
 - 它也不是 `axdriver_block`、`axdriver_net` 这类具体设备类别层。
 
 它解决的问题只有一个：**让不同类别驱动至少拥有一致的“名字、类别、错误类型和可选 IRQ”表达方式。**
@@ -51,7 +51,7 @@
 | --- | --- | --- |
 | `axdriver_base` | 设备类别、错误模型、最小元信息接口 | 设备探测、总线枚举、DMA、具体读写协议 |
 | `axdriver_block`/`net`/`display`/`input`/`vsock` | 各设备类别专属 trait 与少量实现 | 全局设备聚合、系统初始化时序 |
-| `axdriver_pci` / `axdriver_virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
+| `axdriver_pci` / `ax-driver-virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
 | `ax-driver` | 设备探测、分类、聚合、向上交付 `AllDevices` | 重新定义基础错误与元信息接口 |
 
 这里最关键的边界澄清是：**`axdriver_base` 只是公共契约层，不是驱动管理器。**
@@ -87,7 +87,7 @@
 - `axdriver_input`
 - `axdriver_net`
 - `axdriver_vsock`
-- `axdriver_virtio`
+- `ax-driver-virtio`
 - `os/arceos/modules/axdriver`
 - `platform/axplat-dyn` 的动态块设备适配路径
 
@@ -110,7 +110,7 @@
 
 ### 4.2 修改时必须同步检查的地方
 1. 若新增 `DeviceType` 成员，需要同步检查 `ax-driver::AxDeviceEnum`、`AllDevices`、`prelude.rs` 和上层消费者是否都能识别该类别。
-2. 若调整 `DevError`，需要确认 `axdriver_virtio::as_dev_err()`、`axdriver_block`、`axdriver_net` 等映射逻辑仍然一致。
+2. 若调整 `DevError`，需要确认 `ax_driver_virtio::as_dev_err()`、`axdriver_block`、`axdriver_net` 等映射逻辑仍然一致。
 3. 若给 `BaseDriverOps` 增加新方法，会影响所有驱动实现，是高风险接口变更。
 
 ### 4.3 常见误区
@@ -129,7 +129,7 @@
 
 ### 5.3 集成测试重点
 - 各类别驱动能否以同一套 `BaseDriverOps` 被 `ax-driver::prelude` 和 `AllDevices` 使用。
-- `DevError` 是否能被 `axdriver_virtio`、`axdriver_net`、`axdriver_block` 等映射成一致行为。
+- `DevError` 是否能被 `ax-driver-virtio`、`axdriver_net`、`axdriver_block` 等映射成一致行为。
 
 ### 5.4 风险点
 - 新增设备类别时，最容易漏掉上层聚合容器和日志路径。

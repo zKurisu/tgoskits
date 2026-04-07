@@ -41,7 +41,7 @@
 ### 1.4 与上下层的关系
 当前仓库里的典型接线链路如下：
 
-1. `axdriver_virtio::VirtIoInputDev` 实现 `InputDriverOps`。
+1. `ax_driver_virtio::VirtIoInputDev` 实现 `InputDriverOps`。
 2. `ax-driver` 把它包装成 `AxInputDevice` 放进 `AllDevices.input`。
 3. `ax-runtime` 调用 `ax_input::init_input(all_devices.input)`。
 4. StarryOS 的 `pseudofs/dev/event.rs` 再用 `ax_input::take_inputs()` 取走这些设备，构造 evdev 风格的字符设备。
@@ -59,7 +59,7 @@
 - 让不同输入设备能被 `ax-driver`、`ax-input` 和 StarryOS evdev 层共同消费。
 
 ### 2.2 当前 VirtIO 路径的实现方式
-`axdriver_virtio::VirtIoInputDev` 是当前仓库里的主要实现：
+`ax_driver_virtio::VirtIoInputDev` 是当前仓库里的主要实现：
 
 - `try_new()` 从底层设备读取名称和 `ids()`。
 - `get_event_bits()` 通过 `query_config_select(InputConfigSelect::EvBits, ...)` 读取能力位图。

@@ -45,6 +45,7 @@
 | `ax-display` | ArceOS 层 | `os/arceos/modules/axdisplay` | 3 | 4 | [查看](./ax-display.md) |
 | `ax-dma` | ArceOS 层 | `os/arceos/modules/axdma` | 7 | 2 | [查看](./ax-dma.md) |
 | `ax-driver` | ArceOS 层 | `os/arceos/modules/axdriver` | 15 | 10 | [查看](./ax-driver.md) |
+| `ax-driver-virtio` | 组件层 | `components/axdriver_crates/axdriver_virtio` | 6 | 2 | [查看](./ax-driver-virtio.md) |
 | `ax-feat` | ArceOS 层 | `os/arceos/api/axfeat` | 16 | 7 | [查看](./ax-feat.md) |
 | `ax-fs` | ArceOS 层 | `os/arceos/modules/axfs` | 10 | 4 | [查看](./ax-fs.md) |
 | `ax-fs-ng` | ArceOS 层 | `os/arceos/modules/axfs-ng` | 10 | 4 | [查看](./ax-fs-ng.md) |
@@ -90,7 +91,6 @@
 | `axdriver_input` | 组件层 | `components/axdriver_crates/axdriver_input` | 1 | 2 | [查看](./axdriver_input.md) |
 | `axdriver_net` | 组件层 | `components/axdriver_crates/axdriver_net` | 2 | 2 | [查看](./axdriver_net.md) |
 | `axdriver_pci` | 组件层 | `components/axdriver_crates/axdriver_pci` | 0 | 1 | [查看](./axdriver_pci.md) |
-| `axdriver_virtio` | 组件层 | `components/axdriver_crates/axdriver_virtio` | 6 | 2 | [查看](./axdriver_virtio.md) |
 | `axdriver_vsock` | 组件层 | `components/axdriver_crates/axdriver_vsock` | 1 | 2 | [查看](./axdriver_vsock.md) |
 | `axerrno` | 组件层 | `components/axerrno` | 0 | 36 | [查看](./axerrno.md) |
 | `axfs-ng-vfs` | 组件层 | `components/axfs-ng-vfs` | 2 | 3 | [查看](./axfs-ng-vfs.md) |

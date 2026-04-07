@@ -49,7 +49,7 @@
 //! - `block`: use block storage devices. Similar to the `net` feature.
 //! - `display`: use graphics display devices. Similar to the `net` feature.
 //!
-//! [`VirtioNetDev`]: axdriver_virtio::VirtIoNetDev
+//! [`VirtioNetDev`]: ax_driver_virtio::VirtIoNetDev
 //! [`Box<dyn NetDriverOps>`]: axdriver_net::NetDriverOps
 //! [trait objects]: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 //! [dyn]: https://doc.rust-lang.org/std/keyword.dyn.html

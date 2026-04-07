@@ -120,6 +120,7 @@ flowchart TB
         arm_vcpu["arm_vcpu\nv0.5.0"]
         arm_vgic["arm_vgic\nv0.4.2"]
         ax_cpu["ax-cpu\nv0.5.0"]
+        ax_driver_virtio["ax-driver-virtio\nv0.3.4"]
         ax_plat["ax-plat\nv0.5.1"]
         ax_plat_aarch64_bsta1000b["ax-plat-aarch64-bsta1000b\nv0.5.1"]
         ax_plat_aarch64_peripherals["ax-plat-aarch64-peripherals\nv0.5.1"]
@@ -142,7 +143,6 @@ flowchart TB
         axdriver_input["axdriver_input\nv0.3.4"]
         axdriver_net["axdriver_net\nv0.3.4"]
         axdriver_pci["axdriver_pci\nv0.3.4"]
-        axdriver_virtio["axdriver_virtio\nv0.3.4"]
         axdriver_vsock["axdriver_vsock\nv0.3.4"]
         axerrno["axerrno\nv0.4.2"]
         axfs_ng_vfs["axfs-ng-vfs\nv0.3.1"]
@@ -282,6 +282,7 @@ flowchart TB
     ax_driver --> ax_alloc
     ax_driver --> ax_config
     ax_driver --> ax_dma
+    ax_driver --> ax_driver_virtio
     ax_driver --> ax_hal
     ax_driver --> axdriver_base
     ax_driver --> axdriver_block
@@ -289,11 +290,16 @@ flowchart TB
     ax_driver --> axdriver_input
     ax_driver --> axdriver_net
     ax_driver --> axdriver_pci
-    ax_driver --> axdriver_virtio
     ax_driver --> axdriver_vsock
     ax_driver --> axerrno
     ax_driver --> axplat_dyn
     ax_driver --> crate_interface
+    ax_driver_virtio --> axdriver_base
+    ax_driver_virtio --> axdriver_block
+    ax_driver_virtio --> axdriver_display
+    ax_driver_virtio --> axdriver_input
+    ax_driver_virtio --> axdriver_net
+    ax_driver_virtio --> axdriver_vsock
     ax_feat --> ax_alloc
     ax_feat --> ax_config
     ax_feat --> ax_display
@@ -531,12 +537,6 @@ flowchart TB
     axdriver_input --> axdriver_base
     axdriver_net --> axdriver_base
     axdriver_net --> fxmac_rs
-    axdriver_virtio --> axdriver_base
-    axdriver_virtio --> axdriver_block
-    axdriver_virtio --> axdriver_display
-    axdriver_virtio --> axdriver_input
-    axdriver_virtio --> axdriver_net
-    axdriver_virtio --> axdriver_vsock
     axdriver_vsock --> axdriver_base
     axfs_ng_vfs --> axerrno
     axfs_ng_vfs --> axpoll
@@ -549,11 +549,11 @@ flowchart TB
     axklib --> memory_addr
     axplat_dyn --> ax_alloc
     axplat_dyn --> ax_cpu
+    axplat_dyn --> ax_driver_virtio
     axplat_dyn --> ax_plat
     axplat_dyn --> axconfig_macros
     axplat_dyn --> axdriver_base
     axplat_dyn --> axdriver_block
-    axplat_dyn --> axdriver_virtio
     axplat_dyn --> axerrno
     axplat_dyn --> axklib
     axplat_dyn --> memory_addr
@@ -779,6 +779,7 @@ flowchart TB
     class ax_display cat_arceos
     class ax_dma cat_arceos
     class ax_driver cat_arceos
+    class ax_driver_virtio cat_comp
     class ax_feat cat_arceos
     class ax_fs cat_arceos
     class ax_fs_ng cat_arceos
@@ -824,7 +825,6 @@ flowchart TB
     class axdriver_input cat_comp
     class axdriver_net cat_comp
     class axdriver_pci cat_comp
-    class axdriver_virtio cat_comp
     class axdriver_vsock cat_comp
     class axerrno cat_comp
     class axfs_ng_vfs cat_comp
@@ -947,7 +947,7 @@ flowchart TB
     L4["<b>层级 4</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-plat-aarch64-peripherals`、`ax-plat-loongarch64-qemu-virt`、`ax-plat-x86-pc`、`axdevice_base`、`axplat-dyn`、`axplat-x86-qemu-q35`、`axvisor_api`、`starry-signal`"]
     classDef ls4 fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#000
     class L4 ls4
-    L3["<b>层级 3</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-alloc`、`ax-cpu`、`ax-log`、`ax-plat`、`axaddrspace`、`axdriver_virtio`、`scope-local`、`starry-process`、`test-simple`、`test-weak`、`test-weak-partial`、`tg-xtask`"]
+    L3["<b>层级 3</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-alloc`、`ax-cpu`、`ax-driver-virtio`、`ax-log`、`ax-plat`、`axaddrspace`、`scope-local`、`starry-process`、`test-simple`、`test-weak`、`test-weak-partial`、`tg-xtask`"]
     classDef ls3 fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#000
     class L3 ls3
     L2["<b>层级 2</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-config`、`axbuild`、`axdriver_net`、`axfs_devfs`、`axfs_ramfs`、`impl-simple-traits`、`impl-weak-partial`、`impl-weak-traits`、`kspin`、`page_table_multiarch`、`percpu`"]
@@ -1052,9 +1052,9 @@ flowchart TB
 | 3 | 堆叠层 | ArceOS 层 | `ax-log` | `0.5.0` | `os/arceos/modules/axlog` |
 | 3 | 堆叠层 | 工具层 | `tg-xtask` | `0.5.0` | `xtask` |
 | 3 | 堆叠层 | 组件层 | `ax-cpu` | `0.5.0` | `components/axcpu` |
+| 3 | 堆叠层 | 组件层 | `ax-driver-virtio` | `0.3.4` | `components/axdriver_crates/axdriver_virtio` |
 | 3 | 堆叠层 | 组件层 | `ax-plat` | `0.5.1` | `components/axplat_crates/axplat` |
 | 3 | 堆叠层 | 组件层 | `axaddrspace` | `0.5.0` | `components/axaddrspace` |
-| 3 | 堆叠层 | 组件层 | `axdriver_virtio` | `0.3.4` | `components/axdriver_crates/axdriver_virtio` |
 | 3 | 堆叠层 | 组件层 | `scope-local` | `0.3.2` | `components/scope-local` |
 | 3 | 堆叠层 | 组件层 | `starry-process` | `0.4.0` | `components/starry-process` |
 | 3 | 堆叠层 | 组件层 | `test-simple` | `0.3.0` | `components/crate_interface/test_crates/test-simple` |
@@ -1138,7 +1138,7 @@ flowchart TB
 | 0 | 33 | `aarch64_sysreg` `arm_pl011` `arm_pl031` `axbacktrace` `axconfig-gen` `axdriver_base` `axdriver_pci` `axerrno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `axallocator` `axconfig-macros` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_vsock` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-macros` `axsched` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `memory_set` `page_table_entry` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `axbuild` `axdriver_net` `axfs_devfs` `axfs_ramfs` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `kspin` `page_table_multiarch` `percpu` |
-| 3 | 12 | `ax-alloc` `ax-cpu` `ax-log` `ax-plat` `axaddrspace` `axdriver_virtio` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
+| 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
 | 4 | 8 | `ax-plat-aarch64-peripherals` `ax-plat-loongarch64-qemu-virt` `ax-plat-x86-pc` `axdevice_base` `axplat-dyn` `axplat-x86-qemu-q35` `axvisor_api` `starry-signal` |
 | 5 | 10 | `arm_vgic` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-riscv64-qemu-virt` `ax-plat-riscv64-qemu-virt` `axvcpu` `riscv_vplic` `x86_vlapic` |
 | 6 | 8 | `arm_vcpu` `ax-hal` `axdevice` `hello-kernel` `irq-kernel` `riscv_vcpu` `smp-kernel` `x86_vcpu` |
@@ -1187,7 +1187,8 @@ flowchart TB
 | `ax-cpu` | 3 | Privileged instruction and structure abstractions… | `axbacktrace` `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` | `ax-hal` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` `starry-signal` |
 | `ax-display` | 10 | ArceOS graphics module | `ax-driver` `ax-sync` `lazyinit` | `ax-api` `ax-feat` `ax-runtime` `starry-kernel` |
 | `ax-dma` | 8 | ArceOS global DMA allocator | `ax-alloc` `ax-config` `ax-hal` `ax-mm` `axallocator` `kspin` `memory_addr` | `ax-api` `ax-driver` |
-| `ax-driver` | 9 | ArceOS device drivers | `ax-alloc` `ax-config` `ax-dma` `ax-hal` `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_pci` `axdriver_virtio` `axdriver_vsock` `axerrno` `axplat-dyn` `crate_interface` | `ax-api` `ax-display` `ax-feat` `ax-fs` `ax-fs-ng` `ax-input` `ax-net` `ax-net-ng` `ax-runtime` `starry-kernel` |
+| `ax-driver` | 9 | ArceOS device drivers | `ax-alloc` `ax-config` `ax-dma` `ax-driver-virtio` `ax-hal` `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_pci` `axdriver_vsock` `axerrno` `axplat-dyn` `crate_interface` | `ax-api` `ax-display` `ax-feat` `ax-fs` `ax-fs-ng` `ax-input` `ax-net` `ax-net-ng` `ax-runtime` `starry-kernel` |
+| `ax-driver-virtio` | 3 | Wrappers of some devices in the `virtio-drivers` … | `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_vsock` | `ax-driver` `axplat-dyn` |
 | `ax-feat` | 13 | Top-level feature selection for ArceOS | `ax-alloc` `ax-config` `ax-display` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-net` `ax-runtime` `ax-sync` `ax-task` `axbacktrace` `kspin` | `ax-api` `ax-libc` `ax-posix-api` `ax-std` `starry-kernel` `starryos` `starryos-test` |
 | `ax-fs` | 10 | ArceOS filesystem module | `ax-driver` `ax-hal` `axerrno` `axfs_devfs` `axfs_ramfs` `axfs_vfs` `axio` `cap_access` `lazyinit` `rsext4` | `ax-api` `ax-feat` `ax-posix-api` `ax-runtime` |
 | `ax-fs-ng` | 10 | ArceOS filesystem module | `ax-alloc` `ax-driver` `ax-hal` `ax-sync` `axerrno` `axfs-ng-vfs` `axio` `axpoll` `kspin` `scope-local` | `ax-feat` `ax-net-ng` `ax-runtime` `starry-kernel` |
@@ -1227,14 +1228,13 @@ flowchart TB
 | `axconfig-macros` | 1 | Procedural macros for converting TOML format conf… | `axconfig-gen` | `ax-config` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` |
 | `axdevice` | 6 | A reusable, OS-agnostic device abstraction layer … | `arm_vgic` `axaddrspace` `axdevice_base` `axerrno` `axvmconfig` `memory_addr` `range-alloc-arceos` `riscv_vplic` | `axvisor` `axvm` |
 | `axdevice_base` | 4 | Basic traits and structures for emulated devices … | `axaddrspace` `axerrno` `axvmconfig` | `arm_vcpu` `arm_vgic` `axdevice` `axvisor` `axvm` `riscv_vplic` `x86_vcpu` `x86_vlapic` |
-| `axdriver_base` | 0 | Common interfaces for all kinds of device drivers | — | `ax-driver` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_virtio` `axdriver_vsock` `axplat-dyn` |
-| `axdriver_block` | 1 | Common traits and types for block storage drivers | `axdriver_base` | `ax-driver` `axdriver_virtio` `axplat-dyn` |
-| `axdriver_display` | 1 | Common traits and types for graphics device drive… | `axdriver_base` | `ax-driver` `axdriver_virtio` |
-| `axdriver_input` | 1 | Common traits and types for input device drivers | `axdriver_base` | `ax-driver` `axdriver_virtio` |
-| `axdriver_net` | 2 | Common traits and types for network device (NIC) … | `axdriver_base` `fxmac_rs` | `ax-driver` `axdriver_virtio` |
+| `axdriver_base` | 0 | Common interfaces for all kinds of device drivers | — | `ax-driver` `ax-driver-virtio` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_vsock` `axplat-dyn` |
+| `axdriver_block` | 1 | Common traits and types for block storage drivers | `axdriver_base` | `ax-driver` `ax-driver-virtio` `axplat-dyn` |
+| `axdriver_display` | 1 | Common traits and types for graphics device drive… | `axdriver_base` | `ax-driver` `ax-driver-virtio` |
+| `axdriver_input` | 1 | Common traits and types for input device drivers | `axdriver_base` | `ax-driver` `ax-driver-virtio` |
+| `axdriver_net` | 2 | Common traits and types for network device (NIC) … | `axdriver_base` `fxmac_rs` | `ax-driver` `ax-driver-virtio` |
 | `axdriver_pci` | 0 | Structures and functions for PCI bus operations | — | `ax-driver` |
-| `axdriver_virtio` | 3 | Wrappers of some devices in the `virtio-drivers` … | `axdriver_base` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_vsock` | `ax-driver` `axplat-dyn` |
-| `axdriver_vsock` | 1 | Common traits and types for vsock drivers | `axdriver_base` | `ax-driver` `axdriver_virtio` |
+| `axdriver_vsock` | 1 | Common traits and types for vsock drivers | `axdriver_base` | `ax-driver` `ax-driver-virtio` |
 | `axerrno` | 0 | Generic error code representation. | — | `arm_vcpu` `arm_vgic` `ax-alloc` `ax-api` `ax-driver` `ax-fs` `ax-fs-ng` `ax-libc` `ax-mm` `ax-net` `ax-net-ng` `ax-posix-api` `ax-std` `ax-task` `axaddrspace` `axallocator` `axdevice` `axdevice_base` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `axplat-dyn` `axvcpu` `axvisor` `axvm` `axvmconfig` `memory_set` `page_table_multiarch` `riscv_vcpu` `riscv_vplic` `starry-kernel` `starry-vm` `x86_vcpu` `x86_vlapic` |
 | `axfs-ng-vfs` | 1 | Virtual filesystem layer for ArceOS | `axerrno` `axpoll` | `ax-fs-ng` `ax-net-ng` `starry-kernel` |
 | `axfs_devfs` | 2 | Device filesystem used by ArceOS | `axfs_vfs` | `ax-fs` |
@@ -1243,7 +1243,7 @@ flowchart TB
 | `axhvc` | 1 | AxVisor HyperCall definitions for guest-hyperviso… | `axerrno` | `axvisor` |
 | `axio` | 1 | `std::io` for `no_std` environment | `axerrno` | `ax-api` `ax-fs` `ax-fs-ng` `ax-libc` `ax-net` `ax-net-ng` `ax-posix-api` `ax-std` `starry-kernel` |
 | `axklib` | 1 | Small kernel-helper abstractions used across the … | `axerrno` `memory_addr` | `ax-runtime` `axplat-dyn` `axvisor` |
-| `axplat-dyn` | 4 | A dynamic platform module for ArceOS, providing r… | `ax-alloc` `ax-cpu` `ax-plat` `axconfig-macros` `axdriver_base` `axdriver_block` `axdriver_virtio` `axerrno` `axklib` `memory_addr` `percpu` | `ax-driver` `ax-hal` |
+| `axplat-dyn` | 4 | A dynamic platform module for ArceOS, providing r… | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-plat` `axconfig-macros` `axdriver_base` `axdriver_block` `axerrno` `axklib` `memory_addr` `percpu` | `ax-driver` `ax-hal` |
 | `axplat-macros` | 1 | Procedural macros for the `axplat` crate | `crate_interface` | `ax-plat` |
 | `axplat-x86-qemu-q35` | 4 | Hardware platform implementation for x86_64 QEMU … | `ax-cpu` `ax-plat` `axconfig-macros` `int_ratio` `kspin` `lazyinit` `percpu` | `axvisor` |
 | `axpoll` | 0 | A library for polling I/O events and waking up ta… | — | `ax-fs-ng` `ax-net-ng` `ax-task` `axfs-ng-vfs` `starry-kernel` |
@@ -1929,7 +1929,7 @@ flowchart TB
 | `uuid` `1.23.0` | A library to generate and parse UUIDs. | — | — |
 | `valuable` `0.1.1` | Object-safe value inspection, used to pass un-typed structured data across trait-object boundaries. | — | — |
 | `vcpkg` `0.2.15` | A library to find native dependencies in a vcpkg tree at build time in order to be used in Cargo bu… | — | — |
-| `virtio-drivers` `0.7.5` | VirtIO guest drivers. | `axdriver_pci` `axdriver_virtio` | — |
+| `virtio-drivers` `0.7.5` | VirtIO guest drivers. | `ax-driver-virtio` `axdriver_pci` | — |
 | `volatile` `0.3.0` | — | — | — |
 | `volatile` `0.4.6` | A simple volatile wrapper type | — | — |
 | `volatile` `0.6.1` | — | — | — |
@@ -2075,7 +2075,7 @@ flowchart TB
 | `crc-catalog` `2.4.0` | Catalog of CRC algorithms (generated from http://reveng.sourceforge.net/crc-catalogue) expressed as… | — | — |
 | `env_logger` `0.10.2` | A logging implementation for `log` which is configured via an environment variable. | `smoltcp` | — |
 | `env_logger` `0.11.10` | A logging implementation for `log` which is configured via an environment variable. | `axbuild` `axvmconfig` | — |
-| `log` `0.4.29` | A lightweight logging facade for Rust | `arm_vcpu` `arm_vgic` `ax-alloc` `ax-cpu` `ax-display` `ax-dma` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-net-ng` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `ax-task` `axaddrspace` `axbacktrace` `axbuild` `axdevice` `axdriver_block` `axdriver_net` `axdriver_virtio` `axdriver_vsock` `axerrno` `axfs-ng-vfs` `axfs_devfs` `axfs_ramfs` `axfs_vfs` `axplat-dyn` `axplat-x86-qemu-q35` `axvisor` `axvm` `axvmconfig` `fxmac_rs` `page_table_multiarch` `riscv-h` `riscv_vcpu` `riscv_vplic` `rsext4` `smoltcp` `starry-signal` `x86_vcpu` `x86_vlapic` | — |
+| `log` `0.4.29` | A lightweight logging facade for Rust | `arm_vcpu` `arm_vgic` `ax-alloc` `ax-cpu` `ax-display` `ax-dma` `ax-driver` `ax-driver-virtio` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-net-ng` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `ax-task` `axaddrspace` `axbacktrace` `axbuild` `axdevice` `axdriver_block` `axdriver_net` `axdriver_vsock` `axerrno` `axfs-ng-vfs` `axfs_devfs` `axfs_ramfs` `axfs_vfs` `axplat-dyn` `axplat-x86-qemu-q35` `axvisor` `axvm` `axvmconfig` `fxmac_rs` `page_table_multiarch` `riscv-h` `riscv_vcpu` `riscv_vplic` `rsext4` `smoltcp` `starry-signal` `x86_vcpu` `x86_vlapic` | — |
 | `thiserror` `1.0.69` | derive(Error) | — | — |
 | `thiserror` `2.0.18` | derive(Error) | — | — |
 | `thiserror-impl` `1.0.69` | Implementation detail of the `thiserror` crate | — | — |

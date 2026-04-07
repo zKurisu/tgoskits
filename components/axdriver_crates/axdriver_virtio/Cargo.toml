@@ -1,5 +1,5 @@
 [package]
-name = "axdriver_virtio"
+name = "ax-driver-virtio"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true

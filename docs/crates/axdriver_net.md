@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/net_buf.rs`、`src/fxmac.rs`、`src/ixgbe.rs`、`components/axdriver_crates/axdriver_virtio/src/net.rs`、`os/arceos/modules/axdriver/src/drivers.rs`
 
-`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `ax-net`、`ax-net-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `ax-driver`、`axdriver_virtio` 等承担。
+`axdriver_net` 的定位是 NIC 驱动类别层，而不是网络栈。它一方面定义网卡驱动必须实现的 `NetDriverOps`，另一方面内建 `fxmac` 和 `ixgbe` 两个具体实现模块，并提供一套在当前 ArceOS 网络驱动栈里非常关键的缓冲区抽象 `NetBuf` / `NetBufPool` / `NetBufPtr`。上层 `ax-net`、`ax-net-ng` 依赖它消费网卡，下层具体设备和总线探测则由 `ax-driver`、`ax-driver-virtio` 等承担。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -63,10 +63,10 @@
 - `receive_packets()` 支持批量接收并转成 `NetBufPtr`。
 - `IxgbeHal` 由 `os/arceos/modules/axdriver/src/ixgbe.rs` 对接 `ax-dma`。
 
-### 1.6 与 `ax-driver` 和 `axdriver_virtio` 的接线关系
+### 1.6 与 `ax-driver` 和 `ax-driver-virtio` 的接线关系
 当前仓库中的三条主要接线路径是：
 
-- `axdriver_virtio::VirtIoNetDev`：用 `NetBufPool` 组织 VirtIO 队列收发。
+- `ax_driver_virtio::VirtIoNetDev`：用 `NetBufPool` 组织 VirtIO 队列收发。
 - `ax-driver::drivers::IxgbeDriver`：在 PCI 探测路径中构造 `IxgbeNic`。
 - `ax-driver::drivers::FXmacDriver`：在全局 probe 路径中构造 `FXmacNic`，并通过 `crate_interface` 实现 `KernelFunc`。
 
