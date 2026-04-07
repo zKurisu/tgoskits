@@ -3,7 +3,7 @@
 #![doc = include_str!("../README.md")]
 
 #[macro_use]
-extern crate axplat_macros;
+extern crate ax_plat_macros;
 
 pub mod console;
 pub mod init;
