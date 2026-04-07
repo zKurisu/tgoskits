@@ -50,6 +50,6 @@ mod time {
 }
 
 pub use ax_hal::power::system_off as ax_terminate;
-pub use axio::PollState as AxPollState;
+pub use ax_io::PollState as AxPollState;
 
 pub use self::{mem::*, stdio::*, sys::*, task::*, time::*};

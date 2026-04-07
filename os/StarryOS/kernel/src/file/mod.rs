@@ -10,10 +10,10 @@ use alloc::{borrow::Cow, sync::Arc};
 use core::{ffi::c_int, time::Duration};
 
 use ax_fs::{FS_CONTEXT, OpenOptions};
+use ax_io::prelude::*;
 use ax_task::current;
 use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::DeviceId;
-use axio::prelude::*;
 use axpoll::Pollable;
 use downcast_rs::{DowncastSync, impl_downcast};
 use flatten_objects::FlattenObjects;

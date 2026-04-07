@@ -77,7 +77,7 @@
 | 总体定位 | 第一代同步 IP 网络模块 | 第二代统一 socket 服务层 |
 | 地址族 | IP/TCP/UDP/DNS | IP + Unix domain + vsock |
 | 设备视图 | `smoltcp` 直接面对 Ethernet 设备 | `Router`/`Device` 先做路由、loopback、ARP，再把 IP 包交给 `smoltcp` |
-| readiness 语义 | `axio::PollState` | `axpoll::IoEvents` |
+| readiness 语义 | `ax_io::PollState` | `axpoll::IoEvents` |
 | 等待方式 | 轮询接口并 `yield_now()` | `poll_io` + waker + timeout |
 | 主要消费者 | `ax-api`、`ax-posix-api`、老一代 ArceOS 路径 | `ax-runtime net-ng` 与 StarryOS 主 socket 层 |
 

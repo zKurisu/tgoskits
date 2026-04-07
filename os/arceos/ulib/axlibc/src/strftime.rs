@@ -1,7 +1,7 @@
 use alloc::string::String;
 use core::{ffi::c_char, fmt};
 
-use axio::Write;
+use ax_io::Write;
 
 use crate::ctypes;
 

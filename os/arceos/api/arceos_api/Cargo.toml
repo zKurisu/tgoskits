@@ -35,7 +35,7 @@ axerrno.workspace = true
 ax-feat.workspace = true
 ax-fs = { workspace = true, optional = true }
 ax-hal.workspace = true
-axio.workspace = true
+ax-io.workspace = true
 ax-ipi = { workspace = true, optional = true }
 ax-log.workspace = true
 ax-mm = { workspace = true, optional = true }

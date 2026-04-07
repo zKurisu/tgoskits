@@ -3,9 +3,9 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use ax_io::PollState;
 use ax_sync::Mutex;
 use axerrno::{AxError, AxResult, ax_err, ax_err_type};
-use axio::PollState;
 use smoltcp::{
     iface::SocketHandle,
     socket::udp::{self, BindError, SendError},

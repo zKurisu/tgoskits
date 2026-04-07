@@ -2,9 +2,9 @@ use alloc::sync::Arc;
 use core::ffi::{c_char, c_int};
 
 use ax_fs::fops::OpenOptions;
+use ax_io::{PollState, SeekFrom};
 use ax_sync::Mutex;
 use axerrno::{LinuxError, LinuxResult};
-use axio::{PollState, SeekFrom};
 
 use super::fd_ops::{FileLike, get_file_like};
 use crate::{ctypes, utils::char_ptr_to_str};

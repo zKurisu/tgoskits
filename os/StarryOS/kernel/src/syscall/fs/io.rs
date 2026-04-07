@@ -5,9 +5,9 @@ use core::{
 };
 
 use ax_fs::{FS_CONTEXT, FileFlags, OpenOptions};
+use ax_io::{Seek, SeekFrom};
 use ax_task::current;
 use axerrno::{AxError, AxResult};
-use axio::{Seek, SeekFrom};
 use axpoll::{IoEvents, Pollable};
 use linux_raw_sys::general::__kernel_off_t;
 use starry_vm::{VmMutPtr, VmPtr};

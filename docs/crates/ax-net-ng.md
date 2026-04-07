@@ -45,7 +45,7 @@ graph LR
     current --> axfs_ng["ax-fs-ng"]
     current --> axfs_ng_vfs["axfs-ng-vfs"]
     current --> ax-hal["ax-hal"]
-    current --> axio["axio"]
+    current --> axio["ax-io"]
     current --> axpoll["axpoll"]
     ax_runtime["ax-runtime"] --> current
     starry_kernel["starry-kernel"] --> current

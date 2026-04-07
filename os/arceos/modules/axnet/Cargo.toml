@@ -20,7 +20,7 @@ vsock = ["ax-driver/vsock"]
 ax-driver = { workspace = true, features = ["net"] }
 axerrno.workspace = true
 ax-hal.workspace = true
-axio.workspace = true
+ax-io.workspace = true
 ax-sync.workspace = true
 ax-task.workspace = true
 cfg-if.workspace = true

@@ -153,7 +153,7 @@ ax-dma = { path = "os/arceos/modules/axdma" }
 ax-hal = { path = "os/arceos/modules/axhal" }
 
 ax-cpu = { path = "components/axcpu" }
-axio = { path = "components/axio" }
+ax-io = { path = "components/axio" }
 axsched = { path = "components/axsched" }
 axpoll = { path = "components/axpoll" }
 lazyinit = { path = "components/lazyinit" }
@@ -332,7 +332,7 @@ axdevice_base = { path = "components/axdevice_base", version = "0.4.2" }
 axerrno = { path = "components/axerrno", version = "0.4.2" }
 axfs-ng-vfs = { path = "components/axfs-ng-vfs", version = "0.3.1" }
 axhvc = { path = "components/axhvc", version = "0.4.0" }
-axio = { path = "components/axio", version = "0.5.0" }
+ax-io = { path = "components/axio", version = "0.5.0" }
 axklib = { path = "components/axklib", version = "0.5.0" }
 axpoll = { path = "components/axpoll", version = "0.3.2" }
 timer_list = { path = "components/timer_list", version = "0.3.0" }

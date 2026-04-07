@@ -5,10 +5,10 @@ use core::{
     net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4},
 };
 
+use ax_io::PollState;
 use ax_net::{TcpSocket, UdpSocket};
 use ax_sync::Mutex;
 use axerrno::{LinuxError, LinuxResult};
-use axio::PollState;
 
 use super::fd_ops::FileLike;
 use crate::{ctypes, utils::char_ptr_to_str};

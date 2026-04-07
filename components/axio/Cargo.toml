@@ -1,5 +1,5 @@
 [package]
-name = "axio"
+name = "ax-io"
 version = "0.5.0"
 edition = "2024"
 authors = ["Yuekai Jia <equation618@gmail.com>"]

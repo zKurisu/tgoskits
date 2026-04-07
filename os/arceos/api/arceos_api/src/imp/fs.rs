@@ -7,7 +7,7 @@ pub use ax_fs::fops::FileAttr as AxFileAttr;
 pub use ax_fs::fops::FilePerm as AxFilePerm;
 pub use ax_fs::fops::FileType as AxFileType;
 pub use ax_fs::fops::OpenOptions as AxOpenOptions;
-pub use axio::SeekFrom as AxSeekFrom;
+pub use ax_io::SeekFrom as AxSeekFrom;
 
 
 /// A handle to an opened file.

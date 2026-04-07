@@ -37,7 +37,7 @@ graph LR
     current --> axerrno["axerrno"]
     current --> axfs_ng_vfs["axfs-ng-vfs"]
     current --> ax-hal["ax-hal"]
-    current --> axio["axio"]
+    current --> axio["ax-io"]
     current --> axpoll["axpoll"]
     current --> ax-sync["ax-sync"]
     ax_feat["ax-feat"] --> current

@@ -84,7 +84,7 @@ graph LR
 
     axerrno --> ax-alloc["ax-alloc"]
     axerrno --> ax-allocator["ax-allocator"]
-    axerrno --> axio["axio"]
+    axerrno --> axio["ax-io"]
     axerrno --> ax-mm["ax-mm"]
     axerrno --> ax-net["ax-net/ax-net-ng"]
     axerrno --> ax-api["ax-api"]

@@ -15,7 +15,7 @@
 use alloc::string::String;
 use core::fmt;
 
-use axio::Result;
+use ax_io::Result;
 
 use super::FileType;
 use crate::fops;

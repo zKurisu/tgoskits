@@ -233,7 +233,7 @@ CURATED_DOCS = {
     "ax-sync",
     "axsched",
     "ax-cpu",
-    "axio",
+    "ax-io",
     "ax-net",
     "ax-net-ng",
     "axpoll",

@@ -41,7 +41,7 @@ graph LR
     current --> ax-posix-api["ax-posix-api"]
     current --> axerrno["axerrno"]
     current --> ax-feat["ax-feat"]
-    current --> axio["axio"]
+    current --> axio["ax-io"]
 ```
 
 ### 3.1 直接与间接依赖

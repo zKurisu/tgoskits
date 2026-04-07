@@ -19,7 +19,7 @@ ax-driver = { workspace = true, features = ["block"] }
 axerrno = { workspace = true }
 axfs-ng-vfs = { workspace = true }
 ax-hal = { workspace = true }
-axio = { workspace = true, features = ["alloc"] }
+ax-io = { workspace = true, features = ["alloc"] }
 axpoll = { workspace = true }
 ax-sync = { workspace = true }
 bitflags = "2.10"

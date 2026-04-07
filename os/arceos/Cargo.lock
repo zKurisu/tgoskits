@@ -238,7 +238,7 @@ dependencies = [
  "ax-feat",
  "ax-fs",
  "axhal",
- "axio",
+ "ax-io",
  "axipi",
  "ax-log",
  "axmm",
@@ -258,7 +258,7 @@ dependencies = [
  "ax-feat",
  "ax-fs",
  "axhal",
- "axio",
+ "ax-io",
  "ax-log",
  "axnet",
  "ax-runtime",
@@ -636,7 +636,7 @@ dependencies = [
  "ax-fs-ramfs",
  "ax-fs-vfs",
  "axhal",
- "axio",
+ "ax-io",
  "cap_access",
  "lazyinit",
  "log",
@@ -653,7 +653,7 @@ dependencies = [
  "axerrno",
  "axfs-ng-vfs",
  "axhal",
- "axio",
+ "ax-io",
  "axpoll",
  "axsync",
  "bitflags 2.11.0",
@@ -748,7 +748,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axio"
+name = "ax-io"
 version = "0.5.0"
 dependencies = [
  "autocfg",
@@ -785,7 +785,7 @@ dependencies = [
  "ax-posix-api",
  "axerrno",
  "ax-feat",
- "axio",
+ "ax-io",
  "bindgen",
 ]
 
@@ -823,7 +823,7 @@ dependencies = [
  "axdriver",
  "axerrno",
  "axhal",
- "axio",
+ "ax-io",
  "axsync",
  "axtask",
  "cfg-if",
@@ -845,7 +845,7 @@ dependencies = [
  "ax-fs-ng",
  "axfs-ng-vfs",
  "axhal",
- "axio",
+ "ax-io",
  "axpoll",
  "axsync",
  "axtask",
@@ -1086,7 +1086,7 @@ dependencies = [
  "ax-api",
  "axerrno",
  "ax-feat",
- "axio",
+ "ax-io",
  "kspin",
  "lazyinit",
  "lock_api",

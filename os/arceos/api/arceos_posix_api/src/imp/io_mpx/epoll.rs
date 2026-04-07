@@ -131,7 +131,7 @@ impl FileLike for EpollInstance {
         self
     }
 
-    fn poll(&self) -> LinuxResult<axio::PollState> {
+    fn poll(&self) -> LinuxResult<ax_io::PollState> {
         Err(LinuxError::ENOSYS)
     }
 

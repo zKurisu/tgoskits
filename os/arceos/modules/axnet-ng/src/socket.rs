@@ -8,8 +8,8 @@ use core::{
 
 #[cfg(feature = "vsock")]
 use ax_driver::prelude::VsockAddr;
+use ax_io::prelude::*;
 use axerrno::{AxError, AxResult, LinuxError};
-use axio::prelude::*;
 use axpoll::{IoEvents, Pollable};
 use bitflags::bitflags;
 use enum_dispatch::enum_dispatch;

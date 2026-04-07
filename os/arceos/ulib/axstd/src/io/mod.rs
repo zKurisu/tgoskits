@@ -2,7 +2,7 @@
 
 mod stdio;
 
-pub use axio::{BufRead, BufReader, Error, Read, Seek, SeekFrom, Write, prelude};
+pub use ax_io::{BufRead, BufReader, Error, Read, Seek, SeekFrom, Write, prelude};
 
 #[doc(hidden)]
 pub use self::stdio::__print_impl;
@@ -24,4 +24,4 @@ pub use self::stdio::{Stdin, StdinLock, Stdout, StdoutLock, stdin, stdout};
 ///
 /// [`ax_std::io`]: crate::io
 /// [`io::Error`]: Error
-pub type Result<T> = axio::Result<T>;
+pub type Result<T> = ax_io::Result<T>;

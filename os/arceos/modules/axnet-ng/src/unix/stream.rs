@@ -5,9 +5,9 @@ use core::{
 };
 
 use async_trait::async_trait;
+use ax_io::{IoBuf, Read, Write};
 use ax_sync::Mutex;
 use axerrno::{AxError, AxResult};
-use axio::{IoBuf, Read, Write};
 use axpoll::{IoEvents, PollSet, Pollable};
 use ringbuf::{
     HeapCons, HeapProd, HeapRb,

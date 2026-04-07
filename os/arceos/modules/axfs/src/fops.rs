@@ -17,8 +17,8 @@
 use core::fmt;
 
 use ax_fs_vfs::VfsNodeRef;
+use ax_io::SeekFrom;
 use axerrno::{AxError, AxResult, ax_err_type};
-use axio::SeekFrom;
 use cap_access::{Cap, WithCap};
 
 /// Alias of [`ax_fs_vfs::VfsNodeType`].

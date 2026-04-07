@@ -1,9 +1,9 @@
 use alloc::sync::Arc;
 use core::task::Context;
 
+use ax_io::prelude::*;
 use ax_sync::Mutex;
 use axerrno::{AxError, AxResult, ax_bail, ax_err_type};
-use axio::prelude::*;
 use axpoll::{IoEvents, Pollable};
 
 use super::connection_manager::*;
@@ -216,7 +216,7 @@ impl VsockTransportOps for VsockStreamTransport {
         drop(conn_guard);
 
         // now virtio-driver only support non-blocking send
-        let result = src.write_to(&mut axio::write_fn(|buf| vsock_send(conn_id, buf)));
+        let result = src.write_to(&mut ax_io::write_fn(|buf| vsock_send(conn_id, buf)));
         conn.lock().add_tx_bytes(result.unwrap_or(0));
         result
     }

@@ -662,7 +662,7 @@ dependencies = [
  "ax-fs-devfs",
  "ax-fs-ramfs",
  "ax-fs-vfs",
- "axio",
+ "ax-io",
  "cap_access",
  "lazyinit",
  "log",
@@ -681,7 +681,7 @@ dependencies = [
  "axerrno 0.2.2",
  "axfs-ng-vfs",
  "axhal",
- "axio",
+ "ax-io",
  "axpoll",
  "axsync",
  "bitflags 2.11.0",
@@ -787,7 +787,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axio"
+name = "ax-io"
 version = "0.3.0-pre.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6ce41624ae4e7ef942ebe3ac3aa3ce5d64340e8f23fb29bbd0007e9765544b4"
@@ -846,7 +846,7 @@ dependencies = [
  "axdriver",
  "axerrno 0.2.2",
  "axhal",
- "axio",
+ "ax-io",
  "axsync",
  "axtask",
  "cfg-if",
@@ -870,7 +870,7 @@ dependencies = [
  "ax-fs-ng",
  "axfs-ng-vfs",
  "axhal",
- "axio",
+ "ax-io",
  "axpoll",
  "axsync",
  "axtask",
@@ -5532,7 +5532,7 @@ dependencies = [
  "axfs-ng-vfs",
  "axhal",
  "ax-input",
- "axio",
+ "ax-io",
  "ax-log",
  "axmm",
  "ax-net-ng",

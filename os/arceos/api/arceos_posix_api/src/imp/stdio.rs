@@ -1,8 +1,8 @@
+use ax_io::{BufReader, prelude::*};
 use ax_sync::Mutex;
 use axerrno::AxResult;
-use axio::{BufReader, prelude::*};
 #[cfg(feature = "fd")]
-use {alloc::sync::Arc, axerrno::LinuxError, axerrno::LinuxResult, axio::PollState};
+use {alloc::sync::Arc, ax_io::PollState, axerrno::LinuxError, axerrno::LinuxResult};
 
 fn console_read_bytes(buf: &mut [u8]) -> AxResult<usize> {
     let len = ax_hal::console::read_bytes(buf);

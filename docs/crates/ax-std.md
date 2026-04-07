@@ -42,7 +42,7 @@ graph LR
     current --> ax-api["ax-api"]
     current --> axerrno["axerrno"]
     current --> ax-feat["ax-feat"]
-    current --> axio["axio"]
+    current --> axio["ax-io"]
     current --> kspin["kspin"]
     current --> lazyinit["lazyinit"]
     arceos_affinity["arceos-affinity"] --> current
