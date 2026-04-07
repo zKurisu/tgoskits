@@ -505,7 +505,7 @@ dependencies = [
  "axdriver_base",
  "ax-driver-block",
  "ax-driver-display",
- "axdriver_input",
+ "ax-driver-input",
  "axdriver_net",
  "axdriver_pci",
  "ax-driver-virtio",
@@ -544,7 +544,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdriver_input"
+name = "ax-driver-input"
 version = "0.1.4-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5703515bf1f113d272f1e6f6b7043976fbbee66553e21360e07cc7ba75866838"
@@ -582,7 +582,7 @@ dependencies = [
  "axdriver_base",
  "ax-driver-block",
  "ax-driver-display",
- "axdriver_input",
+ "ax-driver-input",
  "axdriver_net",
  "log",
  "virtio-drivers",

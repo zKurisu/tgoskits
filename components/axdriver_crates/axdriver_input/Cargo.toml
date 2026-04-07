@@ -1,5 +1,5 @@
 [package]
-name = "axdriver_input"
+name = "ax-driver-input"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true

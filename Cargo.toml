@@ -214,7 +214,7 @@ ax-driver-display = { path = "components/axdriver_crates/axdriver_display" }
 axdriver_net = { path = "components/axdriver_crates/axdriver_net" }
 axdriver_pci = { path = "components/axdriver_crates/axdriver_pci" }
 ax-driver-virtio = { path = "components/axdriver_crates/axdriver_virtio" }
-axdriver_input = { path = "components/axdriver_crates/axdriver_input" }
+ax-driver-input = { path = "components/axdriver_crates/axdriver_input" }
 axdriver_vsock = { path = "components/axdriver_crates/axdriver_vsock" }
 
 # === percpu ===
@@ -359,7 +359,7 @@ ax-plat-x86-pc = { version = "0.5.1", path = "components/axplat_crates/platforms
 axdriver_base = { version = "0.3.4", path = "components/axdriver_crates/axdriver_base" }
 ax-driver-block = { version = "0.3.4", path = "components/axdriver_crates/axdriver_block" }
 ax-driver-display = { version = "0.3.4", path = "components/axdriver_crates/axdriver_display" }
-axdriver_input = { version = "0.3.4", path = "components/axdriver_crates/axdriver_input" }
+ax-driver-input = { version = "0.3.4", path = "components/axdriver_crates/axdriver_input" }
 axdriver_net = { version = "0.3.4", path = "components/axdriver_crates/axdriver_net" }
 axdriver_pci = { version = "0.3.4", path = "components/axdriver_crates/axdriver_pci" }
 ax-driver-virtio = { version = "0.3.4", path = "components/axdriver_crates/axdriver_virtio" }
