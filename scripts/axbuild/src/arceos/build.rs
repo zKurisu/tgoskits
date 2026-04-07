@@ -694,7 +694,7 @@ mod tests {
     #[test]
     fn resolves_dynamic_platform_features_and_args() {
         let mut build_info = base_build_info();
-        build_info.resolve_features("arceos-helloworld", true);
+        build_info.resolve_features("ax-helloworld", true);
 
         assert!(build_info.features.contains(&"axstd/plat-dyn".to_string()));
         assert!(!build_info.features.contains(&"axstd/defplat".to_string()));
@@ -706,7 +706,7 @@ mod tests {
     #[test]
     fn resolves_non_dynamic_platform_features_and_args() {
         let mut build_info = base_build_info();
-        build_info.resolve_features("arceos-helloworld", false);
+        build_info.resolve_features("ax-helloworld", false);
 
         assert!(build_info.features.contains(&"axstd/defplat".to_string()));
         assert!(!build_info.features.contains(&"axstd/plat-dyn".to_string()));
@@ -722,7 +722,7 @@ mod tests {
             ..ArceosBuildInfo::default()
         };
 
-        build_info.resolve_features("arceos-helloworld", false);
+        build_info.resolve_features("ax-helloworld", false);
 
         assert!(build_info.features.contains(&"axstd/smp".to_string()));
     }
@@ -733,7 +733,7 @@ mod tests {
             features: vec!["axstd".to_string(), "axstd/myplat".to_string()],
             ..ArceosBuildInfo::default()
         };
-        build_info.resolve_features("arceos-helloworld", false);
+        build_info.resolve_features("ax-helloworld", false);
 
         assert!(build_info.features.contains(&"axstd/myplat".to_string()));
         assert!(!build_info.features.contains(&"axstd/defplat".to_string()));
@@ -802,7 +802,7 @@ mod tests {
             ..ArceosBuildInfo::default()
         };
 
-        build_info.resolve_features("arceos-helloworld", false);
+        build_info.resolve_features("ax-helloworld", false);
 
         assert_eq!(
             build_info
@@ -816,9 +816,8 @@ mod tests {
 
     #[test]
     fn resolve_build_info_path_uses_package_directory() {
-        let path =
-            resolve_build_info_path("arceos-helloworld", "aarch64-unknown-none-softfloat", None)
-                .unwrap();
+        let path = resolve_build_info_path("ax-helloworld", "aarch64-unknown-none-softfloat", None)
+            .unwrap();
 
         assert!(
             path.ends_with(
@@ -830,7 +829,7 @@ mod tests {
     #[test]
     fn resolve_build_info_path_prefers_explicit_path() {
         let path = resolve_build_info_path(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             Some(PathBuf::from("/tmp/custom-build.toml")),
         )
@@ -873,7 +872,7 @@ mod tests {
     fn load_build_info_creates_missing_default_file() {
         let root = tempdir().unwrap();
         let path = root.path().join(".build-target.toml");
-        let request = request("arceos-helloworld", "target", None, path.clone());
+        let request = request("ax-helloworld", "target", None, path.clone());
 
         let build_info = load_build_info(&request).unwrap();
 
@@ -891,7 +890,7 @@ mod tests {
         let root = tempdir().unwrap();
         let path = root.path().join(".build-aarch64.toml");
         let request = request(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             None,
             path,
@@ -918,7 +917,7 @@ AX_IP = "127.0.0.1"
 "#,
         )
         .unwrap();
-        let request = request("arceos-helloworld", "target", None, path);
+        let request = request("ax-helloworld", "target", None, path);
 
         let build_info = load_build_info(&request).unwrap();
 
@@ -945,7 +944,7 @@ AX_IP = "127.0.0.1"
     fn to_cargo_config_includes_ax_log_env() {
         let root = tempdir().unwrap();
         let request = request(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             None,
             root.path().join(".build.toml"),
@@ -962,7 +961,7 @@ AX_IP = "127.0.0.1"
     fn to_cargo_config_maps_max_cpu_num_to_smp_env_for_dynamic_platforms() {
         let root = tempdir().unwrap();
         let request = request(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             Some(true),
             root.path().join(".build.toml"),
@@ -983,7 +982,7 @@ AX_IP = "127.0.0.1"
     fn to_cargo_config_maps_single_cpu_to_smp_env_without_forcing_smp_feature() {
         let root = tempdir().unwrap();
         let request = request(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             Some(true),
             root.path().join(".build.toml"),
@@ -1004,7 +1003,7 @@ AX_IP = "127.0.0.1"
     fn base_cargo_config_defaults_to_bin_false_for_x86_64_targets() {
         let cargo = ArceosBuildInfo::default_for_target("x86_64-unknown-none")
             .into_base_cargo_config_with_log(
-                "arceos-helloworld".to_string(),
+                "ax-helloworld".to_string(),
                 "x86_64-unknown-none".to_string(),
                 vec![],
             );
@@ -1016,7 +1015,7 @@ AX_IP = "127.0.0.1"
     fn base_cargo_config_keeps_to_bin_true_for_non_x86_64_targets() {
         let cargo = ArceosBuildInfo::default_for_target("aarch64-unknown-none-softfloat")
             .into_base_cargo_config_with_log(
-                "arceos-helloworld".to_string(),
+                "ax-helloworld".to_string(),
                 "aarch64-unknown-none-softfloat".to_string(),
                 vec![],
             );
@@ -1039,7 +1038,7 @@ AX_GW = "10.0.2.2"
 
         let build_info: ArceosBuildInfo =
             toml::from_str(toml).expect("build info should deserialize");
-        let app_dir = resolve_package_manifest_path("arceos-helloworld", None)
+        let app_dir = resolve_package_manifest_path("ax-helloworld", None)
             .unwrap()
             .parent()
             .unwrap()
@@ -1047,7 +1046,7 @@ AX_GW = "10.0.2.2"
         let generated_config = app_dir.join(".axconfig.toml");
         let existed = generated_config.exists();
         let request = request(
-            "arceos-helloworld",
+            "ax-helloworld",
             "aarch64-unknown-none-softfloat",
             Some(false),
             app_dir.join(".build-aarch64-unknown-none-softfloat.toml"),

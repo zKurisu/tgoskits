@@ -262,13 +262,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arceos-helloworld"
-version = "0.3.0"
-dependencies = [
- "axstd",
-]
-
-[[package]]
 name = "arceos-helloworld-myplat"
 version = "0.3.0"
 dependencies = [
@@ -609,6 +602,13 @@ dependencies = [
  "cmake",
  "dunce",
  "fs_extra",
+]
+
+[[package]]
+name = "ax-helloworld"
+version = "0.3.0"
+dependencies = [
+ "axstd",
 ]
 
 [[package]]

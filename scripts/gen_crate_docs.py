@@ -196,7 +196,7 @@ CURATED_DOCS = {
     "axdriver_vsock",
     "arceos_api",
     "arceos-affinity",
-    "arceos-helloworld",
+    "ax-helloworld",
     "arceos-helloworld-myplat",
     "arceos-httpclient",
     "arceos-httpserver",
