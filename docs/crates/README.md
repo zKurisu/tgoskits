@@ -104,7 +104,7 @@
 | `ax-plat-macros` | 组件层 | `components/axplat_crates/axplat-macros` | 1 | 1 | [查看](./ax-plat-macros.md) |
 | `axplat-x86-qemu-q35` | 平台层 | `platform/x86-qemu-q35` | 7 | 1 | [查看](./axplat-x86-qemu-q35.md) |
 | `axpoll` | 组件层 | `components/axpoll` | 0 | 5 | [查看](./axpoll.md) |
-| `axsched` | 组件层 | `components/axsched` | 1 | 1 | [查看](./axsched.md) |
+| `axsched` | 组件层 | `components/axsched` | 1 | 1 | [查看](./ax-sched.md) |
 | `axvcpu` | 组件层 | `components/axvcpu` | 5 | 5 | [查看](./axvcpu.md) |
 | `axvisor` | Axvisor 层 | `os/axvisor` | 27 | 0 | [查看](./axvisor.md) |
 | `axvisor_api` | 组件层 | `components/axvisor_api` | 5 | 10 | [查看](./axvisor_api.md) |

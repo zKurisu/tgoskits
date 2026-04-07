@@ -4,7 +4,7 @@ use alloc::{collections::VecDeque, sync::Arc};
 use core::mem::MaybeUninit;
 
 use ax_hal::percpu::this_cpu_id;
-use axsched::BaseScheduler;
+use ax_sched::BaseScheduler;
 use kernel_guard::BaseGuard;
 use kspin::{SpinNoIrqGuard, SpinRaw};
 use lazyinit::LazyInit;

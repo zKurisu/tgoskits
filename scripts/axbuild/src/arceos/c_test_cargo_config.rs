@@ -353,7 +353,7 @@ mod tests {
             "ax-allocator",
             "axbacktrace",
             "lazyinit",
-            "axsched",
+            "ax-sched",
             "cap_access",
             "cpumask",
             "rsext4",

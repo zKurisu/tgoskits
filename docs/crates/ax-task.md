@@ -122,7 +122,7 @@ let wq = ax-task::WaitQueue::new();
 ```mermaid
 graph LR
     ax-hal["ax-hal"] --> ax-task["ax-task"]
-    axsched["axsched"] --> ax-task
+    axsched["ax-sched"] --> ax-task
     axconfig["ax-config"] --> ax-task
     kernel_guard["kernel_guard"] --> ax-task
     axpoll["axpoll"] --> ax-task

@@ -64,7 +64,7 @@
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    linked_list["linked_list_r4l"] --> axsched["axsched"]
+    linked_list["linked_list_r4l"] --> axsched["ax-sched"]
     axsched --> ax-task["ax-task"]
     ax-task --> starry["starry-kernel"]
     ax-task --> axvisor["axvisor (indirect)"]
@@ -81,7 +81,7 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axsched = { workspace = true }
+ax-sched = { workspace = true }
 ```
 
 ### 4.2 修改时的关键约束

@@ -1,5 +1,5 @@
 [package]
-name = "axsched"
+name = "ax-sched"
 version = "0.5.1"
 edition = "2021"
 authors = [

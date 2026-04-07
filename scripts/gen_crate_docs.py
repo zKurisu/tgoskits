@@ -231,7 +231,7 @@ CURATED_DOCS = {
     "memory_addr",
     "memory_set",
     "ax-sync",
-    "axsched",
+    "ax-sched",
     "ax-cpu",
     "ax-io",
     "ax-net",

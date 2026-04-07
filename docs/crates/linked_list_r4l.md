@@ -55,7 +55,7 @@
 - `def_node!` 快速定义节点类型。
 
 ### 2.2 关键 API 与真实使用位置
-- `List::push_back()` / `push_front()`：`axsched::fifo` 与 `axsched::round_robin` 用来维护就绪队列。
+- `List::push_back()` / `push_front()`：`ax_sched::fifo` 与 `ax_sched::round_robin` 用来维护就绪队列。
 - `List::pop_front()`：调度器取下一个 runnable 实体时使用。
 - `List::remove()` / `CursorMut::remove_current()`：适合等待队列或 ready queue 的 O(1) 删除场景。
 - `def_node!`：为简单节点类型提供低样板定义方式。
@@ -76,8 +76,8 @@ graph LR
 该 crate 没有本地 crate 依赖，设计上尽量自包含。
 
 ### 3.2 关键直接消费者
-- `axsched::fifo`：`List<Arc<FifoTask<T>>>` 形式的 FIFO ready queue。
-- `axsched::round_robin`：`List<Arc<RRTask<...>>>` 形式的 RR ready queue。
+- `ax_sched::fifo`：`List<Arc<FifoTask<T>>>` 形式的 FIFO ready queue。
+- `ax_sched::round_robin`：`List<Arc<RRTask<...>>>` 形式的 RR ready queue。
 
 ## 4. 开发指南
 ### 4.1 依赖配置

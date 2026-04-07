@@ -1008,7 +1008,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axsched"
+name = "ax-sched"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cad6b7b0b8d9ad1d52a834d8b7721114413da8cf3430af928b1c8651f911287a"
@@ -1054,7 +1054,7 @@ dependencies = [
  "axerrno 0.2.2",
  "axhal",
  "axpoll",
- "axsched",
+ "ax-sched",
  "cfg-if",
  "cpumask",
  "crate_interface 0.1.4",

@@ -154,7 +154,7 @@ ax-hal = { path = "os/arceos/modules/axhal" }
 
 ax-cpu = { path = "components/axcpu" }
 ax-io = { path = "components/axio" }
-axsched = { path = "components/axsched" }
+ax-sched = { path = "components/axsched" }
 axpoll = { path = "components/axpoll" }
 lazyinit = { path = "components/lazyinit" }
 linked_list_r4l = { path = "components/linked_list_r4l" }
@@ -336,7 +336,7 @@ ax-io = { path = "components/axio", version = "0.5.0" }
 axklib = { path = "components/axklib", version = "0.5.0" }
 axpoll = { path = "components/axpoll", version = "0.3.2" }
 timer_list = { path = "components/timer_list", version = "0.3.0" }
-axsched = { path = "components/axsched", version = "0.5.1" }
+ax-sched = { path = "components/axsched", version = "0.5.1" }
 axvcpu = { path = "components/axvcpu", version = "0.5.0" }
 axvm = { path = "components/axvm", version = "0.5.0" }
 axvmconfig = { path = "components/axvmconfig", version = "0.4.2" }

@@ -14,7 +14,7 @@ default = []
 multitask = [
     "dep:ax-config",
     "dep:axpoll",
-    "dep:axsched",
+    "dep:ax-sched",
     "dep:cpumask",
     "dep:crate_interface",
     "dep:futures-util",
@@ -42,7 +42,7 @@ ax-config = { workspace = true, optional = true }
 axerrno.workspace = true
 ax-hal.workspace = true
 axpoll = { workspace = true, optional = true }
-axsched = { version = "0.5.1", optional = true }
+ax-sched = { version = "0.5.1", optional = true }
 cfg-if.workspace = true
 cpumask = { version = "0.3.0", optional = true }
 crate_interface = { workspace = true, optional = true }
