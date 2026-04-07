@@ -509,7 +509,7 @@ dependencies = [
  "ax-driver-net",
  "axdriver_pci",
  "ax-driver-virtio",
- "axdriver_vsock",
+ "ax-driver-vsock",
  "axhal",
  "cfg-if",
  "crate_interface 0.1.4",
@@ -589,7 +589,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdriver_vsock"
+name = "ax-driver-vsock"
 version = "0.1.4-preview.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97c0344e1acedd21a1e2d4be29ed0827c4bcc205129b1332c17dbedd3db183c6"

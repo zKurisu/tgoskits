@@ -93,7 +93,7 @@
 | `axdriver_input` | 组件层 | `components/axdriver_crates/axdriver_input` | 1 | 2 | [查看](./ax-driver-input.md) |
 | `axdriver_net` | 组件层 | `components/axdriver_crates/axdriver_net` | 2 | 2 | [查看](./ax-driver-net.md) |
 | `axdriver_pci` | 组件层 | `components/axdriver_crates/axdriver_pci` | 0 | 1 | [查看](./axdriver_pci.md) |
-| `axdriver_vsock` | 组件层 | `components/axdriver_crates/axdriver_vsock` | 1 | 2 | [查看](./axdriver_vsock.md) |
+| `axdriver_vsock` | 组件层 | `components/axdriver_crates/axdriver_vsock` | 1 | 2 | [查看](./ax-driver-vsock.md) |
 | `axerrno` | 组件层 | `components/axerrno` | 0 | 36 | [查看](./axerrno.md) |
 | `axfs-ng-vfs` | 组件层 | `components/axfs-ng-vfs` | 2 | 3 | [查看](./axfs-ng-vfs.md) |
 | `axfs_vfs` | 组件层 | `components/axfs_crates/axfs_vfs` | 1 | 4 | [查看](./axfs_vfs.md) |

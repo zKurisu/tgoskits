@@ -193,7 +193,7 @@ CURATED_DOCS = {
     "ax-driver-net",
     "axdriver_pci",
     "ax-driver-virtio",
-    "axdriver_vsock",
+    "ax-driver-vsock",
     "ax-api",
     "arceos-affinity",
     "ax-helloworld",

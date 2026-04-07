@@ -18,7 +18,7 @@ net = ["dep:ax-driver-net"]
 block = ["dep:ax-driver-block"]
 display = ["dep:ax-driver-display"]
 input = ["dep:ax-driver-input"]
-vsock = ["axdriver_vsock"]
+vsock = ["ax-driver-vsock"]
 
 # Enabled by features `virtio-*`
 virtio = ["dep:ax-driver-virtio", "dep:ax-alloc", "dep:ax-hal", "dep:ax-config"]
@@ -53,7 +53,7 @@ ax-driver-input = { workspace = true, optional = true }
 ax-driver-net = { workspace = true, optional = true }
 axdriver_pci = { workspace = true, optional = true }
 ax-driver-virtio = { workspace = true, optional = true }
-axdriver_vsock = { workspace = true, optional = true }
+ax-driver-vsock = { workspace = true, optional = true }
 axerrno = { workspace = true, optional = true }
 ax-hal = { workspace = true, optional = true }
 cfg-if.workspace = true
