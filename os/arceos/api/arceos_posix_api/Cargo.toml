@@ -25,7 +25,7 @@ alloc = ["dep:axalloc", "ax-feat/alloc"]
 multitask = ["axtask/multitask", "ax-feat/multitask", "axsync/multitask"]
 fd = ["alloc", "dep:scope-local"]
 fs = ["dep:ax-fs", "ax-feat/fs", "fd"]
-net = ["dep:axnet", "ax-feat/net", "fd"]
+net = ["dep:ax-net", "ax-feat/net", "fd"]
 pipe = ["fd"]
 select = ["fd"]
 epoll = ["fd"]
@@ -38,7 +38,7 @@ ax-feat.workspace = true
 ax-fs = { workspace = true, optional = true }
 axhal.workspace = true
 axlog.workspace = true
-axnet = { workspace = true, optional = true }
+ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 axsync.workspace = true
 axtask = { workspace = true, optional = true }

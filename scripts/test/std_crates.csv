@@ -48,7 +48,7 @@ axtask
 ax-input
 axipi
 axlog
-axnet
+ax-net
 ax-runtime
 ax-feat
 ax-api

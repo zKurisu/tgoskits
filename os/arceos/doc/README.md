@@ -26,7 +26,7 @@ Other optional modules and their corresponding features are as follows:
 | [axalloc](../modules/axalloc) | alloc | ArceOS global memory allocator. |
 | [ax-display](../modules/axdisplay) | display | ArceOS graphics module. |
 | [ax-fs](../modules/axfs) | fs | ArceOS filesystem module. |
-| [axnet](../modules/axnet) | net | ArceOS network module. |
+| [ax-net](../modules/ax-net) | net | ArceOS network module. |
 | [axdriver](../modules/axdriver) | driver-*, fs, net, display | ArceOS device drivers. |
 | [axtask](../modules/axtask) | multitask | ArceOS task management module. |
 | [axsync](../modules/axsync) | multitask | ArceOS synchronization primitives. |

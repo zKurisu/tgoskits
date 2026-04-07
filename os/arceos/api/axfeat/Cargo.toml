@@ -73,7 +73,7 @@ fs-ng-fat = ["fs-ng", "ax-fs-ng/fat"]
 fs-ng-times = ["fs-ng", "ax-fs-ng/times"]
 
 # Networking
-net = ["alloc", "paging", "axdriver/virtio-net", "dep:axnet", "ax-runtime/net"]
+net = ["alloc", "paging", "axdriver/virtio-net", "dep:ax-net", "ax-runtime/net"]
 net-ng = ["net", "irq", "multitask", "ax-runtime/net-ng"]
 vsock = ["ax-runtime/vsock"]
 
@@ -123,7 +123,7 @@ axhal.workspace = true
 ax-input = { workspace = true, optional = true }
 axipi = { workspace = true, optional = true }
 axlog.workspace = true
-axnet = { workspace = true, optional = true }
+ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 axsync = { workspace = true, optional = true }
 axtask = { workspace = true, optional = true }

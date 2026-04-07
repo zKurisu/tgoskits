@@ -75,7 +75,7 @@ graph LR
     lazyinit --> axmm["axmm"]
     lazyinit --> axipi["axipi"]
     lazyinit --> ax-fs["ax-fs / ax-fs-ng"]
-    lazyinit --> axnet["axnet / ax-net-ng"]
+    lazyinit --> ax-net["ax-net / ax-net-ng"]
     lazyinit --> ax-display["ax-display"]
     lazyinit --> ax-input["ax-input"]
     lazyinit --> axplat["多个 axplat 平台 crate"]
@@ -87,7 +87,7 @@ graph LR
 `lazyinit` 没有本地 crate 依赖，目的是保持在启动期也能轻量使用。
 
 ### 3.2 关键直接消费者
-- ArceOS 模块：`axtask`、`axmm`、`axipi`、`ax-fs`、`axnet`、`ax-display`、`ax-input` 等。
+- ArceOS 模块：`axtask`、`axmm`、`axipi`、`ax-fs`、`ax-net`、`ax-display`、`ax-input` 等。
 - 平台层：`axplat-x86-pc`、`axplat-aarch64-peripherals`、`axplat-riscv64-qemu-virt`、`axplat-loongarch64-qemu-virt`。
 - Axvisor：如 `vmm/timer.rs` 的 `TimerList`、DTB 缓存等。
 
@@ -126,7 +126,7 @@ lazyinit = { workspace = true }
 
 ### 5.3 集成测试重点
 - 平台设备初始化顺序。
-- `axtask`、`axmm`、`axnet` 等全局对象的首次构造与后续访问。
+- `axtask`、`axmm`、`ax-net` 等全局对象的首次构造与后续访问。
 - Axvisor 中 `LazyInit<SpinNoIrq<TimerList<_>>>` 这类组合结构的初始化时序。
 
 ### 5.4 覆盖率要求

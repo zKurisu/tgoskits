@@ -1,4 +1,4 @@
-# `axnet` 技术文档
+# `ax-net` 技术文档
 
 > 路径：`os/arceos/modules/axnet`
 > 类型：库 crate
@@ -6,15 +6,15 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`src/smoltcp_impl/mod.rs`、`src/smoltcp_impl/tcp.rs`、`src/smoltcp_impl/udp.rs`、`src/smoltcp_impl/dns.rs`、`src/smoltcp_impl/listen_table.rs`、`src/smoltcp_impl/bench.rs`、`os/arceos/modules/axruntime/src/lib.rs`、`os/arceos/api/ax-api/src/imp/net.rs`、`os/arceos/api/arceos_posix_api/src/imp/net.rs`
 
-`axnet` 是 ArceOS 老一代网络封装层。它围绕 `smoltcp` 构建一个全局、单接口、同步阻塞风格的 IP socket API，把 TCP、UDP 和 DNS 能力接到 ArceOS 运行时与 API 层上。它关心的是“把一块 NIC 和一份 `smoltcp` 实例变成可用的系统网络能力”，而不是构建跨地址族、跨设备、跨等待模型的通用 socket 服务框架。
+`ax-net` 是 ArceOS 老一代网络封装层。它围绕 `smoltcp` 构建一个全局、单接口、同步阻塞风格的 IP socket API，把 TCP、UDP 和 DNS 能力接到 ArceOS 运行时与 API 层上。它关心的是“把一块 NIC 和一份 `smoltcp` 实例变成可用的系统网络能力”，而不是构建跨地址族、跨设备、跨等待模型的通用 socket 服务框架。
 
-最核心的边界是：`axnet` 只是第一代 IP 网络包装层，不是统一 socket 服务层。它的重点是 TCP/UDP/DNS over IP，而不是 Unix domain socket、vsock、复杂路由服务或细粒度事件管理。
+最核心的边界是：`ax-net` 只是第一代 IP 网络包装层，不是统一 socket 服务层。它的重点是 TCP/UDP/DNS over IP，而不是 Unix domain socket、vsock、复杂路由服务或细粒度事件管理。
 
 ## 1. 架构设计分析
 
 ### 1.1 设计定位
 
-`axnet` 的设计目标非常直接：把 `smoltcp` 变成 ArceOS 可直接消费的同步网络 API。当前实现采用三层收敛：
+`ax-net` 的设计目标非常直接：把 `smoltcp` 变成 ArceOS 可直接消费的同步网络 API。当前实现采用三层收敛：
 
 - 设备层：从 `axdriver` 取出一个 `AxNetDevice`，直接适配成 `smoltcp::phy::Device`
 - 接口层：使用单个全局 `InterfaceWrapper` 管理唯一网络接口 `eth0`
@@ -24,7 +24,7 @@
 
 ### 1.2 模块划分
 
-`axnet` 的主要实现集中在 `smoltcp_impl`：
+`ax-net` 的主要实现集中在 `smoltcp_impl`：
 
 | 模块 | 作用 |
 | --- | --- |
@@ -51,7 +51,7 @@
 - `SOCKET_SET`：全局 `smoltcp::SocketSet`
 - `LISTEN_TABLE`：监听端口到 SYN 队列的映射
 
-这组对象共同说明：`axnet` 不是多实例、按命名空间拆分的服务，而是一个单体式全局网络模块。
+这组对象共同说明：`ax-net` 不是多实例、按命名空间拆分的服务，而是一个单体式全局网络模块。
 
 ### 1.4 设备与接口模型
 
@@ -66,13 +66,13 @@
 
 ### 1.5 TCP 监听队列的特别设计
 
-`listen_table.rs` 与 `RxToken::preprocess()` 组合出 `axnet` 最有代表性的实现细节：当底层收到首个 TCP SYN 时，`snoop_tcp_packet()` 会提前在 `SocketSet` 中创建一个监听对应的新 socket，并把 handle 塞入端口对应的 SYN 队列。等上层 `accept()` 时，再从队列中取出已经建立连接的 handle。
+`listen_table.rs` 与 `RxToken::preprocess()` 组合出 `ax-net` 最有代表性的实现细节：当底层收到首个 TCP SYN 时，`snoop_tcp_packet()` 会提前在 `SocketSet` 中创建一个监听对应的新 socket，并把 handle 塞入端口对应的 SYN 队列。等上层 `accept()` 时，再从队列中取出已经建立连接的 handle。
 
 这不是额外的协议实现，而是为了在保持同步 `accept()` 语义的同时，适配 `smoltcp` 原生 socket 集合工作方式。
 
 ### 1.6 与 `ax-net-ng` 的代际差异
 
-| 维度 | `axnet` | `ax-net-ng` |
+| 维度 | `ax-net` | `ax-net-ng` |
 | --- | --- | --- |
 | 总体定位 | 第一代同步 IP 网络模块 | 第二代统一 socket 服务层 |
 | 地址族 | IP/TCP/UDP/DNS | IP + Unix domain + vsock |
@@ -81,7 +81,7 @@
 | 等待方式 | 轮询接口并 `yield_now()` | `poll_io` + waker + timeout |
 | 主要消费者 | `ax-api`、`ax-posix-api`、老一代 ArceOS 路径 | `ax-runtime net-ng` 与 StarryOS 主 socket 层 |
 
-所以，`axnet` 不是“`ax-net-ng` 的轻量别名”，而是更早一代、边界更窄的 IP 网络封装。
+所以，`ax-net` 不是“`ax-net-ng` 的轻量别名”，而是更早一代、边界更窄的 IP 网络封装。
 
 ## 2. 核心功能说明
 
@@ -95,14 +95,14 @@
 
 ### 2.2 同步阻塞模型
 
-`axnet` 的阻塞语义不是建立在独立事件层之上，而是建立在“反复推动协议栈 + 让出 CPU”之上：
+`ax-net` 的阻塞语义不是建立在独立事件层之上，而是建立在“反复推动协议栈 + 让出 CPU”之上：
 
 1. 先调用 `smoltcp` 的 nonblocking socket API
 2. 若当前不可完成，则返回 `AxError::WouldBlock`
 3. 在 blocking 模式下，循环调用 `poll_interfaces()` 并穿插 `axtask::yield_now()`
 4. 条件满足后再返回真实结果
 
-这意味着 `axnet` 的“阻塞”本质上是一种同步轮询式阻塞，而不是基于 `axpoll` 的等待/唤醒模型。
+这意味着 `ax-net` 的“阻塞”本质上是一种同步轮询式阻塞，而不是基于 `axpoll` 的等待/唤醒模型。
 
 ### 2.3 上层调用关系
 
@@ -126,10 +126,10 @@
 
 ### 2.5 关键边界
 
-- `axnet` 不重新实现 TCP/IP 协议状态机，真正的协议引擎仍然是 `smoltcp`
-- `axnet` 不提供 Unix domain socket、vsock 或统一地址族抽象
-- `axnet` 不提供细粒度事件注册机制；它只向上暴露 `PollState`
-- `axnet` 不是应用级 HTTP/DNS 客户端库，而是更低层的网络原语层
+- `ax-net` 不重新实现 TCP/IP 协议状态机，真正的协议引擎仍然是 `smoltcp`
+- `ax-net` 不提供 Unix domain socket、vsock 或统一地址族抽象
+- `ax-net` 不提供细粒度事件注册机制；它只向上暴露 `PollState`
+- `ax-net` 不是应用级 HTTP/DNS 客户端库，而是更低层的网络原语层
 
 ## 3. 依赖关系
 
@@ -155,7 +155,7 @@
 
 ### 3.3 与样例程序的关系
 
-虽然 `ax-httpclient`、`ax-httpserver` 不直接依赖 `axnet` 的源码 API，但它们经由 `ax-std`、`ax-api`、`ax-runtime` 间接走的正是这条网络装配链。因此，这些示例更适合作为 `axnet` 的系统行为样例，而不是 `axnet` 自身的 API 示例。
+虽然 `ax-httpclient`、`ax-httpserver` 不直接依赖 `ax-net` 的源码 API，但它们经由 `ax-std`、`ax-api`、`ax-runtime` 间接走的正是这条网络装配链。因此，这些示例更适合作为 `ax-net` 的系统行为样例，而不是 `ax-net` 自身的 API 示例。
 
 ## 4. 开发指南
 
@@ -189,7 +189,7 @@ axnet = { workspace = true }
 
 ### 5.1 当前测试现状
 
-`axnet` 目录内没有独立的 crate 内 `tests/`。它的正确性主要依赖系统级验证：
+`ax-net` 目录内没有独立的 crate 内 `tests/`。它的正确性主要依赖系统级验证：
 
 - `ax-api` / `ax-posix-api` 的网络调用路径
 - 启用 `net` 的 ArceOS 示例与应用
@@ -211,12 +211,12 @@ axnet = { workspace = true }
 
 ### 6.1 ArceOS
 
-`axnet` 是 ArceOS 老一代网络装配链的重要组成部分。它直接服务 `ax-api`、`ax-posix-api` 和运行时 `net` 路径，是早期同步 IP 网络能力的核心封装。
+`ax-net` 是 ArceOS 老一代网络装配链的重要组成部分。它直接服务 `ax-api`、`ax-posix-api` 和运行时 `net` 路径，是早期同步 IP 网络能力的核心封装。
 
 ### 6.2 StarryOS
 
-当前仓库中的 StarryOS 并不直接使用这个 `axnet` crate。相反，`os/StarryOS/Cargo.toml` 与 `os/StarryOS/kernel/Cargo.toml` 都把依赖名 `axnet` 绑定到了 `package = "ax-net-ng"`，说明 StarryOS 已经切换到第二代网络层。
+当前仓库中的 StarryOS 并不直接使用这个 `ax-net` crate。相反，`os/StarryOS/Cargo.toml` 与 `os/StarryOS/kernel/Cargo.toml` 都把依赖名 `ax-net` 绑定到了 `package = "ax-net-ng"`，说明 StarryOS 已经切换到第二代网络层。
 
 ### 6.3 Axvisor
 
-当前没有看到 Axvisor 直接消费 `axnet` 的证据。即便存在间接复用，也更可能经由 ArceOS 公共 API 层，而不是把这个老一代同步网络模块当成独立基础设施。
+当前没有看到 Axvisor 直接消费 `ax-net` 的证据。即便存在间接复用，也更可能经由 ArceOS 公共 API 层，而不是把这个老一代同步网络模块当成独立基础设施。

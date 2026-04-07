@@ -90,7 +90,7 @@ ax-input = { version = "0.5.0", path = "modules/axinput" }
 axipi = { version = "0.5.0", path = "modules/axipi" }
 axlog = { version = "0.5.0", path = "modules/axlog" }
 axmm = { version = "0.5.0", path = "modules/axmm" }
-axnet = { version = "0.5.0", path = "modules/axnet" }
+ax-net = { version = "0.5.0", path = "modules/axnet" }
 ax-net-ng = { version = "0.5.0", path = "modules/axnet-ng" }
 axplat-dyn = { version = "0.5.0", default-features = false }
 ax-runtime = { version = "0.5.0", path = "modules/axruntime" }

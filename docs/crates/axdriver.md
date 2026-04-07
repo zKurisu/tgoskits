@@ -132,7 +132,7 @@ graph LR
 
     axdriver --> ax-runtime["ax-runtime"]
     axdriver --> ax-fs["ax-fs / ax-fs-ng"]
-    axdriver --> axnet["axnet / ax-net-ng"]
+    axdriver --> ax-net["ax-net / ax-net-ng"]
     axdriver --> ax-display["ax-display"]
     axdriver --> ax-input["ax-input"]
     axdriver --> starry_kernel["starry-kernel"]
@@ -148,7 +148,7 @@ graph LR
 ### 3.2 关键直接消费者
 - `ax-runtime`：初始化阶段调用 `init_drivers()`，并把设备分发到文件系统、网络、显示、输入等子系统。
 - `ax-fs` / `ax-fs-ng`：消费块设备。
-- `axnet` / `ax-net-ng`：消费网络设备和可选 vsock。
+- `ax-net` / `ax-net-ng`：消费网络设备和可选 vsock。
 - `ax-display`、`ax-input`：消费显示和输入设备。
 - `starry-kernel`：复用驱动接口层和若干设备抽象。
 

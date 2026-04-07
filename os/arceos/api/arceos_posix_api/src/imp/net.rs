@@ -7,7 +7,7 @@ use core::{
 
 use axerrno::{LinuxError, LinuxResult};
 use axio::PollState;
-use axnet::{TcpSocket, UdpSocket};
+use ax_net::{TcpSocket, UdpSocket};
 use axsync::Mutex;
 
 use super::fd_ops::FileLike;
@@ -470,7 +470,7 @@ pub unsafe fn sys_getaddrinfo(
             if let Ok(a) = domain.parse::<IpAddr>() {
                 vec![a]
             } else {
-                axnet::dns_query(domain)?
+                ax_net::dns_query(domain)?
             }
         } else {
             vec![Ipv4Addr::LOCALHOST.into()]

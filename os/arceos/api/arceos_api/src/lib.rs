@@ -411,7 +411,7 @@ pub mod modules {
     #[cfg(feature = "paging")]
     pub use axmm;
     #[cfg(feature = "net")]
-    pub use axnet;
+    pub use ax_net;
     pub use axsync;
     #[cfg(feature = "multitask")]
     pub use axtask;

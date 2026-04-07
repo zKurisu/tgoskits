@@ -53,7 +53,7 @@ graph LR
 - `axhal`
 - `axio`
 - `axlog`
-- `axnet`
+- `ax-net`
 - `ax-runtime`
 - `axsync`
 - `axtask`

@@ -1,5 +1,5 @@
 [package]
-name = "axnet"
+name = "ax-net"
 version.workspace = true
 edition.workspace = true
 authors = [

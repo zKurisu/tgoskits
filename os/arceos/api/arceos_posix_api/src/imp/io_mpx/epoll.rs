@@ -189,7 +189,7 @@ pub unsafe fn sys_epoll_wait(
         let epoll_instance = EpollInstance::from_fd(epfd)?;
         loop {
             #[cfg(feature = "net")]
-            axnet::poll_interfaces();
+            ax_net::poll_interfaces();
             let events_num = epoll_instance.poll_all(events)?;
             if events_num > 0 {
                 return Ok(events_num as c_int);

@@ -51,7 +51,7 @@
 再往上一层：
 
 - `axdriver` 把 vsock 设备放入 `AllDevices.vsock`。
-- `ax-runtime` 仅在 `net-ng` + `vsock` feature 组合下调用 `axnet_ng::init_vsock(all_devices.vsock)`。
+- `ax-runtime` 仅在 `net-ng` + `vsock` feature 组合下调用 `ax-net_ng::init_vsock(all_devices.vsock)`。
 
 这说明该 crate 不是独立的网络主线，而是 `ax-net-ng` 可选能力的一部分。
 

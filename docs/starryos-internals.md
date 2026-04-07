@@ -29,7 +29,7 @@ flowchart LR
     starryPackage["StarryPackage: os/StarryOS/starryos"]
     kernelCore["KernelCore: entry syscall task mm file pseudofs time"]
     starryComponents["StarryComponents: starry-process starry-signal starry-vm starry-smoltcp"]
-    arceosModules["ArceosModules: axhal axtask axmm ax-fs axnet axsync"]
+    arceosModules["ArceosModules: axhal axtask axmm ax-fs ax-net axsync"]
     sharedCrates["SharedCrates: components/*"]
     platformLayer["PlatformLayer: axplat-* + platform/*"]
 
@@ -78,7 +78,7 @@ StarryOS 与传统"从零写起"的宏内核不同，将大量底层职责交由
 
 - 任务与调度的基本运行时建立在 `axtask` 之上。
 - 地址空间与页表能力复用 `axmm` 系列基础设施。
-- 文件系统、网络、HAL、日志等依赖 `ax-fs`、`axnet`、`axhal`、`axlog` 等模块。
+- 文件系统、网络、HAL、日志等依赖 `ax-fs`、`ax-net`、`axhal`、`axlog` 等模块。
 
 StarryOS 自身重点补齐"多进程、多线程、Linux syscall 语义、rootfs 用户态验证"这几部分。
 

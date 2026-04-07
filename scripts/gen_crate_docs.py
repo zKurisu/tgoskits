@@ -234,7 +234,7 @@ CURATED_DOCS = {
     "axsched",
     "axcpu",
     "axio",
-    "axnet",
+    "ax-net",
     "ax-net-ng",
     "axpoll",
     "axplat",

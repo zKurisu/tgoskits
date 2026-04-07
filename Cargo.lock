@@ -529,6 +529,7 @@ dependencies = [
  "ax-display",
  "ax-feat",
  "ax-fs",
+ "ax-net",
  "ax-runtime",
  "axalloc",
  "axconfig",
@@ -540,7 +541,6 @@ dependencies = [
  "axipi",
  "axlog",
  "axmm",
- "axnet",
  "axsync",
  "axtask",
 ]
@@ -563,6 +563,7 @@ dependencies = [
  "ax-fs",
  "ax-fs-ng",
  "ax-input",
+ "ax-net",
  "ax-runtime",
  "axalloc",
  "axbacktrace",
@@ -571,7 +572,6 @@ dependencies = [
  "axhal",
  "axipi",
  "axlog",
- "axnet",
  "axsync",
  "axtask",
  "kspin 0.3.1",
@@ -680,6 +680,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-net"
+version = "0.5.0"
+dependencies = [
+ "axdriver",
+ "axerrno",
+ "axhal",
+ "axio",
+ "axsync",
+ "axtask",
+ "cfg-if",
+ "lazyinit 0.4.2",
+ "log",
+ "spin 0.10.0",
+ "starry-smoltcp",
+]
+
+[[package]]
 name = "ax-net-ng"
 version = "0.5.0"
 dependencies = [
@@ -713,6 +730,7 @@ version = "0.5.0"
 dependencies = [
  "ax-feat",
  "ax-fs",
+ "ax-net",
  "ax-runtime",
  "axalloc",
  "axconfig",
@@ -720,7 +738,6 @@ dependencies = [
  "axhal",
  "axio",
  "axlog",
- "axnet",
  "axsync",
  "axtask",
  "bindgen",
@@ -738,6 +755,7 @@ dependencies = [
  "ax-fs",
  "ax-fs-ng",
  "ax-input",
+ "ax-net",
  "ax-net-ng",
  "axalloc",
  "axbacktrace",
@@ -748,7 +766,6 @@ dependencies = [
  "axklib",
  "axlog",
  "axmm",
- "axnet",
  "axplat 0.5.1",
  "axtask",
  "cfg-if",
@@ -1286,23 +1303,6 @@ dependencies = [
  "memory_addr 0.6.1",
  "memory_set",
  "page_table_multiarch 0.8.1",
-]
-
-[[package]]
-name = "axnet"
-version = "0.5.0"
-dependencies = [
- "axdriver",
- "axerrno",
- "axhal",
- "axio",
- "axsync",
- "axtask",
- "cfg-if",
- "lazyinit 0.4.2",
- "log",
- "spin 0.10.0",
- "starry-smoltcp",
 ]
 
 [[package]]

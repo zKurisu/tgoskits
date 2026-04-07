@@ -150,7 +150,7 @@
 
 - QEMU/平台上的 VirtIO MMIO 或 PCI 启动。
 - `axdriver` 对 `virtio-*` 设备的探测与初始化。
-- `ax-display`、`ax-input`、`axnet`、`ax-fs`、`ax-net-ng` 对包装后设备的实际消费。
+- `ax-display`、`ax-input`、`ax-net`、`ax-fs`、`ax-net-ng` 对包装后设备的实际消费。
 
 ### 5.2 建议补充的单元测试
 - `as_dev_type()` 和 `as_dev_err()` 的映射。

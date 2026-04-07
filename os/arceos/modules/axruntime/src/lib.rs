@@ -237,7 +237,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
                 #[cfg(feature = "vsock")]
                 ax_net_ng::init_vsock(all_devices.vsock);
             } else if #[cfg(feature = "net")] {
-                axnet::init_network(all_devices.net);
+                ax_net::init_network(all_devices.net);
             }
         }
 

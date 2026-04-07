@@ -93,14 +93,14 @@
 
 1. `ax_std::io` 直接重导出 `axio` 的 trait 与类型，把它包装成 ArceOS 应用看到的 `std::io` 风格接口。
 2. `ax-fs`、`ax-fs-ng` 的文件对象实现 `Read` / `Write` / `Seek`，复用统一的缓冲器和默认读写逻辑。
-3. `axnet`、`ax-net-ng` 以及更上层 socket 封装使用 `axio` 作为同步收发 trait 的公共接口。
+3. `ax-net`、`ax-net-ng` 以及更上层 socket 封装使用 `axio` 作为同步收发 trait 的公共接口。
 4. `ax-api`、`ax-posix-api`、StarryOS 的 `FileLike`/用户缓冲访问对象通过 `axio` 收敛系统调用读写路径。
 
 ### 2.3 `PollState` 的实际使用位置
 
 虽然 `PollState` 本身很小，但它在旧一代同步接口里承担了一个稳定契约：
 
-- `axnet` 的 TCP/UDP socket 会返回 `PollState`
+- `ax-net` 的 TCP/UDP socket 会返回 `PollState`
 - `ax-api` 把它重导出为 `AxPollState`
 - `ax-posix-api` 的 `fd_ops`、`pipe`、`stdio`、`fs`、`net` 等路径都在使用它
 
@@ -130,7 +130,7 @@
 - `ax-std`、`ax-libc`
 - `ax-api`、`ax-posix-api`
 - `ax-fs`、`ax-fs-ng`
-- `axnet`、`ax-net-ng`
+- `ax-net`、`ax-net-ng`
 - StarryOS 的文件、网络、pipe、用户态缓冲访问和系统调用包装层
 
 ### 3.3 跨层关系
@@ -139,7 +139,7 @@
 | --- | --- |
 | `ax_std::io` | 面向 ArceOS 应用的重导出接口 |
 | `ax-fs*` | 把文件对象映射到统一同步 I/O trait |
-| `axnet*` | 把 socket 收发路径映射到统一同步 I/O trait |
+| `ax-net*` | 把 socket 收发路径映射到统一同步 I/O trait |
 | `ax-posix-api` | 把系统调用中的文件描述符读写逻辑落到统一 trait 上 |
 | StarryOS `FileLike` | 借助 `axio` 统一内核对象读写/seek 语义 |
 
@@ -206,7 +206,7 @@ cargo test -p axio --features alloc
 
 ### 6.1 ArceOS
 
-在 ArceOS 中，`axio` 是同步 I/O 语义基座。`ax-std` 负责把它包装成应用接口，`ax-fs*` 和 `axnet*` 则负责把具体内核对象接到这层协议上。
+在 ArceOS 中，`axio` 是同步 I/O 语义基座。`ax-std` 负责把它包装成应用接口，`ax-fs*` 和 `ax-net*` 则负责把具体内核对象接到这层协议上。
 
 ### 6.2 StarryOS
 

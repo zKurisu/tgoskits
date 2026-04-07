@@ -101,7 +101,7 @@ graph LR
     axpoll["axpoll"] --> current
 
     current --> axfs_ng["ax-fs-ng"]
-    current --> axnet_ng["ax-net-ng"]
+    current --> ax-net_ng["ax-net-ng"]
     current --> starry_pseudofs["StarryOS pseudofs / file layer"]
 ```
 

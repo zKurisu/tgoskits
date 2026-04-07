@@ -60,7 +60,7 @@ graph LR
 - `ax-input`
 - `axipi`
 - `axlog`
-- `axnet`
+- `ax-net`
 - 另外还有 `4` 个同类项未在此展开
 
 ### 3.2 间接本地依赖
