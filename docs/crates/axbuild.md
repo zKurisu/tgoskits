@@ -35,7 +35,7 @@ flowchart TD
 - `prepare_artifacts()` 会先解析架构、平台、SMP、内存、feature 等信息。
 - `generate_config()` 会调用宿主机上的 `axconfig-gen` 命令，把 defconfig、平台配置和命令行覆写合成为 `.axconfig.toml`。
 - `resolve_platform_config_path()` 会调用 `cargo axplat info` 找到平台配置文件。
-- `is_c_app()` 会读取应用 `Cargo.toml`，通过是否出现 `axlibc` 判断这是 C 应用还是 Rust 应用。
+- `is_c_app()` 会读取应用 `Cargo.toml`，通过是否出现 `ax-libc` 判断这是 C 应用还是 Rust 应用。
 
 因此，`axbuild` 是把配置链、feature 链和实际构建链连接起来的中枢。
 
@@ -47,7 +47,7 @@ flowchart TD
 - `build_features()` 在 `ostool.rs` 中再根据应用实际直接依赖的是 `axstd` 还是 `axfeat`，决定拼接前缀：
   - `axstd/<feature>`
   - `axfeat/<feature>`
-  - `axlibc/<feature>`
+  - `ax-libc/<feature>`
 
 `detect_ax_feature_prefix_family()` 甚至会通过 `cargo metadata` 检查应用是否直接依赖 `axstd` 或 `axfeat`。这一步体现了 `axbuild` 对真实调用关系的感知，而不是纯字符串拼接。
 

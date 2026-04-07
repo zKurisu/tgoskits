@@ -6,7 +6,7 @@
 > 版本：`0.3.0-preview.3`
 > 文档依据：`Cargo.toml`、`build.rs`、`src/lib.rs`、`src/utils.rs`、`src/imp/task.rs`、`src/imp/fd_ops.rs`、`src/imp/fs.rs`、`src/imp/net.rs`、`src/imp/io.rs`、`src/imp/time.rs`、`src/imp/resources.rs`、`src/imp/sys.rs`、`src/imp/pipe.rs`、`src/imp/io_mpx/select.rs`、`src/imp/io_mpx/epoll.rs`、`src/imp/pthread/mod.rs`
 
-`arceos_posix_api` 是 ArceOS 的 POSIX 语义实现层。它并不导出 libc 风格的 `extern "C"` 符号，而是以 `sys_*` 形式提供一组面向上层包装器的接口，并在内部直接操作 `axfs`、`axnet`、`axtask`、`axhal` 等模块。`axlibc` 正是建立在它之上的 C ABI 层。
+`arceos_posix_api` 是 ArceOS 的 POSIX 语义实现层。它并不导出 libc 风格的 `extern "C"` 符号，而是以 `sys_*` 形式提供一组面向上层包装器的接口，并在内部直接操作 `axfs`、`axnet`、`axtask`、`axhal` 等模块。`ax-libc` 正是建立在它之上的 C ABI 层。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -19,7 +19,7 @@
 它真正承担的是“把 ArceOS 模块能力组织成 POSIX 语义”的工作。也就是说：
 
 - 语义实现放在这里
-- C ABI 包装留给 `axlibc`
+- C ABI 包装留给 `ax-libc`
 - Rust `std` 风格包装留给 `axstd`
 
 ### 1.2 顶层模块结构
@@ -84,13 +84,13 @@ flowchart LR
 - 成功时返回正常值
 - 失败时返回 `-LinuxError::code()`
 
-因此 `arceos_posix_api` 自身维持的是“内核式负错误码”约定，而不是 libc 层的 `errno` 约定。`errno` 转换由 `axlibc` 完成。
+因此 `arceos_posix_api` 自身维持的是“内核式负错误码”约定，而不是 libc 层的 `errno` 约定。`errno` 转换由 `ax-libc` 完成。
 
 ### 1.6 构建期代码生成
 `build.rs` 做了两件关键事情：
 
 1. 通过 `bindgen` 生成 `src/ctypes_gen.rs`
-2. 根据是否开启 `multitask` 生成 `axlibc/include/ax_pthread_mutex.h`
+2. 根据是否开启 `multitask` 生成 `ax-libc/include/ax_pthread_mutex.h`
 
 这说明它不仅是语义实现层，也顺带承担了与上层 C ABI 对齐所需的一部分类型布局生成工作。
 
@@ -99,7 +99,7 @@ flowchart LR
 - 实现文件、网络、时间、线程、资源限制等 POSIX 风格语义。
 - 维护 fd 表和面向多种对象的统一抽象。
 - 以 `sys_*` 形式向上提供稳定调用接口。
-- 为 `axlibc` 提供类型和行为基础。
+- 为 `ax-libc` 提供类型和行为基础。
 
 ### 2.2 关键能力域
 - `task`：`sys_sched_yield`、`sys_getpid`、`sys_exit`
@@ -120,19 +120,19 @@ flowchart LR
 
 因此它是“POSIX 线程语义适配”，不是“把 Linux 线程 ABI 原封不动搬进来”。
 
-### 2.4 与 `axstd` / `axlibc` 的边界
+### 2.4 与 `axstd` / `ax-libc` 的边界
 三者职责需要明确区分：
 
 - `axstd`：Rust 高层接口，像 `std`
 - `arceos_posix_api`：POSIX 语义实现，像 `sys_*` 内核接口
-- `axlibc`：C ABI 导出和 `errno` 处理，像 libc 壳层
+- `ax-libc`：C ABI 导出和 `errno` 处理，像 libc 壳层
 
 `arceos_posix_api` 是中间层，而不是最终应用直接看到的开发接口。
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axlibc["axlibc"] --> posix["arceos_posix_api"]
+    ax-libc["ax-libc"] --> posix["arceos_posix_api"]
     posix --> axconfig["axconfig"]
     posix --> axfeat["axfeat"]
     posix --> axruntime["axruntime"]
@@ -151,10 +151,10 @@ graph LR
 - `flatten_objects`、`scope-local`、`spin`：支撑 fd 表与对象管理。
 
 ### 3.2 关键直接消费者
-- `axlibc`：当前最主要、也是最直接的消费者。
+- `ax-libc`：当前最主要、也是最直接的消费者。
 
 ### 3.3 关键间接消费者
-- 通过 `axlibc` 运行的 C 应用
+- 通过 `ax-libc` 运行的 C 应用
 - 任何未来可能直接调用 `sys_*` 的 Rust 包装层
 
 ## 4. 开发指南
@@ -166,14 +166,14 @@ graph LR
 - `select` / `epoll` 的可读可写判定
 - `pthread_*`、`sysconf`、`getrlimit` 等系统语义
 
-如果只是 C ABI、`errno`、头文件或符号名问题，优先改 `axlibc`。
+如果只是 C ABI、`errno`、头文件或符号名问题，优先改 `ax-libc`。
 
 ### 4.2 修改时的关键约束
 1. 保持 `syscall_body!` 返回负错误码的统一约定。
 2. 新对象若要进 fd 表，优先实现 `FileLike`，不要另起一套平行描述方式。
 3. 网络相关轮询路径要考虑 `axnet::poll_interfaces()` 的协作。
 4. `pthread_mutex_t` 的内存布局一旦变化，必须同步关注 `build.rs` 生成的头文件。
-5. 任何 API 语义改动都要评估 `axlibc` 是否仍能正确包装。
+5. 任何 API 语义改动都要评估 `ax-libc` 是否仍能正确包装。
 
 ### 4.3 开发建议
 - 先确认语义应该更接近 POSIX 还是更接近当前 ArceOS 能力边界。
@@ -182,7 +182,7 @@ graph LR
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
-当前 crate 没有独立的 `tests/` 目录，主要依赖上层 `axlibc` 和实际程序路径做集成验证。
+当前 crate 没有独立的 `tests/` 目录，主要依赖上层 `ax-libc` 和实际程序路径做集成验证。
 
 ### 5.2 建议重点验证
 - fd 表：打开/关闭/复制/非阻塞设置

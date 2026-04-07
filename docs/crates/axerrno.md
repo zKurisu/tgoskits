@@ -67,7 +67,7 @@ flowchart TD
 
 ### 2.2 关键 API 与真实使用位置
 - `AxErrorKind` / `AxError`：在 `axalloc`、`axmm`、`axnet`、`axfs`、`axtask` 等模块里高频使用。
-- `LinuxError`：在 `axlibc`、`arceos_posix_api`、`axnet-ng` 的 POSIX 兼容路径中直接使用。
+- `LinuxError`：在 `ax-libc`、`arceos_posix_api`、`axnet-ng` 的 POSIX 兼容路径中直接使用。
 - `ax_err!` / `ax_err_type!`：在 `axvisor`、`axnet`、`axstd`、`axtask` 等代码里广泛出现。
 - `canonicalize()`：适合把兼容层传回来的 Linux 错误重新折叠到内核内部语义。
 
@@ -98,7 +98,7 @@ graph LR
 - `log`：支撑 `ax_err_type!` 等宏里的 `warn!` 输出。
 
 ### 3.2 关键直接消费者
-- ArceOS 几乎所有核心模块：`axalloc`、`axmm`、`axfs`、`axnet`、`axtask`、`axstd`、`axlibc`。
+- ArceOS 几乎所有核心模块：`axalloc`、`axmm`、`axfs`、`axnet`、`axtask`、`axstd`、`ax-libc`。
 - StarryOS 内核与相关虚拟化组件。
 - Axvisor 和其设备/虚拟机管理路径。
 
@@ -133,7 +133,7 @@ axerrno = { workspace = true }
 - 宏在有无日志环境下的返回值稳定性。
 
 ### 5.3 集成测试重点
-- POSIX 路径返回的错误码能否被 `axlibc`、`arceos_posix_api` 正确消费。
+- POSIX 路径返回的错误码能否被 `ax-libc`、`arceos_posix_api` 正确消费。
 - 内核内部模块使用 `AxResult` 时，错误语义是否仍保持一致。
 
 ### 5.4 覆盖率要求

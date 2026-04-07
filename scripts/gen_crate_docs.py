@@ -180,7 +180,7 @@ CURATED_DOCS = {
     "axerrno",
     "axipi",
     "axklib",
-    "axlibc",
+    "ax-libc",
     "axlog",
     "axstd",
     "axruntime",

@@ -164,7 +164,7 @@ graph TD
     C[axplat-aarch64-peripherals] --> B
     D[dw_apb_uart / kspin] --> B
     E[axplat] --> B
-    B --> F[arceos-helloworld-myplat]
+    B --> F[ax-helloworld-myplat]
     F --> G[板卡 bring-up / 自定义内核验证]
 ```
 
@@ -219,7 +219,7 @@ fn kernel_main(cpu_id: usize, arg: usize) -> ! {
 ### 5.1 当前已有的有效验证面
 
 - 交叉编译：验证 `aarch64-unknown-none` 下 feature 组合可编译。
-- `arceos-helloworld-myplat`：可覆盖最小启动链和控制台输出。
+- `ax-helloworld-myplat`：可覆盖最小启动链和控制台输出。
 - 板卡整机冒烟：是这类平台包最有价值的真实验证方式。
 
 ### 5.2 推荐测试分层
@@ -240,7 +240,7 @@ fn kernel_main(cpu_id: usize, arg: usize) -> ! {
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | `myplat`/板卡 bring-up 路径 | A1000B 板级平台包 | 当前仓库里主要通过 `arceos-helloworld-myplat` 这类最小示例接入，尚未进入 `axhal` 默认平台集 |
+| ArceOS | `myplat`/板卡 bring-up 路径 | A1000B 板级平台包 | 当前仓库里主要通过 `ax-helloworld-myplat` 这类最小示例接入，尚未进入 `axhal` 默认平台集 |
 | StarryOS | 当前无仓库内直接接入 | 潜在宿主平台包 | 若未来接入，也更可能作为定制平台包直接链接，而不是开箱即用默认平台 |
 | Axvisor | 当前无仓库内直接接入 | 潜在宿主板级支持 | 该 crate 不提供虚拟化能力，只能作为宿主板级 bring-up 基础；当前仓库没有直接依赖它 |
 

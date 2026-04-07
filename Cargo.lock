@@ -605,6 +605,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-libc"
+version = "0.5.0"
+dependencies = [
+ "arceos_posix_api",
+ "axerrno",
+ "axfeat",
+ "axio",
+ "bindgen",
+]
+
+[[package]]
 name = "ax-shell"
 version = "0.3.0"
 dependencies = [
@@ -1177,17 +1188,6 @@ dependencies = [
  "axerrno",
  "memory_addr 0.6.1",
  "trait-ffi",
-]
-
-[[package]]
-name = "axlibc"
-version = "0.5.0"
-dependencies = [
- "arceos_posix_api",
- "axerrno",
- "axfeat",
- "axio",
- "bindgen",
 ]
 
 [[package]]

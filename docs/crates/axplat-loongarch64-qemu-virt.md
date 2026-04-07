@@ -192,7 +192,7 @@ graph TD
     C[axplat / axconfig-macros / lazyinit / kspin] --> B
     B --> D[axhal]
     B --> E[hello-kernel / irq-kernel / smp-kernel]
-    B --> F[arceos-helloworld-myplat]
+    B --> F[ax-helloworld-myplat]
     D --> G[ArceOS]
 ```
 
@@ -232,7 +232,7 @@ axplat-loongarch64-qemu-virt = { workspace = true, features = ["irq", "smp", "rt
 
 - `axhal` 默认平台链路会持续编译和运行它。
 - `hello-kernel`、`irq-kernel`、`smp-kernel` 分别覆盖最小启动、中断和多核路径。
-- `arceos-helloworld-myplat` 提供额外的直接平台验证入口。
+- `ax-helloworld-myplat` 提供额外的直接平台验证入口。
 
 ### 5.2 推荐测试矩阵
 

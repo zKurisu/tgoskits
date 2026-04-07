@@ -119,7 +119,7 @@ graph LR
     axdisplay["axdisplay"] --> arceos_api
 
     arceos_api --> axstd["axstd"]
-    arceos_api --> axlibc["axlibc (间接经更高层)"]
+    arceos_api --> ax-libc["ax-libc (间接经更高层)"]
     arceos_api --> arceos_examples["ArceOS examples / tests (间接)"]
 ```
 

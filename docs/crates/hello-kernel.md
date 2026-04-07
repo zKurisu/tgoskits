@@ -115,7 +115,7 @@ make ARCH=<x86_64|aarch64|riscv64|loongarch64> run
 ### 4.3 什么时候该换别的样例
 - 要测中断：换 `irq-kernel`
 - 要测多核：换 `smp-kernel`
-- 要测上层 OS bring-up：换 ArceOS 的 `arceos-helloworld`
+- 要测上层 OS bring-up：换 ArceOS 的 `ax-helloworld`
 
 ## 5. 测试策略
 ### 5.1 当前测试形态

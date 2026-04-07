@@ -245,7 +245,7 @@ graph LR
     current --> kspin["kspin"]
     current --> lazyinit["lazyinit"]
     current --> percpu["percpu"]
-    arceos_helloworld_myplat["arceos-helloworld-myplat"] --> current
+    arceos_helloworld_myplat["ax-helloworld-myplat"] --> current
     axhal["axhal"] --> current
     hello_kernel["hello-kernel"] --> current
     irq_kernel["irq-kernel"] --> current
@@ -275,7 +275,7 @@ graph LR
 - `percpu_macros`
 
 ### 3.3 被依赖情况
-- `arceos-helloworld-myplat`
+- `ax-helloworld-myplat`
 - `axhal`
 - `hello-kernel`
 - `irq-kernel`
@@ -283,14 +283,14 @@ graph LR
 
 ### 3.4 间接被依赖情况
 - `arceos-affinity`
-- `arceos-helloworld`
-- `arceos-httpclient`
-- `arceos-httpserver`
+- `ax-helloworld`
+- `ax-httpclient`
+- `ax-httpserver`
 - `arceos-irq`
 - `arceos-memtest`
 - `arceos-parallel`
 - `arceos-priority`
-- `arceos-shell`
+- `ax-shell`
 - `arceos-sleep`
 - `arceos-wait-queue`
 - `arceos-yield`
@@ -342,7 +342,7 @@ axplat-x86-pc = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axplat-x86-pc` 不在 ArceOS 目录内部，但被 `arceos-helloworld-myplat`、`axhal` 等 ArceOS crate 直接依赖，说明它是该系统的共享构件或底层服务。
+`axplat-x86-pc` 不在 ArceOS 目录内部，但被 `ax-helloworld-myplat`、`axhal` 等 ArceOS crate 直接依赖，说明它是该系统的共享构件或底层服务。
 
 ### 6.2 StarryOS
 `axplat-x86-pc` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。

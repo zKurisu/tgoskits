@@ -127,7 +127,7 @@
 
 直接或间接依赖 `axio` 的关键模块包括：
 
-- `axstd`、`axlibc`
+- `axstd`、`ax-libc`
 - `arceos_api`、`arceos_posix_api`
 - `axfs`、`axfs-ng`
 - `axnet`、`axnet-ng`

@@ -40,7 +40,7 @@ flowchart LR
     requiredModules["RequiredModules: axruntime axhal axconfig axlog"]
     optionalModules["OptionalModules: axalloc axmm axtask axsync axdriver axfs axnet axdisplay"]
     publicApi["PublicApi: axfeat arceos_api arceos_posix_api"]
-    userLib["UserLib: axstd axlibc"]
+    userLib["UserLib: axstd ax-libc"]
     appsAndTests["AppsAndTests: examples/* + test-suit/arceos/*"]
     upperSystems["UpperSystems: StarryOS AxVisor"]
 
@@ -70,7 +70,7 @@ flowchart LR
 | 平台与 HAL 层 | `platform/*`、`components/axplat_crates/platforms/*`、`os/arceos/modules/axhal` | 架构相关启动、时钟、中断、内存映射、设备访问 |
 | 内核服务模块层 | `os/arceos/modules/*` | 内存分配、页表、任务调度、驱动、文件系统、网络、图形等 OS 能力 |
 | API 聚合层 | `os/arceos/api/*` | feature 选择、稳定 API 封装、POSIX 兼容接口 |
-| 用户库层 | `os/arceos/ulib/*` | `axstd`、`axlibc` 等高层开发接口 |
+| 用户库层 | `os/arceos/ulib/*` | `axstd`、`ax-libc` 等高层开发接口 |
 | 应用与测试层 | `os/arceos/examples/*`、`test-suit/arceos/*` | 场景化验证与系统回归 |
 
 ### 2.2 必选模块与可选模块
@@ -192,7 +192,7 @@ ArceOS 提供三种不同粒度的对外接口：
 | --- | --- | --- | --- |
 | `arceos_api` | `os/arceos/api/arceos_api` | 内核模块、系统软件、需要直接使用 ArceOS 能力的上层系统 | 提供 `sys`、`time`、`mem`、`task`、`fs`、`net`、`display` 等明确分类的 API |
 | `arceos_posix_api` | `os/arceos/api/arceos_posix_api` | 需要 POSIX 风格接口的用户层或兼容层 | 更接近 C / POSIX 习惯 |
-| `axstd` / `axlibc` | `os/arceos/ulib/*` | 应用开发者 | 分别提供 Rust 风格 mini-std 与 libc 风格接口 |
+| `axstd` / `ax-libc` | `os/arceos/ulib/*` | 应用开发者 | 分别提供 Rust 风格 mini-std 与 libc 风格接口 |
 
 `arceos_api` 的组织方式很直接：按能力域导出稳定函数。例如：
 
@@ -435,7 +435,7 @@ Makefile 中常用的构建变量包括：
 
 | 入口 | 适用场景 | 典型命令 |
 | --- | --- | --- |
-| 根目录 `cargo xtask arceos ...` | 集成开发、和 CI 风格保持一致、联调共享组件 | `cargo xtask arceos run --package arceos-helloworld --arch riscv64` |
+| 根目录 `cargo xtask arceos ...` | 集成开发、和 CI 风格保持一致、联调共享组件 | `cargo xtask arceos run --package ax-helloworld --arch riscv64` |
 | `os/arceos/Makefile` | 调试 ArceOS 原生 Makefile 参数、手工控制 QEMU 选项与日志 | `cd os/arceos && make A=examples/helloworld ARCH=riscv64 LOG=debug run` |
 
 Makefile 常用目标（在 `os/arceos/` 下执行）：
@@ -452,9 +452,9 @@ Makefile 常用目标（在 `os/arceos/` 下执行）：
 推荐最小验证闭环：
 
 ```bash
-cargo xtask arceos run --package arceos-helloworld --arch riscv64
-cargo xtask arceos run --package arceos-httpserver --arch riscv64 --net
-cargo xtask arceos run --package arceos-shell --arch riscv64 --blk
+cargo xtask arceos run --package ax-helloworld --arch riscv64
+cargo xtask arceos run --package ax-httpserver --arch riscv64 --net
+cargo xtask arceos run --package ax-shell --arch riscv64 --blk
 ```
 
 ### 6.3 面向模块开发的验证顺序
@@ -463,14 +463,14 @@ cargo xtask arceos run --package arceos-shell --arch riscv64 --blk
 
 | 改动类型 | 第一条验证路径 | 第二条验证路径 |
 | --- | --- | --- |
-| 基础 crate 或 `axhal`、`axtask` | `arceos-helloworld` | `cargo arceos test qemu --target riscv64gc-unknown-none-elf` |
-| 网络栈 | `arceos-httpserver --net` | 对应网络测试或上层消费者 |
-| 文件系统 | `arceos-shell --blk` | `test-suit/arceos` 中相关测试 |
+| 基础 crate 或 `axhal`、`axtask` | `ax-helloworld` | `cargo arceos test qemu --target riscv64gc-unknown-none-elf` |
+| 网络栈 | `ax-httpserver --net` | 对应网络测试或上层消费者 |
+| 文件系统 | `ax-shell --blk` | `test-suit/arceos` 中相关测试 |
 | API/用户库 | 使用该 API 的最小示例 | 再补系统级测试 |
 
 ## 7. API 与配置参考
 
-本节介绍 ArceOS 提供的三种对外接口及其使用方式：`axstd`（应用开发）、`arceos_api`（系统软件）和 `axlibc`（POSIX 兼容）。
+本节介绍 ArceOS 提供的三种对外接口及其使用方式：`axstd`（应用开发）、`arceos_api`（系统软件）和 `ax-libc`（POSIX 兼容）。
 
 ### 7.1 `axstd` 使用方式
 
@@ -517,7 +517,7 @@ fn main() {
 - `fs::ax_open_file()`、`fs::ax_read_file()`、`fs::ax_set_current_dir()`
 - `net::ax_tcp_socket()`、`net::ax_tcp_connect()`、`net::ax_poll_interfaces()`
 
-### 7.3 `axlibc` 与 POSIX 兼容层
+### 7.3 `ax-libc` 与 POSIX 兼容层
 
 若目标为兼容 C 程序或 POSIX 风格接口，需关注：
 

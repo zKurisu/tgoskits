@@ -155,7 +155,7 @@
 
 ### 3.3 与样例程序的关系
 
-虽然 `arceos-httpclient`、`arceos-httpserver` 不直接依赖 `axnet` 的源码 API，但它们经由 `axstd`、`arceos_api`、`axruntime` 间接走的正是这条网络装配链。因此，这些示例更适合作为 `axnet` 的系统行为样例，而不是 `axnet` 自身的 API 示例。
+虽然 `ax-httpclient`、`ax-httpserver` 不直接依赖 `axnet` 的源码 API，但它们经由 `axstd`、`arceos_api`、`axruntime` 间接走的正是这条网络装配链。因此，这些示例更适合作为 `axnet` 的系统行为样例，而不是 `axnet` 自身的 API 示例。
 
 ## 4. 开发指南
 
@@ -203,7 +203,7 @@ axnet = { workspace = true }
 
 ### 5.3 推荐集成验证
 
-- 用 `arceos-httpclient` / `arceos-httpserver` 验证 TCP 主路径
+- 用 `ax-httpclient` / `ax-httpserver` 验证 TCP 主路径
 - 用 POSIX socket 调用路径验证 `arceos_posix_api`
 - 用 `bench_transmit` / `bench_receive` + `bwbench-client` 验证吞吐基准路径
 

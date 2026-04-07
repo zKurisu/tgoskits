@@ -158,7 +158,7 @@ graph TD
     A[axcpu / page_table_entry / aarch64-cpu / axconfig-macros] --> B[axplat-aarch64-raspi]
     C[axplat-aarch64-peripherals] --> B
     D[axplat] --> B
-    B --> E[arceos-helloworld-myplat]
+    B --> E[ax-helloworld-myplat]
     E --> F[树莓派 4 chainboot / jtagboot]
 ```
 
@@ -209,7 +209,7 @@ extern crate axplat_aarch64_raspi;
 ### 5.1 当前有效验证面
 
 - 交叉编译验证 AArch64 裸机构建是否完整。
-- `arceos-helloworld-myplat` 覆盖最小启动与控制台。
+- `ax-helloworld-myplat` 覆盖最小启动与控制台。
 - 树莓派 4 的 chainboot / jtagboot 是最重要的真实验证路径。
 
 ### 5.2 推荐测试矩阵
@@ -231,7 +231,7 @@ extern crate axplat_aarch64_raspi;
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | `myplat`/实板 bring-up 路径 | 树莓派 4 板级平台包 | 当前仓库内主要通过 `arceos-helloworld-myplat` 和配套调试文档使用，未进入 `axhal::defplat` 默认平台集 |
+| ArceOS | `myplat`/实板 bring-up 路径 | 树莓派 4 板级平台包 | 当前仓库内主要通过 `ax-helloworld-myplat` 和配套调试文档使用，未进入 `axhal::defplat` 默认平台集 |
 | StarryOS | 当前无仓库内直接接入 | 潜在宿主平台包 | 若未来接入，也更可能作为定制平台直接链接，而不是现成默认平台 |
 | Axvisor | 当前无仓库内直接接入 | 潜在宿主 bring-up 基础 | 本 crate 不提供虚拟化能力，只能承担树莓派宿主板级 bring-up；当前仓库没有直接依赖 |
 

@@ -16,11 +16,11 @@
 - 对下层实现，它主要依赖 `arceos_api`，把 Rust 语义映射到 ArceOS 稳定 API。
 - 对构建装配，它通过与 `axfeat` 同步的 feature 集，决定最终镜像编入哪些底层能力。
 
-这使得 `axstd` 与 `axlibc`、`arceos_posix_api` 形成清晰分工：
+这使得 `axstd` 与 `ax-libc`、`arceos_posix_api` 形成清晰分工：
 
 - `axstd`：面向 Rust 代码的高层库接口
 - `arceos_posix_api`：面向 POSIX 语义的 `sys_*` 实现层
-- `axlibc`：面向 C ABI 的符号导出层
+- `ax-libc`：面向 C ABI 的符号导出层
 
 ### 1.2 模块组织与真实落点
 按 `src/lib.rs` 与子模块源码，`axstd` 的模块层次非常明确：
@@ -88,12 +88,12 @@ flowchart LR
 
 这不是 `axstd` 的主路径，而是为那些 std 风格 API 尚未覆盖的场景保留的下潜接口。正常开发应优先使用 `axstd` 自己的包装层。
 
-### 2.4 与 `axlibc` / `arceos_posix_api` 的边界
+### 2.4 与 `ax-libc` / `arceos_posix_api` 的边界
 这三个 crate 最容易被混淆，但职责其实很清楚：
 
 - `axstd`：给 Rust 代码用，接口尽量像 `std`
 - `arceos_posix_api`：给 POSIX 语义实现用，接口是 `sys_*`
-- `axlibc`：给 C 代码和链接器用，接口是 `extern "C"` 符号
+- `ax-libc`：给 C 代码和链接器用，接口是 `extern "C"` 符号
 
 `axstd` 不设置 `errno`，也不导出 C ABI；它直接面向 Rust 调用者。
 

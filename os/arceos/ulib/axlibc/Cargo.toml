@@ -1,5 +1,5 @@
 [package]
-name = "axlibc"
+name = "ax-libc"
 version.workspace = true
 edition.workspace = true
 authors = [
@@ -16,6 +16,7 @@ homepage.workspace = true
 repository = "https://github.com/arceos-org/arceos/tree/main/ulib/axlibc"
 
 [lib]
+name = "axlibc"
 crate-type = ["staticlib"]
 
 [features]

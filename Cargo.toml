@@ -190,7 +190,7 @@ axfeat = { path = "os/arceos/api/axfeat" }
 arceos_api = { path = "os/arceos/api/arceos_api" }
 arceos_posix_api = { path = "os/arceos/api/arceos_posix_api" }
 axstd = { path = "os/arceos/ulib/axstd" }
-axlibc = { path = "os/arceos/ulib/axlibc" }
+ax-libc = { path = "os/arceos/ulib/axlibc" }
 
 # === axplat ===
 axplat = { path = "components/axplat_crates/axplat" }
@@ -296,7 +296,7 @@ impl-weak-traits = { path = "components/crate_interface/test_crates/impl-weak-tr
 # === os/arceos crates (0.3.0-preview.3) ===
 # ulib
 axstd = { path = "os/arceos/ulib/axstd", version = "0.5.0" }
-axlibc = { path = "os/arceos/ulib/axlibc", version = "0.5.0" }
+axlibc = { path = "os/arceos/ulib/axlibc", version = "0.5.0", package = "ax-libc" }
 
 # api
 arceos_api = { path = "os/arceos/api/arceos_api", version = "0.5.0" }

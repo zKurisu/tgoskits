@@ -156,7 +156,7 @@ graph TD
     A[axcpu / page_table_entry / axconfig-macros] --> B[axplat-aarch64-phytium-pi]
     C[axplat-aarch64-peripherals] --> B
     D[axplat] --> B
-    B --> E[arceos-helloworld-myplat]
+    B --> E[ax-helloworld-myplat]
     E --> F[飞腾派板卡启动与调试]
 ```
 
@@ -180,7 +180,7 @@ extern crate axplat_aarch64_phytium_pi;
 如果走当前仓库里的 ArceOS 板卡流程，则通常会配合：
 
 - `MYPLAT=axplat-aarch64-phytium-pi`
-- `arceos-helloworld-myplat`
+- `ax-helloworld-myplat`
 - 文档里的 `ostool run uboot` 启动方式
 
 但这些是“如何把镜像送上板”的流程；本 crate 自己只负责镜像上板后的平台 bring-up。
@@ -204,7 +204,7 @@ extern crate axplat_aarch64_phytium_pi;
 ### 5.1 当前有效验证面
 
 - 交叉构建可验证 `aarch64-unknown-none` 下的编译完整性。
-- `arceos-helloworld-myplat` 可覆盖最小启动、串口输出和平台初始化主线。
+- `ax-helloworld-myplat` 可覆盖最小启动、串口输出和平台初始化主线。
 - 真正有价值的验证仍然是飞腾派实板 bring-up。
 
 ### 5.2 推荐测试矩阵
@@ -226,7 +226,7 @@ extern crate axplat_aarch64_phytium_pi;
 
 | 项目 | 位置 | 角色 | 核心作用 |
 | --- | --- | --- | --- |
-| ArceOS | `myplat`/板卡 bring-up 路径 | 飞腾派板级平台包 | 当前仓库内主要通过 `arceos-helloworld-myplat` 和板卡启动文档使用，不在 `axhal::defplat` 默认平台列表中 |
+| ArceOS | `myplat`/板卡 bring-up 路径 | 飞腾派板级平台包 | 当前仓库内主要通过 `ax-helloworld-myplat` 和板卡启动文档使用，不在 `axhal::defplat` 默认平台列表中 |
 | StarryOS | 当前无仓库内直接接入 | 潜在宿主平台包 | 若未来接入，更可能作为定制板级平台直接链接，而不是默认平台能力 |
 | Axvisor | 当前无仓库内直接接入 | 潜在宿主 bring-up 层 | 本 crate 不提供虚拟化能力，只能提供飞腾派宿主板级初始化基础；当前仓库没有直接依赖 |
 

@@ -197,15 +197,15 @@ graph LR
 
 ### 3.4 间接被依赖情况
 - `arceos-affinity`
-- `arceos-helloworld`
-- `arceos-helloworld-myplat`
-- `arceos-httpclient`
-- `arceos-httpserver`
+- `ax-helloworld`
+- `ax-helloworld-myplat`
+- `ax-httpclient`
+- `ax-httpserver`
 - `arceos-irq`
 - `arceos-memtest`
 - `arceos-parallel`
 - `arceos-priority`
-- `arceos-shell`
+- `ax-shell`
 - `arceos-sleep`
 - `arceos-wait-queue`
 - 另外还有 `37` 个同类项未在此展开
@@ -249,7 +249,7 @@ axplat-macros = { workspace = true }
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axplat-macros` 主要通过 `arceos-affinity`、`arceos-helloworld`、`arceos-helloworld-myplat`、`arceos-httpclient`、`arceos-httpserver`、`arceos-irq` 等（另有 26 项） 等上层 crate 被 ArceOS 间接复用，通常处于更底层的公共依赖层。
+`axplat-macros` 主要通过 `arceos-affinity`、`ax-helloworld`、`ax-helloworld-myplat`、`ax-httpclient`、`ax-httpserver`、`arceos-irq` 等（另有 26 项） 等上层 crate 被 ArceOS 间接复用，通常处于更底层的公共依赖层。
 
 ### 6.2 StarryOS
 `axplat-macros` 主要通过 `starry-kernel`、`starryos`、`starryos-test` 等上层 crate 被 StarryOS 间接复用，通常处于更底层的公共依赖层。
