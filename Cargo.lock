@@ -666,12 +666,12 @@ name = "ax-hal"
 version = "0.5.0"
 dependencies = [
  "ax-plat-aarch64-qemu-virt",
+ "ax-plat-loongarch64-qemu-virt",
  "axalloc",
  "axconfig",
  "axcpu 0.5.0",
  "axplat 0.5.1",
  "axplat-dyn",
- "axplat-loongarch64-qemu-virt",
  "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "cfg-if",
@@ -701,8 +701,8 @@ dependencies = [
  "ax-plat-aarch64-phytium-pi",
  "ax-plat-aarch64-qemu-virt",
  "ax-plat-aarch64-raspi",
+ "ax-plat-loongarch64-qemu-virt",
  "ax-std",
- "axplat-loongarch64-qemu-virt",
  "axplat-riscv64-qemu-virt 0.5.1",
  "axplat-x86-pc",
  "cfg-if",
@@ -881,6 +881,22 @@ dependencies = [
  "axplat 0.5.1",
  "log",
  "page_table_entry 0.8.1",
+]
+
+[[package]]
+name = "ax-plat-loongarch64-qemu-virt"
+version = "0.5.1"
+dependencies = [
+ "axconfig-macros 0.4.1",
+ "axcpu 0.5.0",
+ "axplat 0.5.1",
+ "chrono",
+ "kspin 0.3.1",
+ "lazyinit 0.4.2",
+ "log",
+ "loongArch64",
+ "page_table_entry 0.8.1",
+ "uart_16550 0.5.0",
 ]
 
 [[package]]
@@ -1463,22 +1479,6 @@ dependencies = [
  "rdrive",
  "somehal",
  "spin 0.10.0",
-]
-
-[[package]]
-name = "axplat-loongarch64-qemu-virt"
-version = "0.5.1"
-dependencies = [
- "axconfig-macros 0.4.1",
- "axcpu 0.5.0",
- "axplat 0.5.1",
- "chrono",
- "kspin 0.3.1",
- "lazyinit 0.4.2",
- "log",
- "loongArch64",
- "page_table_entry 0.8.1",
- "uart_16550 0.5.0",
 ]
 
 [[package]]

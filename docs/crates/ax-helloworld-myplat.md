@@ -35,7 +35,7 @@ graph LR
     current --> axplat_aarch64_phytium_pi["ax-plat-aarch64-phytium-pi"]
     current --> axplat_aarch64_qemu_virt["ax-plat-aarch64-qemu-virt"]
     current --> axplat_aarch64_raspi["ax-plat-aarch64-raspi"]
-    current --> axplat_loongarch64_qemu_virt["axplat-loongarch64-qemu-virt"]
+    current --> ax_plat_loongarch64_qemu_virt["ax-plat-loongarch64-qemu-virt"]
     current --> axplat_riscv64_qemu_virt["axplat-riscv64-qemu-virt"]
     current --> axplat_x86_pc["axplat-x86-pc"]
     current --> ax-std["ax-std"]
@@ -46,7 +46,7 @@ graph LR
 - `ax-plat-aarch64-phytium-pi`
 - `ax-plat-aarch64-qemu-virt`
 - `ax-plat-aarch64-raspi`
-- `axplat-loongarch64-qemu-virt`
+- `ax-plat-loongarch64-qemu-virt`
 - `axplat-riscv64-qemu-virt`
 - `axplat-x86-pc`
 - `ax-std`

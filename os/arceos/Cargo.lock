@@ -197,7 +197,7 @@ dependencies = [
  "axplat-aarch64-phytium-pi",
  "axplat-aarch64-qemu-virt",
  "axplat-aarch64-raspi",
- "axplat-loongarch64-qemu-virt",
+ "ax-plat-loongarch64-qemu-virt",
  "axplat-riscv64-qemu-virt",
  "axplat-x86-pc",
  "ax-std",
@@ -722,7 +722,7 @@ dependencies = [
  "axplat",
  "axplat-aarch64-qemu-virt",
  "axplat-dyn",
- "axplat-loongarch64-qemu-virt",
+ "ax-plat-loongarch64-qemu-virt",
  "axplat-riscv64-qemu-virt",
  "axplat-x86-pc",
  "cfg-if",
@@ -970,7 +970,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "axplat-loongarch64-qemu-virt"
+name = "ax-plat-loongarch64-qemu-virt"
 version = "0.5.1"
 dependencies = [
  "axconfig-macros",

@@ -250,7 +250,7 @@ CURATED_DOCS = {
     "ax-plat-aarch64-peripherals",
     "axplat-aarch64-phytium-pi",
     "axplat-aarch64-raspi",
-    "axplat-loongarch64-qemu-virt",
+    "ax-plat-loongarch64-qemu-virt",
     "axplat-riscv64-qemu-virt",
     "axplat-x86-pc",
     "axplat-x86-qemu-q35",

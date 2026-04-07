@@ -9,7 +9,7 @@ cfg_if::cfg_if! {
     } else if #[cfg(target_arch = "riscv64")] {
         extern crate axplat_riscv64_qemu_virt;
     } else if #[cfg(target_arch = "loongarch64")] {
-        extern crate axplat_loongarch64_qemu_virt;
+        extern crate ax_plat_loongarch64_qemu_virt;
     } else {
         compile_error!("Unsupported target architecture");
     }

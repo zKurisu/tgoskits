@@ -87,7 +87,7 @@ graph LR
     sample --> x86["axplat-x86-pc(irq)"]
     sample --> a64["ax-plat-aarch64-qemu-virt(irq)"]
     sample --> rv["axplat-riscv64-qemu-virt(irq)"]
-    sample --> loong["axplat-loongarch64-qemu-virt(irq)"]
+    sample --> loong["ax-plat-loongarch64-qemu-virt(irq)"]
 ```
 
 ### 3.1 直接依赖

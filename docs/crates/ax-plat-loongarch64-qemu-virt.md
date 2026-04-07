@@ -1,4 +1,4 @@
-# `axplat-loongarch64-qemu-virt` 技术文档
+# `ax-plat-loongarch64-qemu-virt` 技术文档
 
 > 路径：`components/axplat_crates/platforms/axplat-loongarch64-qemu-virt`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.3.1-pre.6`
 > 文档依据：当前仓库源码、`Cargo.toml`、`README.md`、`axconfig.toml`、`src/boot.rs`、`src/init.rs`、`src/console.rs`、`src/time.rs`、`src/irq.rs`、`src/mem.rs`、`src/power.rs`、`src/mp.rs`
 
-`axplat-loongarch64-qemu-virt` 是 QEMU LoongArch 虚拟机在 `axplat` 体系下的完整平台实现。它不是“只提供启动代码”的薄封装，而是自己承担了控制台、时间、中断、电源、内存和可选多核的全部板级落地工作：从 LoongArch 启动头、DMW 映射和早期页表，到 16550 串口、LoongArch timer CSR、EIOINTC/PCH PIC、GED 关机寄存器，几乎都在本 crate 内部完成。
+`ax-plat-loongarch64-qemu-virt` 是 QEMU LoongArch 虚拟机在 `axplat` 体系下的完整平台实现。它不是“只提供启动代码”的薄封装，而是自己承担了控制台、时间、中断、电源、内存和可选多核的全部板级落地工作：从 LoongArch 启动头、DMW 映射和早期页表，到 16550 串口、LoongArch timer CSR、EIOINTC/PCH PIC、GED 关机寄存器，几乎都在本 crate 内部完成。
 
 ## 1. 架构设计分析
 
@@ -101,7 +101,7 @@ LoongArch QEMU virt 的中断模型在这个 crate 里被明确分层了：
 | 层 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
 | `axcpu` | trap 初始化、MMU 打开、FP/LSX 使能、停机等 CPU 原语 | 串口、GED、EIOINTC/PCH PIC、平台地址窗口 |
-| `axplat-loongarch64-qemu-virt` | 启动头、地址映射、中断拓扑、串口、时间、关机、SMP glue | 调度、页表管理策略、驱动枚举、上层 HAL 组合 |
+| `ax-plat-loongarch64-qemu-virt` | 启动头、地址映射、中断拓扑、串口、时间、关机、SMP glue | 调度、页表管理策略、驱动枚举、上层 HAL 组合 |
 | `ax-hal` | 上层统一内存视图、DTB/bootarg 进一步整合、运行时初始化组织 | LoongArch virt 本地寄存器初始化与外设语义 |
 
 还要额外澄清两点：
@@ -188,7 +188,7 @@ LoongArch QEMU virt 的中断模型在这个 crate 里被明确分层了：
 
 ```mermaid
 graph TD
-    A[axcpu / loongArch64 / page_table_entry / uart_16550] --> B[axplat-loongarch64-qemu-virt]
+    A[axcpu / loongArch64 / page_table_entry / uart_16550] --> B[ax-plat-loongarch64-qemu-virt]
     C[axplat / axconfig-macros / lazyinit / kspin] --> B
     B --> D[ax-hal]
     B --> E[hello-kernel / irq-kernel / smp-kernel]
@@ -204,7 +204,7 @@ graph TD
 
 ```toml
 [dependencies]
-axplat-loongarch64-qemu-virt = { workspace = true, features = ["irq", "smp", "rtc"] }
+ax-plat-loongarch64-qemu-virt = { workspace = true, features = ["irq", "smp", "rtc"] }
 ```
 
 如果是 ArceOS 默认平台链路，通常由 `ax-hal` 的 `defplat` 和 LoongArch 目标自动带入；如果是示例内核，则直接依赖该平台包即可。
@@ -260,4 +260,4 @@ axplat-loongarch64-qemu-virt = { workspace = true, features = ["irq", "smp", "rt
 
 ## 7. 总结
 
-`axplat-loongarch64-qemu-virt` 是一个完整度很高的 LoongArch 平台包：启动、串口、时间、中断、内存和关机都在本 crate 内部自洽落地。它最关键的设计，不是单个设备驱动，而是把 LoongArch virt 的地址映射、中断级联和最小运行环境整理成了稳定的 `axplat` 契约，因此它既适合作为当前仓库的默认 LoongArch 平台，也适合作为后续平台演进的参考基线。
+`ax-plat-loongarch64-qemu-virt` 是一个完整度很高的 LoongArch 平台包：启动、串口、时间、中断、内存和关机都在本 crate 内部自洽落地。它最关键的设计，不是单个设备驱动，而是把 LoongArch virt 的地址映射、中断级联和最小运行环境整理成了稳定的 `axplat` 契约，因此它既适合作为当前仓库的默认 LoongArch 平台，也适合作为后续平台演进的参考基线。

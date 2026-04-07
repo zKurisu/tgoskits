@@ -43,7 +43,7 @@ flowchart LR
 - `axplat-x86-pc`
 - `ax-plat-aarch64-qemu-virt`
 - `axplat-riscv64-qemu-virt`
-- `axplat-loongarch64-qemu-virt`
+- `ax-plat-loongarch64-qemu-virt`
 
 这说明它本质上是 `axplat` 平台包的最小消费者，用来证明平台包已经具备最小 bring-up 能力。
 
@@ -81,7 +81,7 @@ graph LR
     sample --> x86["axplat-x86-pc"]
     sample --> a64["ax-plat-aarch64-qemu-virt"]
     sample --> rv["axplat-riscv64-qemu-virt"]
-    sample --> loong["axplat-loongarch64-qemu-virt"]
+    sample --> loong["ax-plat-loongarch64-qemu-virt"]
 ```
 
 ### 3.1 直接依赖

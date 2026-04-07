@@ -69,7 +69,7 @@ graph LR
     axplat --> x86["axplat-x86-pc / x86-q35"]
     axplat --> riscv["axplat-riscv64-qemu-virt"]
     axplat --> aarch64["ax-plat-aarch64-peripherals"]
-    axplat --> loongarch["axplat-loongarch64-qemu-virt"]
+    axplat --> loongarch["ax-plat-loongarch64-qemu-virt"]
 ```
 
 ### 3.1 关键直接依赖

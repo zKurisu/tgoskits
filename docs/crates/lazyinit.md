@@ -88,7 +88,7 @@ graph LR
 
 ### 3.2 关键直接消费者
 - ArceOS 模块：`ax-task`、`ax-mm`、`ax-ipi`、`ax-fs`、`ax-net`、`ax-display`、`ax-input` 等。
-- 平台层：`axplat-x86-pc`、`ax-plat-aarch64-peripherals`、`axplat-riscv64-qemu-virt`、`axplat-loongarch64-qemu-virt`。
+- 平台层：`axplat-x86-pc`、`ax-plat-aarch64-peripherals`、`axplat-riscv64-qemu-virt`、`ax-plat-loongarch64-qemu-virt`。
 - Axvisor：如 `vmm/timer.rs` 的 `TimerList`、DTB 缓存等。
 
 ## 4. 开发指南

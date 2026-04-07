@@ -521,7 +521,7 @@ fn default_platform_package(arch: &str) -> &'static str {
         "x86_64" => "axplat-x86-pc",
         "aarch64" => "ax-plat-aarch64-qemu-virt",
         "riscv64" => "axplat-riscv64-qemu-virt",
-        "loongarch64" => "axplat-loongarch64-qemu-virt",
+        "loongarch64" => "ax-plat-loongarch64-qemu-virt",
         _ => unreachable!("unsupported arch"),
     }
 }
