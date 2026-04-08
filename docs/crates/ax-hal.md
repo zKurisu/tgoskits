@@ -138,7 +138,7 @@ graph LR
 
 ### 3.2 关键间接依赖
 - 各类驱动基础组件，如 `ax-driver-base`、`ax-driver-virtio` 等，会通过 `axplat` 与上层模块间接参与平台 bring-up。
-- `percpu`、`kernel_guard`、`memory_addr` 等基础组件通过 `ax-cpu`、`axplat` 或 `paging` 路径提供底层支持。
+- `ax-percpu`、`kernel_guard`、`memory_addr` 等基础组件通过 `ax-cpu`、`axplat` 或 `paging` 路径提供底层支持。
 
 ### 3.3 关键直接消费者
 - `ax-runtime`：系统 bring-up 总控，是 `ax-hal` 的第一直接消费者。

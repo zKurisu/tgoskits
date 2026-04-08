@@ -2,7 +2,7 @@
 
 pub use ax_plat::percpu::*;
 
-#[percpu::def_percpu]
+#[ax_percpu::def_percpu]
 static CURRENT_TASK_PTR: usize = 0;
 
 /// Gets the pointer to the current task with preemption-safety.

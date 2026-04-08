@@ -40,7 +40,7 @@ page_table_entry = "0.8.1"
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 lazyinit = "0.4.2"
-percpu = "0.4.3"
+ax-percpu = "0.4.3"
 x86 = "0.52"
 x86_64 = { version = "0.15", default-features = false, features = [
     "instructions",

@@ -266,7 +266,7 @@ graph LR
 - `memory_addr`
 - `page_table_entry`
 - `ax-page-table-multiarch`
-- `percpu`
+- `ax-percpu`
 - `percpu_macros`
 
 ### 3.3 被依赖情况

@@ -294,7 +294,7 @@ CURATED_DOCS = {
     "test-weak-partial",
     "timer_list",
     "tg-xtask",
-    "percpu",
+    "ax-percpu",
     "x86_vcpu",
     "axvisor_api_proc",
     "riscv-h",

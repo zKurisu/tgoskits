@@ -140,7 +140,7 @@
 | `mingo` | ArceOS 层 | `os/arceos/tools/raspi4/chainloader` | 0 | 0 | [查看](./mingo.md) |
 | `page_table_entry` | 组件层 | `components/page_table_multiarch/page_table_entry` | 1 | 12 | [查看](./page_table_entry.md) |
 | `ax-page-table-multiarch` | 组件层 | `components/page_table_multiarch/page_table_multiarch` | 3 | 7 | [查看](./ax-page-table-multiarch.md) |
-| `percpu` | 组件层 | `components/percpu/percpu` | 2 | 17 | [查看](./percpu.md) |
+| `ax-percpu` | 组件层 | `components/percpu/percpu` | 2 | 17 | [查看](./ax-percpu.md) |
 | `percpu_macros` | 组件层 | `components/percpu/percpu_macros` | 0 | 1 | [查看](./percpu_macros.md) |
 | `range-alloc-arceos` | 组件层 | `components/range-alloc-arceos` | 0 | 1 | [查看](./range-alloc-arceos.md) |
 | `riscv-h` | 组件层 | `components/riscv-h` | 0 | 2 | [查看](./riscv-h.md) |

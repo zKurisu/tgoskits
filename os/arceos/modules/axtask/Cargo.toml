@@ -22,20 +22,20 @@ multitask = [
     "dep:ax-kspin",
     "dep:lazyinit",
     "dep:memory_addr",
-    "dep:percpu",
+    "dep:ax-percpu",
     "dep:spin",
 ]
 task-ext = ["dep:extern-trait"]
 irq = ["ax-hal/irq", "dep:timer_list"]
 tls = ["ax-hal/tls"]
-preempt = ["irq", "percpu?/preempt", "kernel_guard/preempt"]
+preempt = ["irq", "ax-percpu?/preempt", "kernel_guard/preempt"]
 smp = ["ax-kspin/smp"]
 
 sched-fifo = ["multitask"]
 sched-rr = ["multitask", "preempt"]
 sched-cfs = ["multitask", "preempt"]
 
-test = ["percpu?/sp-naive"]
+test = ["ax-percpu?/sp-naive"]
 
 [dependencies]
 ax-config = { workspace = true, optional = true }
@@ -56,7 +56,7 @@ ax-kspin = { workspace = true, optional = true }
 lazyinit = { workspace = true, optional = true }
 log.workspace = true
 memory_addr = { workspace = true, optional = true }
-percpu = { workspace = true, optional = true }
+ax-percpu = { workspace = true, optional = true }
 spin = { workspace = true, optional = true }
 timer_list = { workspace = true, optional = true }
 

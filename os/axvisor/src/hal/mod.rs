@@ -69,7 +69,7 @@ impl AxMmHal for AxMmHalImpl {
 //     }
 // }
 
-#[percpu::def_percpu]
+#[ax_percpu::def_percpu]
 static mut AXVM_PER_CPU: AxVMPerCpu = AxVMPerCpu::new_uninit();
 
 /// Init hardware virtualization support in each core.
@@ -102,12 +102,12 @@ pub(crate) fn enable_virtualization() {
 
             vmm::init_timer_percpu();
 
-            // SAFETY: We are initializing the percpu state for the first time
+            // SAFETY: We are initializing the per-CPU state for the first time
             #[allow(static_mut_refs)]
             let percpu = unsafe { AXVM_PER_CPU.current_ref_mut_raw() };
             percpu
                 .init(this_cpu_id())
-                .expect("Failed to initialize percpu state");
+                .expect("Failed to initialize per-CPU state");
             percpu
                 .hardware_enable()
                 .expect("Failed to enable virtualization");

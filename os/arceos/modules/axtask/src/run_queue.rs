@@ -22,7 +22,7 @@ macro_rules! percpu_static {
     ),* $(,)?) => {
         $(
             $(#[$comment])*
-            #[percpu::def_percpu]
+            #[ax_percpu::def_percpu]
             static $name: $ty = $init;
         )*
     };
@@ -584,7 +584,7 @@ impl AxRunQueue {
             let prev_ctx_ptr = prev_task.ctx_mut_ptr();
             let next_ctx_ptr = next_task.ctx_mut_ptr();
 
-            // Store the weak pointer of **prev_task** in percpu variable `PREV_TASK`.
+            // Store the weak pointer of **prev_task** in ax-percpu variable `PREV_TASK`.
             #[cfg(feature = "smp")]
             {
                 *PREV_TASK.current_ref_mut_raw() = Arc::downgrade(&prev_task);

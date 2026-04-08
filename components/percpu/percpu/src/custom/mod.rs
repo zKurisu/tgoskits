@@ -261,7 +261,7 @@ mod _linux {
         unsafe {
             let base = g.as_slice().as_ptr() as usize;
             PERCPU_BASE = base;
-            println!("alloc percpu data @{:#x}, size: {:#x}", base, size);
+            println!("alloc ax-percpu data @{:#x}, size: {:#x}", base, size);
         }
         cpu_count
     }

@@ -217,8 +217,8 @@ ax-driver-virtio = { path = "components/axdriver_crates/axdriver_virtio" }
 ax-driver-input = { path = "components/axdriver_crates/axdriver_input" }
 ax-driver-vsock = { path = "components/axdriver_crates/axdriver_vsock" }
 
-# === percpu ===
-percpu = { path = "components/percpu/percpu" }
+# === ax-percpu ===
+ax-percpu = { path = "components/percpu/percpu" }
 percpu_macros = { path = "components/percpu/percpu_macros" }
 
 # === page_table ===
@@ -390,7 +390,7 @@ lock_api = { version = "0.4", default-features = false }
 log = "0.4"
 memory_addr = { version = "0.6.1", path = "components/axmm_crates/memory_addr" }
 ax-page-table-multiarch = { version = "0.8.1", features = ["ax-errno"], path = "components/page_table_multiarch/page_table_multiarch" }
-percpu = { version = "0.4.3", path = "components/percpu/percpu" }
+ax-percpu = { version = "0.4.3", path = "components/percpu/percpu" }
 scope-local = { version = "0.3.2", path = "components/scope-local" }
 spin = "0.10"
 ostool = { version = "0.12" }
