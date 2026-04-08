@@ -228,7 +228,7 @@ CURATED_DOCS = {
     "axvisor_api",
     "ax-page-table-multiarch",
     "ax-page-table-entry",
-    "memory_addr",
+    "ax-memory-addr",
     "ax-memory-set",
     "ax-sync",
     "ax-sched",

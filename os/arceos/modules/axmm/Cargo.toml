@@ -18,6 +18,6 @@ ax-hal = { workspace = true, features = ["paging"] }
 ax-kspin.workspace = true
 ax-lazyinit.workspace = true
 log.workspace = true
-memory_addr.workspace = true
+ax-memory-addr.workspace = true
 ax-memory-set = { version = "0.6.1", features = ["ax-errno"] }
 ax-page-table-multiarch = { workspace = true, optional = true }

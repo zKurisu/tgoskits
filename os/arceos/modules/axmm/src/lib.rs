@@ -16,7 +16,7 @@ use ax_hal::{
 };
 use ax_kspin::SpinNoIrq;
 use ax_lazyinit::LazyInit;
-use memory_addr::{MemoryAddr, PhysAddr, VirtAddr};
+use ax_memory_addr::{MemoryAddr, PhysAddr, VirtAddr};
 
 pub use self::{aspace::AddrSpace, backend::Backend};
 
