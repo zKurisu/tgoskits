@@ -269,7 +269,7 @@ CURATED_DOCS = {
     "bitmap-allocator",
     "ax-cpumask",
     "deptool",
-    "handler_table",
+    "ax-handler-table",
     "ax-int-ratio",
     "ax-kernel-guard",
     "ax-kspin",

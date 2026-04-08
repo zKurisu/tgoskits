@@ -130,7 +130,7 @@
 | `define-weak-traits` | 组件层 | `components/crate_interface/test_crates/define-weak-traits` | 1 | 4 | [查看](./define-weak-traits.md) |
 | `deptool` | ArceOS 层 | `os/arceos/tools/deptool` | 0 | 0 | [查看](./deptool.md) |
 | `fxmac_rs` | 组件层 | `components/fxmac_rs` | 1 | 1 | [查看](./fxmac_rs.md) |
-| `handler_table` | 组件层 | `components/handler_table` | 0 | 1 | [查看](./handler_table.md) |
+| `ax-handler-table` | 组件层 | `components/handler_table` | 0 | 1 | [查看](./ax-handler-table.md) |
 | `hello-kernel` | 组件层 | `components/axplat_crates/examples/hello-kernel` | 5 | 0 | [查看](./hello-kernel.md) |
 | `impl-simple-traits` | 组件层 | `components/crate_interface/test_crates/impl-simple-traits` | 2 | 1 | [查看](./impl-simple-traits.md) |
 | `impl-weak-partial` | 组件层 | `components/crate_interface/test_crates/impl-weak-partial` | 2 | 1 | [查看](./impl-weak-partial.md) |

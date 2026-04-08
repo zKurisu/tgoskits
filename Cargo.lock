@@ -893,6 +893,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-handler-table"
+version = "0.3.2"
+
+[[package]]
 name = "ax-helloworld"
 version = "0.3.0"
 dependencies = [
@@ -1111,12 +1115,12 @@ name = "ax-plat"
 version = "0.5.1"
 dependencies = [
  "ax-crate-interface",
+ "ax-handler-table",
  "ax-kspin",
  "ax-percpu",
  "ax-plat-macros",
  "bitflags 2.11.0",
  "const-str",
- "handler_table 0.3.2",
  "memory_addr 0.6.1",
 ]
 
@@ -1610,7 +1614,7 @@ dependencies = [
  "bitflags 2.11.0",
  "const-str",
  "crate_interface 0.3.0",
- "handler_table 0.1.2",
+ "handler_table",
  "kspin",
  "memory_addr 0.4.1",
  "percpu 0.2.3-preview.1",
@@ -3838,10 +3842,6 @@ name = "handler_table"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "702cb690200d6303c1e1992bc648f3f3bf9c1d6a27fcf50551c513d61f339c99"
-
-[[package]]
-name = "handler_table"
-version = "0.3.2"
 
 [[package]]
 name = "hash32"
