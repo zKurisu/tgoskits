@@ -16,7 +16,7 @@ use core::fmt::Debug;
 use arrayvec::ArrayVec;
 #[doc(no_inline)]
 pub use ax_page_table_entry::{GenericPTE, MappingFlags};
-use memory_addr::{MemoryAddr, PAGE_SIZE_4K, PhysAddr, VirtAddr};
+use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, PhysAddr, VirtAddr};
 
 #[cfg(any(target_pointer_width = "32", doc, docsrs))]
 pub use self::{
@@ -146,12 +146,12 @@ impl PageSize {
 
     /// Checks whether a given address or size is aligned to the page size.
     pub const fn is_aligned(self, addr_or_size: usize) -> bool {
-        memory_addr::is_aligned(addr_or_size, self as usize)
+        ax_memory_addr::is_aligned(addr_or_size, self as usize)
     }
 
     /// Returns the offset of the address within the page size.
     pub const fn align_offset(self, addr: usize) -> usize {
-        memory_addr::align_offset(addr, self as usize)
+        ax_memory_addr::align_offset(addr, self as usize)
     }
 }
 

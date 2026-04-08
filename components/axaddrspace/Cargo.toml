@@ -27,7 +27,7 @@ numeric-enum-macro = "0.2"
 
 # Operating system independent modules provided by ArceOS.
 ax-errno = "0.4.2"
-memory_addr = "0.6.1"
+ax-memory-addr = "0.6.1"
 ax-memory-set = "0.6.1"
 ax-page-table-entry = "0.8.1"
 ax-page-table-multiarch = "0.8.1"
