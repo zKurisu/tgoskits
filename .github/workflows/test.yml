@@ -107,47 +107,39 @@ jobs:
       - name: Run ${{ matrix.os }} tests
         run: cargo ${{ matrix.os }} test qemu --target ${{ matrix.target }}
 
-  # test_axvisor_x86_64:
-  #   name: Test axvisor x86_64
-  #   runs-on:
-  #     - self-hosted
-  #     - linux
-  #     - intel
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v5
+  test_axvisor_x86_64:
+    name: Test axvisor x86_64
+    runs-on:
+      - self-hosted
+      - linux
+      - intel
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-  #     - run: rustc --version
+      - run: rustc --version
 
-  #     - uses: Swatinem/rust-cache@v2
-  #       with:
-  #         shared-key: test-axvisor-x86_64
-  #         cache-bin: false
-  #         save-if: ${{ github.event_name == 'push' }}
+      - name: Run axvisor x86_64 tests
+        run: cargo axvisor test qemu --target x86_64
 
-  #     - name: Run axvisor x86_64 tests
-  #       run: cargo axvisor test qemu --target x86_64
+  test_axvisor_board:
+    name: Test axvisor ${{ matrix.test_group }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - test_group: phytiumpi-linux
+          - test_group: orangepi-5-plus-linux
+          - test_group: roc-rk3568-pc-linux
+    runs-on:
+      - self-hosted
+      - linux
+      - board
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-  # test_axvisor_board:
-  #   name: Test axvisor ${{ matrix.test_group }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include:
-  #         # - test_group: phytiumpi-linux
-  #         - test_group: orangepi-5-plus-linux
-  #         - test_group: roc-rk3568-pc-linux
-  #   runs-on:
-  #     - self-hosted
-  #     - linux
-  #     - board
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v5
+      - run: rustc --version
 
-  #     - run: rustc --version
-
-
-
-  #     - name: Run axvisor board tests
-  #       run: cargo axvisor test board -t ${{ matrix.test_group }}
+      - name: Run axvisor board tests
+        run: cargo axvisor test board -t ${{ matrix.test_group }}
