@@ -355,7 +355,7 @@ mod tests {
             "lazyinit",
             "ax-sched",
             "ax-cap-access",
-            "cpumask",
+            "ax-cpumask",
             "rsext4",
         ] {
             assert!(
@@ -371,7 +371,7 @@ mod tests {
         let patches = discover_patch_paths(&root, &root.join("os/arceos")).unwrap();
 
         assert_eq!(
-            patches.get("page_table_entry"),
+            patches.get("ax-page-table-entry"),
             Some(&PathBuf::from(
                 "../../components/page_table_multiarch/page_table_entry"
             ))

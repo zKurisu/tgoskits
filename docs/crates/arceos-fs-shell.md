@@ -32,31 +32,31 @@
 ```mermaid
 graph LR
     current["arceos-fs-shell"]
-    current --> ax_fs_ramfs["ax-fs-ramfs"]
-    current --> ax_std["ax-std"]
-    current --> axfs_vfs["ax-fs-vfs"]
     current --> ax_crate_interface["ax-crate-interface"]
+    current --> ax_fs_ramfs["ax-fs-ramfs"]
+    current --> ax_fs_vfs["ax-fs-vfs"]
+    current --> ax_std["ax-std"]
 ```
 
 ### 3.1 直接与间接依赖
-- `ax-fs-ramfs`
-- `ax-std`
-- `axfs_vfs`
 - `ax-crate-interface`
+- `ax-fs-ramfs`
+- `ax-fs-vfs`
+- `ax-std`
 
 ### 3.2 间接本地依赖
-- `arm_pl011`
-- `arm_pl031`
 - `ax-alloc`
 - `ax-allocator`
 - `ax-api`
+- `ax-arm-pl011`
+- `ax-arm-pl031`
+- `ax-cap-access`
 - `ax-config`
+- `ax-config-gen`
 - `ax-config-macros`
 - `ax-cpu`
+- `ax-cpumask`
 - `ax-display`
-- `ax-dma`
-- `ax-driver`
-- `ax-driver-virtio`
 - 另外还有 `63` 个同类项未在此展开
 
 ### 3.3 被依赖情况

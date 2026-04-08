@@ -5,7 +5,7 @@ use alloc::{
     sync::{Arc, Weak},
 };
 
-use kernel_guard::NoPreemptIrqSave;
+use ax_kernel_guard::NoPreemptIrqSave;
 
 pub(crate) use crate::run_queue::{current_run_queue, select_run_queue};
 #[doc(cfg(all(feature = "multitask", feature = "task-ext")))]
@@ -26,8 +26,8 @@ pub type AxTaskRef = Arc<AxTask>;
 /// The weak reference type of a task.
 pub type WeakAxTaskRef = Weak<AxTask>;
 
-/// The wrapper type for [`cpumask::CpuMask`] with SMP configuration.
-pub type AxCpuMask = cpumask::CpuMask<{ ax_config::plat::MAX_CPU_NUM }>;
+/// The wrapper type for [`ax_cpumask::CpuMask`] with SMP configuration.
+pub type AxCpuMask = ax_cpumask::CpuMask<{ ax_config::plat::MAX_CPU_NUM }>;
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "sched-rr")] {
@@ -49,7 +49,7 @@ struct KernelGuardIfImpl;
 
 #[cfg(feature = "preempt")]
 #[ax_crate_interface::impl_interface]
-impl kernel_guard::KernelGuardIf for KernelGuardIfImpl {
+impl ax_kernel_guard::KernelGuardIf for KernelGuardIfImpl {
     fn disable_preempt() {
         if let Some(curr) = current_may_uninit() {
             curr.disable_preempt();
@@ -114,10 +114,10 @@ pub fn init_scheduler_secondary() {
 #[cfg(feature = "irq")]
 #[doc(cfg(feature = "irq"))]
 pub fn on_timer_tick() {
-    use kernel_guard::NoOp;
+    use ax_kernel_guard::NoOp;
     crate::timers::check_events();
     // Since irq and preemption are both disabled here,
-    // we can get current run queue with the default `kernel_guard::NoOp`.
+    // we can get current run queue with the default `ax_kernel_guard::NoOp`.
     current_run_queue::<NoOp>().scheduler_timer_tick();
 }
 
