@@ -157,7 +157,7 @@ ax-io = { path = "components/axio" }
 ax-sched = { path = "components/axsched" }
 axpoll = { path = "components/axpoll" }
 ax-lazyinit = { path = "components/ax-lazyinit" }
-linked_list_r4l = { path = "components/linked_list_r4l" }
+ax-linked-list-r4l = { path = "components/linked_list_r4l" }
 timer_list = { path = "components/timer_list" }
 ax-int-ratio = { path = "components/int_ratio" }
 ax-cap-access = { path = "components/cap_access" }
