@@ -392,13 +392,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arm_pl031"
-version = "0.4.1"
-dependencies = [
- "chrono",
-]
-
-[[package]]
 name = "arm_vcpu"
 version = "0.5.0"
 dependencies = [
@@ -574,6 +567,13 @@ name = "ax-arm-pl011"
 version = "0.3.0"
 dependencies = [
  "tock-registers 0.8.1",
+]
+
+[[package]]
+name = "ax-arm-pl031"
+version = "0.4.1"
+dependencies = [
+ "chrono",
 ]
 
 [[package]]
@@ -1097,8 +1097,8 @@ version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "arm-gic-driver 0.16.5",
- "arm_pl031",
  "ax-arm-pl011",
+ "ax-arm-pl031",
  "ax-cpu",
  "ax-kspin",
  "ax-plat",

@@ -258,7 +258,7 @@ CURATED_DOCS = {
     "arm_vcpu",
     "arm_vgic",
     "ax-arm-pl011",
-    "arm_pl031",
+    "ax-arm-pl031",
     "crate_interface",
     "crate_interface_lite",
     "define-simple-traits",

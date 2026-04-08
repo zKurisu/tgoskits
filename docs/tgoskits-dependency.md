@@ -116,7 +116,7 @@ flowchart TB
         direction TB
         aarch64_sysreg["aarch64_sysreg\nv0.3.1"]
         ax-arm-pl011["ax-arm-pl011\nv0.3.0"]
-        arm_pl031["arm_pl031\nv0.4.1"]
+        ax-arm-pl031["ax-arm-pl031\nv0.4.1"]
         arm_vcpu["arm_vcpu\nv0.5.0"]
         arm_vgic["arm_vgic\nv0.4.2"]
         ax_allocator["ax-allocator\nv0.4.0"]
@@ -419,7 +419,7 @@ flowchart TB
     ax_plat_aarch64_bsta1000b --> ax-kspin
     ax_plat_aarch64_bsta1000b --> ax-page-table-entry
     ax_plat_aarch64_peripherals --> ax-arm-pl011
-    ax_plat_aarch64_peripherals --> arm_pl031
+    ax_plat_aarch64_peripherals --> ax-arm-pl031
     ax_plat_aarch64_peripherals --> ax_cpu
     ax_plat_aarch64_peripherals --> ax_plat
     ax_plat_aarch64_peripherals --> int_ratio
@@ -769,7 +769,7 @@ flowchart TB
     class arceos_wait_queue cat_test
     class arceos_yield cat_test
     class ax-arm-pl011 cat_comp
-    class arm_pl031 cat_comp
+    class ax-arm-pl031 cat_comp
     class arm_vcpu cat_comp
     class arm_vgic cat_comp
     class ax_alloc cat_arceos
@@ -956,7 +956,7 @@ flowchart TB
     L1["<b>层级 1</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-allocator`、`ax-config-macros`、`axdriver_block`、`axdriver_display`、`axdriver_input`、`axdriver_vsock`、`axfs-ng-vfs`、`axfs_vfs`、`axhvc`、`axio`、`axklib`、`ax-plat-macros`、`axsched`、`axvmconfig`、`ctor_bare`、`define-simple-traits`、`define-weak-traits`、`fxmac_rs`、`kernel_guard`、`memory_set` …共23个"]
     classDef ls1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L1 ls1
-    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`arm_pl031`、`axbacktrace`、`ax-config-gen`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cap_access`、`cargo-axplat`、`cpumask`、`crate_interface`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
+    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`axbacktrace`、`ax-config-gen`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cap_access`、`cargo-axplat`、`cpumask`、`crate_interface`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
     classDef ls0 fill:#eceff1,stroke:#455a64,stroke-width:2px,color:#000
     class L0 ls0
     L16 --> L15
@@ -987,7 +987,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 其他 | `tgmath` | `0.3.0` | `examples/tgmath` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `aarch64_sysreg` | `0.3.1` | `components/aarch64_sysreg` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-arm-pl011` | `0.3.0` | `components/arm_pl011` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `arm_pl031` | `0.4.1` | `components/arm_pl031` |
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-arm-pl031` | `0.4.1` | `components/arm_pl031` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `axbacktrace` | `0.3.2` | `components/axbacktrace` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-config-gen` | `0.4.1` | `components/axconfig-gen/axconfig-gen` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-driver-base` | `0.3.4` | `components/axdriver_crates/axdriver_base` |
@@ -1135,7 +1135,7 @@ flowchart TB
 
 | 层级 | 数 | 成员 |
 |------|-----|------|
-| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `arm_pl031` `axbacktrace` `ax-config-gen` `ax-driver-base` `ax-driver-pci` `ax-errno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
+| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `axbacktrace` `ax-config-gen` `ax-driver-base` `ax-driver-pci` `ax-errno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `ax-allocator` `ax-config-macros` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_vsock` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `ax-plat-macros` `axsched` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `memory_set` `ax-page-table-entry` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `ax-fs-devfs` `ax-fs-ramfs` `axbuild` `axdriver_net` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `ax-kspin` `ax-page-table-multiarch` `ax-percpu` |
 | 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
@@ -1178,7 +1178,7 @@ flowchart TB
 | `arceos-wait-queue` | 16 | A simple demo to test the wait queue for tasks un… | `ax-std` | — |
 | `arceos-yield` | 16 | 系统级测试与回归入口 | `ax-std` | — |
 | `ax-arm-pl011` | 0 | ARM Uart pl011 register definitions and basic ope… | — | `ax-plat-aarch64-peripherals` |
-| `arm_pl031` | 0 | System Real Time Clock (RTC) Drivers for aarch64 … | — | `ax-plat-aarch64-peripherals` |
+| `ax-arm-pl031` | 0 | System Real Time Clock (RTC) Drivers for aarch64 … | — | `ax-plat-aarch64-peripherals` |
 | `arm_vcpu` | 6 | Aarch64 VCPU implementation for Arceos Hypervisor | `axaddrspace` `axdevice_base` `ax-errno` `axvcpu` `axvisor_api` `ax-percpu` | `axvm` |
 | `arm_vgic` | 5 | ARM Virtual Generic Interrupt Controller (VGIC) i… | `aarch64_sysreg` `axaddrspace` `axdevice_base` `ax-errno` `axvisor_api` `memory_addr` | `axdevice` `axvm` |
 | `ax-alloc` | 3 | ArceOS global memory allocator | `ax-allocator` `axbacktrace` `ax-errno` `ax-kspin` `memory_addr` `ax-percpu` | `ax-api` `ax-dma` `ax-driver` `ax-feat` `ax-fs-ng` `ax-hal` `ax-mm` `ax-posix-api` `ax-runtime` `axplat-dyn` `starry-kernel` |
@@ -1210,7 +1210,7 @@ flowchart TB
 | `ax-net-ng` | 11 | ArceOS network module | `ax-config` `ax-driver` `ax-fs-ng` `ax-hal` `ax-sync` `ax-task` `ax-errno` `axfs-ng-vfs` `axio` `axpoll` `smoltcp` | `ax-runtime` `starry-kernel` |
 | `ax-plat` | 3 | This crate provides a unified abstraction layer f… | `ax-plat-macros` `crate_interface` `handler_table` `ax-kspin` `memory_addr` `ax-percpu` | `ax-hal` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `ax-runtime` `axplat-dyn` `axplat-x86-qemu-q35` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-aarch64-bsta1000b` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-plat` `ax-plat-aarch64-peripherals` `ax-kspin` `ax-page-table-entry` | `ax-helloworld-myplat` |
-| `ax-plat-aarch64-peripherals` | 4 | ARM64 common peripheral drivers with `axplat` com… | `ax-arm-pl011` `arm_pl031` `ax-cpu` `ax-plat` `int_ratio` `ax-kspin` `lazyinit` | `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` |
+| `ax-plat-aarch64-peripherals` | 4 | ARM64 common peripheral drivers with `axplat` com… | `ax-arm-pl011` `ax-arm-pl031` `ax-cpu` `ax-plat` `int_ratio` `ax-kspin` `lazyinit` | `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` |
 | `ax-plat-aarch64-phytium-pi` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-plat` `ax-plat-aarch64-peripherals` `ax-page-table-entry` | `ax-helloworld-myplat` |
 | `ax-plat-aarch64-qemu-virt` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-plat` `ax-plat-aarch64-peripherals` `ax-page-table-entry` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-aarch64-raspi` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-plat` `ax-plat-aarch64-peripherals` `ax-page-table-entry` | `ax-helloworld-myplat` |
@@ -1533,7 +1533,7 @@ flowchart TB
 | `cexpr` `0.6.0` | A C expression parser and evaluator | — | — |
 | `cfg-if` `1.0.4` | A macro to ergonomically define an item depending on a large number of #[cfg] parameters. Structure… | `ax-alloc` `ax-allocator` `ax-cpu` `ax-driver` `ax-fs-ng` `ax-hal` `ax-helloworld-myplat` `ax-log` `ax-net` `ax-net-ng` `ax-runtime` `ax-task` `axaddrspace` `axbacktrace` `axdevice` `axfs-ng-vfs` `axvisor` `axvm` `kernel_guard` `ax-kspin` `ax-percpu` `percpu_macros` `riscv_vcpu` `smoltcp` `starry-kernel` `starry-signal` `x86_vcpu` | — |
 | `cfg_aliases` `0.2.1` | A tiny utility to help save you a lot of effort with long winded `#[cfg()]` checks. | — | — |
-| `chrono` `0.4.44` | Date and time library for Rust | `arm_pl031` `ax-fs-ng` `ax-log` `ax-plat-loongarch64-qemu-virt` `ax-runtime` `axbuild` `starry-kernel` | — |
+| `chrono` `0.4.44` | Date and time library for Rust | `ax-arm-pl031` `ax-fs-ng` `ax-log` `ax-plat-loongarch64-qemu-virt` `ax-runtime` `axbuild` `starry-kernel` | — |
 | `ciborium` `0.2.2` | serde implementation of CBOR using ciborium-basic | — | — |
 | `ciborium-io` `0.2.2` | Simplified Read/Write traits for no_std usage | — | — |
 | `ciborium-ll` `0.2.2` | Low-level CBOR codec primitives | — | — |

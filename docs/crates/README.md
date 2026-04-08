@@ -35,7 +35,7 @@
 | `arceos-wait-queue` | 测试层 | `test-suit/arceos/rust/task/wait_queue` | 1 | 0 | [查看](./arceos-wait-queue.md) |
 | `arceos-yield` | 测试层 | `test-suit/arceos/rust/task/yield` | 1 | 0 | [查看](./arceos-yield.md) |
 | `ax-arm-pl011` | 组件层 | `components/arm_pl011` | 0 | 1 | [查看](./ax-arm-pl011.md) |
-| `arm_pl031` | 组件层 | `components/arm_pl031` | 0 | 1 | [查看](./arm_pl031.md) |
+| `ax-arm-pl031` | 组件层 | `components/arm_pl031` | 0 | 1 | [查看](./ax-arm-pl031.md) |
 | `arm_vcpu` | 组件层 | `components/arm_vcpu` | 6 | 1 | [查看](./arm_vcpu.md) |
 | `arm_vgic` | 组件层 | `components/arm_vgic` | 6 | 2 | [查看](./arm_vgic.md) |
 | `ax-alloc` | ArceOS 层 | `os/arceos/modules/axalloc` | 6 | 11 | [查看](./ax-alloc.md) |
