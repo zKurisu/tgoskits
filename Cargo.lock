@@ -1689,8 +1689,15 @@ dependencies = [
  "fdt-edit",
  "heapless 0.9.2",
  "log",
+ "phytium-mci",
  "rd-block",
+ "rdif-clk",
  "rdrive",
+ "rk3568_clk",
+ "rk3588-clk",
+ "rockchip-pm",
+ "sdmmc",
+ "some-serial",
  "somehal",
  "spin 0.10.0",
 ]
@@ -1850,6 +1857,7 @@ dependencies = [
  "axdevice_base",
  "axhvc",
  "axklib",
+ "axplat-dyn",
  "axplat-x86-qemu-q35",
  "axvcpu",
  "axvisor_api",
@@ -1863,21 +1871,12 @@ dependencies = [
  "hashbrown 0.14.5",
  "lazy_static",
  "log",
- "pcie 0.5.0",
- "phytium-mci",
  "prettyplease",
  "quote",
- "rd-block",
- "rdif-block",
- "rdif-clk",
  "rdif-intc",
  "rdrive",
  "riscv_vcpu",
  "riscv_vplic",
- "rk3568_clk",
- "rk3588-clk",
- "rockchip-pm",
- "sdmmc",
  "spin 0.10.0",
  "syn 2.0.117",
  "tokio",
@@ -5415,21 +5414,6 @@ dependencies = [
 
 [[package]]
 name = "pcie"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98b1339d53c73a04833791fa907b60ff074b95cae8db9f94f3173ed2b30b5b6c"
-dependencies = [
- "bare-test-macros",
- "bit_field",
- "bitflags 2.11.0",
- "log",
- "pci_types",
- "rdif-pcie",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "pcie"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8b092a434cb4a9dff1321bc486f0d324ce2425f217eb1fe43d34b1d21b03294"
@@ -6200,7 +6184,7 @@ dependencies = [
  "log",
  "mmio-api",
  "paste",
- "pcie 0.6.0",
+ "pcie",
  "rdif-base 0.8.0",
  "rdif-pcie",
  "rdrive-macros",
