@@ -988,6 +988,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-linked-list-r4l"
+version = "0.5.0"
+
+[[package]]
 name = "ax-log"
 version = "0.5.0"
 dependencies = [
@@ -1324,7 +1328,7 @@ dependencies = [
 name = "ax-sched"
 version = "0.5.1"
 dependencies = [
- "linked_list_r4l",
+ "ax-linked-list-r4l",
 ]
 
 [[package]]
@@ -4735,10 +4739,6 @@ checksum = "3f50e8f47623268b5407192d26876c4d7f89d686ca130fdc53bced4814cd29f8"
 dependencies = [
  "bitflags 2.11.0",
 ]
-
-[[package]]
-name = "linked_list_r4l"
-version = "0.5.0"
 
 [[package]]
 name = "linkme"

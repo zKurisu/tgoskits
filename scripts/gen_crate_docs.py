@@ -274,7 +274,7 @@ CURATED_DOCS = {
     "ax-kernel-guard",
     "ax-kspin",
     "lazyinit",
-    "linked_list_r4l",
+    "ax-linked-list-r4l",
     "mingo",
     "percpu_macros",
     "impl-simple-traits",

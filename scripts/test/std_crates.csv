@@ -26,7 +26,7 @@ int_ratio
 ax-kernel-guard
 ax-kspin
 lazyinit
-linked_list_r4l
+ax-linked-list-r4l
 range-alloc-arceos
 riscv-h
 riscv_plic
