@@ -84,7 +84,7 @@
 | `axaddrspace` | 组件层 | `components/axaddrspace` | 6 | 12 | [查看](./axaddrspace.md) |
 | `axbacktrace` | 组件层 | `components/axbacktrace` | 0 | 5 | [查看](./axbacktrace.md) |
 | `axbuild` | 工具层 | `scripts/axbuild` | 1 | 3 | [查看](./axbuild.md) |
-| `axconfig-gen` | 组件层 | `components/axconfig-gen/axconfig-gen` | 0 | 1 | [查看](./axconfig-gen.md) |
+| `ax-config-gen` | 组件层 | `components/axconfig-gen/axconfig-gen` | 0 | 1 | [查看](./ax-config-gen.md) |
 | `axdevice` | 组件层 | `components/axdevice` | 8 | 2 | [查看](./axdevice.md) |
 | `axdevice_base` | 组件层 | `components/axdevice_base` | 3 | 8 | [查看](./axdevice_base.md) |
 | `axdriver_base` | 组件层 | `components/axdriver_crates/axdriver_base` | 0 | 8 | [查看](./axdriver_base.md) |

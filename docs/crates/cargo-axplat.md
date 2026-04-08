@@ -16,7 +16,7 @@
 
 - 向下：调用宿主机 `cargo new`、`cargo add`，并用 `cargo_metadata`、`toml_edit` 解析工程与配置文件。
 - 向上：为平台包开发者和上层构建脚本提供统一的 CLI。
-- 向旁：把模板目录 `template/` 中的骨架 crate 与下游的 `axconfig-gen`、`AX_CONFIG_PATH` 构建链对接起来。
+- 向旁：把模板目录 `template/` 中的骨架 crate 与下游的 `ax-config-gen`、`AX_CONFIG_PATH` 构建链对接起来。
 
 因此它不是“平台运行时的一部分”，而是“平台包生命周期管理工具”的一部分：
 
@@ -98,7 +98,7 @@ flowchart TD
     C --> D[cargo axplat add 或手工写依赖]
     D --> E[make/platform.mk 调用 cargo axplat info -c]
     E --> F[得到平台包 axconfig.toml 路径]
-    F --> G[axconfig-gen 生成 .axconfig.toml]
+    F --> G[ax-config-gen 生成 .axconfig.toml]
     G --> H[导出 AX_CONFIG_PATH]
     H --> I[平台包 build.rs + include_configs!]
     I --> J[真正编译目标镜像]
@@ -109,7 +109,7 @@ flowchart TD
 1. 先根据 `ARCH` 或 `MYPLAT` 决定 `PLAT_PACKAGE`。
 2. 若用户没有直接给 `PLAT_CONFIG` 路径，就执行 `cargo axplat info -C <manifest_dir> -c <PLAT_PACKAGE>`。
 3. 该命令只输出平台包的 `axconfig.toml` 路径。
-4. 随后真正的配置合并由 `axconfig-gen` 完成，再写出 `.axconfig.toml`。
+4. 随后真正的配置合并由 `ax-config-gen` 完成，再写出 `.axconfig.toml`。
 5. 构建阶段通过 `AX_CONFIG_PATH` 把这个结果喂给平台包自身的 `build.rs` 与 `ax_config_macros::include_configs!`。
 
 因此 `cargo-axplat` 在构建流程中的角色是“定位配置来源”，而不是“生成最终配置”或“参与交叉编译”。
@@ -120,7 +120,7 @@ flowchart TD
 
 - 与 `axplat` 的边界：`cargo-axplat` 本身没有直接依赖 `axplat` 作为运行时库；它只是为将来依赖 `axplat` 的平台包写模板和清单。
 - 与 `ax-plat-macros` 的边界：生成模板只依赖 `axplat`，并通过 `axplat` 间接使用重导出的宏；工具自身从不直接链接 `ax-plat-macros`。
-- 与宿主机工具链的边界：它会调用 `cargo new`、`cargo add`、`cargo metadata`，但不会替你运行 `axconfig-gen`、`rustc` 交叉编译、QEMU 或其它镜像工具。
+- 与宿主机工具链的边界：它会调用 `cargo new`、`cargo add`、`cargo metadata`，但不会替你运行 `ax-config-gen`、`rustc` 交叉编译、QEMU 或其它镜像工具。
 
 还有一个非常关键的边界是：
 
@@ -210,7 +210,7 @@ graph TD
     B --> C[生成的 axplat-* 平台包骨架]
     B --> D[项目 Cargo.toml 依赖项]
     B --> E[构建脚本对 config_path 的查询]
-    E --> F[axconfig-gen]
+    E --> F[ax-config-gen]
     F --> G[AX_CONFIG_PATH]
     G --> H[真正的平台包构建]
 ```
@@ -274,4 +274,4 @@ graph TD
 
 ## 7. 总结
 
-`cargo-axplat` 的真正价值不在“帮你写了几个命令别名”，而在它把 `axplat` 平台包的宿主机生命周期标准化了：先用模板生成一个结构正确的骨架，再把这个平台包接到项目依赖里，最后在构建前准确找回它的 `axconfig.toml`。它不实现平台、不参与运行时，也不替代 `axconfig-gen`；它负责的是平台包开发和构建链之间那段最容易散乱的 glue。
+`cargo-axplat` 的真正价值不在“帮你写了几个命令别名”，而在它把 `axplat` 平台包的宿主机生命周期标准化了：先用模板生成一个结构正确的骨架，再把这个平台包接到项目依赖里，最后在构建前准确找回它的 `axconfig.toml`。它不实现平台、不参与运行时，也不替代 `ax-config-gen`；它负责的是平台包开发和构建链之间那段最容易散乱的 glue。

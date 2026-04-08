@@ -81,8 +81,8 @@ flowchart TD
 
 这也解释了为什么 `ax-config` 自身没有初始化函数：它的“初始化”已经在编译阶段完成了。
 
-### 2.3 与 `axconfig-gen` / `ax-config-macros` 的边界
-- `axconfig-gen` 负责解析、合并、重写配置文件，是宿主机构建工具。
+### 2.3 与 `ax-config-gen` / `ax-config-macros` 的边界
+- `ax-config-gen` 负责解析、合并、重写配置文件，是宿主机构建工具。
 - `ax-config-macros` 负责把配置文本展开成 Rust 代码，是编译期宏层。
 - `ax-config` 负责对外暴露最终常量，是目标镜像中的只读常量入口。
 
@@ -91,7 +91,7 @@ flowchart TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    gen["axconfig-gen / axbuild"] --> toml[".axconfig.toml"]
+    gen["ax-config-gen / axbuild"] --> toml[".axconfig.toml"]
     toml --> macros["ax-config-macros"]
     macros --> ax-config["ax-config"]
 

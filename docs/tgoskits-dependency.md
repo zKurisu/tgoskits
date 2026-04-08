@@ -136,7 +136,7 @@ flowchart TB
         ax_plat_x86_pc["ax-plat-x86-pc\nv0.5.1"]
         axaddrspace["axaddrspace\nv0.5.0"]
         axbacktrace["axbacktrace\nv0.3.2"]
-        axconfig_gen["axconfig-gen\nv0.4.1"]
+        ax_config_gen["ax-config-gen\nv0.4.1"]
         axdevice["axdevice\nv0.4.2"]
         axdevice_base["axdevice_base\nv0.4.2"]
         axdriver_base["axdriver_base\nv0.3.4"]
@@ -265,7 +265,7 @@ flowchart TB
     ax_api --> axerrno
     ax_api --> axio
     ax_config --> ax_config_macros
-    ax_config_macros --> axconfig_gen
+    ax_config_macros --> ax_config_gen
     ax_cpu --> axbacktrace
     ax_cpu --> lazyinit
     ax_cpu --> memory_addr
@@ -818,7 +818,7 @@ flowchart TB
     class axaddrspace cat_comp
     class axbacktrace cat_comp
     class axbuild cat_tool
-    class axconfig_gen cat_comp
+    class ax_config_gen cat_comp
     class axdevice cat_comp
     class axdevice_base cat_comp
     class axdriver_base cat_comp
@@ -956,7 +956,7 @@ flowchart TB
     L1["<b>层级 1</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-allocator`、`ax-config-macros`、`axdriver_block`、`axdriver_display`、`axdriver_input`、`axdriver_vsock`、`axfs-ng-vfs`、`axfs_vfs`、`axhvc`、`axio`、`axklib`、`ax-plat-macros`、`axsched`、`axvmconfig`、`ctor_bare`、`define-simple-traits`、`define-weak-traits`、`fxmac_rs`、`kernel_guard`、`memory_set` …共23个"]
     classDef ls1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L1 ls1
-    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`arm_pl011`、`arm_pl031`、`axbacktrace`、`axconfig-gen`、`axdriver_base`、`axdriver_pci`、`axerrno`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cap_access`、`cargo-axplat`、`cpumask`、`crate_interface`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
+    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`arm_pl011`、`arm_pl031`、`axbacktrace`、`ax-config-gen`、`axdriver_base`、`axdriver_pci`、`axerrno`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cap_access`、`cargo-axplat`、`cpumask`、`crate_interface`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
     classDef ls0 fill:#eceff1,stroke:#455a64,stroke-width:2px,color:#000
     class L0 ls0
     L16 --> L15
@@ -989,7 +989,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `arm_pl011` | `0.3.0` | `components/arm_pl011` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `arm_pl031` | `0.4.1` | `components/arm_pl031` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `axbacktrace` | `0.3.2` | `components/axbacktrace` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `axconfig-gen` | `0.4.1` | `components/axconfig-gen/axconfig-gen` |
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-config-gen` | `0.4.1` | `components/axconfig-gen/axconfig-gen` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `axdriver_base` | `0.3.4` | `components/axdriver_crates/axdriver_base` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `axdriver_pci` | `0.3.4` | `components/axdriver_crates/axdriver_pci` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `axerrno` | `0.4.2` | `components/axerrno` |
@@ -1135,7 +1135,7 @@ flowchart TB
 
 | 层级 | 数 | 成员 |
 |------|-----|------|
-| 0 | 33 | `aarch64_sysreg` `arm_pl011` `arm_pl031` `axbacktrace` `axconfig-gen` `axdriver_base` `axdriver_pci` `axerrno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
+| 0 | 33 | `aarch64_sysreg` `arm_pl011` `arm_pl031` `axbacktrace` `ax-config-gen` `axdriver_base` `axdriver_pci` `axerrno` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cap_access` `cargo-axplat` `cpumask` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `ax-allocator` `ax-config-macros` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_vsock` `axfs-ng-vfs` `axfs_vfs` `axhvc` `axio` `axklib` `ax-plat-macros` `axsched` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `memory_set` `page_table_entry` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `ax-fs-devfs` `ax-fs-ramfs` `axbuild` `axdriver_net` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `kspin` `page_table_multiarch` `percpu` |
 | 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
@@ -1185,7 +1185,7 @@ flowchart TB
 | `ax-allocator` | 1 | Various allocator algorithms in a unified interfa… | `axerrno` `bitmap-allocator` | `ax-alloc` `ax-dma` |
 | `ax-api` | 14 | Public APIs and types for ArceOS modules | `ax-alloc` `ax-config` `ax-display` `ax-dma` `ax-driver` `ax-feat` `ax-fs` `ax-hal` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-runtime` `ax-sync` `ax-task` `axerrno` `axio` | `ax-std` |
 | `ax-config` | 2 | Platform-specific constants and parameters for Ar… | `ax-config-macros` | `ax-api` `ax-dma` `ax-driver` `ax-feat` `ax-hal` `ax-ipi` `ax-net-ng` `ax-posix-api` `ax-runtime` `ax-task` `axvisor` `starry-kernel` |
-| `ax-config-macros` | 1 | Procedural macros for converting TOML format conf… | `axconfig-gen` | `ax-config` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` |
+| `ax-config-macros` | 1 | Procedural macros for converting TOML format conf… | `ax-config-gen` | `ax-config` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` |
 | `ax-cpu` | 3 | Privileged instruction and structure abstractions… | `axbacktrace` `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` | `ax-hal` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `axplat-dyn` `axplat-x86-qemu-q35` `irq-kernel` `smp-kernel` `starry-signal` |
 | `ax-display` | 10 | ArceOS graphics module | `ax-driver` `ax-sync` `lazyinit` | `ax-api` `ax-feat` `ax-runtime` `starry-kernel` |
 | `ax-dma` | 8 | ArceOS global DMA allocator | `ax-alloc` `ax-allocator` `ax-config` `ax-hal` `ax-mm` `kspin` `memory_addr` | `ax-api` `ax-driver` |
@@ -1227,7 +1227,7 @@ flowchart TB
 | `axaddrspace` | 3 | ArceOS-Hypervisor guest address space management … | `axerrno` `lazyinit` `memory_addr` `memory_set` `page_table_entry` `page_table_multiarch` | `arm_vcpu` `arm_vgic` `axdevice` `axdevice_base` `axvcpu` `axvisor` `axvisor_api` `axvm` `riscv_vcpu` `riscv_vplic` `x86_vcpu` `x86_vlapic` |
 | `axbacktrace` | 0 | Backtrace for ArceOS | — | `ax-alloc` `ax-cpu` `ax-feat` `ax-runtime` `starry-kernel` |
 | `axbuild` | 2 | An OS build lib toolkit used by arceos | `axvmconfig` | `axvisor` `starryos` `tg-xtask` |
-| `axconfig-gen` | 0 | A TOML-based configuration generation tool for Ar… | — | `ax-config-macros` |
+| `ax-config-gen` | 0 | A TOML-based configuration generation tool for Ar… | — | `ax-config-macros` |
 | `axdevice` | 6 | A reusable, OS-agnostic device abstraction layer … | `arm_vgic` `axaddrspace` `axdevice_base` `axerrno` `axvmconfig` `memory_addr` `range-alloc-arceos` `riscv_vplic` | `axvisor` `axvm` |
 | `axdevice_base` | 4 | Basic traits and structures for emulated devices … | `axaddrspace` `axerrno` `axvmconfig` | `arm_vcpu` `arm_vgic` `axdevice` `axvisor` `axvm` `riscv_vplic` `x86_vcpu` `x86_vlapic` |
 | `axdriver_base` | 0 | Common interfaces for all kinds of device drivers | — | `ax-driver` `ax-driver-virtio` `axdriver_block` `axdriver_display` `axdriver_input` `axdriver_net` `axdriver_vsock` `axplat-dyn` |
@@ -1370,7 +1370,7 @@ flowchart TB
 | `bitflags` `1.3.2` | A macro to generate structures which behave like bitflags. | `smoltcp` | — |
 | `bitflags` `2.11.0` | A macro to generate structures which behave like bitflags. | `ax-fs-ng` `ax-net-ng` `ax-plat` `ax-plat-x86-pc` `axaddrspace` `axfs-ng-vfs` `axfs_vfs` `axplat-x86-qemu-q35` `axpoll` `axvisor` `cap_access` `page_table_entry` `riscv-h` `riscv_vcpu` `rsext4` `starry-kernel` `starry-signal` `x86_vcpu` | — |
 | `cargo_metadata` `0.23.1` | structured access to the output of `cargo metadata` | `axbuild` | — |
-| `clap` `4.6.0` | A simple to use, efficient, and full-featured Command Line Argument Parser | `axbuild` `axconfig-gen` `axvisor` `axvmconfig` `starryos` | — |
+| `clap` `4.6.0` | A simple to use, efficient, and full-featured Command Line Argument Parser | `axbuild` `ax-config-gen` `axvisor` `axvmconfig` `starryos` | — |
 | `clap_builder` `4.6.0` | A simple to use, efficient, and full-featured Command Line Argument Parser | — | — |
 | `clap_derive` `4.6.0` | Parse command line argument by defining a struct, derive crate. | — | — |
 | `clap_lex` `1.1.0` | Minimal, flexible command line parser | — | — |
@@ -1496,8 +1496,8 @@ flowchart TB
 | `aws-lc-sys` `0.39.1` | AWS-LC is a general-purpose cryptographic library maintained by the AWS Cryptography team for AWS a… | — | — |
 | `ax_slab_allocator` `0.4.0` | Slab allocator for `no_std` systems. Uses multiple slabs with blocks of different sizes and a linke… | `ax-allocator` | — |
 | `axallocator` `0.2.0` | — | — | — |
-| `axconfig-gen` `0.2.1` | — | — | — |
-| `axconfig-macros` `0.2.1` | — | — | `axconfig-gen` |
+| `ax-config-gen` `0.2.1` | — | — | — |
+| `axconfig-macros` `0.2.1` | — | — | `ax-config-gen` |
 | `axcpu` `0.3.1` | — | — | `lazyinit` `memory_addr` `page_table_entry` `page_table_multiarch` `percpu` |
 | `axfatfs` `0.1.0-pre.0` | FAT filesystem library. | `ax-fs` | — |
 | `axin` `0.1.0` | A Rust procedural macro library for function instrumentation | `axaddrspace` | — |
@@ -2011,7 +2011,7 @@ flowchart TB
 | `toml_datetime` `0.6.11` | A TOML-compatible datetime type | — | — |
 | `toml_datetime` `0.7.5+spec-1.1.0` | A TOML-compatible datetime type | — | — |
 | `toml_datetime` `1.1.1+spec-1.1.0` | A TOML-compatible datetime type | — | — |
-| `toml_edit` `0.22.27` | Yet another format-preserving TOML parser. | `axconfig-gen` | — |
+| `toml_edit` `0.22.27` | Yet another format-preserving TOML parser. | `ax-config-gen` | — |
 | `toml_edit` `0.25.10+spec-1.1.0` | Yet another format-preserving TOML parser. | — | — |
 | `toml_parser` `1.1.2+spec-1.1.0` | Yet another format-preserving TOML parser. | — | — |
 | `toml_write` `0.1.2` | A low-level interface for writing out TOML | — | — |

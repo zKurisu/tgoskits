@@ -157,7 +157,7 @@ flowchart TD
 - 与 `axplat` 的边界：`axplat` 定义的是稳定平台契约和入口调用面；`axplat-dyn` 只是其中一个实现者，并不改变接口定义。
 - 与 `ax-plat-macros` 的边界：本 crate 不直接依赖 `ax-plat-macros`，只通过 `axplat` 重新导出的 `#[impl_plat_interface]` 和入口宏参与体系。
 - 与 `somehal` 的边界：真正的“平台事实来源”在 `somehal`，包括入口、内存图、时钟、IRQ、电源与 CPU 元数据；`axplat-dyn` 负责转译，而不是重新探测 CPU 模式或自己管理整套启动环境。
-- 与 `cargo-axplat` / `axconfig-gen` 的边界：当前源码中保留了一段被注释掉的 `config` 模块草稿，但现行实现并没有启用 `axconfig.toml -> AX_CONFIG_PATH -> include_configs!` 这条常规平台包主线，因此它不属于典型 `axplat-*` 配置化平台生态。
+- 与 `cargo-axplat` / `ax-config-gen` 的边界：当前源码中保留了一段被注释掉的 `config` 模块草稿，但现行实现并没有启用 `axconfig.toml -> AX_CONFIG_PATH -> include_configs!` 这条常规平台包主线，因此它不属于典型 `axplat-*` 配置化平台生态。
 
 ## 2. 核心功能说明
 

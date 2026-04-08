@@ -211,7 +211,7 @@ CURATED_DOCS = {
     "ax-posix-api",
     "axbuild",
     "ax-config",
-    "axconfig-gen",
+    "ax-config-gen",
     "ax-config-macros",
     "ax-feat",
     "ax-fs",

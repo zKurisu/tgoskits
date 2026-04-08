@@ -263,7 +263,7 @@ graph LR
 
 ### 3.2 间接本地依赖
 - `axbacktrace`
-- `axconfig-gen`
+- `ax-config-gen`
 - `axerrno`
 - `ax-plat-macros`
 - `crate_interface`

@@ -6,7 +6,7 @@
 > 版本：`0.2.1`
 > 文档依据：`Cargo.toml`、`src/lib.rs`、`tests/example_config.rs`、`README.md`、`os/arceos/modules/axconfig/src/lib.rs`、`components/axplat_crates/platforms/axplat-aarch64-qemu-virt/src/lib.rs`
 
-`ax-config-macros` 把 TOML 配置文本直接变成 Rust 常量定义，是 `axconfig*` 链路中的“编译期翻译器”。它不生成配置文件，也不保存任何运行时状态；它的职责是在宏展开阶段读取配置文本，调用 `axconfig-gen` 解析后输出等价的 Rust 代码。
+`ax-config-macros` 把 TOML 配置文本直接变成 Rust 常量定义，是 `axconfig*` 链路中的“编译期翻译器”。它不生成配置文件，也不保存任何运行时状态；它的职责是在宏展开阶段读取配置文本，调用 `ax-config-gen` 解析后输出等价的 Rust 代码。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -20,7 +20,7 @@
 ```mermaid
 flowchart LR
     A["配置文本 / 配置文件"] --> B["ax-config-macros"]
-    B --> C["axconfig-gen::Config::from_toml"]
+    B --> C["ax_config_gen::Config::from_toml"]
     C --> D["dump(OutputFormat::Rust)"]
     D --> E["Rust 常量模块"]
 ```
@@ -31,7 +31,7 @@ flowchart LR
 1. `parse_configs!`
    - 解析输入 token 为字符串字面量。
    - 在 `nightly` feature 下先执行 `expand_expr()`，从而支持 `include_str!(...)` 这类表达式先展开再解析。
-   - 调用 `axconfig_gen::Config::from_toml()` 解析 TOML。
+   - 调用 `ax_config_gen::Config::from_toml()` 解析 TOML。
    - 再调用 `dump(OutputFormat::Rust)` 生成 Rust 常量代码。
    - 若任何一步失败，则通过 `syn::Error` 生成编译错误。
 
@@ -71,7 +71,7 @@ flowchart LR
 - 将 TOML 配置文本直接转换为 Rust 常量定义。
 - 支持通过环境变量或回退路径选择配置文件。
 - 将读取失败、解析失败和代码生成失败转化为清晰的编译期错误。
-- 复用 `axconfig-gen`，避免宏层和命令行工具层重复实现解析逻辑。
+- 复用 `ax-config-gen`，避免宏层和命令行工具层重复实现解析逻辑。
 
 ### 2.2 生成代码的真实形态
 生成结果通常包括：
@@ -94,14 +94,14 @@ flowchart LR
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axconfig_gen["axconfig-gen"] --> macros["ax-config-macros"]
+    ax_config_gen["ax-config-gen"] --> macros["ax-config-macros"]
     macros --> axconfig["ax-config"]
     macros --> axplat["axplat-* 平台 crate"]
     macros --> template["cargo-axplat 模板"]
 ```
 
 ### 3.1 关键直接依赖
-- `axconfig-gen`：宏层真正复用的 TOML 解析与 Rust 输出实现。
+- `ax-config-gen`：宏层真正复用的 TOML 解析与 Rust 输出实现。
 - `syn`、`quote`、`proc-macro2`：标准过程宏栈。
 
 ### 3.2 关键直接消费者
@@ -117,7 +117,7 @@ graph LR
 - 宏参数语法
 - 编译期错误信息
 - 配置文件定位策略
-- 与 `axconfig-gen` 的对接方式
+- 与 `ax-config-gen` 的对接方式
 
 ### 4.2 修改时的关键约束
 1. `parse_configs!` 和 `include_configs!` 必须保持相同的生成语义，否则同一配置文本在两种入口下会得到不同常量。
@@ -146,7 +146,7 @@ graph LR
 ### 5.3 高风险改动重点
 - 路径解析规则
 - `nightly` 分支的表达式展开
-- 与 `axconfig-gen` 输出格式的耦合点
+- 与 `ax-config-gen` 输出格式的耦合点
 
 ### 5.4 覆盖率重点
 对过程宏来说，最重要的不是行覆盖率，而是“生成代码与错误诊断是否稳定”；这两点一旦变化，会直接影响所有下游 crate 的编译体验。

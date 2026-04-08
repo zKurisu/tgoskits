@@ -565,7 +565,7 @@ fn resolve_platform_config_path(app_dir: &Path, platform_package: &str) -> anyho
 
 fn ensure_arceos_tooling_installed() -> anyhow::Result<()> {
     ensure_cargo_axplat_installed()?;
-    ensure_axconfig_gen_installed()?;
+    ensure_ax_config_gen_installed()?;
     Ok(())
 }
 
@@ -588,8 +588,8 @@ fn ensure_cargo_axplat_installed() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn ensure_axconfig_gen_installed() -> anyhow::Result<()> {
-    if Command::new("axconfig-gen")
+fn ensure_ax_config_gen_installed() -> anyhow::Result<()> {
+    if Command::new("ax-config-gen")
         .arg("--version")
         .exec_capture()
         .is_ok()
@@ -597,12 +597,12 @@ fn ensure_axconfig_gen_installed() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    warn!("`axconfig-gen` not found, installing `axconfig-gen` via cargo");
+    warn!("`ax-config-gen` not found, installing `ax-config-gen` via cargo");
     Command::new("cargo")
         .arg("install")
-        .arg("axconfig-gen")
+        .arg("ax-config-gen")
         .exec()
-        .context("failed to install axconfig-gen")?;
+        .context("failed to install ax-config-gen")?;
     Ok(())
 }
 
@@ -625,7 +625,7 @@ fn generate_axconfig(
 ) -> anyhow::Result<()> {
     let defconfig = resolve_defconfig_path(workspace_root)?;
     let arch = target_arch_name(target)?;
-    let mut command = Command::new("axconfig-gen");
+    let mut command = Command::new("ax-config-gen");
     command
         .arg(defconfig)
         .arg(platform_config)
@@ -642,7 +642,7 @@ fn generate_axconfig(
         .arg("-o")
         .arg(out_config)
         .exec()
-        .context("failed to run axconfig-gen")?;
+        .context("failed to run ax-config-gen")?;
 
     Ok(())
 }

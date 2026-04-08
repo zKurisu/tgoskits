@@ -13,7 +13,7 @@ define resolve_config
 endef
 
 define validate_config
-  $(eval package := $(shell axconfig-gen $(PLAT_CONFIG) -r package 2>/dev/null)) \
+  $(eval package := $(shell ax-config-gen $(PLAT_CONFIG) -r package 2>/dev/null)) \
   $(if $(strip $(package)),,$(error PLAT_CONFIG=$(PLAT_CONFIG) is not a valid platform configuration file)) \
   $(if $(filter "$(PLAT_PACKAGE)",$(package)),,\
     $(error `PLAT_PACKAGE` field mismatch: expected $(PLAT_PACKAGE), got $(package)))
@@ -47,7 +47,7 @@ else
   $(call validate_config)
 
   # Read the architecture name from the configuration file
-  _arch := $(patsubst "%",%,$(shell axconfig-gen $(PLAT_CONFIG) -r arch))
+  _arch := $(patsubst "%",%,$(shell ax-config-gen $(PLAT_CONFIG) -r arch))
   ifeq ($(origin ARCH),command line)
     ifneq ($(ARCH),$(_arch))
       $(error "ARCH=$(ARCH)" is not compatible with "MYPLAT=$(MYPLAT)")
@@ -56,4 +56,4 @@ else
   ARCH := $(_arch)
 endif
 
-PLAT_NAME := $(patsubst "%",%,$(shell axconfig-gen $(PLAT_CONFIG) -r platform))
+PLAT_NAME := $(patsubst "%",%,$(shell ax-config-gen $(PLAT_CONFIG) -r platform))

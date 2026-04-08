@@ -585,10 +585,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-config-gen"
+version = "0.4.1"
+dependencies = [
+ "clap",
+ "toml_edit 0.22.27",
+]
+
+[[package]]
 name = "ax-config-macros"
 version = "0.4.1"
 dependencies = [
- "axconfig-gen 0.4.1",
+ "ax-config-gen",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -1372,20 +1380,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "axconfig-gen"
-version = "0.4.1"
-dependencies = [
- "clap",
- "toml_edit 0.22.27",
-]
-
-[[package]]
 name = "axconfig-macros"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b2decc5437a10ddb659f0fbd819b9308362ea1d11455ddb5a1c47ea3973920d"
 dependencies = [
- "axconfig-gen 0.2.1",
+ "axconfig-gen",
  "proc-macro2",
  "quote",
  "syn 2.0.117",

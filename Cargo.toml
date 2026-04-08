@@ -281,7 +281,7 @@ axhvc = { path = "components/axhvc" }
 axklib = { path = "components/axklib" }
 range-alloc-arceos = { path = "components/range-alloc-arceos" }
 cpumask = { path = "components/cpumask" }
-axconfig-gen = { path = "components/axconfig-gen/axconfig-gen" }
+ax-config-gen = { path = "components/axconfig-gen/axconfig-gen" }
 ax-config-macros = { path = "components/axconfig-gen/axconfig-macros" }
 
 # === drivers ===
