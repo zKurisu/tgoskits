@@ -65,7 +65,7 @@ ax-plat.workspace = true
 cfg-if.workspace = true
 fdt-parser = "0.4"
 heapless = "0.9"
-kernel_guard.workspace = true
+ax-kernel-guard.workspace = true
 linkme = { version = "0.3.33", optional = true }
 log.workspace = true
 memory_addr.workspace = true

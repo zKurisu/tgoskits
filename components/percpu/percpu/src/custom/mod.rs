@@ -6,7 +6,7 @@ use core::{
 mod tp;
 
 #[cfg(feature = "preempt")]
-use kernel_guard::NoPreempt;
+use ax_kernel_guard::NoPreempt;
 pub use tp::*;
 
 #[repr(transparent)]

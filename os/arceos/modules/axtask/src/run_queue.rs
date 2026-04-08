@@ -4,9 +4,9 @@ use alloc::{collections::VecDeque, sync::Arc};
 use core::mem::MaybeUninit;
 
 use ax_hal::percpu::this_cpu_id;
+use ax_kernel_guard::BaseGuard;
 use ax_kspin::{SpinNoIrqGuard, SpinRaw};
 use ax_sched::BaseScheduler;
-use kernel_guard::BaseGuard;
 use lazyinit::LazyInit;
 
 use crate::{
@@ -327,7 +327,7 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
         assert!(curr.is_running());
 
         // When we call `preempt_resched()`, both IRQs and preemption must
-        // have been disabled by `kernel_guard::NoPreemptIrqSave`. So we need
+        // have been disabled by `ax_kernel_guard::NoPreemptIrqSave`. So we need
         // to set `current_disable_count` to 1 in `can_preempt()` to obtain
         // the preemption permission.
         let can_preempt = curr.can_preempt(1);
@@ -651,7 +651,7 @@ fn gc_entry() {
 /// then puts the task to the scheduler of target run queue.
 #[cfg(feature = "smp")]
 pub(crate) fn migrate_entry(migrated_task: AxTaskRef) {
-    select_run_queue::<kernel_guard::NoPreemptIrqSave>(&migrated_task)
+    select_run_queue::<ax_kernel_guard::NoPreemptIrqSave>(&migrated_task)
         .inner
         .scheduler
         .lock()

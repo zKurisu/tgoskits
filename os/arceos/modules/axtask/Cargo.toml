@@ -18,7 +18,7 @@ multitask = [
     "dep:ax-cpumask",
     "dep:crate_interface",
     "dep:futures-util",
-    "dep:kernel_guard",
+    "dep:ax-kernel-guard",
     "dep:ax-kspin",
     "dep:lazyinit",
     "dep:memory_addr",
@@ -28,7 +28,7 @@ multitask = [
 task-ext = ["dep:extern-trait"]
 irq = ["ax-hal/irq", "dep:timer_list"]
 tls = ["ax-hal/tls"]
-preempt = ["irq", "ax-percpu?/preempt", "kernel_guard/preempt"]
+preempt = ["irq", "ax-percpu?/preempt", "ax-kernel-guard/preempt"]
 smp = ["ax-kspin/smp"]
 
 sched-fifo = ["multitask"]
@@ -51,7 +51,7 @@ futures-util = { version = "0.3", default-features = false, optional = true, fea
     "alloc",
     "async-await-macro",
 ] }
-kernel_guard = { workspace = true, optional = true }
+ax-kernel-guard = { workspace = true, optional = true }
 ax-kspin = { workspace = true, optional = true }
 lazyinit = { workspace = true, optional = true }
 log.workspace = true

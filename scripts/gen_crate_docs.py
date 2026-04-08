@@ -271,7 +271,7 @@ CURATED_DOCS = {
     "deptool",
     "handler_table",
     "int_ratio",
-    "kernel_guard",
+    "ax-kernel-guard",
     "ax-kspin",
     "lazyinit",
     "linked_list_r4l",

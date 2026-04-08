@@ -72,7 +72,7 @@ gimli = { version = "0.33", default-features = false, optional = true }
 hashbrown = "0.16"
 indoc = "2"
 inherit-methods-macro = "0.1.0"
-kernel_guard = "0.3.3"
+ax-kernel-guard = "0.3.3"
 kernel-elf-parser = "0.3.4"
 ax-kspin = "0.3.1"
 lazy_static = { version = "1.5", features = ["spin_no_std"] }
