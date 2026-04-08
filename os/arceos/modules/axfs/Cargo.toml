@@ -21,7 +21,7 @@ ax-fs-devfs = { version = "0.3.2" }
 ax-fs-ramfs = { version = "0.3.2" }
 ax-fs-vfs = "0.3.2"
 ax-io = { workspace = true, features = ["alloc"] }
-cap_access = "0.3.0"
+ax-cap-access = "0.3.0"
 lazyinit = "0.4.2"
 log = { workspace = true }
 rsext4 = "0.3.0"

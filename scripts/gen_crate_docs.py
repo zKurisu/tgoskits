@@ -265,7 +265,7 @@ CURATED_DOCS = {
     "define-weak-traits",
     "ctor_bare",
     "ctor_bare_macros",
-    "cap_access",
+    "ax-cap-access",
     "bitmap-allocator",
     "cpumask",
     "deptool",
