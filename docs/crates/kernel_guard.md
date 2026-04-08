@@ -85,7 +85,7 @@
 
 - `IrqSave`
 
-而 `kspin::SpinNoIrq` 之类上层命名，通常是把更复杂的 guard 组合映射成更直观的锁名。
+而 `ax_kspin::SpinNoIrq` 之类上层命名，通常是把更复杂的 guard 组合映射成更直观的锁名。
 
 ## 2. 核心功能说明
 
@@ -130,7 +130,7 @@
 
 仓库内关键消费者包括：
 
-- `kspin`
+- `ax-kspin`
 - `percpu`
 - `ax-task`
 - `ax-hal`
@@ -141,7 +141,7 @@
 
 ```mermaid
 graph TD
-    A[kernel_guard] --> B[kspin]
+    A[kernel_guard] --> B[ax-kspin]
     A --> C[percpu]
     A --> D[ax-task]
     A --> E[ax-hal]
@@ -162,7 +162,7 @@ graph TD
 3. 在 `acquire()` 中切换状态
 4. 在 `release()` 中恢复状态
 
-这样就能被 `kspin`、`ax-task` 等通用框架复用。
+这样就能被 `ax-kspin`、`ax-task` 等通用框架复用。
 
 ### 4.2 修改现有 guard 时的关注点
 
@@ -173,7 +173,7 @@ graph TD
 ### 4.3 与锁的职责边界
 
 - `kernel_guard`：描述临界区策略
-- `kspin`：真正持有锁状态并组合 guard
+- `ax-kspin`：真正持有锁状态并组合 guard
 
 不要把锁行为写进 `kernel_guard`，否则这层会失去通用性。
 
@@ -184,7 +184,7 @@ graph TD
 从仓库结构看，本 crate 本体的独立测试不多，更多依赖：
 
 - 多架构构建检查
-- 上层 `kspin`、`percpu`、`ax-task` 的间接使用
+- 上层 `ax-kspin`、`percpu`、`ax-task` 的间接使用
 
 这符合它的定位，因为很多关键语义要在目标架构和真实运行时上下文中才成立。
 
@@ -192,7 +192,7 @@ graph TD
 
 - 裸机目标上的 IRQ save/restore 正确性
 - `preempt` 开关前后的 `NoPreempt` / `NoPreemptIrqSave` 行为
-- 与 `kspin` 组合时的嵌套和 drop 顺序
+- 与 `ax-kspin` 组合时的嵌套和 drop 顺序
 - 与 `ax-task` 调度路径配合时的抢占计数一致性
 
 ### 5.3 风险点

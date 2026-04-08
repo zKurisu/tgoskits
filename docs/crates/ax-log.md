@@ -55,7 +55,7 @@ flowchart TD
 
 - `init()` 会调用 `log::set_logger(&Logger)`，并把默认最大级别设成 `Warn`。
 - `set_max_level()` 只做运行时调节；如果上游用了编译期 `log-level-*` feature，这个函数不会改变结果。
-- `print_fmt()` 内部用 `kspin::SpinNoIrq<()>` 做串行化，所以它解决的是输出交叉，不是后端缓冲问题。
+- `print_fmt()` 内部用 `ax_kspin::SpinNoIrq<()>` 做串行化，所以它解决的是输出交叉，不是后端缓冲问题。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -79,7 +79,7 @@ flowchart TD
 graph LR
     log["log"] --> ax-log["ax-log"]
     crate_interface["crate_interface"] --> ax-log
-    kspin["kspin"] --> ax-log
+    ax_kspin["ax-kspin"] --> ax-log
     chrono["chrono (std)"] --> ax-log
 
     ax-log --> ax-runtime["ax-runtime"]
@@ -92,7 +92,7 @@ graph LR
 ### 3.1 关键直接依赖
 - `log`：标准日志 facade。
 - `crate_interface`：`no_std` 路径下的后端接口桥。
-- `kspin`：输出串行化。
+- `ax-kspin`：输出串行化。
 - `chrono`：只在 `std` 下使用。
 
 ### 3.2 关键直接消费者

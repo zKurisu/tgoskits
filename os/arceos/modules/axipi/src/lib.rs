@@ -10,7 +10,7 @@ use ax_hal::{
     irq::{IPI_IRQ, IpiTarget},
     percpu::this_cpu_id,
 };
-use kspin::SpinNoIrq;
+use ax_kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 
 mod event;

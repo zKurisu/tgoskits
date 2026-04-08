@@ -122,7 +122,7 @@
 | `axconfig` | 提供 `PHYS_BUS_OFFSET` |
 | `ax-hal` | 提供物理地址与页表标志相关能力 |
 | `ax-mm` | 修改内核地址空间页表属性 |
-| `kspin` | 保护全局分配器 |
+| `ax-kspin` | 保护全局分配器 |
 | `memory_addr` | 地址与页大小辅助 |
 | `log` | 错误与调试日志 |
 

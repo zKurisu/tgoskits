@@ -35,7 +35,7 @@ axbacktrace = { workspace = true, optional = true }
 ax-errno.workspace = true
 buddy-slab-allocator = { workspace = true, optional = true }
 cfg-if.workspace = true
-kspin.workspace = true
+ax-kspin.workspace = true
 log.workspace = true
 memory_addr.workspace = true
 percpu = { workspace = true, optional = true }

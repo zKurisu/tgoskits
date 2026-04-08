@@ -19,7 +19,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/ulib/axstd"
 default = []
 
 # Multicore
-smp = ["ax-feat/smp", "kspin/smp"]
+smp = ["ax-feat/smp", "ax-kspin/smp"]
 
 # Floating point/SIMD
 fp-simd = ["ax-feat/fp-simd"]
@@ -94,7 +94,7 @@ ax-api.workspace = true
 ax-errno.workspace = true
 ax-feat.workspace = true
 ax-io.workspace = true
-kspin.workspace = true
+ax-kspin.workspace = true
 lazyinit.workspace = true
 lock_api.workspace = true
 spin.workspace = true

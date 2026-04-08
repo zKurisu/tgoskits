@@ -12,7 +12,7 @@ use core::{
 };
 
 use ax_allocator::{AllocResult, BaseAllocator, BitmapPageAllocator, ByteAllocator, PageAllocator};
-use kspin::SpinNoIrq;
+use ax_kspin::SpinNoIrq;
 
 use super::{UsageKind, Usages};
 

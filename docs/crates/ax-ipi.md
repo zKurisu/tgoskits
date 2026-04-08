@@ -78,7 +78,7 @@ flowchart TD
 graph LR
     ax-hal["ax-hal (ipi)"] --> ax-ipi["ax-ipi"]
     axconfig["ax-config"] --> ax-ipi
-    kspin["kspin"] --> ax-ipi
+    ax_kspin["ax-kspin"] --> ax-ipi
     lazyinit["lazyinit"] --> ax-ipi
     percpu["percpu"] --> ax-ipi
 
@@ -90,7 +90,7 @@ graph LR
 ### 3.1 关键直接依赖
 - `ax-hal`：真正的 IPI 发送原语来自这里。
 - `axconfig`：广播时需要 `MAX_CPU_NUM`。
-- `kspin`：保护每 CPU 队列。
+- `ax-kspin`：保护每 CPU 队列。
 - `lazyinit`：按 CPU 惰性初始化队列。
 - `percpu`：声明每 CPU 静态存储。
 

@@ -7,8 +7,8 @@ use ax_hal::{
     mem::phys_to_virt,
     paging::{MappingFlags, PageSize, PageTableCursor, PagingError},
 };
+use ax_kspin::SpinNoIrq;
 use ax_sync::Mutex;
-use kspin::SpinNoIrq;
 use memory_addr::{PhysAddr, VirtAddr, VirtAddrRange};
 
 use super::{

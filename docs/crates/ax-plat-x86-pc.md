@@ -242,7 +242,7 @@ graph LR
     current --> ax-cpu["ax-cpu"]
     current --> axplat["ax-plat"]
     current --> int_ratio["int_ratio"]
-    current --> kspin["kspin"]
+    current --> ax_kspin["ax-kspin"]
     current --> lazyinit["lazyinit"]
     current --> percpu["percpu"]
     arceos_helloworld_myplat["ax-helloworld-myplat"] --> current
@@ -257,7 +257,7 @@ graph LR
 - `ax-cpu`
 - `axplat`
 - `int_ratio`
-- `kspin`
+- `ax-kspin`
 - `lazyinit`
 - `percpu`
 

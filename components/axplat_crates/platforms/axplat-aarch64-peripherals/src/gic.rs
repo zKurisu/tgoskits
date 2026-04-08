@@ -1,8 +1,8 @@
 //! ARM Generic Interrupt Controller (GIC).
 
 use arm_gic_driver::v2::{Ack, Gic, IntId, SGITarget, TargetList, TrapOp, Trigger, VirtAddr};
+use ax_kspin::SpinNoIrq;
 use ax_plat::irq::{HandlerTable, IpiTarget, IrqHandler};
-use kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 
 /// The maximum number of IRQs.

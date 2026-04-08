@@ -4,9 +4,9 @@ use ax_alloc::{DefaultByteAllocator, UsageKind, global_allocator};
 #[cfg(not(feature = "buddy-slab"))]
 use ax_allocator::{AllocError, AllocResult, BaseAllocator, ByteAllocator};
 use ax_hal::{mem::virt_to_phys, paging::MappingFlags};
+use ax_kspin::SpinNoIrq;
 #[cfg(feature = "buddy-slab")]
 use buddy_slab_allocator::{AllocError, AllocResult, ByteAllocator};
-use kspin::SpinNoIrq;
 use log::{debug, error};
 use memory_addr::{PAGE_SIZE_4K, VirtAddr, va};
 

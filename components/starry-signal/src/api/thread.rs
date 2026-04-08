@@ -6,7 +6,7 @@ use core::{
 };
 
 use ax_cpu::uspace::UserContext;
-use kspin::SpinNoIrq;
+use ax_kspin::SpinNoIrq;
 use starry_vm::VmMutPtr;
 
 use super::ProcessSignalManager;

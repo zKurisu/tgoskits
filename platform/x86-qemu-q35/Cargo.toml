@@ -21,7 +21,7 @@ fp-simd = []
 irq = ["ax-plat/irq"]
 reboot-on-system-off = []
 rtc = ["dep:x86_rtc"]
-smp = ["ax-plat/smp", "kspin/smp"]
+smp = ["ax-plat/smp", "ax-kspin/smp"]
 
 [dependencies]
 ax-config-macros = "0.4.1"
@@ -30,7 +30,7 @@ ax-plat.workspace = true
 bitflags = "2.6"
 heapless = "0.9"
 int_ratio = "0.3.2"
-kspin = "0.3.1"
+ax-kspin = "0.3.1"
 lazyinit = "0.4.2"
 log = "0.4"
 percpu.workspace = true

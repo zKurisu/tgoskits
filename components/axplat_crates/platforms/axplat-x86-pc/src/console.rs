@@ -1,5 +1,5 @@
+use ax_kspin::SpinNoIrq;
 use ax_plat::console::ConsoleIf;
-use kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 use uart_16550::{Config, Uart16550, backend::PioBackend};
 

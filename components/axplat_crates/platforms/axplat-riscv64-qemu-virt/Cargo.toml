@@ -18,7 +18,7 @@ rtc = ["dep:riscv_goldfish"]
 smp = ["ax-plat/smp"]
 
 [dependencies]
-kspin = "0.3.1"
+ax-kspin = "0.3.1"
 lazyinit = "0.4.2"
 log = "0.4"
 riscv = "0.16"

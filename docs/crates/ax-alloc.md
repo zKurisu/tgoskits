@@ -84,7 +84,7 @@ graph LR
     ax-allocator["ax-allocator"] --> ax-alloc["ax-alloc"]
     axbacktrace["axbacktrace (tracking)"] --> ax-alloc
     percpu["percpu (tracking)"] --> ax-alloc
-    kspin["kspin"] --> ax-alloc
+    ax_kspin["ax-kspin"] --> ax-alloc
 
     ax-alloc --> ax-runtime["ax-runtime"]
     ax-alloc --> ax-mm["ax-mm"]
@@ -99,7 +99,7 @@ graph LR
 
 ### 3.1 关键直接依赖
 - `ax-allocator`：默认路径的算法库来源。
-- `kspin`：保护全局分配器内部状态。
+- `ax-kspin`：保护全局分配器内部状态。
 - `ax-errno`：把页对象和分配失败映射到 ArceOS 错误码。
 - `axbacktrace`、`percpu`：只在 `tracking` 下参与分配跟踪。
 - `buddy-slab-allocator`：只在 `hv` 下启用。

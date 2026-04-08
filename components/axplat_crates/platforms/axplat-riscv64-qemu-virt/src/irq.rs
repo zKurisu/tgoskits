@@ -4,11 +4,11 @@ use core::{
     sync::atomic::{AtomicPtr, Ordering},
 };
 
+use ax_kspin::SpinNoIrq;
 use ax_plat::{
     irq::{HandlerTable, IpiTarget, IrqHandler, IrqIf},
     percpu::this_cpu_id,
 };
-use kspin::SpinNoIrq;
 use riscv::register::sie;
 use riscv_plic::Plic;
 use sbi_rt::HartMask;

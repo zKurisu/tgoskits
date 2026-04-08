@@ -2,10 +2,10 @@ use alloc::sync::Arc;
 use core::marker::PhantomPinned;
 
 use ax_driver::AxBlockDevice;
+use ax_kspin::{SpinNoPreempt as Mutex, SpinNoPreemptGuard as MutexGuard};
 use axfs_ng_vfs::{
     DirEntry, Filesystem, FilesystemOps, Reference, StatFs, VfsResult, path::MAX_NAME_LEN,
 };
-use kspin::{SpinNoPreempt as Mutex, SpinNoPreemptGuard as MutexGuard};
 use slab::Slab;
 
 use super::{dir::FatDirNode, disk::SeekableDisk, ff, util::into_vfs_err};

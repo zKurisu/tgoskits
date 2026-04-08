@@ -13,20 +13,20 @@
 `ax-sync` 的目标不是做一个庞大的同步库，而是解决两个现实问题：
 
 - 对大多数上层模块来说，只需要一个统一的 `Mutex` 名字，不想在代码里到处分辨当前是“多任务可阻塞锁”还是“无调度环境自旋锁”。
-- 对需要显式控制抢占/中断语义的低层代码来说，仍然要能直接访问 `kspin` 提供的自旋锁家族。
+- 对需要显式控制抢占/中断语义的低层代码来说，仍然要能直接访问 `ax-kspin` 提供的自旋锁家族。
 
 因此，`ax-sync` 的职责边界是：
 
 - 向上提供统一的 `Mutex` / `MutexGuard` / 可选 `RawMutex`。
-- 向下复用 `kspin`、`lock_api`、`event-listener` 和 `ax-task`，而不是重复造轮子。
+- 向下复用 `ax-kspin`、`lock_api`、`event-listener` 和 `ax-task`，而不是重复造轮子。
 
 ### 1.2 模块划分
-- `src/lib.rs`：feature 分流入口。决定 `Mutex` 是 `kspin::SpinNoIrq` 的别名，还是本 crate 自己的阻塞 mutex。
+- `src/lib.rs`：feature 分流入口。决定 `Mutex` 是 `ax_kspin::SpinNoIrq` 的别名，还是本 crate 自己的阻塞 mutex。
 - `src/mutex.rs`：只在 `multitask` 开启时编译，定义 `RawMutex`、`Mutex<T>` 和 `MutexGuard`。
 - `README.md`：说明 `multitask` feature 的语义与使用方式。
 
 ### 1.3 关键类型与锁语义
-- `ax-sync::spin`：直接再导出 `kspin` crate，供调用者显式使用自旋锁。
+- `ax-sync::spin`：直接再导出 `ax-kspin` crate，供调用者显式使用自旋锁。
 - `Mutex` / `MutexGuard`：
   - 未启用 `multitask` 时：别名到 `SpinNoIrq` 与其 guard。
   - 启用 `multitask` 时：别名到 `lock_api::Mutex<RawMutex, T>`。
@@ -83,7 +83,7 @@ flowchart TD
 ### 2.1 主要功能
 - 在多任务环境中提供阻塞式互斥锁。
 - 在无多任务环境中把同名 `Mutex` 退化为关中断自旋锁。
-- 通过 `ax-sync::spin` 暴露完整的 `kspin` 自旋锁家族。
+- 通过 `ax-sync::spin` 暴露完整的 `ax-kspin` 自旋锁家族。
 
 ### 2.2 关键 API 与使用场景
 - `Mutex<T>`：上层模块最常用的统一互斥抽象。
@@ -108,7 +108,7 @@ let mut guard = COUNTER.lock();
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    kspin["kspin"] --> ax-sync["ax-sync"]
+    ax_kspin["ax-kspin"] --> ax-sync["ax-sync"]
     lock_api["lock_api"] --> ax-sync
     event_listener["event-listener"] --> ax-sync
     ax-task["ax-task"] --> ax-sync
@@ -122,7 +122,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `kspin`：提供自旋锁实现，并通过 `spin` 再导出。
+- `ax-kspin`：提供自旋锁实现，并通过 `spin` 再导出。
 - `lock_api`：提供 `RawMutex` trait 与泛型 `Mutex<T>` 框架。
 - `event-listener`：提供等待/唤醒事件机制。
 - `ax-task`：提供当前任务 ID、`yield_now()` 与 `block_on()`，使阻塞 mutex 真正能与调度器协作。

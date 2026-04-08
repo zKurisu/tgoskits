@@ -26,7 +26,7 @@ bitflags = "2.10"
 cfg-if = { workspace = true }
 chrono = { workspace = true }
 intrusive-collections = "0.9"
-kspin = { workspace = true }
+ax-kspin = { workspace = true }
 log = { workspace = true }
 lru = "0.16"
 scope-local = { workspace = true }

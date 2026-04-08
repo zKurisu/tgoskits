@@ -8,8 +8,8 @@ use core::{
     ptr::NonNull,
 };
 
+use ax_kspin::SpinNoIrq;
 use buddy_slab_allocator::{AllocResult, PageAllocator, SlabByteAllocator};
-use kspin::SpinNoIrq;
 
 use super::{UsageKind, Usages};
 

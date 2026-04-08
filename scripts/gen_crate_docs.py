@@ -272,7 +272,7 @@ CURATED_DOCS = {
     "handler_table",
     "int_ratio",
     "kernel_guard",
-    "kspin",
+    "ax-kspin",
     "lazyinit",
     "linked_list_r4l",
     "mingo",

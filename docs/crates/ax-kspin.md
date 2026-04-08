@@ -1,4 +1,4 @@
-# `kspin` 技术文档
+# `ax-kspin` 技术文档
 
 > 路径：`components/kspin`
 > 类型：库 crate
@@ -6,11 +6,11 @@
 > 版本：`0.1.1`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/base.rs`
 
-`kspin` 是内核态自旋锁实现。它把“锁状态”和“进入临界区前要不要关抢占/关 IRQ”两件事拆开：锁本体由 `BaseSpinLock` 负责，临界区语义则由 `kernel_guard` 的 guard 类型决定。它是同步叶子基础件：不是阻塞式 mutex、不是调度器，也不是完整同步库。
+`ax-kspin` 是内核态自旋锁实现。它把“锁状态”和“进入临界区前要不要关抢占/关 IRQ”两件事拆开：锁本体由 `BaseSpinLock` 负责，临界区语义则由 `kernel_guard` 的 guard 类型决定。它是同步叶子基础件：不是阻塞式 mutex、不是调度器，也不是完整同步库。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`kspin` 的设计核心在于“锁”和“临界区策略”解耦：
+`ax-kspin` 的设计核心在于“锁”和“临界区策略”解耦：
 
 - `BaseSpinLock<G, T>`：负责原子测试并设置锁状态。
 - `G: BaseGuard`：负责进入和退出临界区时的副作用，比如关抢占或关本地中断。
@@ -21,7 +21,7 @@
 - `SpinNoPreempt<T>`：加锁时关抢占，但不关 IRQ。
 - `SpinNoIrq<T>`：加锁时同时关抢占和本地 IRQ。
 
-这也决定了它的边界：`kspin` 实现的是“自旋锁家族”，不是“内核同步总控”。
+这也决定了它的边界：`ax-kspin` 实现的是“自旋锁家族”，不是“内核同步总控”。
 
 ### 1.2 模块划分
 - `src/lib.rs`：公开类型别名，把 `kernel_guard` 的 guard 组合成 `SpinRaw` / `SpinNoPreempt` / `SpinNoIrq`。
@@ -34,12 +34,12 @@
 - `force_unlock()`：仅用于极端 FFI 等场景，要求调用者自行保证安全。
 
 ### 1.4 `smp` feature 的关键影响
-这是 `kspin` 最容易被误读的一点：
+这是 `ax-kspin` 最容易被误读的一点：
 
 - 开启 `smp`：锁位真实存在，通过 `AtomicBool` 做自旋。
 - 关闭 `smp`：锁位被编译期去掉，`is_locked()` 恒为 `false`，排他性完全依赖 guard 语义和单核前提。
 
-因此，`kspin` 在单核下并不是“性能优化的普通 mutex”，而是“把锁状态优化掉的单核专用自旋锁”。
+因此，`ax-kspin` 在单核下并不是“性能优化的普通 mutex”，而是“把锁状态优化掉的单核专用自旋锁”。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -53,24 +53,24 @@
 - `SpinRaw`：被 `ax-task::run_queue` 用来保护已由外层 guard 保证过的就绪队列状态。
 
 ### 2.3 使用边界
-- `kspin` 不会睡眠等待，所以它不是阻塞式锁。
-- `kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `ax-sync` / `ax-task`。
-- `kspin` 也不决定 guard 的具体语义；那部分在 `kernel_guard`。
+- `ax-kspin` 不会睡眠等待，所以它不是阻塞式锁。
+- `ax-kspin` 不维护条件变量、等待队列或唤醒机制，这些属于 `ax-sync` / `ax-task`。
+- `ax-kspin` 也不决定 guard 的具体语义；那部分在 `kernel_guard`。
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    kernel_guard["kernel_guard"] --> kspin["kspin"]
+    kernel_guard["kernel_guard"] --> ax_kspin["ax-kspin"]
 
-    kspin --> ax-alloc["ax-alloc"]
-    kspin --> ax-ipi["ax-ipi"]
-    kspin --> ax-log["ax-log"]
-    kspin --> ax-mm["ax-mm"]
-    kspin --> ax-task["ax-task"]
-    kspin --> ax-sync["ax-sync"]
-    kspin --> axplat["axplat / platform crates"]
-    kspin --> starry["starry-kernel"]
-    kspin --> axvisor["axvisor"]
+    ax_kspin --> ax-alloc["ax-alloc"]
+    ax_kspin --> ax-ipi["ax-ipi"]
+    ax_kspin --> ax-log["ax-log"]
+    ax_kspin --> ax-mm["ax-mm"]
+    ax_kspin --> ax-task["ax-task"]
+    ax_kspin --> ax-sync["ax-sync"]
+    ax_kspin --> axplat["axplat / platform crates"]
+    ax_kspin --> starry["starry-kernel"]
+    ax_kspin --> axvisor["axvisor"]
 ```
 
 ### 3.1 关键直接依赖
@@ -86,14 +86,14 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-kspin = { workspace = true }
+ax-kspin = { workspace = true }
 ```
 
 若运行在多核环境，通常还要打开：
 
 ```toml
 [dependencies]
-kspin = { workspace = true, features = ["smp"] }
+ax-kspin = { workspace = true, features = ["smp"] }
 ```
 
 ### 4.2 修改时的关键约束
@@ -105,7 +105,7 @@ kspin = { workspace = true, features = ["smp"] }
 ### 4.3 开发建议
 - 早期启动、IRQ 相关或显式需要本地中断保护的路径，优先选 `SpinNoIrq`。
 - 已有外层 guard 保证的极短临界区才考虑 `SpinRaw`。
-- 需要可睡眠互斥语义时不要硬用 `kspin`，应该去用 `ax-sync` 的阻塞 mutex。
+- 需要可睡眠互斥语义时不要硬用 `ax-kspin`，应该去用 `ax-sync` 的阻塞 mutex。
 
 ## 5. 测试策略
 ### 5.1 当前测试形态
@@ -126,15 +126,15 @@ kspin = { workspace = true, features = ["smp"] }
 - `ax-log`、`ax-alloc` 这类高频使用者在并发环境下是否出现死锁或输出/统计错乱。
 
 ### 5.4 覆盖率要求
-- 对 `kspin`，并发行为覆盖比普通代码覆盖更重要。
+- 对 `ax-kspin`，并发行为覆盖比普通代码覆盖更重要。
 - 任何改动 CAS、自旋或 drop 顺序的提交，都应补对应并发和 guard 语义测试。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`kspin` 是 ArceOS 基础栈里最常见的低层锁之一，广泛分布在内存、日志、IPI、平台状态和任务运行队列周围。
+`ax-kspin` 是 ArceOS 基础栈里最常见的低层锁之一，广泛分布在内存、日志、IPI、平台状态和任务运行队列周围。
 
 ### 6.2 StarryOS
-StarryOS 直接复用 `kspin`。在这里它仍然只是自旋锁基础件，而不是线程同步框架本身。
+StarryOS 直接复用 `ax-kspin`。在这里它仍然只是自旋锁基础件，而不是线程同步框架本身。
 
 ### 6.3 Axvisor
-Axvisor 同样把 `kspin` 用在计时器、平台状态和 VMM 内部共享对象上。它提供的是宿主侧临界区保护，不是 Hypervisor 调度器。
+Axvisor 同样把 `ax-kspin` 用在计时器、平台状态和 VMM 内部共享对象上。它提供的是宿主侧临界区保护，不是 Hypervisor 调度器。

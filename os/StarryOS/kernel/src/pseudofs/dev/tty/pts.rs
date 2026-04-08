@@ -2,9 +2,9 @@ use alloc::{borrow::Cow, boxed::Box, string::ToString, sync::Arc, vec::Vec};
 use core::sync::atomic::Ordering;
 
 use ax_errno::{AxError, AxResult};
+use ax_kspin::SpinNoIrq;
 use axfs_ng_vfs::{DeviceId, NodeType, VfsResult};
 use flatten_objects::FlattenObjects;
-use kspin::SpinNoIrq;
 
 use crate::pseudofs::{Device, NodeOpsMux, SimpleDirOps, SimpleFs, dev::tty::pty::PtyDriver};
 

@@ -1,8 +1,8 @@
 //! PL011 UART.
 
 use arm_pl011::Pl011Uart;
+use ax_kspin::SpinNoIrq;
 use ax_plat::mem::VirtAddr;
-use kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 
 static UART: LazyInit<SpinNoIrq<Pl011Uart>> = LazyInit::new();

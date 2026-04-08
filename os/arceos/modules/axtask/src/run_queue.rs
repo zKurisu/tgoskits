@@ -4,9 +4,9 @@ use alloc::{collections::VecDeque, sync::Arc};
 use core::mem::MaybeUninit;
 
 use ax_hal::percpu::this_cpu_id;
+use ax_kspin::{SpinNoIrqGuard, SpinRaw};
 use ax_sched::BaseScheduler;
 use kernel_guard::BaseGuard;
-use kspin::{SpinNoIrqGuard, SpinRaw};
 use lazyinit::LazyInit;
 
 use crate::{
@@ -318,7 +318,7 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
     ///
     /// Note:
     /// preemption may happened in `enable_preempt`, which is called
-    /// each time a [`kspin::NoPreemptGuard`] is dropped.
+    /// each time a [`ax_kspin::NoPreemptGuard`] is dropped.
     #[cfg(feature = "preempt")]
     pub fn preempt_resched(&mut self) {
         // There is no need to disable IRQ and preemption here, because

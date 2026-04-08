@@ -43,8 +43,8 @@ pub async fn poll_io<P: Pollable, F: FnMut() -> AxResult<T>, T>(
 pub fn register_irq_waker(irq: usize, waker: &core::task::Waker) {
     use alloc::collections::BTreeMap;
 
+    use ax_kspin::SpinNoIrq;
     use axpoll::PollSet;
-    use kspin::SpinNoIrq;
 
     static POLL_IRQ: SpinNoIrq<BTreeMap<usize, PollSet>> = SpinNoIrq::new(BTreeMap::new());
 

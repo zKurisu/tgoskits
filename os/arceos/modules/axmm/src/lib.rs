@@ -14,7 +14,7 @@ use ax_hal::{
     mem::{MemRegionFlags, phys_to_virt},
     paging::MappingFlags,
 };
-use kspin::SpinNoIrq;
+use ax_kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 use memory_addr::{MemoryAddr, PhysAddr, VirtAddr};
 

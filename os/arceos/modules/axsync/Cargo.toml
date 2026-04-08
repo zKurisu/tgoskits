@@ -14,7 +14,7 @@ default = []
 
 [dependencies]
 ax-task.workspace = true
-kspin.workspace = true
+ax-kspin.workspace = true
 lock_api.workspace = true
 
 [dev-dependencies]

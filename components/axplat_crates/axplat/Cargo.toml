@@ -12,7 +12,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [features]
-smp = ["kspin/smp"]
+smp = ["ax-kspin/smp"]
 irq = ["dep:handler_table"]
 
 [dependencies]
@@ -22,7 +22,7 @@ crate_interface = "0.5.0"
 handler_table = { version = "0.3.2", optional = true }
 const-str = "1.0"
 ax-plat-macros = { workspace = true }
-kspin = "0.3.1"
+ax-kspin = "0.3.1"
 percpu.workspace = true
 
 [package.metadata.docs.rs]

@@ -243,8 +243,8 @@ bitmap-allocator = { path = "components/bitmap-allocator" }
 # === kernel_guard ===
 kernel_guard = { path = "components/kernel_guard" }
 
-# === kspin ===
-kspin = { path = "components/kspin" }
+# === ax-kspin ===
+ax-kspin = { path = "components/kspin" }
 
 # === starry-process ===
 starry-process = { path = "components/starry-process" }
@@ -376,7 +376,7 @@ ctor_bare = { version = "0.4.1", path = "components/ctor_bare/ctor_bare" }
 env_logger = "0.11"
 event-listener = { version = "5.4.0", default-features = false }
 kernel_guard = { version = "0.3.3", path = "components/kernel_guard" }
-kspin = { version = "0.3.1", path = "components/kspin" }
+ax-kspin = { version = "0.3.1", path = "components/kspin" }
 lazyinit = { version = "0.4.2", path = "components/lazyinit" }
 schemars = "1.2.1"
 toml = "1"

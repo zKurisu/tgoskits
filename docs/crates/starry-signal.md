@@ -126,7 +126,7 @@ let wake_tid = proc_signal.send_signal(sig);
 ```mermaid
 graph LR
     ax-cpu["ax-cpu"] --> sig["starry-signal"]
-    kspin["kspin"] --> sig
+    ax_kspin["ax-kspin"] --> sig
     vm["starry-vm"] --> sig
     linux["linux-raw-sys"] --> sig
 
@@ -138,7 +138,7 @@ graph LR
 ### 3.1 关键直接依赖
 - `ax-cpu`：提供 `UserContext` 及寄存器定义，是保存/恢复信号现场的基础。
 - `starry-vm`：用于把 `SignalFrame` 写入用户栈，以及读写用户空间中的 signal 相关对象。
-- `kspin`：保护动作表、mask、pending 队列等可变状态。
+- `ax-kspin`：保护动作表、mask、pending 队列等可变状态。
 - `linux-raw-sys`：提供 `siginfo_t`、`kernel_sigaction`、`SA_*`、`sigset_t` 等兼容定义。
 
 ### 3.2 关键直接消费者

@@ -15,7 +15,7 @@ repository.workspace = true
 irq = ["ax-plat/irq"]
 
 [dependencies]
-kspin = "0.3.1"
+ax-kspin = "0.3.1"
 log = "0.4"
 spin = "0.10"
 int_ratio = "0.3.2"

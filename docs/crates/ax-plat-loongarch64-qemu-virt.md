@@ -172,7 +172,7 @@ LoongArch QEMU virt 的中断模型在这个 crate 里被明确分层了：
 | `uart_16550` | MMIO 16550 控制台 |
 | `page_table_entry` | LoongArch64 引导页表项构造 |
 | `ax-config-macros` | 把 `axconfig.toml` 生成为 `config` 常量 |
-| `lazyinit` / `kspin` | 串口和全局状态初始化保护 |
+| `lazyinit` / `ax-kspin` | 串口和全局状态初始化保护 |
 | `chrono` | `rtc` 打开时的墙钟时间解析 |
 | `log` | 启动与调试日志 |
 
@@ -189,7 +189,7 @@ LoongArch QEMU virt 的中断模型在这个 crate 里被明确分层了：
 ```mermaid
 graph TD
     A[ax-cpu / loongArch64 / page_table_entry / uart_16550] --> B[ax-plat-loongarch64-qemu-virt]
-    C[axplat / ax-config-macros / lazyinit / kspin] --> B
+    C[axplat / ax-config-macros / lazyinit / ax-kspin] --> B
     B --> D[ax-hal]
     B --> E[hello-kernel / irq-kernel / smp-kernel]
     B --> F[ax-helloworld-myplat]

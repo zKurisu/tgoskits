@@ -191,7 +191,7 @@ impl ax_plat::init::InitIf for InitIfImpl {
 | `memory_addr` | 提供 `PhysAddr`、`VirtAddr`、地址转换辅助类型 |
 | `bitflags` | 定义 `MemRegionFlags` |
 | `handler_table` | 在 `irq` feature 下提供 IRQ 处理函数表 |
-| `kspin` | 控制台锁与 SMP 自旋场景 |
+| `ax-kspin` | 控制台锁与 SMP 自旋场景 |
 | `percpu` | CPU 本地变量定义与寄存器初始化 |
 
 ### 3.2 被谁依赖
@@ -208,7 +208,7 @@ graph TD
     A[ax-plat-macros] --> B[ax-plat]
     C[crate_interface] --> B
     D[memory_addr] --> B
-    E[kspin / percpu / bitflags] --> B
+    E[ax-kspin / percpu / bitflags] --> B
 
     B --> F[ax-plat-* 平台包]
     F --> G[ax-hal]

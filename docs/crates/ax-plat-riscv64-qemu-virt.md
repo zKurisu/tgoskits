@@ -237,7 +237,7 @@ graph LR
     current --> axconfig_macros["ax-config-macros"]
     current --> ax-cpu["ax-cpu"]
     current --> axplat["ax-plat"]
-    current --> kspin["kspin"]
+    current --> ax_kspin["ax-kspin"]
     current --> lazyinit["lazyinit"]
     current --> riscv_plic["riscv_plic"]
     arceos_helloworld_myplat["ax-helloworld-myplat"] --> current
@@ -251,7 +251,7 @@ graph LR
 - `ax-config-macros`
 - `ax-cpu`
 - `axplat`
-- `kspin`
+- `ax-kspin`
 - `lazyinit`
 - `riscv_plic`
 

@@ -147,7 +147,7 @@ flowchart TD
 | `dw_apb_uart` | A1000B 控制台所用的 DesignWare 8250 UART 驱动 |
 | `page_table_entry` | 构造 AArch64 引导页表项 |
 | `ax-config-macros` | 把 `axconfig.toml` 变成 `config` 常量模块 |
-| `kspin` | 串口访问的无中断自旋锁 |
+| `ax-kspin` | 串口访问的无中断自旋锁 |
 | `log` | 启动和错误日志 |
 
 ### 3.2 主要消费者
@@ -162,7 +162,7 @@ flowchart TD
 graph TD
     A[ax-cpu / page_table_entry / ax-config-macros] --> B[ax-plat-aarch64-bsta1000b]
     C[ax-plat-aarch64-peripherals] --> B
-    D[dw_apb_uart / kspin] --> B
+    D[dw_apb_uart / ax-kspin] --> B
     E[axplat] --> B
     B --> F[ax-helloworld-myplat]
     F --> G[板卡 bring-up / 自定义内核验证]

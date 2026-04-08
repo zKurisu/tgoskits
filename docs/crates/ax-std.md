@@ -43,7 +43,7 @@ graph LR
     current --> ax_errno["ax-errno"]
     current --> ax-feat["ax-feat"]
     current --> axio["ax-io"]
-    current --> kspin["kspin"]
+    current --> ax_kspin["ax-kspin"]
     current --> lazyinit["lazyinit"]
     arceos_affinity["arceos-affinity"] --> current
     arceos_display["arceos-display"] --> current
@@ -60,7 +60,7 @@ graph LR
 - `ax-errno`
 - `ax-feat`
 - `axio`
-- `kspin`
+- `ax-kspin`
 - `lazyinit`
 
 ### 3.2 间接本地依赖

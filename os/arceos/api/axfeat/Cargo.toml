@@ -12,7 +12,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/api/axfeat"
 default = []
 
 # Multicore
-smp = ["ax-hal/smp", "ax-runtime/smp", "ax-task?/smp", "kspin/smp"]
+smp = ["ax-hal/smp", "ax-runtime/smp", "ax-task?/smp", "ax-kspin/smp"]
 
 # Floating point/SIMD
 fp-simd = ["ax-hal/fp-simd"]
@@ -127,4 +127,4 @@ ax-net = { workspace = true, optional = true }
 ax-runtime.workspace = true
 ax-sync = { workspace = true, optional = true }
 ax-task = { workspace = true, optional = true }
-kspin = { workspace = true, optional = true }
+ax-kspin = { workspace = true, optional = true }

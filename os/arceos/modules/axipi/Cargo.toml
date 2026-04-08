@@ -14,7 +14,7 @@ default = []
 [dependencies]
 ax-config.workspace = true
 ax-hal = { workspace = true, features = ["ipi"] }
-kspin.workspace = true
+ax-kspin.workspace = true
 lazyinit.workspace = true
 log.workspace = true
 percpu.workspace = true

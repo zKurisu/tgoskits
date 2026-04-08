@@ -312,9 +312,10 @@ impl ArceOS {
                 package
             );
             ensure_package_runtime_assets(package)?;
+            let qemu_config = Some(Self::resolve_test_qemu_config(package, target)?);
             let request = self.prepare_request(
                 Self::test_build_args(package, target),
-                None,
+                qemu_config,
                 None,
                 SnapshotPersistence::Discard,
             )?;
@@ -376,6 +377,22 @@ impl ArceOS {
             package: Some(package.to_string()),
             target: Some(target.to_string()),
             plat_dyn: None,
+        }
+    }
+
+    fn resolve_test_qemu_config(package: &str, target: &str) -> anyhow::Result<PathBuf> {
+        let manifest_path = build::resolve_package_manifest_path(package, None)?;
+        let app_dir = manifest_path
+            .parent()
+            .context("package manifest path has no parent directory")?;
+        let qemu_config = app_dir.join(format!("qemu-{}.toml", arch_from_target(target)));
+        if qemu_config.exists() {
+            Ok(qemu_config)
+        } else {
+            bail!(
+                "missing qemu config for package `{package}` and target `{target}` at {}",
+                qemu_config.display()
+            )
         }
     }
 

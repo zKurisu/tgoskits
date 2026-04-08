@@ -5,8 +5,8 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use ax_kspin::SpinNoIrq;
 use axbacktrace::Backtrace;
-use kspin::SpinNoIrq;
 
 pub(crate) static TRACKING_ENABLED: AtomicBool = AtomicBool::new(false);
 

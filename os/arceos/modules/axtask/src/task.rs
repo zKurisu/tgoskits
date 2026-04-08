@@ -15,8 +15,8 @@ use core::{
 use ax_hal::context::TaskContext;
 #[cfg(feature = "tls")]
 use ax_hal::tls::TlsArea;
+use ax_kspin::SpinNoIrq;
 use futures_util::task::AtomicWaker;
-use kspin::SpinNoIrq;
 use memory_addr::{VirtAddr, align_up_4k};
 
 use crate::{AxCpuMask, AxTask, AxTaskRef, WaitQueue};

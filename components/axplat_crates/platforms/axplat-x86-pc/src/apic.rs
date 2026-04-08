@@ -2,8 +2,8 @@
 
 use core::mem::MaybeUninit;
 
+use ax_kspin::SpinNoIrq;
 use ax_plat::mem::{PhysAddr, pa, phys_to_virt};
-use kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 use x2apic::{
     ioapic::IoApic,

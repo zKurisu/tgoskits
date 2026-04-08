@@ -55,7 +55,7 @@ graph LR
 - `axio`
 - `axpoll`
 - `ax-sync`
-- `kspin`
+- `ax-kspin`
 - `scope-local`
 
 ### 3.2 间接本地依赖
