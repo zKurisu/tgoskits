@@ -53,7 +53,7 @@ graph LR
 
 ### 3.2 间接本地依赖
 - `ax-api`
-- `arm_pl011`
+- `ax-arm-pl011`
 - `arm_pl031`
 - `axaddrspace`
 - `ax-alloc`

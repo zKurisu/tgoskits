@@ -164,7 +164,7 @@ cap_access = { path = "components/cap_access" }
 handler_table = { path = "components/handler_table" }
 riscv_plic = { path = "components/riscv_plic" }
 rsext4 = { path = "components/rsext4" }
-arm_pl011 = { path = "components/arm_pl011" }
+ax-arm-pl011 = { path = "components/arm_pl011" }
 arm_pl031 = { path = "components/arm_pl031" }
 fxmac_rs = { path = "components/fxmac_rs" }
 smoltcp = { path = "components/starry-smoltcp" }

@@ -64,7 +64,7 @@ graph LR
 - 另外还有 `4` 个同类项未在此展开
 
 ### 3.2 间接本地依赖
-- `arm_pl011`
+- `ax-arm-pl011`
 - `arm_pl031`
 - `axaddrspace`
 - `ax-allocator`

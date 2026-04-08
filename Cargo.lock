@@ -392,13 +392,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arm_pl011"
-version = "0.3.0"
-dependencies = [
- "tock-registers 0.8.1",
-]
-
-[[package]]
 name = "arm_pl031"
 version = "0.4.1"
 dependencies = [
@@ -574,6 +567,13 @@ dependencies = [
  "ax-runtime",
  "ax-sync",
  "ax-task",
+]
+
+[[package]]
+name = "ax-arm-pl011"
+version = "0.3.0"
+dependencies = [
+ "tock-registers 0.8.1",
 ]
 
 [[package]]
@@ -1097,8 +1097,8 @@ version = "0.5.1"
 dependencies = [
  "aarch64-cpu 11.2.0",
  "arm-gic-driver 0.16.5",
- "arm_pl011 0.3.0",
  "arm_pl031",
+ "ax-arm-pl011",
  "ax-cpu",
  "ax-kspin",
  "ax-plat",
@@ -6877,7 +6877,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd0dbda75ab3bc25f210eb7ad16f2bd1f877a05444e1aeea083c60221bf76f15"
 dependencies = [
  "aarch64-cpu 10.0.0",
- "arm_pl011 0.1.0",
+ "arm_pl011",
  "bare-test-macros",
  "bitflags 2.11.0",
  "cfg-if",

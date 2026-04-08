@@ -1,6 +1,6 @@
 package
 aarch64_sysreg
-arm_pl011
+ax-arm-pl011
 arm_pl031
 arm_vgic
 axaddrspace

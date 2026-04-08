@@ -51,7 +51,7 @@ graph LR
 - `axio`
 
 ### 3.2 间接本地依赖
-- `arm_pl011`
+- `ax-arm-pl011`
 - `arm_pl031`
 - `axaddrspace`
 - `ax-alloc`

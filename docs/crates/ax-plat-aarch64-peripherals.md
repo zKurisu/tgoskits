@@ -156,7 +156,7 @@ generic_timer::enable_irqs(timer_irq);
 
 | 依赖 | 作用 |
 | --- | --- |
-| `arm_pl011` | PL011 串口驱动 |
+| `ax-arm-pl011` | PL011 串口驱动 |
 | `arm_pl031` | PL031 RTC 驱动 |
 | `arm-gic-driver` | GICv2 控制器访问与 trap 操作 |
 | `aarch64-cpu` | 访问系统寄存器和底层 CPU 能力 |
@@ -179,7 +179,7 @@ generic_timer::enable_irqs(timer_irq);
 
 ```mermaid
 graph TD
-    A[arm_pl011 / arm_pl031 / arm-gic-driver / aarch64-cpu] --> B[ax-plat-aarch64-peripherals]
+    A[ax-arm-pl011 / arm_pl031 / arm-gic-driver / aarch64-cpu] --> B[ax-plat-aarch64-peripherals]
     C[axplat] --> B
     D[lazyinit / ax-kspin / int_ratio] --> B
 
