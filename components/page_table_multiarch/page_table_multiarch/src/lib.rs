@@ -45,12 +45,12 @@ pub enum PagingError {
     MappedToHugePage,
 }
 
-#[cfg(feature = "axerrno")]
-impl From<PagingError> for axerrno::AxError {
+#[cfg(feature = "ax-errno")]
+impl From<PagingError> for ax_errno::AxError {
     fn from(value: PagingError) -> Self {
         match value {
-            PagingError::NoMemory => axerrno::AxError::NoMemory,
-            _ => axerrno::AxError::InvalidInput,
+            PagingError::NoMemory => ax_errno::AxError::NoMemory,
+            _ => ax_errno::AxError::InvalidInput,
         }
     }
 }

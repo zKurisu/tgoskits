@@ -124,7 +124,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- 核心基础：`axconfig`、`axerrno`、`ax-feat`、`ax-hal`、`axio`、`ax-log`、`ax-runtime`、`ax-sync`。
+- 核心基础：`axconfig`、`ax-errno`、`ax-feat`、`ax-hal`、`axio`、`ax-log`、`ax-runtime`、`ax-sync`。
 - 可选能力：`ax-alloc`、`ax-dma`、`ax-task`、`ax-fs`、`ax-net`、`ax-display`、`ax-driver`、`ax-ipi`、`ax-mm`。
 
 ### 3.2 关键直接消费者

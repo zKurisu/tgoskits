@@ -157,6 +157,6 @@ impl DirBuilder {
     }
 
     fn create_dir_all(&self, _path: &str) -> Result<()> {
-        Err(axerrno::AxError::Unsupported)
+        Err(ax_errno::AxError::Unsupported)
     }
 }

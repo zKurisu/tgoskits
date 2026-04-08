@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use axerrno::{ax_err, ax_err_type};
+use ax_errno::{ax_err, ax_err_type};
 use memory_addr::PhysAddr;
 use memory_set::MappingError;
 use page_table_entry::MappingFlags;
@@ -47,7 +47,7 @@ pub enum NestedPageTable<H: PagingHandler> {
 }
 
 impl<H: PagingHandler> NestedPageTable<H> {
-    pub fn new(level: usize) -> axerrno::AxResult<Self> {
+    pub fn new(level: usize) -> ax_errno::AxResult<Self> {
         match level {
             3 => {
                 #[cfg(not(target_arch = "x86_64"))]

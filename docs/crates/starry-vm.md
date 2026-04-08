@@ -106,7 +106,7 @@ vm_write_slice(out_ptr, &data)?;
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axerrno["axerrno"] --> vm["starry-vm"]
+    ax_errno["ax-errno"] --> vm["starry-vm"]
     bytemuck["bytemuck"] --> vm
     externtrait["extern-trait"] --> vm
 
@@ -117,7 +117,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axerrno`：把 `VmError` 映射到 StarryOS/ArceOS 统一错误模型。
+- `ax-errno`：把 `VmError` 映射到 StarryOS/ArceOS 统一错误模型。
 - `bytemuck`：为 `vm_read()`、`vm_load()`、`vm_load_until_nul()` 提供按位可解释类型约束。
 - `extern-trait`：让 `VmIo` 的具体实现留给外部环境注入。
 

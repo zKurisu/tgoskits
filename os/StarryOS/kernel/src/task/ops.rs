@@ -4,8 +4,8 @@ use alloc::{
 };
 use core::{ffi::c_long, sync::atomic::Ordering};
 
+use ax_errno::{AxError, AxResult};
 use ax_task::{AxTaskRef, TaskInner, WeakAxTaskRef, current};
-use axerrno::{AxError, AxResult};
 use bytemuck::AnyBitPattern;
 use linux_raw_sys::general::ROBUST_LIST_LIMIT;
 use spin::RwLock;

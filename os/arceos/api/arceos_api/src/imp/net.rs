@@ -1,5 +1,5 @@
 use crate::io::AxPollState;
-use axerrno::AxResult;
+use ax_errno::AxResult;
 use ax_net::{UdpSocket, TcpSocket};
 use core::net::{IpAddr, SocketAddr};
 

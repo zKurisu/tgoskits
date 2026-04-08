@@ -38,7 +38,7 @@ fxmac = ["net", "ax-driver-net/fxmac", "dep:ax-alloc", "dep:ax-hal", "dep:ax-dma
 # more devices example: e1000 = ["net", "ax-driver-net/e1000"]
 
 irq = []
-dyn = ["dep:axerrno", "dep:axplat-dyn"]
+dyn = ["dep:ax-errno", "dep:axplat-dyn"]
 
 default = ["bus-pci"]
 
@@ -54,7 +54,7 @@ ax-driver-net = { workspace = true, optional = true }
 ax-driver-pci = { workspace = true, optional = true }
 ax-driver-virtio = { workspace = true, optional = true }
 ax-driver-vsock = { workspace = true, optional = true }
-axerrno = { workspace = true, optional = true }
+ax-errno = { workspace = true, optional = true }
 ax-hal = { workspace = true, optional = true }
 cfg-if.workspace = true
 crate_interface.workspace = true

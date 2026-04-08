@@ -18,7 +18,7 @@ vsock = ["ax-driver/vsock"]
 
 [dependencies]
 ax-driver = { workspace = true, features = ["net"] }
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-hal.workspace = true
 ax-io.workspace = true
 ax-sync.workspace = true

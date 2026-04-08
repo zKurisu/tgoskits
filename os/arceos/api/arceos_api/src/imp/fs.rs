@@ -1,5 +1,5 @@
 use alloc::string::String;
-use axerrno::AxResult;
+use ax_errno::AxResult;
 use ax_fs::fops::{Directory, File};
 
 pub use ax_fs::fops::DirEntry as AxDirEntry;

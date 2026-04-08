@@ -6,7 +6,7 @@
 > 版本：`0.3.0-pre.1`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`src/read/mod.rs`、`src/write/mod.rs`、`src/seek/mod.rs`、`src/buffered/*`、`src/iobuf/*`、`src/utils/*`、`tests/*`
 
-`axio` 是仓库里所有“同步 I/O 行为”共享的一层公共协议。它把 Rust `std::io` 的核心 trait、缓冲包装器和若干辅助适配器移植到 `no_std` 语境，并将错误统一到 `axerrno`。文件、socket、内存游标、用户态缓冲区访问器、POSIX 兼容层里的读写对象，都通过它来表达“可读”“可写”“可 seek”这些共同语义。
+`axio` 是仓库里所有“同步 I/O 行为”共享的一层公共协议。它把 Rust `std::io` 的核心 trait、缓冲包装器和若干辅助适配器移植到 `no_std` 语境，并将错误统一到 `ax-errno`。文件、socket、内存游标、用户态缓冲区访问器、POSIX 兼容层里的读写对象，都通过它来表达“可读”“可写”“可 seek”这些共同语义。
 
 最需要先钉死的一条边界是：`axio` 只定义同步 I/O 接口与默认行为，不负责等待、唤醒、超时和多路复用。`PollState` 只是一个轻量就绪快照，不是事件系统。
 
@@ -39,7 +39,7 @@
 
 `README.md` 已明确说明：`axio` 基本沿用 Rust 标准库 `std::io` 的设计与大量实现细节，但为了适配内核和 `no_std` 场景做了几处关键收敛：
 
-- 错误类型改为 `axerrno::AxError`
+- 错误类型改为 `ax_errno::AxError`
 - 不提供 `IoSlice`、`IoSliceMut` 与 `*_vectored` 系列接口
 - 在不启用 `alloc` 时保留一条更适合固定缓冲区的最小能力路径
 
@@ -119,7 +119,7 @@
 
 | 依赖 | 作用 |
 | --- | --- |
-| `axerrno` | 定义 `Error`、`ErrorKind` 与 `Result` |
+| `ax-errno` | 定义 `Error`、`ErrorKind` 与 `Result` |
 | `heapless` | 支撑无堆环境下的部分固定容量实现 |
 | `memchr` | 支撑 `BufRead::read_until`、`skip_until` 等基于分隔符的扫描逻辑 |
 

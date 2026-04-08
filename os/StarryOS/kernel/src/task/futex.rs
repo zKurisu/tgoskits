@@ -13,12 +13,12 @@ use core::{
     time::Duration,
 };
 
+use ax_errno::AxResult;
 use ax_sync::Mutex;
 use ax_task::{
     current,
     future::{self, block_on, interruptible},
 };
-use axerrno::AxResult;
 use hashbrown::HashMap;
 use kspin::SpinNoIrq;
 use memory_addr::VirtAddr;

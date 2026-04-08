@@ -231,7 +231,7 @@ graph LR
     current --> aarch64_sysreg["aarch64_sysreg"]
     current --> axaddrspace["axaddrspace"]
     current --> axdevice_base["axdevice_base"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> axvisor_api["axvisor_api"]
     current --> memory_addr["memory_addr"]
     axdevice["axdevice"] --> current
@@ -242,7 +242,7 @@ graph LR
 - `aarch64_sysreg`
 - `axaddrspace`
 - `axdevice_base`
-- `axerrno`
+- `ax-errno`
 - `axvisor_api`
 - `memory_addr`
 

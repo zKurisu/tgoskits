@@ -3,9 +3,9 @@ use core::{
     sync::atomic::{AtomicBool, AtomicU32, Ordering},
 };
 
+use ax_errno::{AxError, AxResult, LinuxError};
 use ax_fs::FileBackend;
 use ax_sync::Mutex;
-use axerrno::{AxError, AxResult, LinuxError};
 use axfs_ng_vfs::{DeviceId, NodeFlags, VfsResult};
 use linux_raw_sys::{
     ioctl::{BLKGETSIZE, BLKGETSIZE64, BLKRAGET, BLKRASET, BLKROGET, BLKROSET},

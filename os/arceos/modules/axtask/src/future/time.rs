@@ -6,8 +6,8 @@ use core::{
     time::Duration,
 };
 
+use ax_errno::AxError;
 use ax_hal::time::{TimeValue, wall_time};
-use axerrno::AxError;
 use futures_util::{FutureExt, select_biased};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

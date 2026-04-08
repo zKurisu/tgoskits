@@ -1,4 +1,4 @@
-use axerrno::LinuxError;
+use ax_errno::LinuxError;
 use axfs_ng_vfs::{NodeType, VfsError};
 use lwext4_rust::{Ext4Error, InodeType, SystemHal};
 

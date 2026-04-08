@@ -28,7 +28,7 @@
 
 ### New Features
 
-- [Add axerrno compatibility](https://github.com/arceos-org/page_table_multiarch/pull/25).
+- [Add ax-errno compatibility](https://github.com/arceos-org/page_table_multiarch/pull/25).
 
 ### Bug Fixes
 

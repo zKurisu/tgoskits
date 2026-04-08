@@ -2,8 +2,8 @@ use alloc::vec;
 use core::ffi::c_char;
 
 use ax_config::ARCH;
+use ax_errno::{AxError, AxResult};
 use ax_fs::FS_CONTEXT;
-use axerrno::{AxError, AxResult};
 use linux_raw_sys::{
     general::{GRND_INSECURE, GRND_NONBLOCK, GRND_RANDOM},
     system::{new_utsname, sysinfo},

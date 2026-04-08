@@ -8,7 +8,7 @@ ax-allocator
 axbacktrace
 axdevice
 axdevice_base
-axerrno
+ax-errno
 axfs-ng-vfs
 axhvc
 ax-io

@@ -14,8 +14,8 @@ pub mod tty;
 use alloc::{format, sync::Arc};
 use core::any::Any;
 
+use ax_errno::AxError;
 use ax_sync::Mutex;
-use axerrno::AxError;
 use axfs_ng_vfs::{DeviceId, Filesystem, NodeFlags, NodeType, VfsResult};
 #[cfg(feature = "dev-log")]
 pub use log::bind_dev_log;

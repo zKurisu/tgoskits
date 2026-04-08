@@ -14,7 +14,7 @@
 
 use core::marker::PhantomData;
 
-use axerrno::{AxResult, ax_err_type};
+use ax_errno::{AxResult, ax_err_type};
 pub(crate) use memory_addr::PAGE_SIZE_4K as PAGE_SIZE;
 
 use crate::{AxMmHal, HostPhysAddr};

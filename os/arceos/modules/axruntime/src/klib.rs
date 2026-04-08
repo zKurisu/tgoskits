@@ -23,7 +23,7 @@ impl_trait! {
         /// This function forwards the request to `ax_mm::iomap` and returns the
         /// resulting virtual address wrapped in an `AxResult`.
         fn mem_iomap(addr: PhysAddr, size: usize) -> AxResult<VirtAddr> {
-            // Convert from AxError (struct in axerrno 0.2) to AxErrorKind (enum used by axklib)
+            // Convert from AxError (struct in ax_errno 0.2) to AxErrorKind (enum used by axklib)
             ax_mm::iomap(addr, size)
         }
 

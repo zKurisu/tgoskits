@@ -1,7 +1,7 @@
 use alloc::{borrow::ToOwned, fmt, string::String};
 
+use ax_errno::AxResult;
 use ax_task::{TaskInner, TaskState};
-use axerrno::AxResult;
 use starry_signal::Signo;
 
 use crate::task::AsThread;

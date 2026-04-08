@@ -1,4 +1,4 @@
-# `axerrno` 技术文档
+# `ax-errno` 技术文档
 
 > 路径：`components/axerrno`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.2.2`
 > 文档依据：`Cargo.toml`、`README.md`、`build.rs`、`src/lib.rs`、`src/errno.h`
 
-`axerrno` 是 ArceOS 体系的统一错误码契约层。它同时维护一套面向内核模块的 `AxErrorKind`，以及一套面向 Linux/POSIX 兼容层的 `LinuxError`，并用 `AxError` 把两者压缩到单个 `i32` 表示中。它是叶子基础件：负责错误值的表示和转换，不负责错误传播策略、日志策略或 syscall 分派策略。
+`ax-errno` 是 ArceOS 体系的统一错误码契约层。它同时维护一套面向内核模块的 `AxErrorKind`，以及一套面向 Linux/POSIX 兼容层的 `LinuxError`，并用 `AxError` 把两者压缩到单个 `i32` 表示中。它是叶子基础件：负责错误值的表示和转换，不负责错误传播策略、日志策略或 syscall 分派策略。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -16,7 +16,7 @@
 - POSIX/Linux 兼容路径又必须能落到具体 `errno`。
 - 与 C、syscall、FFI 打交道时，最终还得压成 `i32`。
 
-`axerrno` 的做法不是让所有地方都直接用 `errno`，而是先提供抽象层，再在需要时桥接到 Linux 错误码。
+`ax-errno` 的做法不是让所有地方都直接用 `errno`，而是先提供抽象层，再在需要时桥接到 Linux 错误码。
 
 ### 1.2 模块与生成流程
 - `build.rs`：从 `src/errno.h` 生成 `linux_errno.rs`。
@@ -56,7 +56,7 @@ flowchart TD
 - `ax_bail!`：直接 `return Err(...)`。
 - `ensure!`：条件不满足时早返回。
 
-这说明 `axerrno` 不只是“枚举定义”，而是同时承担一套轻量错误书写 DSL。
+这说明 `ax-errno` 不只是“枚举定义”，而是同时承担一套轻量错误书写 DSL。
 
 ## 2. 核心功能说明
 ### 2.1 主要功能
@@ -72,25 +72,25 @@ flowchart TD
 - `canonicalize()`：适合把兼容层传回来的 Linux 错误重新折叠到内核内部语义。
 
 ### 2.3 使用边界
-- `axerrno` 不负责“何时打印日志”；宏里的 `warn!` 只是便捷副作用，不等于统一错误审计策略。
-- `axerrno` 不负责“错误恢复”；它只描述错误值，不描述恢复流程。
+- `ax-errno` 不负责“何时打印日志”；宏里的 `warn!` 只是便捷副作用，不等于统一错误审计策略。
+- `ax-errno` 不负责“错误恢复”；它只描述错误值，不描述恢复流程。
 - `LinuxError` 和 `AxErrorKind` 不是简单同义词；`AxError` 能同时承载两套编码语义。
 
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    log["log"] --> axerrno["axerrno"]
-    strum["strum"] --> axerrno
+    log["log"] --> ax_errno["ax-errno"]
+    strum["strum"] --> ax_errno
 
-    axerrno --> ax-alloc["ax-alloc"]
-    axerrno --> ax-allocator["ax-allocator"]
-    axerrno --> axio["ax-io"]
-    axerrno --> ax-mm["ax-mm"]
-    axerrno --> ax-net["ax-net/ax-net-ng"]
-    axerrno --> ax-api["ax-api"]
-    axerrno --> arceos_posix["ax-posix-api"]
-    axerrno --> starry_kernel["starry-kernel"]
-    axerrno --> axvisor["axvisor"]
+    ax_errno --> ax-alloc["ax-alloc"]
+    ax_errno --> ax-allocator["ax-allocator"]
+    ax_errno --> axio["ax-io"]
+    ax_errno --> ax-mm["ax-mm"]
+    ax_errno --> ax-net["ax-net/ax-net-ng"]
+    ax_errno --> ax-api["ax-api"]
+    ax_errno --> arceos_posix["ax-posix-api"]
+    ax_errno --> starry_kernel["starry-kernel"]
+    ax_errno --> axvisor["axvisor"]
 ```
 
 ### 3.1 关键直接依赖
@@ -106,7 +106,7 @@ graph LR
 ### 4.1 依赖配置
 ```toml
 [dependencies]
-axerrno = { workspace = true }
+ax-errno = { workspace = true }
 ```
 
 ### 4.2 修改时的关键约束
@@ -137,15 +137,15 @@ axerrno = { workspace = true }
 - 内核内部模块使用 `AxResult` 时，错误语义是否仍保持一致。
 
 ### 5.4 覆盖率要求
-- 对 `axerrno`，转换表覆盖率是核心指标。
+- 对 `ax-errno`，转换表覆盖率是核心指标。
 - 任何新增或调整错误码映射的改动，都必须补齐正向和逆向测试。
 
 ## 6. 跨项目定位分析
 ### 6.1 ArceOS
-`axerrno` 是 ArceOS 基础栈里最广泛共享的契约层之一。它把驱动、文件系统、网络、内存、任务等模块的错误语义统一到同一套类型上。
+`ax-errno` 是 ArceOS 基础栈里最广泛共享的契约层之一。它把驱动、文件系统、网络、内存、任务等模块的错误语义统一到同一套类型上。
 
 ### 6.2 StarryOS
-StarryOS 复用 `axerrno` 作为内核内部与 Linux 兼容边界之间的错误桥。它在这里仍是契约层，而不是“系统调用错误处理框架”本身。
+StarryOS 复用 `ax-errno` 作为内核内部与 Linux 兼容边界之间的错误桥。它在这里仍是契约层，而不是“系统调用错误处理框架”本身。
 
 ### 6.3 Axvisor
-Axvisor 同样直接使用 `axerrno`。在 hypervisor 场景里，它承担的是跨模块统一错误值的角色，而不是 VMM 策略层。
+Axvisor 同样直接使用 `ax-errno`。在 hypervisor 场景里，它承担的是跨模块统一错误值的角色，而不是 VMM 策略层。

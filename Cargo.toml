@@ -142,8 +142,8 @@ exclude = [
 ]
 
 [patch.crates-io]
-# === axerrno ===
-axerrno = { path = "components/axerrno" }
+# === ax-errno ===
+ax-errno = { path = "components/axerrno" }
 ax-allocator = { path = "components/axallocator" }
 axbacktrace = { path = "components/axbacktrace" }
 
@@ -329,7 +329,7 @@ ax-allocator = { path = "components/axallocator", version = "0.4.0" }
 axbacktrace = { path = "components/axbacktrace", version = "0.3.2" }
 axdevice = { path = "components/axdevice", version = "0.4.2" }
 axdevice_base = { path = "components/axdevice_base", version = "0.4.2" }
-axerrno = { path = "components/axerrno", version = "0.4.2" }
+ax-errno = { path = "components/axerrno", version = "0.4.2" }
 axfs-ng-vfs = { path = "components/axfs-ng-vfs", version = "0.3.1" }
 axhvc = { path = "components/axhvc", version = "0.4.0" }
 ax-io = { path = "components/axio", version = "0.5.0" }
@@ -389,7 +389,7 @@ lazy_static = { version = "1.5", features = ["spin_no_std"] }
 lock_api = { version = "0.4", default-features = false }
 log = "0.4"
 memory_addr = { version = "0.6.1", path = "components/axmm_crates/memory_addr" }
-page_table_multiarch = { version = "0.8.1", features = ["axerrno"], path = "components/page_table_multiarch/page_table_multiarch" }
+page_table_multiarch = { version = "0.8.1", features = ["ax-errno"], path = "components/page_table_multiarch/page_table_multiarch" }
 percpu = { version = "0.4.3", path = "components/percpu/percpu" }
 scope-local = { version = "0.3.2", path = "components/scope-local" }
 spin = "0.10"

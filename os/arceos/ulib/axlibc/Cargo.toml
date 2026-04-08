@@ -56,7 +56,7 @@ epoll = ["ax-posix-api/epoll"]
 
 [dependencies]
 ax-posix-api.workspace = true
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-feat.workspace = true
 ax-io.workspace = true
 

@@ -1,6 +1,6 @@
 use core::bstr::ByteStr;
 
-use axerrno::LinuxResult;
+use ax_errno::LinuxResult;
 use axnet::{
     RecvOptions, SocketAddrEx, SocketOps,
     unix::{DgramTransport, UnixSocket, UnixSocketAddr},

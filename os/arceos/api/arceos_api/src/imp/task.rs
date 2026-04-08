@@ -86,7 +86,7 @@ cfg_task! {
         if ax_task::set_priority(prio) {
             Ok(())
         } else {
-            axerrno::ax_err!(
+            ax_errno::ax_err!(
                 BadState,
                 "ax_set_current_priority: failed to set task priority"
             )
@@ -97,7 +97,7 @@ cfg_task! {
         if ax_task::set_current_affinity(cpumask) {
             Ok(())
         } else {
-            axerrno::ax_err!(
+            ax_errno::ax_err!(
                 BadState,
                 "ax_set_current_affinity: failed to set task affinity"
             )

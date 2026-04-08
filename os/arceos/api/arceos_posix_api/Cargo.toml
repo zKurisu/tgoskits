@@ -44,7 +44,7 @@ ax-sync.workspace = true
 ax-task = { workspace = true, optional = true }
 
 # Other crates
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-io.workspace = true
 flatten_objects = "0.2"
 lazy_static.workspace = true

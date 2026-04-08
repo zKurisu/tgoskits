@@ -8,7 +8,7 @@ use core::{
     task::{Context, Poll, Waker},
 };
 
-use axerrno::AxError;
+use ax_errno::AxError;
 use kernel_guard::NoPreemptIrqSave;
 use kspin::SpinNoIrq;
 

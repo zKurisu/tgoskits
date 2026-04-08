@@ -1,7 +1,7 @@
 use core::sync::atomic::Ordering;
 
+use ax_errno::{AxError, AxResult, LinuxError};
 use ax_task::current;
-use axerrno::{AxError, AxResult, LinuxError};
 use linux_raw_sys::general::{
     FUTEX_CMD_MASK, FUTEX_CMP_REQUEUE, FUTEX_REQUEUE, FUTEX_WAIT, FUTEX_WAIT_BITSET, FUTEX_WAKE,
     FUTEX_WAKE_BITSET, robust_list_head, timespec,

@@ -1,8 +1,8 @@
 use alloc::{boxed::Box, collections::VecDeque};
 use core::ops::{Deref, DerefMut};
 
+use ax_errno::{AxError, AxResult, ax_err};
 use ax_sync::Mutex;
-use axerrno::{AxError, AxResult, ax_err};
 use smoltcp::{
     iface::{SocketHandle, SocketSet},
     socket::tcp::{self, State},

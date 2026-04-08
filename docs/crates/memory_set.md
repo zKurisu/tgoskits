@@ -168,7 +168,7 @@
 
 这体现了该 crate 的风格：它只暴露区间管理需要知道的最小失败原因，不把后端复杂状态直接泄露到接口层。
 
-当启用 `axerrno` feature 时，还可以桥接到更通用的错误体系。
+当启用 `ax-errno` feature 时，还可以桥接到更通用的错误体系。
 
 ## 3. 依赖关系图谱
 
@@ -177,7 +177,7 @@
 | 依赖 | 作用 |
 | --- | --- |
 | `memory_addr` | 提供 `AddrRange` 与 `MemoryAddr` 抽象 |
-| `axerrno`（可选） | 把 `MappingError` 映射到统一错误类型 |
+| `ax-errno`（可选） | 把 `MappingError` 映射到统一错误类型 |
 
 ### 3.2 主要消费者
 

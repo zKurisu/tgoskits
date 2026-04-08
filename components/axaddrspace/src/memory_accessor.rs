@@ -17,7 +17,7 @@
 //! This module provides a safe and consistent way to access guest memory
 //! from VirtIO device implementations, handling address translation and
 //! memory safety concerns.
-use axerrno::{AxError, AxResult};
+use ax_errno::{AxError, AxResult};
 use memory_addr::PhysAddr;
 
 use crate::GuestPhysAddr;

@@ -91,7 +91,7 @@ impl BaseDeviceOps<GuestPhysAddrRange> for VGicR {
         &self,
         addr: <GuestPhysAddrRange as axaddrspace::device::DeviceAddrRange>::Addr,
         width: axaddrspace::device::AccessWidth,
-    ) -> axerrno::AxResult<usize> {
+    ) -> ax_errno::AxResult<usize> {
         let gicr_base = self.host_gicr_base_this_cpu;
         let reg = addr - self.addr;
 
@@ -160,7 +160,7 @@ impl BaseDeviceOps<GuestPhysAddrRange> for VGicR {
         addr: <GuestPhysAddrRange as axaddrspace::device::DeviceAddrRange>::Addr,
         width: axaddrspace::device::AccessWidth,
         value: usize,
-    ) -> axerrno::AxResult<()> {
+    ) -> ax_errno::AxResult<()> {
         let gicr_base = self.host_gicr_base_this_cpu;
         let reg = addr - self.addr;
 

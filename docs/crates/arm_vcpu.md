@@ -227,7 +227,7 @@ graph LR
     current["arm_vcpu"]
     current --> axaddrspace["axaddrspace"]
     current --> axdevice_base["axdevice_base"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> axvcpu["axvcpu"]
     current --> axvisor_api["axvisor_api"]
     current --> percpu["percpu"]
@@ -237,7 +237,7 @@ graph LR
 ### 3.1 直接与间接依赖
 - `axaddrspace`
 - `axdevice_base`
-- `axerrno`
+- `ax-errno`
 - `axvcpu`
 - `axvisor_api`
 - `percpu`

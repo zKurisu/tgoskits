@@ -40,7 +40,7 @@
 graph LR
     current["ax-std"]
     current --> ax-api["ax-api"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> ax-feat["ax-feat"]
     current --> axio["ax-io"]
     current --> kspin["kspin"]
@@ -57,7 +57,7 @@ graph LR
 
 ### 3.1 直接与间接依赖
 - `ax-api`
-- `axerrno`
+- `ax-errno`
 - `ax-feat`
 - `axio`
 - `kspin`

@@ -42,7 +42,7 @@
 
 use core::time::Duration;
 
-pub use axerrno::AxResult;
+pub use ax_errno::AxResult;
 pub use memory_addr::{PhysAddr, VirtAddr};
 use trait_ffi::*;
 

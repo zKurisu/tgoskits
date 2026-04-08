@@ -1,9 +1,9 @@
+use ax_errno::{AxError, AxResult};
 use ax_hal::time::TimeValue;
 use ax_task::{
     AxCpuMask, current,
     future::{block_on, interruptible, sleep},
 };
-use axerrno::{AxError, AxResult};
 use linux_raw_sys::general::{
     __kernel_clockid_t, CLOCK_MONOTONIC, CLOCK_REALTIME, PRIO_PGRP, PRIO_PROCESS, PRIO_USER,
     SCHED_RR, TIMER_ABSTIME, timespec,

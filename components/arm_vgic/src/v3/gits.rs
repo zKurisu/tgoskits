@@ -116,7 +116,7 @@ impl BaseDeviceOps<GuestPhysAddrRange> for Gits {
         &self,
         addr: <GuestPhysAddrRange as axaddrspace::device::DeviceAddrRange>::Addr,
         width: axaddrspace::device::AccessWidth,
-    ) -> axerrno::AxResult<usize> {
+    ) -> ax_errno::AxResult<usize> {
         let gits_base = self.host_gits_base;
         let reg = addr - self.addr;
         // let reg = mmio.address;
@@ -165,7 +165,7 @@ impl BaseDeviceOps<GuestPhysAddrRange> for Gits {
         addr: <GuestPhysAddrRange as axaddrspace::device::DeviceAddrRange>::Addr,
         width: axaddrspace::device::AccessWidth,
         val: usize,
-    ) -> axerrno::AxResult {
+    ) -> ax_errno::AxResult {
         let gits_base = self.host_gits_base;
         let reg = addr - self.addr;
         // let reg = mmio.address;

@@ -24,7 +24,7 @@ ax-cpu.workspace = true
 ax-driver-base.workspace = true
 ax-driver-block.workspace = true
 ax-driver-virtio = { workspace = true, features = ["block"] }
-axerrno.workspace = true
+ax-errno.workspace = true
 axklib.workspace = true
 ax-plat.workspace = true
 dma-api = "0.7"

@@ -7,6 +7,7 @@ use core::{
     ptr, slice, str,
 };
 
+use ax_errno::{AxError, AxResult};
 use ax_hal::{
     asm::user_copy,
     paging::MappingFlags,
@@ -14,7 +15,6 @@ use ax_hal::{
 };
 use ax_io::prelude::*;
 use ax_task::current;
-use axerrno::{AxError, AxResult};
 use extern_trait::extern_trait;
 use kernel_guard::IrqSave;
 use memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};

@@ -91,7 +91,7 @@ dwarf = ["ax-feat/dwarf"]
 
 [dependencies]
 ax-api.workspace = true
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-feat.workspace = true
 ax-io.workspace = true
 kspin.workspace = true

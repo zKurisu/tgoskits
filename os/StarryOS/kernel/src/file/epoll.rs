@@ -18,7 +18,7 @@ use core::{
     task::{Context, Waker},
 };
 
-use axerrno::{AxError, AxResult};
+use ax_errno::{AxError, AxResult};
 use axpoll::{IoEvents, PollSet, Pollable};
 use bitflags::bitflags;
 use hashbrown::HashMap;

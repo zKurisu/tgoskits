@@ -1,7 +1,7 @@
 use core::ptr::NonNull;
 
+use ax_errno::AxError;
 use ax_plat::mem::phys_to_virt;
-use axerrno::AxError;
 use somehal::{KernelOp, setup::*};
 
 #[somehal::entry(Kernel)]

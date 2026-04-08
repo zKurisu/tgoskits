@@ -4,8 +4,8 @@ use core::{
     ffi::{c_int, c_void},
 };
 
+use ax_errno::{LinuxError, LinuxResult};
 use ax_task::AxTaskRef;
-use axerrno::{LinuxError, LinuxResult};
 use spin::RwLock;
 
 use crate::ctypes;

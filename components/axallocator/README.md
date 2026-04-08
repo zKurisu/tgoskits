@@ -28,7 +28,7 @@ Various allocator algorithms behind a unified interface for `no_std` environment
 | `buddy`         | Buddy byte allocator                           |
 | `allocator_api` | Implement `Allocator` (nightly)                |
 | `page-alloc-*`  | Page size / range (e.g. `page-alloc-256m`)     |
-| `axerrno`       | `AxError` integration                          |
+| `ax-errno`       | `AxError` integration                          |
 
 Default: `page-alloc-256m`. Use `full` for all allocators and `allocator_api`.
 

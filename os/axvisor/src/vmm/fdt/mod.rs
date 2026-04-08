@@ -109,7 +109,7 @@ pub fn get_developer_provided_dtb(
         }
         #[cfg(feature = "fs")]
         Some("fs") => {
-            use axerrno::ax_err_type;
+            use ax_errno::ax_err_type;
             use std::io::{BufReader, Read};
             if let Some(dtb_path) = &crate_config.kernel.dtb_path {
                 let (dtb_file, dtb_size) =

@@ -18,7 +18,7 @@ use bitflags::bitflags;
 use memory_addr::PAGE_SIZE_4K as PAGE_SIZE;
 
 use axaddrspace::HostPhysAddr;
-use axerrno::AxResult;
+use ax_errno::AxResult;
 use axvisor_api::memory::PhysFrame;
 
 use crate::msr::{Msr, MsrReadWrite};

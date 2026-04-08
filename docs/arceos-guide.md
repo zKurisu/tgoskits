@@ -172,7 +172,7 @@ cargo arceos test qemu --target riscv64gc-unknown-none-elf
 ### host / unit 测试
 
 ```bash
-cargo test -p axerrno
+cargo test -p ax-errno
 ```
 
 ## 6. 调试建议

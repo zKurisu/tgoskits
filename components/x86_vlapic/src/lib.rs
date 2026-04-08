@@ -29,7 +29,7 @@ mod vlapic;
 
 use core::cell::UnsafeCell;
 
-use axerrno::AxResult;
+use ax_errno::AxResult;
 use axvisor_api::{
     memory,
     vmm::{VCpuId, VMId},

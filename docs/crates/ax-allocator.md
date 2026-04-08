@@ -30,7 +30,7 @@
 - `ByteAllocator`：字节级申请/释放与统计接口。
 - `PageAllocator`：页级申请/释放、定点页分配和页统计接口。
 - `IdAllocator`：唯一 ID 分配接口；当前仓库里接口已定义，但本 crate 里没有现成实现。
-- `AllocError` / `AllocResult`：统一错误模型；启用 `axerrno` 后可转换成 `AxError`。
+- `AllocError` / `AllocResult`：统一错误模型；启用 `ax-errno` 后可转换成 `AxError`。
 
 ### 1.4 具体算法特征
 - `BitmapPageAllocator<const PAGE_SIZE: usize>`：
@@ -73,7 +73,7 @@ graph LR
     buddy["buddy_system_allocator"] --> ax-allocator
     slab["ax_slab_allocator"] --> ax-allocator
     tlsf["rlsf"] --> ax-allocator
-    axerrno["axerrno (optional)"] --> ax-allocator
+    ax_errno["ax-errno (optional)"] --> ax-allocator
 
     ax-allocator --> ax-alloc["ax-alloc"]
     ax-allocator --> ax_dma["ax-dma"]
@@ -84,7 +84,7 @@ graph LR
 - `buddy_system_allocator`：buddy 字节分配核心。
 - `ax_slab_allocator`：slab 分配核心。
 - `rlsf`：TLSF 分配核心。
-- `axerrno`：可选错误桥接层。
+- `ax-errno`：可选错误桥接层。
 
 ### 3.2 关键直接消费者
 - `ax-alloc`：默认全局分配器装配层。
@@ -108,7 +108,7 @@ ax-allocator = { workspace = true, features = ["bitmap", "tlsf"] }
 ### 4.3 开发建议
 - 需要“全局装配”时去改 `ax-alloc`，不要把 `ax-allocator` 写成第二个运行时模块。
 - 需要“并发保护”时去用 `kspin`/`ax-sync`，不要在算法实现里偷偷引入全局锁。
-- 需要“错误码落到 OS 语义”时用 `axerrno` feature；纯算法测试可直接用 `AllocError`。
+- 需要“错误码落到 OS 语义”时用 `ax-errno` feature；纯算法测试可直接用 `AllocError`。
 
 ## 5. 测试策略
 ### 5.1 当前测试形态

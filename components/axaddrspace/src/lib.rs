@@ -31,7 +31,7 @@ mod npt;
 
 pub use addr::*;
 pub use address_space::*;
-use axerrno::AxError;
+use ax_errno::AxError;
 pub use frame::PhysFrame;
 pub use hal::AxMmHal;
 pub use memory_accessor::GuestMemoryAccessor;

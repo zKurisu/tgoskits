@@ -35,7 +35,7 @@ graph LR
     current["ax-posix-api"]
     current --> ax-alloc["ax-alloc"]
     current --> axconfig["ax-config"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> ax-feat["ax-feat"]
     current --> ax-fs["ax-fs"]
     current --> ax-hal["ax-hal"]
@@ -47,7 +47,7 @@ graph LR
 ### 3.1 直接与间接依赖
 - `ax-alloc`
 - `axconfig`
-- `axerrno`
+- `ax-errno`
 - `ax-feat`
 - `ax-fs`
 - `ax-hal`

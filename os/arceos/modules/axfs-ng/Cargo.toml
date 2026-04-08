@@ -16,7 +16,7 @@ std = ["lwext4_rust?/std"]
 [dependencies]
 ax-alloc = { workspace = true }
 ax-driver = { workspace = true, features = ["block"] }
-axerrno = { workspace = true }
+ax-errno = { workspace = true }
 axfs-ng-vfs = { workspace = true }
 ax-hal = { workspace = true }
 ax-io = { workspace = true, features = ["alloc"] }

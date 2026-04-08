@@ -39,14 +39,14 @@
 graph LR
     current["ax-libc"]
     current --> ax-posix-api["ax-posix-api"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> ax-feat["ax-feat"]
     current --> axio["ax-io"]
 ```
 
 ### 3.1 直接与间接依赖
 - `ax-posix-api`
-- `axerrno`
+- `ax-errno`
 - `ax-feat`
 - `axio`
 

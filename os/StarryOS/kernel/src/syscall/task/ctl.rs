@@ -1,7 +1,7 @@
 use core::ffi::c_char;
 
+use ax_errno::{AxError, AxResult};
 use ax_task::current;
-use axerrno::{AxError, AxResult};
 use linux_raw_sys::general::{__user_cap_data_struct, __user_cap_header_struct};
 use starry_vm::{VmMutPtr, VmPtr, vm_write_slice};
 

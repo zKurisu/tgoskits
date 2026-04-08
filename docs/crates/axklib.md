@@ -37,7 +37,7 @@
 
 ### 1.3 类型与桥接方式
 - `PhysAddr` / `VirtAddr`：直接复用 `memory_addr` 的地址类型。
-- `AxResult`：复用 `axerrno` 的错误结果类型。
+- `AxResult`：复用 `ax-errno` 的错误结果类型。
 - `IrqHandler`：简单的 `fn()` 函数指针。
 - `#[def_extern_trait]`：由 `trait-ffi` 生成跨 crate 调用所需的桥接层。
 
@@ -81,7 +81,7 @@ flowchart TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axerrno["axerrno"] --> axklib["axklib"]
+    ax_errno["ax-errno"] --> axklib["axklib"]
     memory_addr["memory_addr"] --> axklib
     trait_ffi["trait-ffi"] --> axklib
 
@@ -91,7 +91,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axerrno`：统一错误结果类型。
+- `ax-errno`：统一错误结果类型。
 - `memory_addr`：统一地址类型。
 - `trait-ffi`：生成 trait 调用桥接。
 

@@ -1,6 +1,6 @@
 use core::ffi::c_int;
 
-use axerrno::LinuxError;
+use ax_errno::LinuxError;
 
 use crate::ctypes;
 

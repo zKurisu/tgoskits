@@ -30,7 +30,7 @@ use std::os::arceos::{
     modules::ax_task,
 };
 
-use axerrno::{AxResult, ax_err_type};
+use ax_errno::{AxResult, ax_err_type};
 
 use crate::task::AsVCpuTask;
 pub use timer::init_percpu as init_timer_percpu;

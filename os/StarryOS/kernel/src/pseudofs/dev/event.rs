@@ -5,9 +5,9 @@ use core::{any::Any, task::Context, time::Duration};
 use ax_driver::prelude::{
     AxInputDevice, BaseDriverOps, DevError, Event, EventType, InputDeviceId, InputDriverOps,
 };
+use ax_errno::{AxError, AxResult};
 use ax_hal::time::wall_time;
 use ax_sync::Mutex;
-use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::{DeviceId, NodeFlags, NodeType, VfsResult};
 use axpoll::{IoEvents, Pollable};
 use bitmaps::Bitmap;

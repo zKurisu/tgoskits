@@ -100,6 +100,6 @@ fn test_alloc_no_memory() {
     MockHal::set_alloc_fail(true);
     let result = PhysFrame::<MockHal>::alloc();
     // Assert that allocation failed and verify the specific error type.
-    assert_matches!(result, Err(axerrno::AxError::NoMemory));
+    assert_matches!(result, Err(ax_errno::AxError::NoMemory));
     MockHal::set_alloc_fail(false); // Reset for other tests
 }

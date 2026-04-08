@@ -4,8 +4,8 @@ use core::{
     time::Duration,
 };
 
+use ax_errno::AxResult;
 use ax_task::future::{block_on, poll_io, timeout};
-use axerrno::AxResult;
 use axpoll::{IoEvents, Pollable};
 
 use crate::{

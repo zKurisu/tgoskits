@@ -232,7 +232,7 @@ flowchart TD
 | `axvcpu` | 通用 vCPU 抽象接口 |
 | `axaddrspace` | GPA/GVA 类型与访问宽度 |
 | `axvisor_api` | 访存和宿主地址转换辅助 |
-| `axerrno` | 错误模型 |
+| `ax-errno` | 错误模型 |
 | `page_table_entry` / `memory_addr` | 页表相关辅助类型 |
 | `memoffset` / `tock-registers` | 汇编偏移和寄存器组织辅助 |
 

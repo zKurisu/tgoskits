@@ -23,8 +23,8 @@ mod tests {
     };
     use core::cell::RefCell;
 
+    use ax_errno::{AxError, AxResult};
     use axaddrspace::{GuestPhysAddr, HostPhysAddr};
-    use axerrno::{AxError, AxResult};
     use axvisor_api::vmm::{VCpuId, VMId};
 
     use crate::{AxArchVCpu, AxVCpu, VCpuState, exit::AxVCpuExitReason};

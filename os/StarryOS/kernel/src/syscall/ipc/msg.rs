@@ -1,9 +1,9 @@
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 
+use ax_errno::{AxError, AxResult, LinuxError};
 use ax_hal::time::monotonic_time_nanos;
 use ax_sync::Mutex;
 use ax_task::current;
-use axerrno::{AxError, AxResult, LinuxError};
 use bytemuck::AnyBitPattern;
 use linux_raw_sys::general::*;
 use starry_process::Pid;

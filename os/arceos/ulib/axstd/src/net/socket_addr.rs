@@ -172,10 +172,10 @@ mod dns {
             // split the string by ':' and convert the second part to u16
             let (host, port_str) = self
                 .rsplit_once(':')
-                .ok_or_else(|| axerrno::ax_err_type!(InvalidInput, "invalid socket address"))?;
+                .ok_or_else(|| ax_errno::ax_err_type!(InvalidInput, "invalid socket address"))?;
             let port: u16 = port_str
                 .parse()
-                .map_err(|_| axerrno::ax_err_type!(InvalidInput, "invalid port value"))?;
+                .map_err(|_| ax_errno::ax_err_type!(InvalidInput, "invalid port value"))?;
 
             Ok(ax_api::net::ax_dns_query(host)?
                 .into_iter()

@@ -38,7 +38,7 @@ graph LR
     current["x86_vlapic"]
     current --> axaddrspace["axaddrspace"]
     current --> axdevice_base["axdevice_base"]
-    current --> axerrno["axerrno"]
+    current --> ax_errno["ax-errno"]
     current --> axvisor_api["axvisor_api"]
     current --> memory_addr["memory_addr"]
     x86_vcpu["x86_vcpu"] --> current
@@ -47,7 +47,7 @@ graph LR
 ### 3.1 直接与间接依赖
 - `axaddrspace`
 - `axdevice_base`
-- `axerrno`
+- `ax-errno`
 - `axvisor_api`
 - `memory_addr`
 

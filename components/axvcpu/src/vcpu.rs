@@ -14,8 +14,8 @@
 
 use core::cell::{RefCell, UnsafeCell};
 
+use ax_errno::{AxResult, ax_err};
 use axaddrspace::{GuestPhysAddr, HostPhysAddr};
-use axerrno::{AxResult, ax_err};
 use axvisor_api::vmm::{VCpuId, VMId};
 
 use super::{AxArchVCpu, AxVCpuExitReason};

@@ -32,7 +32,7 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 [dependencies]
 ax-allocator = { workspace = true, features = ["bitmap"], optional = true }
 axbacktrace = { workspace = true, optional = true }
-axerrno.workspace = true
+ax-errno.workspace = true
 buddy-slab-allocator = { workspace = true, optional = true }
 cfg-if.workspace = true
 kspin.workspace = true

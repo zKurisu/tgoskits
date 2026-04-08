@@ -3,7 +3,7 @@ use core::{
     time::Duration,
 };
 
-use axerrno::LinuxError;
+use ax_errno::LinuxError;
 
 use crate::{
     ctypes,

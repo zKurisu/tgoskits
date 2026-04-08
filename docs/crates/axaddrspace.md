@@ -238,7 +238,7 @@ flowchart TD
 | `memory_set` | 区域集合与后端映射框架 |
 | `page_table_entry` | `MappingFlags` 与各架构页表项定义 |
 | `page_table_multiarch` | 底层页表引擎与 `PagingHandler` trait |
-| `axerrno` | 错误模型 |
+| `ax-errno` | 错误模型 |
 | `bitflags` / `bit_field` / `numeric-enum-macro` | 辅助标志与枚举操作 |
 | `lazyinit` / `log` | 初始化与日志 |
 

@@ -1,8 +1,8 @@
 use alloc::sync::Arc;
 use core::ffi::c_int;
 
+use ax_errno::{LinuxError, LinuxResult};
 use ax_io::PollState;
-use axerrno::{LinuxError, LinuxResult};
 use flatten_objects::FlattenObjects;
 use scope_local::scope_local;
 use spin::RwLock;

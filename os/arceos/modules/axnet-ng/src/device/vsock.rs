@@ -5,9 +5,9 @@ use core::{
 };
 
 use ax_driver::prelude::*;
+use ax_errno::{AxError, AxResult, ax_bail};
 use ax_sync::Mutex;
 use ax_task::future::{block_on, interruptible};
-use axerrno::{AxError, AxResult, ax_bail};
 
 use crate::vsock::connection_manager::VSOCK_CONN_MANAGER;
 

@@ -25,8 +25,8 @@ use alloc::{
     vec::Vec,
 };
 
+use ax_errno::{AxError, AxResult};
 use ax_fs_vfs::{VfsDirEntry, VfsNodeAttr, VfsNodeOps, VfsNodeRef, VfsNodeType, VfsOps, VfsResult};
-use axerrno::{AxError, AxResult};
 use lazyinit::LazyInit;
 use spin::Mutex;
 

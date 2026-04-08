@@ -39,7 +39,7 @@ test = ["percpu?/sp-naive"]
 
 [dependencies]
 ax-config = { workspace = true, optional = true }
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-hal.workspace = true
 axpoll = { workspace = true, optional = true }
 ax-sched = { version = "0.5.1", optional = true }

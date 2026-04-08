@@ -19,7 +19,7 @@ extern crate alloc;
 mod macros;
 mod imp;
 
-pub use axerrno::{AxError, AxResult};
+pub use ax_errno::{AxError, AxResult};
 
 /// Platform-specific constants and parameters.
 pub mod config {

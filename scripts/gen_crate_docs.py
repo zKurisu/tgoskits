@@ -177,7 +177,7 @@ CURATED_DOCS = {
     "ax-alloc",
     "ax-allocator",
     "axbacktrace",
-    "axerrno",
+    "ax-errno",
     "ax-ipi",
     "axklib",
     "ax-libc",

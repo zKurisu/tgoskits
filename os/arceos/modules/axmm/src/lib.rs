@@ -9,11 +9,11 @@ extern crate alloc;
 mod aspace;
 mod backend;
 
+use ax_errno::{AxError, AxResult};
 use ax_hal::{
     mem::{MemRegionFlags, phys_to_virt},
     paging::MappingFlags,
 };
-use axerrno::{AxError, AxResult};
 use kspin::SpinNoIrq;
 use lazyinit::LazyInit;
 use memory_addr::{MemoryAddr, PhysAddr, VirtAddr};

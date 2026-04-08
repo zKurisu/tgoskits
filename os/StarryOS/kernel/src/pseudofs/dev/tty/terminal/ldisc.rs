@@ -6,8 +6,8 @@ use core::{
     task::{Context, Poll, Waker},
 };
 
+use ax_errno::{AxError, AxResult};
 use ax_task::future::{block_on, poll_io};
-use axerrno::{AxError, AxResult};
 use axpoll::{IoEvents, PollSet, Pollable};
 use linux_raw_sys::general::{
     ECHOCTL, ECHOK, ICRNL, IGNCR, ISIG, VEOF, VERASE, VKILL, VMIN, VTIME,

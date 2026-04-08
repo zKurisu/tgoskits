@@ -166,7 +166,7 @@ flowchart TD
 - 提供跨架构统一的映射、查询、撤销、保护和遍历 API
 - 支持大页映射与区域映射
 - 支持批量修改后的延迟 TLB 刷新
-- 通过 feature 支持与 `axerrno` 集成及页表根项复制能力
+- 通过 feature 支持与 `ax-errno` 集成及页表根项复制能力
 
 ### 2.2 架构差异
 
@@ -189,7 +189,7 @@ flowchart TD
 
 当前 feature 有两个：
 
-- `axerrno`：把 `PagingError` 转成 `axerrno::AxError`
+- `ax-errno`：把 `PagingError` 转成 `ax_errno::AxError`
 - `copy-from`：允许根级条目复制，并依赖 `bitmaps` 记录 borrowed entries
 
 其中 `copy-from` 在 StarryOS 用户地址空间复制场景中很有价值，因为它允许直接复用部分内核映射而避免重复建表。
@@ -204,7 +204,7 @@ flowchart TD
 | `memory_addr` | 地址类型、对齐与页大小辅助 |
 | `arrayvec` | 小规模 TLB 刷新地址缓存 |
 | `log` | 调试输出 |
-| `axerrno` | 可选错误桥接 |
+| `ax-errno` | 可选错误桥接 |
 | `bitmaps` | `copy-from` feature 下记录 borrowed entries |
 | `x86` / `riscv` | 特定架构元数据与辅助指令 |
 

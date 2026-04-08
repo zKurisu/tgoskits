@@ -123,7 +123,7 @@ impl PagingHandler for MyHal {
     }
 }
 
-fn example() -> axerrno::AxResult<()> {
+fn example() -> ax_errno::AxResult<()> {
     let base = GuestPhysAddr::from_usize(0x1000_0000);
     let mut addr_space = AddrSpace::<MyHal>::new_empty(4, base, 0x20_0000)?;
 

@@ -5,10 +5,10 @@ use core::{
     time::Duration,
 };
 
+use ax_errno::{AxError, AxResult};
 use ax_fs::{FS_CONTEXT, FsContext};
 use ax_hal::time::wall_time;
 use ax_task::current;
-use axerrno::{AxError, AxResult};
 use axfs_ng_vfs::{MetadataUpdate, NodePermission, NodeType, path::Path};
 use linux_raw_sys::{
     general::*,

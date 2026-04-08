@@ -54,7 +54,7 @@ ax-sync.workspace = true
 ax-task.workspace = true
 
 axbacktrace = "0.3.2"
-axerrno = "0.4.2"
+ax-errno = "0.4.2"
 axfs-ng-vfs = "0.3.1"
 ax-io = "0.5.0"
 axpoll = "0.3.2"

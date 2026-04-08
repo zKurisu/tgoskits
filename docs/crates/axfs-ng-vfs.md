@@ -97,7 +97,7 @@ graph TD
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axerrno["axerrno"] --> current["axfs-ng-vfs"]
+    ax_errno["ax-errno"] --> current["axfs-ng-vfs"]
     axpoll["axpoll"] --> current
 
     current --> axfs_ng["ax-fs-ng"]
@@ -106,7 +106,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axerrno`：统一错误类型。
+- `ax-errno`：统一错误类型。
 - `axpoll`：文件/节点轮询接口。
 - `spin`、`hashbrown`、`smallvec`：为目录项缓存、挂载点管理与轻量集合提供支撑。
 

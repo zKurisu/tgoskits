@@ -219,7 +219,7 @@ flowchart TD
 
 | 依赖 | 作用 |
 | --- | --- |
-| `axerrno` | 错误模型 |
+| `ax-errno` | 错误模型 |
 | `axaddrspace` | `GuestPhysAddr`、`HostPhysAddr` 与 `AxMmHal` |
 | `axvisor_api` | `VMId`、`VCpuId` 等基础 ID 类型 |
 | `percpu` | current vCPU 与 per-CPU 虚拟化状态 |

@@ -1,10 +1,10 @@
 use alloc::{string::ToString, sync::Arc, vec::Vec};
 use core::ffi::c_char;
 
+use ax_errno::{AxError, AxResult};
 use ax_fs::FS_CONTEXT;
 use ax_hal::uspace::UserContext;
 use ax_task::current;
-use axerrno::{AxError, AxResult};
 use starry_vm::vm_load_until_nul;
 
 use crate::{

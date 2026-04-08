@@ -1,7 +1,7 @@
 use std::os::arceos::modules::{ax_hal, ax_task};
 
+use ax_errno::{AxResult, ax_err_type};
 use axaddrspace::{HostPhysAddr, HostVirtAddr};
-use axerrno::{AxResult, ax_err_type};
 use axvisor_api::vmm::{InterruptVector, VCpuId, VCpuSet, VMId, VmmIf};
 
 use crate::{task::AsVCpuTask, vmm};

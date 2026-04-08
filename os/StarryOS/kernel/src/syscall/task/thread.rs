@@ -1,5 +1,5 @@
+use ax_errno::{AxError, AxResult};
 use ax_task::current;
-use axerrno::{AxError, AxResult};
 
 use crate::task::AsThread;
 
@@ -84,6 +84,6 @@ pub fn sys_arch_prctl(
             Ok(0)
         }
         ArchPrctlCode::GetCpuid => Ok(0),
-        ArchPrctlCode::SetCpuid => Err(axerrno::AxError::NoSuchDevice),
+        ArchPrctlCode::SetCpuid => Err(ax_errno::AxError::NoSuchDevice),
     }
 }

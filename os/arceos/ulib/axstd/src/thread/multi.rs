@@ -6,7 +6,7 @@ use alloc::{string::String, sync::Arc};
 use core::{cell::UnsafeCell, num::NonZeroU64};
 
 use ax_api::task::{self as api, AxTaskHandle};
-use axerrno::ax_err_type;
+use ax_errno::ax_err_type;
 
 use crate::io;
 

@@ -1,9 +1,9 @@
 use alloc::sync::Arc;
 use core::ffi::c_int;
 
+use ax_errno::{LinuxError, LinuxResult};
 use ax_io::PollState;
 use ax_sync::Mutex;
-use axerrno::{LinuxError, LinuxResult};
 
 use super::fd_ops::{FileLike, add_file_like, close_file_like};
 use crate::ctypes;

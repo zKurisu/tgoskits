@@ -81,7 +81,7 @@
 ## 3. 依赖关系图谱
 ```mermaid
 graph LR
-    axerrno["axerrno"] --> current["ax-fs-vfs"]
+    ax_errno["ax-errno"] --> current["ax-fs-vfs"]
 
     current --> ax-fs["ax-fs"]
     current --> axfs_ramfs["ax-fs-ramfs"]
@@ -89,7 +89,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axerrno`：错误码来源。
+- `ax-errno`：错误码来源。
 - `bitflags`：权限位实现。
 - `log`：长目录项名警告等辅助日志。
 

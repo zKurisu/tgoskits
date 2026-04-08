@@ -34,7 +34,7 @@ use axaddrspace::{
     device::{AccessWidth, Port, SysRegAddr, SysRegAddrRange},
 };
 use axdevice_base::BaseDeviceOps;
-use axerrno::{AxResult, ax_err, ax_err_type};
+use ax_errno::{AxResult, ax_err, ax_err_type};
 use axvcpu::{AxArchVCpu, AxVCpuExitReason};
 use axvisor_api::vmm::{VCpuId, VMId};
 

@@ -31,7 +31,7 @@ ax-config.workspace = true
 ax-display = { workspace = true, optional = true }
 ax-dma = { workspace = true, optional = true }
 ax-driver = { workspace = true, optional = true }
-axerrno.workspace = true
+ax-errno.workspace = true
 ax-feat.workspace = true
 ax-fs = { workspace = true, optional = true }
 ax-hal.workspace = true

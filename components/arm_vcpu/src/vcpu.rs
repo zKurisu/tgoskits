@@ -13,8 +13,8 @@
 // limitations under the License.
 
 use aarch64_cpu::registers::*;
+use ax_errno::AxResult;
 use axaddrspace::{GuestPhysAddr, HostPhysAddr, device::SysRegAddr};
-use axerrno::AxResult;
 use axvcpu::{AxArchVCpu, AxVCpuExitReason};
 
 use crate::{
