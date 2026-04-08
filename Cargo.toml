@@ -162,7 +162,7 @@ timer_list = { path = "components/timer_list" }
 int_ratio = { path = "components/int_ratio" }
 ax-cap-access = { path = "components/cap_access" }
 handler_table = { path = "components/handler_table" }
-riscv_plic = { path = "components/riscv_plic" }
+ax-riscv-plic = { path = "components/riscv_plic" }
 rsext4 = { path = "components/rsext4" }
 ax-arm-pl011 = { path = "components/arm_pl011" }
 ax-arm-pl031 = { path = "components/arm_pl031" }

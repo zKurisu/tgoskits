@@ -1,12 +1,12 @@
-# `riscv_plic` 技术文档
+# `ax-riscv-plic` 技术文档
 
 > 路径：`components/riscv_plic`
 > 类型：库 crate
 > 分层：组件层 / RISC-V 物理中断控制器封装层
-> 版本：`0.2.0`
+> 版本：`0.4.0`
 > 文档依据：当前仓库源码、`Cargo.toml`、`README.md`、`src/lib.rs` 以及 `ax-plat-riscv64-qemu-virt` 的集成代码
 
-`riscv_plic` 是针对 RISC-V PLIC 的 typed MMIO 封装库。它把平台级中断控制器的寄存器布局、优先级、使能位图、threshold 和 claim/complete 等操作建模成一套安全边界明确的 Rust API。它不是完整的中断子系统，也不是虚拟 PLIC；它只负责“给定一个物理 PLIC MMIO 基址，如何按规范读写它”。
+`ax-riscv-plic` 是针对 RISC-V PLIC 的 typed MMIO 封装库。它把平台级中断控制器的寄存器布局、优先级、使能位图、threshold 和 claim/complete 等操作建模成一套安全边界明确的 Rust API。它不是完整的中断子系统，也不是虚拟 PLIC；它只负责“给定一个物理 PLIC MMIO 基址，如何按规范读写它”。
 
 ## 1. 架构设计分析
 
@@ -23,7 +23,7 @@
 
 ### 1.2 模块结构
 
-`riscv_plic` 只有一个 `src/lib.rs`，没有进一步拆分子模块。这说明作者将其定位为：
+`ax-riscv-plic` 只有一个 `src/lib.rs`，没有进一步拆分子模块。这说明作者将其定位为：
 
 - 结构简单
 - 接口集中
@@ -112,7 +112,7 @@
 
 需要特别强调：
 
-- `riscv_plic`：物理 PLIC 寄存器封装
+- `ax-riscv-plic`：物理 PLIC 寄存器封装
 - `riscv_vplic`：Hypervisor 中对 guest 暴露的虚拟 PLIC 模型
 
 两者可能共享同一套寄存器语义背景，但不是一回事，也不是当前仓库里的直接 crate 依赖关系。
@@ -174,7 +174,7 @@
 
 ```mermaid
 graph TD
-    A[riscv_plic] --> B[ax-plat-riscv64-qemu-virt irq]
+    A[ax-riscv-plic] --> B[ax-plat-riscv64-qemu-virt irq]
     B --> C[ax-hal IRQ]
     C --> D[ArceOS / StarryOS]
     E[riscv_vplic] -.相关但非直接依赖.-> A
@@ -199,7 +199,7 @@ graph TD
 
 ### 4.3 与平台层的职责分工
 
-- `riscv_plic`：只负责寄存器访问
+- `ax-riscv-plic`：只负责寄存器访问
 - `axplat-*`：负责基址、context 选择和 IRQ 接线
 - `ax-hal`：负责更高层 IRQ 入口和 handler 分发
 
@@ -237,4 +237,4 @@ graph TD
 
 ## 7. 总结
 
-`riscv_plic` 的价值在于，它把一块容易被写成散乱裸指针访问的 MMIO 控制器，整理成了清晰、接近规范章节结构的 Rust API。它不大，但它处在 RISC-V 中断链的物理入口位置；一旦没有这层稳定封装，平台 IRQ 代码就会快速退化成难维护的寄存器偏移和位运算集合。
+`ax-riscv-plic` 的价值在于，它把一块容易被写成散乱裸指针访问的 MMIO 控制器，整理成了清晰、接近规范章节结构的 Rust API。它不大，但它处在 RISC-V 中断链的物理入口位置；一旦没有这层稳定封装，平台 IRQ 代码就会快速退化成难维护的寄存器偏移和位运算集合。

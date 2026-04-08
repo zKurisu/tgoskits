@@ -1218,12 +1218,12 @@ dependencies = [
  "ax-crate-interface",
  "ax-kspin",
  "ax-plat",
+ "ax-riscv-plic",
  "axvisor_api",
  "lazyinit 0.4.2",
  "log",
  "riscv 0.14.0",
  "riscv_goldfish",
- "riscv_plic 0.4.0",
  "sbi-rt",
  "uart_16550 0.4.0",
 ]
@@ -1236,11 +1236,11 @@ dependencies = [
  "ax-cpu",
  "ax-kspin",
  "ax-plat",
+ "ax-riscv-plic",
  "lazyinit 0.4.2",
  "log",
  "riscv 0.16.0",
  "riscv_goldfish",
- "riscv_plic 0.4.0",
  "sbi-rt",
  "uart_16550 0.5.0",
 ]
@@ -1289,6 +1289,13 @@ dependencies = [
  "lazy_static",
  "scope-local",
  "spin 0.10.0",
+]
+
+[[package]]
+name = "ax-riscv-plic"
+version = "0.4.0"
+dependencies = [
+ "tock-registers 0.10.1",
 ]
 
 [[package]]
@@ -1663,7 +1670,7 @@ dependencies = [
  "log",
  "riscv 0.14.0",
  "riscv_goldfish",
- "riscv_plic 0.2.0",
+ "riscv_plic",
  "sbi-rt",
  "uart_16550 0.4.0",
 ]
@@ -6448,13 +6455,6 @@ name = "riscv_plic"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e701d1c6ea06c35a19cb80d213fab87d264798f9bac0aed2730c0e86d297394a"
-dependencies = [
- "tock-registers 0.10.1",
-]
-
-[[package]]
-name = "riscv_plic"
-version = "0.4.0"
 dependencies = [
  "tock-registers 0.10.1",
 ]

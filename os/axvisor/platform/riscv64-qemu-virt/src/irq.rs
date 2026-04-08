@@ -9,8 +9,8 @@ use ax_plat::{
     irq::{HandlerTable, IpiTarget, IrqHandler, IrqIf},
     percpu::this_cpu_id,
 };
+use ax_riscv_plic::Plic;
 use riscv::register::sie;
-use riscv_plic::Plic;
 use sbi_rt::HartMask;
 
 use crate::config::{devices::PLIC_PADDR, plat::PHYS_VIRT_OFFSET};

@@ -13,7 +13,7 @@ repository.workspace = true
 
 [features]
 fp-simd = ["ax-cpu/fp-simd"]
-irq = ["ax-plat/irq", "dep:riscv_plic"]
+irq = ["ax-plat/irq", "dep:ax-riscv-plic"]
 rtc = ["dep:riscv_goldfish"]
 smp = ["ax-plat/smp"]
 
@@ -23,7 +23,7 @@ lazyinit = "0.4.2"
 log = "0.4"
 riscv = "0.16"
 riscv_goldfish = { version = "0.1", optional = true }
-riscv_plic = { version = "0.4.0", optional = true }
+ax-riscv-plic = { version = "0.4.0", optional = true }
 sbi-rt = { version = "0.0.3", features = ["legacy"] }
 uart_16550 = "0.5.0"
 

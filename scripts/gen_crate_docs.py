@@ -284,7 +284,7 @@ CURATED_DOCS = {
     "irq-kernel",
     "rsext4",
     "range-alloc-arceos",
-    "riscv_plic",
+    "ax-riscv-plic",
     "scope-local",
     "smoltcp",
     "smoltcp-fuzz",
