@@ -39,18 +39,18 @@ graph LR
 - `ax-std`
 
 ### 3.2 间接本地依赖
-- `ax-arm-pl011`
-- `ax-arm-pl031`
 - `ax-alloc`
 - `ax-allocator`
 - `ax-api`
+- `ax-arm-pl011`
+- `ax-arm-pl031`
 - `ax-config`
+- `ax-config-gen`
 - `ax-config-macros`
 - `ax-cpu`
 - `ax-display`
 - `ax-dma`
 - `ax-driver`
-- `ax-driver-virtio`
 - 另外还有 `66` 个同类项未在此展开
 
 ### 3.3 被依赖情况

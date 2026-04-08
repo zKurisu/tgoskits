@@ -249,7 +249,7 @@ graph LR
 - `kernel_guard`
 - `lazyinit`
 - `memory_addr`
-- `memory_set`
+- `ax-memory-set`
 - `ax-page-table-entry`
 - `ax-page-table-multiarch`
 - `percpu_macros`

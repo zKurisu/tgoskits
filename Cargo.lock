@@ -969,6 +969,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-memory-set"
+version = "0.6.1"
+dependencies = [
+ "ax-errno",
+ "memory_addr 0.6.1",
+]
+
+[[package]]
 name = "ax-mm"
 version = "0.5.0"
 dependencies = [
@@ -976,11 +984,11 @@ dependencies = [
  "ax-errno",
  "ax-hal",
  "ax-kspin",
+ "ax-memory-set",
  "ax-page-table-multiarch",
  "lazyinit 0.4.2",
  "log",
  "memory_addr 0.6.1",
- "memory_set",
 ]
 
 [[package]]
@@ -1360,6 +1368,7 @@ version = "0.5.0"
 dependencies = [
  "assert_matches",
  "ax-errno",
+ "ax-memory-set",
  "ax-page-table-entry",
  "ax-page-table-multiarch",
  "axin",
@@ -1370,7 +1379,6 @@ dependencies = [
  "lazyinit 0.4.2",
  "log",
  "memory_addr 0.6.1",
- "memory_set",
  "numeric-enum-macro",
  "spin 0.10.0",
  "x86",
@@ -4922,14 +4930,6 @@ name = "memory_addr"
 version = "0.6.1"
 
 [[package]]
-name = "memory_set"
-version = "0.6.1"
-dependencies = [
- "ax-errno",
- "memory_addr 0.6.1",
-]
-
-[[package]]
 name = "micromath"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7426,6 +7426,7 @@ dependencies = [
  "ax-io",
  "ax-kspin",
  "ax-log",
+ "ax-memory-set",
  "ax-mm",
  "ax-net-ng",
  "ax-page-table-multiarch",
@@ -7457,7 +7458,6 @@ dependencies = [
  "linux-raw-sys 0.12.1",
  "lock_api",
  "memory_addr 0.6.1",
- "memory_set",
  "num_enum",
  "ouroboros",
  "rand 0.10.0",

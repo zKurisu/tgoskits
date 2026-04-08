@@ -14,8 +14,8 @@
 
 //! Memory mapping backends.
 
+use ax_memory_set::MappingBackend;
 use ax_page_table_multiarch::{MappingFlags, PagingHandler};
-use memory_set::MappingBackend;
 
 use crate::{GuestPhysAddr, npt::NestedPageTable as PageTable};
 

@@ -251,7 +251,7 @@ graph LR
 - `axvmconfig`
 - `crate_interface`
 - `lazyinit`
-- `memory_set`
+- `ax-memory-set`
 - `ax-page-table-entry`
 - `ax-page-table-multiarch`
 

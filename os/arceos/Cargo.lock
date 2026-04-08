@@ -696,7 +696,7 @@ dependencies = [
  "lazyinit",
  "log",
  "memory_addr",
- "memory_set",
+ "ax-memory-set",
 ]
 
 [[package]]
@@ -2323,7 +2323,7 @@ name = "memory_addr"
 version = "0.6.1"
 
 [[package]]
-name = "memory_set"
+name = "ax-memory-set"
 version = "0.6.1"
 dependencies = [
  "ax-errno",
