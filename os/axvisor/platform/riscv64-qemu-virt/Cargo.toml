@@ -19,7 +19,7 @@ ax-lazyinit = "0.4.2"
 log = "0.4"
 riscv = "0.14.0"
 riscv_goldfish = { version = "0.1", optional = true }
-riscv_plic = "0.4.0"
+ax-riscv-plic = "0.4.0"
 sbi-rt = { version = "0.0.3", features = ["legacy"] }
 uart_16550 = "0.4.0"
 

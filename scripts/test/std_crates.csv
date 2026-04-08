@@ -29,7 +29,7 @@ ax-lazyinit
 ax-linked-list-r4l
 range-alloc-arceos
 riscv-h
-riscv_plic
+ax-riscv-plic
 riscv_vplic
 rsext4
 scope-local

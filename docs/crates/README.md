@@ -144,7 +144,7 @@
 | `mingo` | ArceOS 层 | `os/arceos/tools/raspi4/chainloader` | 0 | 0 | [查看](./mingo.md) |
 | `range-alloc-arceos` | 组件层 | `components/range-alloc-arceos` | 0 | 1 | [查看](./range-alloc-arceos.md) |
 | `riscv-h` | 组件层 | `components/riscv-h` | 0 | 2 | [查看](./riscv-h.md) |
-| `riscv_plic` | 组件层 | `components/riscv_plic` | 0 | 1 | [查看](./riscv_plic.md) |
+| `ax-riscv-plic` | 组件层 | `components/riscv_plic` | 0 | 1 | [查看](./ax-riscv-plic.md) |
 | `riscv_vcpu` | 组件层 | `components/riscv_vcpu` | 8 | 2 | [查看](./riscv_vcpu.md) |
 | `riscv_vplic` | 组件层 | `components/riscv_vplic` | 5 | 2 | [查看](./riscv_vplic.md) |
 | `rsext4` | 组件层 | `components/rsext4` | 0 | 1 | [查看](./rsext4.md) |

@@ -164,6 +164,7 @@ flowchart TB
         ax_plat_macros["ax-plat-macros\nv0.3.0"]
         ax_plat_riscv64_qemu_virt["ax-plat-riscv64-qemu-virt\nv0.5.1"]
         ax_plat_x86_pc["ax-plat-x86-pc\nv0.5.1"]
+        ax_riscv_plic["ax-riscv-plic\nv0.4.0"]
         ax_sched["ax-sched\nv0.5.1"]
         ax_timer_list["ax-timer-list\nv0.3.0"]
         axaddrspace["axaddrspace\nv0.5.0"]
@@ -191,7 +192,6 @@ flowchart TB
         irq_kernel["irq-kernel\nv0.3.0"]
         range_alloc_arceos["range-alloc-arceos\nv0.3.4"]
         riscv_h["riscv-h\nv0.4.0"]
-        riscv_plic["riscv_plic\nv0.4.0"]
         riscv_vcpu["riscv_vcpu\nv0.5.0"]
         riscv_vplic["riscv_vplic\nv0.4.2"]
         rsext4["rsext4\nv0.3.0"]
@@ -472,8 +472,8 @@ flowchart TB
     ax_plat_riscv64_qemu_virt --> ax_kspin
     ax_plat_riscv64_qemu_virt --> ax_lazyinit
     ax_plat_riscv64_qemu_virt --> ax_plat
+    ax_plat_riscv64_qemu_virt --> ax_riscv_plic
     ax_plat_riscv64_qemu_virt --> axvisor_api
-    ax_plat_riscv64_qemu_virt --> riscv_plic
     ax_plat_x86_pc --> ax_config_macros
     ax_plat_x86_pc --> ax_cpu
     ax_plat_x86_pc --> ax_int_ratio
@@ -840,6 +840,7 @@ flowchart TB
     class ax_plat_riscv64_qemu_virt cat_axvisor
     class ax_plat_x86_pc cat_comp
     class ax_posix_api cat_arceos
+    class ax_riscv_plic cat_comp
     class ax_runtime cat_arceos
     class ax_sched cat_comp
     class ax_shell cat_arceos
@@ -879,7 +880,6 @@ flowchart TB
     class mingo cat_arceos
     class range_alloc_arceos cat_comp
     class riscv_h cat_comp
-    class riscv_plic cat_comp
     class riscv_vcpu cat_comp
     class riscv_vplic cat_comp
     class rsext4 cat_comp
@@ -957,10 +957,17 @@ flowchart TB
     classDef ls1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L1 ls1
 <<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-crate-interface-lite`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`ax-handler-table`、`ax-int-ratio`、`ax-lazyinit`、`ax-linked-list-r4l`、`ax-memory-addr`、`ax-riscv-plic`、`axbacktrace`、`axpoll`、`axvisor_api_proc` …共33个"]
+=======
+=======
     L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-crate-interface-lite`、`ax-ctor-bare-macros`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`ax-handler-table`、`ax-int-ratio`、`ax-lazyinit`、`ax-linked-list-r4l`、`ax-memory-addr`、`ax-percpu-macros`、`axbacktrace`、`axpoll` …共33个"]
 =======
 <<<<<<< HEAD
+>>>>>>> origin/devrn-all
     L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-crate-interface-lite`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`ax-handler-table`、`ax-int-ratio`、`ax-lazyinit`、`ax-linked-list-r4l`、`ax-memory-addr`、`ax-timer-list`、`axbacktrace`、`axpoll`、`axvisor_api_proc` …共33个"]
+>>>>>>> origin/devrn-all
 =======
 <<<<<<< HEAD
     L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-crate-interface-lite`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`ax-handler-table`、`ax-int-ratio`、`ax-lazyinit`、`ax-linked-list-r4l`、`ax-memory-addr`、`ax-percpu-macros`、`axbacktrace`、`axpoll`、`axvisor_api_proc` …共33个"]
@@ -1015,7 +1022,11 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-linked-list-r4l` | `0.5.0` | `components/linked_list_r4l` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-memory-addr` | `0.6.1` | `components/axmm_crates/memory_addr` |
 <<<<<<< HEAD
+<<<<<<< HEAD
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-riscv-plic` | `0.4.0` | `components/riscv_plic` |
+=======
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-timer-list` | `0.3.0` | `components/timer_list` |
+>>>>>>> origin/devrn-all
 =======
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-percpu-macros` | `0.4.3` | `components/percpu/percpu_macros` |
 >>>>>>> origin/devrn-all
@@ -1026,7 +1037,6 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `cargo-axplat` | `0.4.5` | `components/axplat_crates/cargo-axplat` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `range-alloc-arceos` | `0.3.4` | `components/range-alloc-arceos` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `riscv-h` | `0.4.0` | `components/riscv-h` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `riscv_plic` | `0.4.0` | `components/riscv_plic` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `rsext4` | `0.3.0` | `components/rsext4` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `smoltcp` | `0.14.0` | `components/starry-smoltcp` |
 | 1 | 堆叠层 | 组件层 | `ax-allocator` | `0.4.0` | `components/axallocator` |
@@ -1151,11 +1161,18 @@ flowchart TB
 | 层级 | 数 | 成员 |
 |------|-----|------|
 <<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-crate-interface-lite` `ax-driver-base` `ax-driver-pci` `ax-errno` `ax-handler-table` `ax-int-ratio` `ax-lazyinit` `ax-linked-list-r4l` `ax-memory-addr` `ax-riscv-plic` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `ctor_bare_macros` `deptool` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `rsext4` `smoltcp` `tgmath` `timer_list` |
+=======
+=======
 | 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-crate-interface-lite` `ax-ctor-bare-macros` `ax-driver-base` `ax-driver-pci` `ax-errno` `ax-handler-table` `ax-int-ratio` `ax-lazyinit` `ax-linked-list-r4l` `ax-memory-addr` `ax-percpu-macros` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `deptool` `mingo` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `ax-allocator` `ax-config-macros` `ax-ctor-bare` `ax-driver-block` `ax-driver-display` `ax-driver-input` `ax-driver-vsock` `ax-fs-vfs` `ax-io` `ax-kernel-guard` `ax-memory-set` `ax-page-table-entry` `ax-plat-macros` `ax-sched` `axfs-ng-vfs` `axhvc` `axklib` `axvmconfig` `define-simple-traits` `define-weak-traits` `fxmac_rs` `smoltcp-fuzz` `starry-vm` |
 =======
 <<<<<<< HEAD
+>>>>>>> origin/devrn-all
 | 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-crate-interface-lite` `ax-driver-base` `ax-driver-pci` `ax-errno` `ax-handler-table` `ax-int-ratio` `ax-lazyinit` `ax-linked-list-r4l` `ax-memory-addr` `ax-timer-list` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `ctor_bare_macros` `deptool` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` |
+>>>>>>> origin/devrn-all
 =======
 <<<<<<< HEAD
 | 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-crate-interface-lite` `ax-driver-base` `ax-driver-pci` `ax-errno` `ax-handler-table` `ax-int-ratio` `ax-lazyinit` `ax-linked-list-r4l` `ax-memory-addr` `ax-percpu-macros` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `ctor_bare_macros` `deptool` `mingo` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
@@ -1273,11 +1290,16 @@ flowchart TB
 | `ax-plat-aarch64-raspi` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-page-table-entry` `ax-plat` `ax-plat-aarch64-peripherals` | `ax-helloworld-myplat` |
 | `ax-plat-loongarch64-qemu-virt` | 4 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-lazyinit` `ax-page-table-entry` `ax-plat` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-macros` | 1 | Procedural macros for the `axplat` crate | `ax-crate-interface` | `ax-plat` |
-| `ax-plat-riscv64-qemu-virt` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-crate-interface` `ax-kspin` `ax-lazyinit` `ax-plat` `axvisor_api` `riscv_plic` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
-| `ax-plat-riscv64-qemu-virt` | 5 | Axvisor Hypervisor 运行时 | `ax-config-macros` `ax-cpu` `ax-crate-interface` `ax-kspin` `ax-lazyinit` `ax-plat` `axvisor_api` `riscv_plic` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
+| `ax-plat-riscv64-qemu-virt` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-crate-interface` `ax-kspin` `ax-lazyinit` `ax-plat` `ax-riscv-plic` `axvisor_api` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
+| `ax-plat-riscv64-qemu-virt` | 5 | Axvisor Hypervisor 运行时 | `ax-config-macros` `ax-cpu` `ax-crate-interface` `ax-kspin` `ax-lazyinit` `ax-plat` `ax-riscv-plic` `axvisor_api` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-x86-pc` | 4 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-int-ratio` `ax-kspin` `ax-lazyinit` `ax-percpu` `ax-plat` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-posix-api` | 14 | POSIX-compatible APIs for ArceOS modules | `ax-alloc` `ax-config` `ax-errno` `ax-feat` `ax-fs` `ax-hal` `ax-io` `ax-log` `ax-net` `ax-runtime` `ax-sync` `ax-task` `scope-local` | `ax-libc` |
+<<<<<<< HEAD
+| `ax-riscv-plic` | 0 | RISC-V platform-level interrupt controller (PLIC)… | — | `ax-plat-riscv64-qemu-virt` |
+| `ax-runtime` | 12 | Runtime library of ArceOS | `ax-alloc` `ax-config` `ax-crate-interface` `ax-display` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-net-ng` `ax-percpu` `ax-plat` `ax-task` `axbacktrace` `axklib` `ctor_bare` | `ax-api` `ax-feat` `ax-posix-api` `starry-kernel` |
+=======
 | `ax-runtime` | 12 | Runtime library of ArceOS | `ax-alloc` `ax-config` `ax-crate-interface` `ax-ctor-bare` `ax-display` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-net-ng` `ax-percpu` `ax-plat` `ax-task` `axbacktrace` `axklib` | `ax-api` `ax-feat` `ax-posix-api` `starry-kernel` |
+>>>>>>> origin/devrn-all
 | `ax-sched` | 1 | Various scheduler algorithms in a unified interfa… | `ax-linked-list-r4l` | `ax-task` |
 | `ax-shell` | 16 | ArceOS 示例程序 | `ax-std` | — |
 | `ax-std` | 15 | ArceOS user library with an interface similar to … | `ax-api` `ax-errno` `ax-feat` `ax-io` `ax-kspin` `ax-lazyinit` | `arceos-affinity` `arceos-display` `arceos-exception` `arceos-fs-shell` `arceos-irq` `arceos-memtest` `arceos-net-echoserver` `arceos-net-httpclient` `arceos-net-httpserver` `arceos-net-udpserver` `arceos-parallel` `arceos-priority` `arceos-sleep` `arceos-tls` `arceos-wait-queue` `arceos-yield` `ax-helloworld` `ax-helloworld-myplat` `ax-httpclient` `ax-httpserver` `ax-shell` `axvisor` |
@@ -1316,7 +1338,6 @@ flowchart TB
 | `mingo` | 0 | ArceOS 配套工具与辅助程序 | — | — |
 | `range-alloc-arceos` | 0 | Generic range allocator | — | `axdevice` |
 | `riscv-h` | 0 | RISC-V virtualization-related registers | — | `riscv_vcpu` `riscv_vplic` |
-| `riscv_plic` | 0 | RISC-V platform-level interrupt controller (PLIC)… | — | `ax-plat-riscv64-qemu-virt` |
 | `riscv_vcpu` | 6 | ArceOS-Hypervisor riscv vcpu module | `ax-crate-interface` `ax-errno` `ax-memory-addr` `ax-page-table-entry` `axaddrspace` `axvcpu` `axvisor_api` `riscv-h` | `axvisor` `axvm` |
 | `riscv_vplic` | 5 | RISCV Virtual PLIC implementation. | `ax-errno` `axaddrspace` `axdevice_base` `axvisor_api` `riscv-h` | `axdevice` `axvisor` |
 | `rsext4` | 0 | A lightweight ext4 file system. | — | `ax-fs` |
@@ -1479,7 +1500,7 @@ flowchart TB
 | `embedded-graphics` `0.8.2` | Embedded graphics library for small hardware displays | `arceos-display` | — |
 | `embedded-graphics-core` `0.4.1` | Core traits and functionality for embedded-graphics | — | — |
 | `embedded-hal` `1.0.0` | A Hardware Abstraction Layer (HAL) for embedded systems | — | — |
-| `tock-registers` `0.10.1` | Memory-Mapped I/O and register interface developed for Tock. | `arm_vgic` `ax-cpu` `riscv_plic` `riscv_vcpu` `x86_vlapic` | — |
+| `tock-registers` `0.10.1` | Memory-Mapped I/O and register interface developed for Tock. | `arm_vgic` `ax-cpu` `ax-riscv-plic` `riscv_vcpu` `x86_vlapic` | — |
 | `tock-registers` `0.8.1` | Memory-Mapped I/O and register interface developed for Tock. | `ax-arm-pl011` | — |
 | `tock-registers` `0.9.0` | Memory-Mapped I/O and register interface developed for Tock. | — | — |
 
@@ -1531,7 +1552,7 @@ flowchart TB
 | `axin` `0.1.0` | A Rust procedural macro library for function instrumentation | `axaddrspace` | — |
 | `axplat` `0.3.1-pre.6` | — | — | — |
 | `axplat-macros` `0.1.0` | — | — | — |
-| `axplat-riscv64-visionfive2` `0.1.0-pre.2` | — | `starryos` `starryos-test` | `riscv_plic` |
+| `axplat-riscv64-visionfive2` `0.1.0-pre.2` | — | `starryos` `starryos-test` | — |
 | `az` `1.2.1` | Casts and checked casts | — | — |
 | `bare-metal` `1.0.0` | Abstractions common to bare metal systems | `riscv-h` | — |
 | `bare-test-macros` `0.2.0` | macros for bare-test | — | — |
