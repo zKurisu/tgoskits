@@ -241,9 +241,9 @@ graph LR
     current --> axconfig_macros["ax-config-macros"]
     current --> ax-cpu["ax-cpu"]
     current --> axplat["ax-plat"]
-    current --> int_ratio["int_ratio"]
+    current --> ax_int_ratio["ax-int-ratio"]
     current --> ax_kspin["ax-kspin"]
-    current --> lazyinit["lazyinit"]
+    current --> ax_lazyinit["ax-lazyinit"]
     current --> ax-percpu["ax-percpu"]
     arceos_helloworld_myplat["ax-helloworld-myplat"] --> current
     ax-hal["ax-hal"] --> current
@@ -256,9 +256,9 @@ graph LR
 - `ax-config-macros`
 - `ax-cpu`
 - `axplat`
-- `int_ratio`
+- `ax-int-ratio`
 - `ax-kspin`
-- `lazyinit`
+- `ax-lazyinit`
 - `ax-percpu`
 
 ### 3.2 间接本地依赖
@@ -267,7 +267,7 @@ graph LR
 - `ax-errno`
 - `ax-plat-macros`
 - `crate_interface`
-- `handler_table`
+- `ax-handler-table`
 - `kernel_guard`
 - `memory_addr`
 - `ax-page-table-entry`
