@@ -16,10 +16,10 @@
 
 use core::fmt;
 
+use ax_cap_access::{Cap, WithCap};
 use ax_errno::{AxError, AxResult, ax_err_type};
 use ax_fs_vfs::VfsNodeRef;
 use ax_io::SeekFrom;
-use cap_access::{Cap, WithCap};
 
 /// Alias of [`ax_fs_vfs::VfsNodeType`].
 pub type FileType = ax_fs_vfs::VfsNodeType;

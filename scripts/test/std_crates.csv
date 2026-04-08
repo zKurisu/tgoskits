@@ -19,7 +19,7 @@ axvcpu
 axvm
 axvmconfig
 bitmap-allocator
-cap_access
+ax-cap-access
 cpumask
 handler_table
 int_ratio

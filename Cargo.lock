@@ -577,6 +577,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-cap-access"
+version = "0.3.0"
+dependencies = [
+ "bitflags 2.11.0",
+]
+
+[[package]]
 name = "ax-config"
 version = "0.5.0"
 dependencies = [
@@ -776,6 +783,7 @@ dependencies = [
 name = "ax-fs"
 version = "0.5.0"
 dependencies = [
+ "ax-cap-access",
  "ax-driver",
  "ax-errno",
  "ax-fs-devfs",
@@ -784,7 +792,6 @@ dependencies = [
  "ax-hal",
  "ax-io",
  "axfatfs",
- "cap_access",
  "lazyinit 0.4.2",
  "log",
  "rsext4",
@@ -2122,13 +2129,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e629a66d692cb9ff1a1c664e41771b3dcaf961985a9774c0eb0bd1b51cf60a48"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "cap_access"
-version = "0.3.0"
-dependencies = [
- "bitflags 2.11.0",
 ]
 
 [[package]]
