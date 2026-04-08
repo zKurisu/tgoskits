@@ -229,8 +229,8 @@ ax-page-table-multiarch = { path = "components/page_table_multiarch/page_table_m
 ax-crate-interface = { path = "components/crate_interface" }
 crate_interface_lite = { path = "components/crate_interface/crate_interface_lite" }
 
-# === ctor_bare ===
-ctor_bare = { path = "components/ctor_bare/ctor_bare" }
+# === ax-ctor-bare ===
+ax-ctor-bare = { path = "components/ctor_bare/ctor_bare" }
 ctor_bare_macros = { path = "components/ctor_bare/ctor_bare_macros" }
 
 # === memory (axmm_crates) ===
@@ -372,7 +372,7 @@ bindgen = "0.72"
 buddy-slab-allocator = "0.2"
 cfg-if = "1.0"
 chrono = { version = "0.4", default-features = false }
-ctor_bare = { version = "0.4.1", path = "components/ctor_bare/ctor_bare" }
+ax-ctor-bare = { version = "0.4.1", path = "components/ctor_bare/ctor_bare" }
 env_logger = "0.11"
 event-listener = { version = "5.4.0", default-features = false }
 ax-kernel-guard = { version = "0.3.3", path = "components/kernel_guard" }

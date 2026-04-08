@@ -263,7 +263,7 @@ CURATED_DOCS = {
     "crate_interface_lite",
     "define-simple-traits",
     "define-weak-traits",
-    "ctor_bare",
+    "ax-ctor-bare",
     "ctor_bare_macros",
     "ax-cap-access",
     "bitmap-allocator",

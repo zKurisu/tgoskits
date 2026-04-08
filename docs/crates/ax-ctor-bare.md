@@ -1,4 +1,4 @@
-# `ctor_bare` 技术文档
+# `ax-ctor-bare` 技术文档
 
 > 路径：`components/ctor_bare/ctor_bare`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.2.1`
 > 文档依据：当前仓库源码、`components/ctor_bare/Cargo.toml`、`components/ctor_bare/README.md`、`components/ctor_bare/ctor_bare/Cargo.toml`、`components/ctor_bare/ctor_bare/src/lib.rs`、`components/ctor_bare/ctor_bare/tests/*`、`os/arceos/modules/axruntime/src/lib.rs`
 
-`ctor_bare` 的定位不是“初始化框架”，而是一个很小的**构造函数注册与遍历运行时**：配合 `#[register_ctor]` 宏把函数指针放进 `.init_array`，再在需要时用 `call_ctors()` 统一遍历执行。它不做依赖排序，不做分阶段启动，更不理解系统里的模块拓扑。
+`ax-ctor-bare` 的定位不是“初始化框架”，而是一个很小的**构造函数注册与遍历运行时**：配合 `#[register_ctor]` 宏把函数指针放进 `.init_array`，再在需要时用 `call_ctors()` 统一遍历执行。它不做依赖排序，不做分阶段启动，更不理解系统里的模块拓扑。
 
 ## 1. 架构设计分析
 
@@ -24,7 +24,7 @@
 
 ### 1.2 核心组成
 
-`ctor_bare` 本体非常小，只有三项关键内容：
+`ax-ctor-bare` 本体非常小，只有三项关键内容：
 
 | 项目 | 作用 |
 | --- | --- |
@@ -45,7 +45,7 @@
 
 这说明：
 
-- `ctor_bare` 只知道“这里有一串 `fn()` 指针”
+- `ax-ctor-bare` 只知道“这里有一串 `fn()` 指针”
 - 它不知道每个函数来自哪个模块
 - 它也不会做去重、排序、依赖解析或错误隔离
 
@@ -56,7 +56,7 @@
 README 已经说明了两种使用模式：
 
 - 在 Linux/macOS 等常规环境里，系统加载器本身就会处理 `.init_array`
-- 在自研内核或裸机环境里，需要手工调用 `ctor_bare::call_ctors()`
+- 在自研内核或裸机环境里，需要手工调用 `ax_ctor_bare::call_ctors()`
 
 当前仓库中，ArceOS 的真实接线点就是：
 
@@ -64,7 +64,7 @@ README 已经说明了两种使用模式：
 
 在主 CPU 初始化流程中，`ax-runtime` 完成驱动、文件系统、网络、显示、中断等基础初始化后，会显式执行：
 
-- `ctor_bare::call_ctors();`
+- `ax_ctor_bare::call_ctors();`
 
 然后才继续进入 `main()`。
 
@@ -75,7 +75,7 @@ README 已经说明了两种使用模式：
 - 自定义链接脚本必须保留 `.init_array` 并导出 `__init_array_start` / `__init_array_end`
 - 需要加 `-z nostart-stop-gc`，避免相关段符号被优化掉
 
-因此 `ctor_bare` 不是一个“纯 Rust 逻辑库”，而是一个带明显链接器契约的组件。
+因此 `ax-ctor-bare` 不是一个“纯 Rust 逻辑库”，而是一个带明显链接器契约的组件。
 
 ## 2. 核心功能说明
 
@@ -92,10 +92,10 @@ README 已经说明了两种使用模式：
 
 1. 业务函数上使用 `#[register_ctor]`
 2. 宏 crate 把函数指针放进 `.init_array`
-3. `ax-runtime` 启动时调用 `ctor_bare::call_ctors()`
+3. `ax-runtime` 启动时调用 `ax_ctor_bare::call_ctors()`
 4. 各注册函数被依次执行
 
-这说明 `ctor_bare` 处于：
+这说明 `ax-ctor-bare` 处于：
 
 - 编译期注册结果
 - 启动期统一执行入口
@@ -104,7 +104,7 @@ README 已经说明了两种使用模式：
 
 ### 2.3 最关键的边界澄清
 
-`ctor_bare` 不是：
+`ax-ctor-bare` 不是：
 
 - 依赖感知的初始化编排器
 - 多阶段启动管理器
@@ -129,14 +129,14 @@ README 已经说明了两种使用模式：
 
 可确认的间接链路：
 
-- `ctor_bare` -> `ax-runtime` -> ArceOS/StarryOS/Axvisor 的共享运行时启动路径
+- `ax-ctor-bare` -> `ax-runtime` -> ArceOS/StarryOS/Axvisor 的共享运行时启动路径
 
 ### 3.3 关系解读
 
 | 层级 | 角色 |
 | --- | --- |
 | `ctor_bare_macros` | 编译期登记函数指针 |
-| `ctor_bare` | 运行时遍历 `.init_array` |
+| `ax-ctor-bare` | 运行时遍历 `.init_array` |
 | `ax-runtime` | 在系统启动序列中选择何时执行这些函数 |
 
 ## 4. 开发指南
@@ -168,7 +168,7 @@ README 已经说明了两种使用模式：
 
 - 分阶段启动、依赖排序：放在上层运行时
 - 注册函数的编译期约束：放在 `ctor_bare_macros`
-- 遍历 `.init_array` 的底层逻辑：保留在 `ctor_bare`
+- 遍历 `.init_array` 的底层逻辑：保留在 `ax-ctor-bare`
 
 ## 5. 测试策略
 
@@ -208,4 +208,4 @@ README 已经说明了两种使用模式：
 
 ## 7. 总结
 
-`ctor_bare` 的职责非常清楚：把 `.init_array` 里的函数指针按顺序调用出来。它是一个小型、低层、强链接器契约的运行时组件。理解它时必须避免一个常见误区：它不是完整的初始化子系统，只是**构造函数登记机制的运行时执行端**。
+`ax-ctor-bare` 的职责非常清楚：把 `.init_array` 里的函数指针按顺序调用出来。它是一个小型、低层、强链接器契约的运行时组件。理解它时必须避免一个常见误区：它不是完整的初始化子系统，只是**构造函数登记机制的运行时执行端**。

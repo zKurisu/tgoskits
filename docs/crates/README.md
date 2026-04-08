@@ -124,7 +124,7 @@
 | `bwbench-client` | ArceOS 层 | `os/arceos/tools/bwbench_client` | 0 | 0 | [查看](./bwbench-client.md) |
 | `cargo-axplat` | 组件层 | `components/axplat_crates/cargo-axplat` | 0 | 0 | [查看](./cargo-axplat.md) |
 | `crate_interface_lite` | 组件层 | `components/crate_interface/crate_interface_lite` | 0 | 0 | [查看](./crate_interface_lite.md) |
-| `ctor_bare` | 组件层 | `components/ctor_bare/ctor_bare` | 1 | 1 | [查看](./ctor_bare.md) |
+| `ax-ctor-bare` | 组件层 | `components/ctor_bare/ctor_bare` | 1 | 1 | [查看](./ax-ctor-bare.md) |
 | `ctor_bare_macros` | 组件层 | `components/ctor_bare/ctor_bare_macros` | 0 | 1 | [查看](./ctor_bare_macros.md) |
 | `define-simple-traits` | 组件层 | `components/crate_interface/test_crates/define-simple-traits` | 1 | 2 | [查看](./define-simple-traits.md) |
 | `define-weak-traits` | 组件层 | `components/crate_interface/test_crates/define-weak-traits` | 1 | 4 | [查看](./define-weak-traits.md) |

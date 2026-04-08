@@ -263,7 +263,7 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
         init_tls();
     }
 
-    ctor_bare::call_ctors();
+    ax_ctor_bare::call_ctors();
 
     info!("Primary CPU {cpu_id} init OK.");
     INITED_CPUS.fetch_add(1, Ordering::Release);
