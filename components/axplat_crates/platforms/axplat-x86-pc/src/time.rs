@@ -4,7 +4,7 @@
 
 use ax_plat::time::TimeIf;
 #[cfg(feature = "irq")]
-use int_ratio::Ratio;
+use ax_int_ratio::Ratio;
 use raw_cpuid::CpuId;
 
 #[cfg(feature = "irq")]

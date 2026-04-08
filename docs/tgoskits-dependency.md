@@ -181,7 +181,7 @@ flowchart TB
         impl_simple_traits["impl-simple-traits\nv0.3.0"]
         impl_weak_partial["impl-weak-partial\nv0.3.0"]
         impl_weak_traits["impl-weak-traits\nv0.3.0"]
-        int_ratio["int_ratio\nv0.3.2"]
+        ax_int_ratio["ax-int-ratio\nv0.3.2"]
         irq_kernel["irq-kernel\nv0.3.0"]
         kernel_guard["kernel_guard\nv0.3.3"]
         lazyinit["lazyinit\nv0.4.2"]
@@ -440,7 +440,7 @@ flowchart TB
     ax_plat_aarch64_peripherals --> ax_cpu
     ax_plat_aarch64_peripherals --> ax_kspin
     ax_plat_aarch64_peripherals --> ax_plat
-    ax_plat_aarch64_peripherals --> int_ratio
+    ax_plat_aarch64_peripherals --> ax_int_ratio
     ax_plat_aarch64_peripherals --> lazyinit
     ax_plat_aarch64_phytium_pi --> ax_config_macros
     ax_plat_aarch64_phytium_pi --> ax_cpu
@@ -477,7 +477,7 @@ flowchart TB
     ax_plat_x86_pc --> ax_kspin
     ax_plat_x86_pc --> ax_percpu
     ax_plat_x86_pc --> ax_plat
-    ax_plat_x86_pc --> int_ratio
+    ax_plat_x86_pc --> ax_int_ratio
     ax_plat_x86_pc --> lazyinit
     ax_posix_api --> ax_alloc
     ax_posix_api --> ax_config
@@ -574,7 +574,7 @@ flowchart TB
     axplat_x86_qemu_q35 --> ax_kspin
     axplat_x86_qemu_q35 --> ax_percpu
     axplat_x86_qemu_q35 --> ax_plat
-    axplat_x86_qemu_q35 --> int_ratio
+    axplat_x86_qemu_q35 --> ax_int_ratio
     axplat_x86_qemu_q35 --> lazyinit
     axvcpu --> ax_errno
     axvcpu --> ax_percpu
@@ -868,7 +868,7 @@ flowchart TB
     class impl_simple_traits cat_comp
     class impl_weak_partial cat_comp
     class impl_weak_traits cat_comp
-    class int_ratio cat_comp
+    class ax_int_ratio cat_comp
     class irq_kernel cat_comp
     class kernel_guard cat_comp
     class lazyinit cat_comp
@@ -1003,7 +1003,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `crate_interface_lite` | `0.3.0` | `components/crate_interface/crate_interface_lite` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ctor_bare_macros` | `0.4.1` | `components/ctor_bare/ctor_bare_macros` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `handler_table` | `0.3.2` | `components/handler_table` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `int_ratio` | `0.3.2` | `components/int_ratio` |
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-int-ratio` | `0.3.2` | `components/int_ratio` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `lazyinit` | `0.4.2` | `components/lazyinit` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `linked_list_r4l` | `0.5.0` | `components/linked_list_r4l` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `memory_addr` | `0.6.1` | `components/axmm_crates/memory_addr` |
@@ -1135,7 +1135,7 @@ flowchart TB
 
 | 层级 | 数 | 成员 |
 |------|-----|------|
-| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-driver-base` `ax-driver-pci` `ax-errno` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
+| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-driver-base` `ax-driver-pci` `ax-errno` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `crate_interface` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `ax-int-ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `ax-allocator` `ax-config-macros` `ax-driver-block` `ax-driver-display` `ax-driver-input` `ax-driver-vsock` `ax-fs-vfs` `ax-io` `ax-memory-set` `ax-page-table-entry` `ax-plat-macros` `ax-sched` `axfs-ng-vfs` `axhvc` `axklib` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `kernel_guard` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `ax-driver-net` `ax-fs-devfs` `ax-fs-ramfs` `ax-kspin` `ax-page-table-multiarch` `ax-percpu` `axbuild` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` |
 | 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
@@ -1228,7 +1228,7 @@ flowchart TB
 | `ax-percpu` | 2 | Define and access per-CPU data structures | `kernel_guard` `percpu_macros` | `arm_vcpu` `ax-alloc` `ax-cpu` `ax-hal` `ax-ipi` `ax-plat` `ax-plat-x86-pc` `ax-runtime` `ax-task` `axplat-dyn` `axplat-x86-qemu-q35` `axvcpu` `axvisor` `axvm` `scope-local` `smp-kernel` `starry-kernel` |
 | `ax-plat` | 3 | This crate provides a unified abstraction layer f… | `ax-kspin` `ax-percpu` `ax-plat-macros` `crate_interface` `handler_table` `memory_addr` | `ax-hal` `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-peripherals` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `ax-runtime` `axplat-dyn` `axplat-x86-qemu-q35` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-aarch64-bsta1000b` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-page-table-entry` `ax-plat` `ax-plat-aarch64-peripherals` | `ax-helloworld-myplat` |
-| `ax-plat-aarch64-peripherals` | 4 | ARM64 common peripheral drivers with `axplat` com… | `ax-arm-pl011` `ax-arm-pl031` `ax-cpu` `ax-kspin` `ax-plat` `int_ratio` `lazyinit` | `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` |
+| `ax-plat-aarch64-peripherals` | 4 | ARM64 common peripheral drivers with `axplat` com… | `ax-arm-pl011` `ax-arm-pl031` `ax-cpu` `ax-kspin` `ax-plat` `ax-int-ratio` `lazyinit` | `ax-plat-aarch64-bsta1000b` `ax-plat-aarch64-phytium-pi` `ax-plat-aarch64-qemu-virt` `ax-plat-aarch64-raspi` |
 | `ax-plat-aarch64-phytium-pi` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-page-table-entry` `ax-plat` `ax-plat-aarch64-peripherals` | `ax-helloworld-myplat` |
 | `ax-plat-aarch64-qemu-virt` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-page-table-entry` `ax-plat` `ax-plat-aarch64-peripherals` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-aarch64-raspi` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-page-table-entry` `ax-plat` `ax-plat-aarch64-peripherals` | `ax-helloworld-myplat` |
@@ -1236,7 +1236,7 @@ flowchart TB
 | `ax-plat-macros` | 1 | Procedural macros for the `axplat` crate | `crate_interface` | `ax-plat` |
 | `ax-plat-riscv64-qemu-virt` | 5 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-plat` `axvisor_api` `crate_interface` `lazyinit` `riscv_plic` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-plat-riscv64-qemu-virt` | 5 | Axvisor Hypervisor 运行时 | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-plat` `axvisor_api` `crate_interface` `lazyinit` `riscv_plic` | `ax-hal` `ax-helloworld-myplat` `axvisor` `hello-kernel` `irq-kernel` `smp-kernel` |
-| `ax-plat-x86-pc` | 4 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-percpu` `ax-plat` `int_ratio` `lazyinit` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
+| `ax-plat-x86-pc` | 4 | Implementation of `axplat` hardware abstraction l… | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-percpu` `ax-plat` `ax-int-ratio` `lazyinit` | `ax-hal` `ax-helloworld-myplat` `hello-kernel` `irq-kernel` `smp-kernel` |
 | `ax-posix-api` | 14 | POSIX-compatible APIs for ArceOS modules | `ax-alloc` `ax-config` `ax-errno` `ax-feat` `ax-fs` `ax-hal` `ax-io` `ax-log` `ax-net` `ax-runtime` `ax-sync` `ax-task` `scope-local` | `ax-libc` |
 | `ax-runtime` | 12 | Runtime library of ArceOS | `ax-alloc` `ax-config` `ax-display` `ax-driver` `ax-fs` `ax-fs-ng` `ax-hal` `ax-input` `ax-ipi` `ax-log` `ax-mm` `ax-net` `ax-net-ng` `ax-percpu` `ax-plat` `ax-task` `axbacktrace` `axklib` `crate_interface` `ctor_bare` | `ax-api` `ax-feat` `ax-posix-api` `starry-kernel` |
 | `ax-sched` | 1 | Various scheduler algorithms in a unified interfa… | `linked_list_r4l` | `ax-task` |
@@ -1253,7 +1253,7 @@ flowchart TB
 | `axhvc` | 1 | AxVisor HyperCall definitions for guest-hyperviso… | `ax-errno` | `axvisor` |
 | `axklib` | 1 | Small kernel-helper abstractions used across the … | `ax-errno` `memory_addr` | `ax-runtime` `axplat-dyn` `axvisor` |
 | `axplat-dyn` | 4 | A dynamic platform module for ArceOS, providing r… | `ax-alloc` `ax-config-macros` `ax-cpu` `ax-driver-base` `ax-driver-block` `ax-driver-virtio` `ax-errno` `ax-percpu` `ax-plat` `axklib` `memory_addr` | `ax-driver` `ax-hal` |
-| `axplat-x86-qemu-q35` | 4 | Hardware platform implementation for x86_64 QEMU … | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-percpu` `ax-plat` `int_ratio` `lazyinit` | `axvisor` |
+| `axplat-x86-qemu-q35` | 4 | Hardware platform implementation for x86_64 QEMU … | `ax-config-macros` `ax-cpu` `ax-kspin` `ax-percpu` `ax-plat` `ax-int-ratio` `lazyinit` | `axvisor` |
 | `axpoll` | 0 | A library for polling I/O events and waking up ta… | — | `ax-fs-ng` `ax-net-ng` `ax-task` `axfs-ng-vfs` `starry-kernel` |
 | `axvcpu` | 5 | Virtual CPU abstraction for ArceOS hypervisor | `ax-errno` `ax-percpu` `axaddrspace` `axvisor_api` `memory_addr` | `arm_vcpu` `axvisor` `axvm` `riscv_vcpu` `x86_vcpu` |
 | `axvisor` | 16 | A lightweight type-1 hypervisor based on ArceOS | `ax-config` `ax-cpumask` `ax-errno` `ax-hal` `ax-kspin` `ax-page-table-entry` `ax-page-table-multiarch` `ax-percpu` `ax-plat-riscv64-qemu-virt` `ax-std` `axaddrspace` `axbuild` `axdevice` `axdevice_base` `axhvc` `axklib` `axplat-x86-qemu-q35` `axvcpu` `axvisor_api` `axvm` `crate_interface` `kernel_guard` `lazyinit` `memory_addr` `riscv_vcpu` `riscv_vplic` `timer_list` | — |
@@ -1277,7 +1277,7 @@ flowchart TB
 | `impl-simple-traits` | 2 | Implement the simple traits defined in define-sim… | `crate_interface` `define-simple-traits` | `test-simple` |
 | `impl-weak-partial` | 2 | Partial implementation of WeakDefaultIf trait. Th… | `crate_interface` `define-weak-traits` | `test-weak-partial` |
 | `impl-weak-traits` | 2 | Full implementation of weak_default traits define… | `crate_interface` `define-weak-traits` | `test-weak` |
-| `int_ratio` | 0 | The type of ratios represented by two integers. | — | `ax-plat-aarch64-peripherals` `ax-plat-x86-pc` `axplat-x86-qemu-q35` |
+| `ax-int-ratio` | 0 | The type of ratios represented by two integers. | — | `ax-plat-aarch64-peripherals` `ax-plat-x86-pc` `axplat-x86-qemu-q35` |
 | `irq-kernel` | 6 | 可复用基础组件 | `ax-config-macros` `ax-cpu` `ax-plat` `ax-plat-aarch64-qemu-virt` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` | — |
 | `kernel_guard` | 1 | RAII wrappers to create a critical section with l… | `crate_interface` | `ax-hal` `ax-kspin` `ax-percpu` `ax-task` `axvisor` `starry-kernel` |
 | `lazyinit` | 0 | Initialize a static value lazily. | — | `ax-cpu` `ax-display` `ax-fs` `ax-input` `ax-ipi` `ax-mm` `ax-net` `ax-plat-aarch64-peripherals` `ax-plat-loongarch64-qemu-virt` `ax-plat-riscv64-qemu-virt` `ax-plat-x86-pc` `ax-std` `ax-task` `axaddrspace` `axplat-x86-qemu-q35` `axvisor` `starry-process` |
@@ -2192,4 +2192,3 @@ flowchart TB
 | `multiboot` `0.8.0` | Library to access multiboot structures. | `ax-plat-x86-pc` `axplat-x86-qemu-q35` | — |
 | `vm-fdt` `0.3.0` | Crate for writing Flattened Devicetree blobs | — | — |
 | `xmas-elf` `0.9.1` | Library for parsing and navigating ELF data; zero-allocation, type-safe. | `starry-kernel` | — |
-

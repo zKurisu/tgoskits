@@ -270,7 +270,7 @@ CURATED_DOCS = {
     "ax-cpumask",
     "deptool",
     "handler_table",
-    "int_ratio",
+    "ax-int-ratio",
     "ax-kernel-guard",
     "ax-kspin",
     "lazyinit",
