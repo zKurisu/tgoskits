@@ -267,7 +267,7 @@ graph LR
 - `ax-errno`
 - `ax-plat-macros`
 - `crate_interface`
-- `handler_table`
+- `ax-handler-table`
 - `kernel_guard`
 - `memory_addr`
 - `ax-page-table-entry`
