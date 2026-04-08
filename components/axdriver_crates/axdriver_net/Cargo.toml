@@ -1,5 +1,5 @@
 [package]
-name = "axdriver_net"
+name = "ax-driver-net"
 edition.workspace = true
 version.workspace = true
 authors = [
@@ -23,8 +23,8 @@ fxmac = ["dep:fxmac_rs"]
 ixgbe = ["dep:ixgbe-driver"]
 
 [dependencies]
-axdriver_base = { version = "0.1.4-preview.3" }
-fxmac_rs = { version = "0.2", optional = true }
+ax-driver-base = { version = "0.3.4" }
+fxmac_rs = { version = "0.4.1", optional = true }
 ixgbe-driver = { version = "0.1.1-preview.1", optional = true }
 log = { workspace = true }
 spin = "0.9"

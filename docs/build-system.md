@@ -77,8 +77,8 @@ flowchart TD
 
 ```bash
 # ArceOS
-cargo arceos build --package arceos-helloworld --target riscv64gc-unknown-none-elf
-cargo arceos qemu --package arceos-helloworld --target riscv64gc-unknown-none-elf
+cargo arceos build --package ax-helloworld --target riscv64gc-unknown-none-elf
+cargo arceos qemu --package ax-helloworld --target riscv64gc-unknown-none-elf
 
 # StarryOS
 cargo starry build --arch riscv64
@@ -125,7 +125,7 @@ ArceOS 的根入口当前只直接暴露：
 - 子命令是 `build`、`qemu`、`rootfs`、`uboot`
 - 默认包固定为 `starryos`
 - `test` 使用 `starryos-test`
-- `rootfs` 和 `qemu` 围绕 target 目录里的 `disk.img` 工作
+- `rootfs` 和 `qemu` 围绕 target 目录里的 `rootfs-<arch>.img` 工作
 
 本地 Makefile 入口的特点：
 

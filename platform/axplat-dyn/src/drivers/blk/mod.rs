@@ -1,11 +1,15 @@
-use axdriver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
-use axdriver_block::BlockDriverOps;
+use ax_driver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
+use ax_driver_block::BlockDriverOps;
 use rd_block::BlkError;
 use rdrive::Device;
 use spin::Mutex;
 
 use super::DmaImpl;
 
+#[cfg(feature = "phytium-blk")]
+mod phytium;
+#[cfg(feature = "sdmmc")]
+mod rockchip;
 mod virtio;
 
 pub struct Block {

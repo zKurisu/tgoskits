@@ -6,15 +6,18 @@ use alloc::{
 };
 use core::ptr::NonNull;
 
-use axdriver_block::BlockDriverOps;
-use axerrno::AxError;
-use axplat::mem::PhysAddr;
+use ax_driver_block::BlockDriverOps;
+use ax_errno::AxError;
+use ax_memory_addr::PAGE_SIZE_4K;
+use ax_plat::mem::PhysAddr;
 use heapless::Vec;
-use memory_addr::PAGE_SIZE_4K;
 use rdrive::probe::OnProbeError;
 use spin::Mutex;
 
 mod pci;
+#[cfg(feature = "serial")]
+mod serial;
+mod soc;
 
 pub mod blk;
 
