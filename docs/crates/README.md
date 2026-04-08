@@ -136,7 +136,7 @@
 | `lazyinit` | 组件层 | `components/lazyinit` | 0 | 17 | [查看](./lazyinit.md) |
 | `linked_list_r4l` | 组件层 | `components/linked_list_r4l` | 0 | 1 | [查看](./linked_list_r4l.md) |
 | `memory_addr` | 组件层 | `components/axmm_crates/memory_addr` | 0 | 24 | [查看](./memory_addr.md) |
-| `memory_set` | 组件层 | `components/axmm_crates/memory_set` | 2 | 3 | [查看](./memory_set.md) |
+| `ax-memory-set` | 组件层 | `components/axmm_crates/memory_set` | 2 | 3 | [查看](./ax-memory-set.md) |
 | `mingo` | ArceOS 层 | `os/arceos/tools/raspi4/chainloader` | 0 | 0 | [查看](./mingo.md) |
 | `page_table_entry` | 组件层 | `components/page_table_multiarch/page_table_entry` | 1 | 12 | [查看](./page_table_entry.md) |
 | `page_table_multiarch` | 组件层 | `components/page_table_multiarch/page_table_multiarch` | 3 | 7 | [查看](./page_table_multiarch.md) |
