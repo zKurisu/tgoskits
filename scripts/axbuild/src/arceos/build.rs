@@ -597,12 +597,24 @@ fn ensure_ax_config_gen_installed() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    warn!("`ax-config-gen` not found, installing `ax-config-gen` via cargo");
+    let workspace_root = workspace_root_path()?;
+    let ax_config_gen_dir = workspace_root.join("components/axconfig-gen/axconfig-gen");
+
+    warn!(
+        "`ax-config-gen` not found, installing from local path {}",
+        ax_config_gen_dir.display()
+    );
     Command::new("cargo")
         .arg("install")
-        .arg("ax-config-gen")
+        .arg("--path")
+        .arg(&ax_config_gen_dir)
         .exec()
-        .context("failed to install ax-config-gen")?;
+        .with_context(|| {
+            format!(
+                "failed to install ax-config-gen from {}",
+                ax_config_gen_dir.display()
+            )
+        })?;
     Ok(())
 }
 
