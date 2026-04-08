@@ -1,4 +1,4 @@
-# `axdriver_pci` 技术文档
+# `ax-driver-pci` 技术文档
 
 > 路径：`components/axdriver_crates/axdriver_pci`
 > 类型：库 crate
@@ -6,7 +6,7 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`os/arceos/modules/axdriver/src/bus/pci.rs`、`os/arceos/modules/axdriver/src/virtio.rs`
 
-`axdriver_pci` 的定位非常清晰：它是 `ax-driver` 体系里的 PCI 总线访问辅助层。它不负责把设备按类别聚合，也不负责实现具体网卡、块设备或显示设备驱动；它提供的是 PCI 配置空间相关类型的统一来源，以及一个很小但很关键的 `PciRangeAllocator`，供上层为未分配地址的 PCI BAR 安排 MMIO 窗口。
+`ax-driver-pci` 的定位非常清晰：它是 `ax-driver` 体系里的 PCI 总线访问辅助层。它不负责把设备按类别聚合，也不负责实现具体网卡、块设备或显示设备驱动；它提供的是 PCI 配置空间相关类型的统一来源，以及一个很小但很关键的 `PciRangeAllocator`，供上层为未分配地址的 PCI BAR 安排 MMIO 窗口。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
@@ -50,14 +50,14 @@
 
 这说明：
 
-- `axdriver_pci` 负责的是“访问和分配”。
+- `ax-driver-pci` 负责的是“访问和分配”。
 - `ax-driver` 才负责“枚举和派发”。
 
 ### 1.5 与 VirtIO 路径的关系
-`ax_driver_virtio::probe_pci_device()` 和 `os/arceos/modules/axdriver/src/virtio.rs` 会继续基于 `PciRoot`、`DeviceFunction`、`DeviceFunctionInfo` 做 VirtIO PCI 设备识别。因此 `axdriver_pci` 也是 VirtIO PCI 探测路径的底层依赖。
+`ax_driver_virtio::probe_pci_device()` 和 `os/arceos/modules/axdriver/src/virtio.rs` 会继续基于 `PciRoot`、`DeviceFunction`、`DeviceFunctionInfo` 做 VirtIO PCI 设备识别。因此 `ax-driver-pci` 也是 VirtIO PCI 探测路径的底层依赖。
 
 ### 1.6 边界澄清
-最关键的边界是：**`axdriver_pci` 是 PCI 总线访问辅助层，不是通用驱动聚合层，也不是完整的 PCI 设备管理子系统。**
+最关键的边界是：**`ax-driver-pci` 是 PCI 总线访问辅助层，不是通用驱动聚合层，也不是完整的 PCI 设备管理子系统。**
 
 ## 2. 核心功能说明
 ### 2.1 主要能力
@@ -93,7 +93,7 @@
 
 ## 4. 开发指南
 ### 4.1 何时应改这里
-适合修改 `axdriver_pci` 的场景包括：
+适合修改 `ax-driver-pci` 的场景包括：
 
 - 需要给所有 PCI 设备路径新增通用辅助逻辑。
 - 需要补充 BAR 分配或 PCI 配置访问相关能力。
@@ -140,4 +140,4 @@ ArceOS 是当前仓库里唯一明确的直接主线消费者。`ax-driver` 的 
 StarryOS 若复用 ArceOS 底层驱动栈，会间接依赖本 crate；但当前仓库中没有看到它作为 StarryOS 独立 PCI 子系统直接存在。
 
 ### 6.3 Axvisor
-当前仓库里没有看到 Axvisor 直接依赖 `axdriver_pci`。它不是 Axvisor 的宿主 PCI 管理核心，也不是虚拟 PCI 设备框架。
+当前仓库里没有看到 Axvisor 直接依赖 `ax-driver-pci`。它不是 Axvisor 的宿主 PCI 管理核心，也不是虚拟 PCI 设备框架。

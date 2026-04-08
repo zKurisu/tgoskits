@@ -660,10 +660,10 @@ dependencies = [
  "ax-driver-display",
  "ax-driver-input",
  "ax-driver-net",
+ "ax-driver-pci",
  "ax-driver-virtio",
  "ax-driver-vsock",
  "ax-hal",
- "axdriver_pci",
  "axerrno",
  "axplat-dyn",
  "cfg-if",
@@ -711,6 +711,13 @@ dependencies = [
  "ixgbe-driver",
  "log",
  "spin 0.9.8",
+]
+
+[[package]]
+name = "ax-driver-pci"
+version = "0.3.4"
+dependencies = [
+ "virtio-drivers",
 ]
 
 [[package]]
@@ -1444,13 +1451,6 @@ dependencies = [
  "axerrno",
  "axvmconfig",
  "serde",
-]
-
-[[package]]
-name = "axdriver_pci"
-version = "0.3.4"
-dependencies = [
- "virtio-drivers",
 ]
 
 [[package]]

@@ -19,7 +19,7 @@
 这意味着它在驱动栈中的位置很明确：
 
 - 它不是 `ax-driver` 那样的驱动聚合层。
-- 它不是 `axdriver_pci` 或 `ax-driver-virtio` 那样的总线/传输层。
+- 它不是 `ax-driver-pci` 或 `ax-driver-virtio` 那样的总线/传输层。
 - 它也不是 `axdriver_block`、`axdriver_net` 这类具体设备类别层。
 
 它解决的问题只有一个：**让不同类别驱动至少拥有一致的“名字、类别、错误类型和可选 IRQ”表达方式。**
@@ -51,7 +51,7 @@
 | --- | --- | --- |
 | `ax-driver-base` | 设备类别、错误模型、最小元信息接口 | 设备探测、总线枚举、DMA、具体读写协议 |
 | `axdriver_block`/`net`/`display`/`input`/`vsock` | 各设备类别专属 trait 与少量实现 | 全局设备聚合、系统初始化时序 |
-| `axdriver_pci` / `ax-driver-virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
+| `ax-driver-pci` / `ax-driver-virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
 | `ax-driver` | 设备探测、分类、聚合、向上交付 `AllDevices` | 重新定义基础错误与元信息接口 |
 
 这里最关键的边界澄清是：**`ax-driver-base` 只是公共契约层，不是驱动管理器。**

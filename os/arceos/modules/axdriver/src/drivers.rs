@@ -4,7 +4,7 @@
 
 use ax_driver_base::DeviceType;
 #[cfg(feature = "bus-pci")]
-use axdriver_pci::{DeviceFunction, DeviceFunctionInfo, PciRoot};
+use ax_driver_pci::{DeviceFunction, DeviceFunctionInfo, PciRoot};
 
 pub use super::dummy::*;
 use crate::AxDeviceEnum;
@@ -119,9 +119,9 @@ cfg_if::cfg_if! {
         impl DriverProbe for IxgbeDriver {
             #[cfg(bus = "pci")]
             fn probe_pci(
-                root: &mut axdriver_pci::PciRoot,
-                bdf: axdriver_pci::DeviceFunction,
-                dev_info: &axdriver_pci::DeviceFunctionInfo,
+                root: &mut ax_driver_pci::PciRoot,
+                bdf: ax_driver_pci::DeviceFunction,
+                dev_info: &ax_driver_pci::DeviceFunctionInfo,
             ) -> Option<crate::AxDeviceEnum> {
                 use ax_driver_net::ixgbe::{INTEL_82599, INTEL_VEND, IxgbeNic};
                 if dev_info.vendor_id == INTEL_VEND && dev_info.device_id == INTEL_82599 {
@@ -135,7 +135,7 @@ cfg_if::cfg_if! {
                     const QS: usize = 1024;
                     let bar_info = root.bar_info(bdf, 0).unwrap();
                     match bar_info {
-                        axdriver_pci::BarInfo::Memory { address, size, .. } => {
+                        ax_driver_pci::BarInfo::Memory { address, size, .. } => {
                             let ixgbe_nic = IxgbeNic::<IxgbeHalImpl, QS, QN>::init(
                                 ax_hal::mem::phys_to_virt((address as usize).into()).into(),
                                 size as usize,
@@ -143,7 +143,7 @@ cfg_if::cfg_if! {
                             .expect("failed to initialize ixgbe device");
                             return Some(AxDeviceEnum::from_net(ixgbe_nic));
                         }
-                        axdriver_pci::BarInfo::IO { .. } => {
+                        ax_driver_pci::BarInfo::IO { .. } => {
                             error!("ixgbe: BAR0 is of I/O type");
                             return None;
                         }

@@ -13,7 +13,7 @@ repository = "https://github.com/arceos-org/arceos/tree/main/modules/axdriver"
 
 [features]
 bus-mmio = []
-bus-pci = ["dep:axdriver_pci", "dep:ax-hal", "dep:ax-config"]
+bus-pci = ["dep:ax-driver-pci", "dep:ax-hal", "dep:ax-config"]
 net = ["dep:ax-driver-net"]
 block = ["dep:ax-driver-block"]
 display = ["dep:ax-driver-display"]
@@ -51,7 +51,7 @@ ax-driver-block = { workspace = true, optional = true }
 ax-driver-display = { workspace = true, optional = true }
 ax-driver-input = { workspace = true, optional = true }
 ax-driver-net = { workspace = true, optional = true }
-axdriver_pci = { workspace = true, optional = true }
+ax-driver-pci = { workspace = true, optional = true }
 ax-driver-virtio = { workspace = true, optional = true }
 ax-driver-vsock = { workspace = true, optional = true }
 axerrno = { workspace = true, optional = true }

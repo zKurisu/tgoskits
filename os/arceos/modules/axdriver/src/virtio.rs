@@ -10,7 +10,7 @@ use crate::{AxDeviceEnum, drivers::DriverProbe};
 
 cfg_if! {
     if #[cfg(bus = "pci")] {
-        use axdriver_pci::{PciRoot, DeviceFunction, DeviceFunctionInfo};
+        use ax_driver_pci::{PciRoot, DeviceFunction, DeviceFunctionInfo};
         type VirtIoTransport = ax_driver_virtio::PciTransport;
     } else if #[cfg(bus =  "mmio")] {
         type VirtIoTransport = ax_driver_virtio::MmioTransport;

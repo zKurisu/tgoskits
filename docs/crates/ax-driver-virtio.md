@@ -18,7 +18,7 @@
 它在分层中的位置很明确：
 
 - 不是 `ax-driver`：不负责枚举所有设备，也不维护 `AllDevices`。
-- 不是 `axdriver_pci`：不负责扫描总线或分配 BAR。
+- 不是 `ax-driver-pci`：不负责扫描总线或分配 BAR。
 - 也不是 `virtio-drivers` 本身：它提供的是 ArceOS 风格的包装接口，而非原始 VirtIO API。
 
 ### 1.2 模块划分

@@ -32,7 +32,7 @@ ax-driver-block = { path = "axdriver_block", version = "0.3.4" }
 ax-driver-display = { path = "axdriver_display", version = "0.3.4" }
 ax-driver-input = { path = "axdriver_input", version = "0.3.4" }
 ax-driver-net = { path = "axdriver_net", version = "0.3.4" }
-axdriver_pci = { path = "axdriver_pci", version = "0.3.4" }
+ax-driver-pci = { path = "axdriver_pci", version = "0.3.4" }
 ax-driver-virtio = { path = "axdriver_virtio", version = "0.3.4" }
 ax-driver-vsock = { path = "axdriver_vsock", version = "0.3.4" }
 log = "0.4"
