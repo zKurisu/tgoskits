@@ -54,12 +54,12 @@ graph LR
 ### 3.2 间接本地依赖
 - `ax-cpumask`
 - `ax-crate-interface`
+- `ax-lazyinit`
 - `ax-memory-set`
 - `ax-page-table-entry`
 - `ax-page-table-multiarch`
 - `axvisor_api_proc`
 - `axvmconfig`
-- `lazyinit`
 
 ### 3.3 被依赖情况
 - `x86_vcpu`

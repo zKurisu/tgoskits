@@ -25,7 +25,7 @@ ax-handler-table
 ax-int-ratio
 ax-kernel-guard
 ax-kspin
-lazyinit
+ax-lazyinit
 ax-linked-list-r4l
 range-alloc-arceos
 riscv-h
