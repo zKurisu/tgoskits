@@ -354,7 +354,7 @@ mod tests {
             "axbacktrace",
             "lazyinit",
             "ax-sched",
-            "cap_access",
+            "ax-cap-access",
             "cpumask",
             "rsext4",
         ] {

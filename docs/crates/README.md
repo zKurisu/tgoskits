@@ -113,7 +113,7 @@
 | `axvmconfig` | 组件层 | `components/axvmconfig` | 1 | 4 | [查看](./axvmconfig.md) |
 | `bitmap-allocator` | 组件层 | `components/bitmap-allocator` | 0 | 1 | [查看](./bitmap-allocator.md) |
 | `bwbench-client` | ArceOS 层 | `os/arceos/tools/bwbench_client` | 0 | 0 | [查看](./bwbench-client.md) |
-| `cap_access` | 组件层 | `components/cap_access` | 0 | 1 | [查看](./cap_access.md) |
+| `ax-cap-access` | 组件层 | `components/cap_access` | 0 | 1 | [查看](./ax-cap-access.md) |
 | `cargo-axplat` | 组件层 | `components/axplat_crates/cargo-axplat` | 0 | 0 | [查看](./cargo-axplat.md) |
 | `cpumask` | 组件层 | `components/cpumask` | 0 | 4 | [查看](./cpumask.md) |
 | `crate_interface` | 组件层 | `components/crate_interface` | 0 | 22 | [查看](./crate_interface.md) |
