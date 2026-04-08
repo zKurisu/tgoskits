@@ -647,6 +647,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-ctor-bare"
+version = "0.4.1"
+dependencies = [
+ "ax-ctor-bare-macros",
+]
+
+[[package]]
 name = "ax-ctor-bare-macros"
 version = "0.4.1"
 dependencies = [
@@ -1337,6 +1344,7 @@ dependencies = [
  "ax-alloc",
  "ax-config",
  "ax-crate-interface",
+ "ax-ctor-bare",
  "ax-display",
  "ax-driver",
  "ax-fs",
@@ -1355,7 +1363,6 @@ dependencies = [
  "axklib",
  "cfg-if",
  "chrono",
- "ctor_bare",
  "indoc",
 ]
 
@@ -2819,13 +2826,6 @@ name = "ctor-proc-macro"
 version = "0.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "52560adf09603e58c9a7ee1fe1dcb95a16927b17c127f0ac02d6e768a0e25bc1"
-
-[[package]]
-name = "ctor_bare"
-version = "0.4.1"
-dependencies = [
- "ax-ctor-bare-macros",
-]
 
 [[package]]
 name = "cursive"
