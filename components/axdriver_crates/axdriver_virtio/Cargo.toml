@@ -3,7 +3,7 @@ name = "ax-driver-virtio"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
-description = "Wrappers of some devices in the `virtio-drivers` crate, that implement traits in the `axdriver_base` series crates"
+description = "Wrappers of some devices in the `virtio-drivers` crate, that implement traits in the `ax-driver-base` series crates"
 documentation = "https://arceos-org.github.io/axdriver_crates/axdriver_virtio"
 keywords = ["arceos", "driver", "virtio"]
 license.workspace = true
@@ -21,7 +21,7 @@ net = ["alloc", "ax-driver-net"]
 socket = ["alloc", "ax-driver-vsock"]
 
 [dependencies]
-axdriver_base = { version = "0.3.4" }
+ax-driver-base = { version = "0.3.4" }
 ax-driver-block = { version = "0.3.4", optional = true }
 ax-driver-display = { version = "0.3.4", optional = true }
 ax-driver-input = { version = "0.3.4", optional = true }

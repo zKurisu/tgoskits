@@ -1,5 +1,5 @@
+use ax_driver_base::{BaseDriverOps, DevResult, DeviceType};
 use ax_driver_vsock::{VsockConnId, VsockDriverEvent, VsockDriverOps};
-use axdriver_base::{BaseDriverOps, DevResult, DeviceType};
 use virtio_drivers::{
     Hal,
     device::socket::{

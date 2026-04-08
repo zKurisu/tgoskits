@@ -1,5 +1,5 @@
+use ax_driver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 use ax_driver_block::BlockDriverOps;
-use axdriver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 use rd_block::BlkError;
 use rdrive::Device;
 use spin::Mutex;

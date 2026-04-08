@@ -2,7 +2,7 @@
 
 Crates for building device driver subsystems in the `no_std` environment:
 
-- [axdriver_base](https://github.com/arceos-org/axdriver_crates/tree/main/axdriver_base): Common interfaces for all kinds of device drivers.
+- [ax-driver-base](https://github.com/arceos-org/axdriver_crates/tree/main/axdriver_base): Common interfaces for all kinds of device drivers.
 - [axdriver_block](https://github.com/arceos-org/axdriver_crates/tree/main/axdriver_block): Common traits and types for block storage drivers.
 - [axdriver_net](https://github.com/arceos-org/axdriver_crates/tree/main/axdriver_net): Common traits and types for network device (NIC) drivers.
 - [axdriver_display](https://github.com/arceos-org/axdriver_crates/tree/main/axdriver_display): Common traits and types for graphics device drivers.

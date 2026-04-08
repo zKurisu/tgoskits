@@ -186,7 +186,7 @@ CURATED_DOCS = {
     "ax-runtime",
     "ax-mm",
     "ax-driver",
-    "axdriver_base",
+    "ax-driver-base",
     "ax-driver-block",
     "ax-driver-display",
     "ax-driver-input",

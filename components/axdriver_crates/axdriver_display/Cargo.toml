@@ -13,4 +13,4 @@ categories.workspace = true
 readme = "README.md"
 
 [dependencies]
-axdriver_base = { version = "0.3.4" }
+ax-driver-base = { version = "0.3.4" }

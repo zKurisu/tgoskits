@@ -4,10 +4,10 @@ use alloc::format;
 use core::{marker::PhantomData, ptr::NonNull};
 
 use ax_alloc::{UsageKind, global_allocator};
+use ax_driver_base::DeviceType;
 use ax_driver_block::BlockDriverOps;
 use ax_driver_virtio::{BufferDirection, MmioTransport, PhysAddr as VirtIoPhysAddr, VirtIoHal};
 use ax_plat::mem::{PhysAddr, phys_to_virt};
-use axdriver_base::DeviceType;
 use rdrive::{
     DriverGeneric, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
 };
@@ -149,20 +149,22 @@ impl rd_block::IQueue for BlockQueue {
     }
 }
 
-fn maping_dev_err_to_blk_err(err: axdriver_base::DevError) -> rd_block::BlkError {
+fn maping_dev_err_to_blk_err(err: ax_driver_base::DevError) -> rd_block::BlkError {
     match err {
-        axdriver_base::DevError::Again => rd_block::BlkError::Retry,
-        axdriver_base::DevError::AlreadyExists => {
+        ax_driver_base::DevError::Again => rd_block::BlkError::Retry,
+        ax_driver_base::DevError::AlreadyExists => {
             rd_block::BlkError::Other("Already exists".into())
         }
-        axdriver_base::DevError::BadState => rd_block::BlkError::Other("Bad internal state".into()),
-        axdriver_base::DevError::InvalidParam => {
+        ax_driver_base::DevError::BadState => {
+            rd_block::BlkError::Other("Bad internal state".into())
+        }
+        ax_driver_base::DevError::InvalidParam => {
             rd_block::BlkError::Other("Invalid parameter".into())
         }
-        axdriver_base::DevError::Io => rd_block::BlkError::Other("I/O error".into()),
-        axdriver_base::DevError::NoMemory => rd_block::BlkError::NoMemory,
-        axdriver_base::DevError::ResourceBusy => rd_block::BlkError::Other("Resource busy".into()),
-        axdriver_base::DevError::Unsupported => rd_block::BlkError::NotSupported,
+        ax_driver_base::DevError::Io => rd_block::BlkError::Other("I/O error".into()),
+        ax_driver_base::DevError::NoMemory => rd_block::BlkError::NoMemory,
+        ax_driver_base::DevError::ResourceBusy => rd_block::BlkError::Other("Resource busy".into()),
+        ax_driver_base::DevError::Unsupported => rd_block::BlkError::NotSupported,
     }
 }
 

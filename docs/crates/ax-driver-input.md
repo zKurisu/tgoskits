@@ -76,7 +76,7 @@
 ### 3.1 直接依赖
 | 依赖 | 作用 |
 | --- | --- |
-| `axdriver_base` | 基础设备信息和错误模型 |
+| `ax-driver-base` | 基础设备信息和错误模型 |
 | `strum` | 为 `EventType` 提供 `FromRepr` |
 
 ### 3.2 主要消费者

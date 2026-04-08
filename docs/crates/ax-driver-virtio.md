@@ -38,7 +38,7 @@
 | `MmioTransport` / `PciTransport` | VirtIO 设备的两条 transport 路径 |
 | `probe_mmio_device()` | 识别一段 MMIO 区间是否为支持的 VirtIO 设备 |
 | `probe_pci_device()` | 识别 PCI 设备是否为支持的 VirtIO 设备，并计算 IRQ |
-| `as_dev_type()` | 把 VirtIO 设备类型映射到 `axdriver_base::DeviceType` |
+| `as_dev_type()` | 把 VirtIO 设备类型映射到 `ax_driver_base::DeviceType` |
 
 ### 1.4 设备包装方式
 每个具体设备模块都做两件事：
@@ -113,7 +113,7 @@
 | 依赖 | 作用 |
 | --- | --- |
 | `virtio-drivers` | 提供底层 transport 和设备实现 |
-| `axdriver_base` | 提供统一设备类型和错误模型 |
+| `ax-driver-base` | 提供统一设备类型和错误模型 |
 | `axdriver_block` / `display` / `input` / `net` / `vsock` | 提供各类别 trait |
 | `log` | 初始化和错误日志 |
 

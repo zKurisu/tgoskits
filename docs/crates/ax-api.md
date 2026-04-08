@@ -67,7 +67,7 @@ graph LR
 - `ax-config-gen`
 - `ax-config-macros`
 - `ax-cpu`
-- `axdriver_base`
+- `ax-driver-base`
 - `axdriver_block`
 - `axdriver_display`
 - `axdriver_input`

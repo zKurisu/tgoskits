@@ -1,7 +1,7 @@
 use alloc::{borrow::ToOwned, string::String};
 
+use ax_driver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 use ax_driver_input::{Event, EventType, InputDeviceId, InputDriverOps};
-use axdriver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 use virtio_drivers::{
     Hal,
     device::input::{InputConfigSelect, VirtIOInput as InnerDev},

@@ -18,7 +18,7 @@
 
 它在分层上位于：
 
-- `axdriver_base` 之上：继承统一的 `BaseDriverOps`。
+- `ax-driver-base` 之上：继承统一的 `BaseDriverOps`。
 - 具体显示驱动之下：例如 `ax_driver_virtio::VirtIoGpuDev` 会实现它。
 - `ax-display` 之下：上层模块通过 `AxDisplayDevice` 使用它，而不是直接接触具体 GPU 驱动类型。
 
@@ -80,7 +80,7 @@
 ### 3.1 直接依赖
 | 依赖 | 作用 |
 | --- | --- |
-| `axdriver_base` | 提供 `BaseDriverOps`、`DeviceType`、`DevError` |
+| `ax-driver-base` | 提供 `BaseDriverOps`、`DeviceType`、`DevError` |
 
 ### 3.2 主要消费者
 - `components/axdriver_crates/axdriver_virtio`

@@ -655,6 +655,7 @@ dependencies = [
  "ax-alloc",
  "ax-config",
  "ax-dma",
+ "ax-driver-base",
  "ax-driver-block",
  "ax-driver-display",
  "ax-driver-input",
@@ -662,7 +663,6 @@ dependencies = [
  "ax-driver-virtio",
  "ax-driver-vsock",
  "ax-hal",
- "axdriver_base",
  "axdriver_pci",
  "axerrno",
  "axplat-dyn",
@@ -673,10 +673,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-driver-base"
+version = "0.3.4"
+
+[[package]]
 name = "ax-driver-block"
 version = "0.3.4"
 dependencies = [
- "axdriver_base",
+ "ax-driver-base",
  "bcm2835-sdhci",
  "log",
  "simple-ahci",
@@ -687,14 +691,14 @@ dependencies = [
 name = "ax-driver-display"
 version = "0.3.4"
 dependencies = [
- "axdriver_base",
+ "ax-driver-base",
 ]
 
 [[package]]
 name = "ax-driver-input"
 version = "0.3.4"
 dependencies = [
- "axdriver_base",
+ "ax-driver-base",
  "strum 0.27.2",
 ]
 
@@ -702,7 +706,7 @@ dependencies = [
 name = "ax-driver-net"
 version = "0.3.4"
 dependencies = [
- "axdriver_base",
+ "ax-driver-base",
  "fxmac_rs",
  "ixgbe-driver",
  "log",
@@ -713,12 +717,12 @@ dependencies = [
 name = "ax-driver-virtio"
 version = "0.3.4"
 dependencies = [
+ "ax-driver-base",
  "ax-driver-block",
  "ax-driver-display",
  "ax-driver-input",
  "ax-driver-net",
  "ax-driver-vsock",
- "axdriver_base",
  "log",
  "virtio-drivers",
 ]
@@ -727,7 +731,7 @@ dependencies = [
 name = "ax-driver-vsock"
 version = "0.3.4"
 dependencies = [
- "axdriver_base",
+ "ax-driver-base",
  "log",
 ]
 
@@ -1443,10 +1447,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axdriver_base"
-version = "0.3.4"
-
-[[package]]
 name = "axdriver_pci"
 version = "0.3.4"
 dependencies = [
@@ -1538,10 +1538,10 @@ dependencies = [
  "ax-alloc",
  "ax-config-macros",
  "ax-cpu",
+ "ax-driver-base",
  "ax-driver-block",
  "ax-driver-virtio",
  "ax-plat",
- "axdriver_base",
  "axerrno",
  "axklib",
  "dma-api 0.7.1",

@@ -46,7 +46,7 @@ default = ["bus-pci"]
 ax-alloc = { workspace = true, optional = true }
 ax-config = { workspace = true, optional = true }
 ax-dma = { workspace = true, optional = true }
-axdriver_base.workspace = true
+ax-driver-base.workspace = true
 ax-driver-block = { workspace = true, optional = true }
 ax-driver-display = { workspace = true, optional = true }
 ax-driver-input = { workspace = true, optional = true }

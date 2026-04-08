@@ -3,7 +3,7 @@
 #![no_std]
 
 #[doc(no_inline)]
-pub use axdriver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
+pub use ax_driver_base::{BaseDriverOps, DevError, DevResult, DeviceType};
 
 /// The information of the graphics device.
 #[derive(Debug, Clone, Copy)]

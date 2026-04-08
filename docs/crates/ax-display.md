@@ -57,7 +57,7 @@ graph LR
 - `ax-config-macros`
 - `ax-cpu`
 - `ax-dma`
-- `axdriver_base`
+- `ax-driver-base`
 - 另外还有 `41` 个同类项未在此展开
 
 ### 3.3 被依赖情况

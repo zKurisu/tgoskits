@@ -1,4 +1,4 @@
-# `axdriver_base` 技术文档
+# `ax-driver-base` 技术文档
 
 > 路径：`components/axdriver_crates/axdriver_base`
 > 类型：库 crate
@@ -6,11 +6,11 @@
 > 版本：`0.1.4-preview.3`
 > 文档依据：`Cargo.toml`、`README.md`、`src/lib.rs`、`os/arceos/modules/axdriver/src/prelude.rs`
 
-`axdriver_base` 是整个 `axdriver_crates` 体系的最小公共基座。它不负责探测设备、枚举总线、管理 DMA，也不组织 `AllDevices` 这样的设备聚合对象；它只把所有驱动都必须共享的设备分类、错误模型和基础元信息接口集中定义出来，供 `axdriver_block`、`axdriver_net`、`axdriver_display`、`axdriver_input`、`axdriver_vsock` 以及上层 `ax-driver` 聚合层复用。
+`ax-driver-base` 是整个 `axdriver_crates` 体系的最小公共基座。它不负责探测设备、枚举总线、管理 DMA，也不组织 `AllDevices` 这样的设备聚合对象；它只把所有驱动都必须共享的设备分类、错误模型和基础元信息接口集中定义出来，供 `axdriver_block`、`axdriver_net`、`axdriver_display`、`axdriver_input`、`axdriver_vsock` 以及上层 `ax-driver` 聚合层复用。
 
 ## 1. 架构设计分析
 ### 1.1 设计定位
-`axdriver_base` 的职责非常克制，核心只有三件事：
+`ax-driver-base` 的职责非常克制，核心只有三件事：
 
 - 用 `DeviceType` 给驱动实例贴上统一类别标签。
 - 用 `DevError` / `DevResult` 统一设备操作失败语义。
@@ -32,7 +32,7 @@
 | `DevResult<T>` | 设备操作统一返回类型 | `Result<T, DevError>` 的别名 |
 | `BaseDriverOps` | 所有设备的最小公共 trait | 是各类别 `*DriverOps` 的共同父接口 |
 
-`DeviceType` 当前覆盖 `Block`、`Char`、`Net`、`Display`、`Input`、`Vsock` 六类。其中 `Char` 在当前 `ax-driver` 聚合层里还没有对应容器字段，这也说明 `axdriver_base` 的枚举范围略大于当前 ArceOS 运行时实际接入面。
+`DeviceType` 当前覆盖 `Block`、`Char`、`Net`、`Display`、`Input`、`Vsock` 六类。其中 `Char` 在当前 `ax-driver` 聚合层里还没有对应容器字段，这也说明 `ax-driver-base` 的枚举范围略大于当前 ArceOS 运行时实际接入面。
 
 ### 1.3 接口约束
 `BaseDriverOps` 的接口极小：
@@ -49,12 +49,12 @@
 ### 1.4 与相邻层的边界
 | 层次 | 负责内容 | 不负责内容 |
 | --- | --- | --- |
-| `axdriver_base` | 设备类别、错误模型、最小元信息接口 | 设备探测、总线枚举、DMA、具体读写协议 |
+| `ax-driver-base` | 设备类别、错误模型、最小元信息接口 | 设备探测、总线枚举、DMA、具体读写协议 |
 | `axdriver_block`/`net`/`display`/`input`/`vsock` | 各设备类别专属 trait 与少量实现 | 全局设备聚合、系统初始化时序 |
 | `axdriver_pci` / `ax-driver-virtio` | 总线访问、传输探测和设备包装 | 跨类别统一错误模型定义 |
 | `ax-driver` | 设备探测、分类、聚合、向上交付 `AllDevices` | 重新定义基础错误与元信息接口 |
 
-这里最关键的边界澄清是：**`axdriver_base` 只是公共契约层，不是驱动管理器。**
+这里最关键的边界澄清是：**`ax-driver-base` 只是公共契约层，不是驱动管理器。**
 
 ## 2. 核心功能说明
 ### 2.1 主要能力
@@ -70,7 +70,7 @@
 2. 再实现本类别的专属 trait，例如 `BlockDriverOps` 或 `NetDriverOps`。
 3. 最终由 `ax-driver` 聚合层把实例包装进 `AxDeviceEnum` 或 `Ax*Device`。
 
-也就是说，`axdriver_base` 只定义“底座接口”，并不规定设备如何初始化、如何被发现、如何被消费。
+也就是说，`ax-driver-base` 只定义“底座接口”，并不规定设备如何初始化、如何被发现、如何被消费。
 
 ### 2.3 当前实现特征
 - 该 crate 没有 Cargo feature，也没有内部子模块拆分，说明它被刻意维持在最稳定、最少变化的一层。
@@ -79,7 +79,7 @@
 
 ## 3. 依赖关系图谱
 ### 3.1 直接依赖
-`axdriver_base` 当前没有本地或外部 Rust 依赖；`Cargo.toml` 的 `[dependencies]` 为空。这进一步说明它只承担语言层面的共性抽象。
+`ax-driver-base` 当前没有本地或外部 Rust 依赖；`Cargo.toml` 的 `[dependencies]` 为空。这进一步说明它只承担语言层面的共性抽象。
 
 ### 3.2 主要消费者
 - `axdriver_block`
@@ -100,7 +100,7 @@
 
 ## 4. 开发指南
 ### 4.1 何时应该修改本 crate
-只有在以下场景才应改动 `axdriver_base`：
+只有在以下场景才应改动 `ax-driver-base`：
 
 - 需要新增一种全新的设备类别。
 - 需要为所有驱动统一引入新的基础元信息。
@@ -140,7 +140,7 @@
 这是当前仓库中最主要的直接消费方。ArceOS 通过 `ax-driver` 聚合层把它作为整个驱动体系的公共接口底座。
 
 ### 6.2 StarryOS
-StarryOS 不是直接围绕 `axdriver_base` 写业务逻辑，而是通过共享的 `ax-driver`、`ax-display`、`ax-input` 等模块间接复用这套基础契约。
+StarryOS 不是直接围绕 `ax-driver-base` 写业务逻辑，而是通过共享的 `ax-driver`、`ax-display`、`ax-input` 等模块间接复用这套基础契约。
 
 ### 6.3 Axvisor
-当前仓库里没有看到 Axvisor 直接把 `axdriver_base` 当作其核心设备管理接口。即便未来在某些宿主兼容路径中复用它，它也只会扮演“共享驱动契约层”，而不是虚拟机设备分发中心。
+当前仓库里没有看到 Axvisor 直接把 `ax-driver-base` 当作其核心设备管理接口。即便未来在某些宿主兼容路径中复用它，它也只会扮演“共享驱动契约层”，而不是虚拟机设备分发中心。

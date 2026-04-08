@@ -1,9 +1,9 @@
 use core::{marker::PhantomData, ptr::NonNull};
 
 use ax_alloc::{UsageKind, global_allocator};
+use ax_driver_base::{BaseDriverOps, DevResult, DeviceType};
 use ax_driver_virtio::{BufferDirection, PhysAddr, VirtIoHal};
 use ax_hal::mem::{phys_to_virt, virt_to_phys};
-use axdriver_base::{BaseDriverOps, DevResult, DeviceType};
 use cfg_if::cfg_if;
 
 use crate::{AxDeviceEnum, drivers::DriverProbe};

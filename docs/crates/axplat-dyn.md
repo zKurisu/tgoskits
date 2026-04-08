@@ -198,7 +198,7 @@ flowchart TD
 | `axklib` | 提供 `iomap()` 等内核内存映射辅助 |
 | `ax-alloc` | 为 `VirtIO` DMA 路径提供页分配 |
 | `rdrive`、`rd-block` | 提供运行时设备探测与块设备抽象 |
-| `axdriver_block`、`ax-driver-virtio`、`axdriver_base` | 将探测结果转接为 ArceOS 驱动接口 |
+| `axdriver_block`、`ax-driver-virtio`、`ax-driver-base` | 将探测结果转接为 ArceOS 驱动接口 |
 | `dma-api` | 为设备 DMA 提供抽象接口 |
 | `heapless`、`spin` | 用于固定容量缓存与锁/一次初始化结构 |
 

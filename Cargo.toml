@@ -208,7 +208,7 @@ axplat-x86-qemu-q35 = { path = "platform/x86-qemu-q35" }
 axplat-dyn = { path = "platform/axplat-dyn" }
 
 # === axdriver ===
-axdriver_base = { path = "components/axdriver_crates/axdriver_base" }
+ax-driver-base = { path = "components/axdriver_crates/axdriver_base" }
 ax-driver-block = { path = "components/axdriver_crates/axdriver_block" }
 ax-driver-display = { path = "components/axdriver_crates/axdriver_display" }
 ax-driver-net = { path = "components/axdriver_crates/axdriver_net" }
@@ -356,7 +356,7 @@ ax-plat-aarch64-raspi = { version = "0.5.1", path = "components/axplat_crates/pl
 ax-plat-loongarch64-qemu-virt = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-loongarch64-qemu-virt" }
 ax-plat-riscv64-qemu-virt = { version = "0.5.0", path = "components/axplat_crates/platforms/axplat-riscv64-qemu-virt" }
 ax-plat-x86-pc = { version = "0.5.1", path = "components/axplat_crates/platforms/axplat-x86-pc" }
-axdriver_base = { version = "0.3.4", path = "components/axdriver_crates/axdriver_base" }
+ax-driver-base = { version = "0.3.4", path = "components/axdriver_crates/axdriver_base" }
 ax-driver-block = { version = "0.3.4", path = "components/axdriver_crates/axdriver_block" }
 ax-driver-display = { version = "0.3.4", path = "components/axdriver_crates/axdriver_display" }
 ax-driver-input = { version = "0.3.4", path = "components/axdriver_crates/axdriver_input" }

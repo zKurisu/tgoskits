@@ -100,7 +100,7 @@
 ### 3.1 直接依赖
 | 依赖 | 作用 |
 | --- | --- |
-| `axdriver_base` | 提供共性设备接口与错误类型 |
+| `ax-driver-base` | 提供共性设备接口与错误类型 |
 | `spin` | 保护 `NetBufPool` 空闲链表 |
 | `fxmac_rs` | `fxmac` 实现的底层库 |
 | `ixgbe-driver` | `ixgbe` 实现的底层库 |

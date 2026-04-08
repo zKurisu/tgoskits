@@ -127,7 +127,7 @@ graph LR
     ax-hal["ax-hal"] --> ax-driver
     ax-alloc["ax-alloc"] --> ax-driver
     ax_dma["ax-dma"] --> ax-driver
-    axdriver_base["axdriver_base / axdriver_*"] --> ax-driver
+    ax_driver_base["ax-driver-base / axdriver_*"] --> ax-driver
     axplat_dyn["axplat-dyn (dyn 模式)"] --> ax-driver
 
     ax-driver --> ax-runtime["ax-runtime"]
@@ -139,7 +139,7 @@ graph LR
 ```
 
 ### 3.1 关键直接依赖
-- `axdriver_base` 与各 `axdriver_*` crate：提供设备 trait 与具体驱动实现。
+- `ax-driver-base` 与各 `axdriver_*` crate：提供设备 trait 与具体驱动实现。
 - `axconfig`：提供 PCI ECAM、MMIO ranges、SDMMC 基址等平台配置。
 - `ax-hal`：提供地址转换、总线相关底层能力。
 - `ax-alloc`、`ax-dma`：服务 VirtIO 和网卡 DMA 路径。

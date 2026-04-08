@@ -72,7 +72,7 @@ graph LR
 - `ax-config-macros`
 - `ax-cpu`
 - `ax-dma`
-- `axdriver_base`
+- `ax-driver-base`
 - `axdriver_block`
 - `axdriver_display`
 - `axdriver_input`

@@ -2,7 +2,7 @@
 
 #![allow(unused_imports, dead_code)]
 
-use axdriver_base::DeviceType;
+use ax_driver_base::DeviceType;
 #[cfg(feature = "bus-pci")]
 use axdriver_pci::{DeviceFunction, DeviceFunctionInfo, PciRoot};
 
