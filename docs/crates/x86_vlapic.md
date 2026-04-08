@@ -54,7 +54,7 @@ graph LR
 ### 3.2 间接本地依赖
 - `axvisor_api_proc`
 - `axvmconfig`
-- `cpumask`
+- `ax-cpumask`
 - `crate_interface`
 - `lazyinit`
 - `memory_set`
