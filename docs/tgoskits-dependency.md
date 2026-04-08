@@ -166,7 +166,7 @@ flowchart TB
         bitmap_allocator["bitmap-allocator\nv0.4.1"]
         cargo_axplat["cargo-axplat\nv0.4.5"]
         cpumask["cpumask\nv0.3.0"]
-        crate_interface["crate_interface\nv0.5.0"]
+        ax-crate-interface["ax-crate-interface\nv0.5.0"]
         crate_interface_lite["crate_interface_lite\nv0.3.0"]
         ctor_bare["ctor_bare\nv0.4.1"]
         ctor_bare_macros["ctor_bare_macros\nv0.4.1"]
@@ -999,7 +999,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `bitmap-allocator` | `0.4.1` | `components/bitmap-allocator` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `cargo-axplat` | `0.4.5` | `components/axplat_crates/cargo-axplat` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `cpumask` | `0.3.0` | `components/cpumask` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `crate_interface` | `0.5.0` | `components/crate_interface` |
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-crate-interface` | `0.5.0` | `components/crate_interface` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `crate_interface_lite` | `0.3.0` | `components/crate_interface/crate_interface_lite` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `ctor_bare_macros` | `0.4.1` | `components/ctor_bare/ctor_bare_macros` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `handler_table` | `0.3.2` | `components/handler_table` |
@@ -1261,7 +1261,7 @@ flowchart TB
 | `bwbench-client` | 0 | A raw socket benchmark client. | — | — |
 | `cargo-axplat` | 0 | Manages hardware platform packages using `axplat` | — | — |
 | `cpumask` | 0 | CPU mask library in Rust | — | `ax-task` `axvisor` `axvisor_api` `axvm` |
-| `crate_interface` | 0 | Provides a way to define an interface (trait) in … | — | `arceos-fs-shell` `ax-driver` `ax-log` `ax-plat` `ax-plat-macros` `ax-plat-riscv64-qemu-virt` `ax-runtime` `ax-task` `axvisor` `axvisor_api` `define-simple-traits` `define-weak-traits` `fxmac_rs` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `kernel_guard` `riscv_vcpu` `test-simple` `test-weak` `test-weak-partial` `x86_vcpu` |
+| `ax-crate-interface` | 0 | Provides a way to define an interface (trait) in … | — | `arceos-fs-shell` `ax-driver` `ax-log` `ax-plat` `ax-plat-macros` `ax-plat-riscv64-qemu-virt` `ax-runtime` `ax-task` `axvisor` `axvisor_api` `define-simple-traits` `define-weak-traits` `fxmac_rs` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` `kernel_guard` `riscv_vcpu` `test-simple` `test-weak` `test-weak-partial` `x86_vcpu` |
 | `crate_interface_lite` | 0 | Provides a way to define an interface (trait) in … | — | — |
 | `ctor_bare` | 1 | Register constructor functions for Rust at compli… | `ctor_bare_macros` | `ax-runtime` |
 | `ctor_bare_macros` | 0 | Macros for registering constructor functions for … | — | `ctor_bare` |
@@ -2190,4 +2190,3 @@ flowchart TB
 | `multiboot` `0.8.0` | Library to access multiboot structures. | `ax-plat-x86-pc` `axplat-x86-qemu-q35` | — |
 | `vm-fdt` `0.3.0` | Crate for writing Flattened Devicetree blobs | — | — |
 | `xmas-elf` `0.9.1` | Library for parsing and navigating ELF data; zero-allocation, type-safe. | `starry-kernel` | — |
-

@@ -35,14 +35,14 @@ graph LR
     current --> ax_fs_ramfs["ax-fs-ramfs"]
     current --> ax_std["ax-std"]
     current --> axfs_vfs["ax-fs-vfs"]
-    current --> crate_interface["crate_interface"]
+    current --> ax_crate_interface["ax-crate-interface"]
 ```
 
 ### 3.1 直接与间接依赖
 - `ax-fs-ramfs`
 - `ax-std`
 - `axfs_vfs`
-- `crate_interface`
+- `ax-crate-interface`
 
 ### 3.2 间接本地依赖
 - `arm_pl011`

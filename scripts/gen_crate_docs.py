@@ -259,7 +259,7 @@ CURATED_DOCS = {
     "arm_vgic",
     "arm_pl011",
     "arm_pl031",
-    "crate_interface",
+    "ax-crate-interface",
     "crate_interface_lite",
     "define-simple-traits",
     "define-weak-traits",

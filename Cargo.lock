@@ -255,10 +255,10 @@ dependencies = [
 name = "arceos-fs-shell"
 version = "0.3.0"
 dependencies = [
+ "ax-crate-interface",
  "ax-fs-ramfs",
  "ax-fs-vfs",
  "ax-std",
- "crate_interface 0.5.0",
 ]
 
 [[package]]
@@ -631,6 +631,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ax-crate-interface"
+version = "0.5.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "ax-display"
 version = "0.5.0"
 dependencies = [
@@ -661,6 +670,7 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "ax-config",
+ "ax-crate-interface",
  "ax-dma",
  "ax-driver-base",
  "ax-driver-block",
@@ -674,7 +684,6 @@ dependencies = [
  "ax-hal",
  "axplat-dyn",
  "cfg-if",
- "crate_interface 0.5.0",
  "log",
  "smallvec",
 ]
@@ -967,11 +976,11 @@ dependencies = [
 name = "ax-log"
 version = "0.5.0"
 dependencies = [
+ "ax-crate-interface",
  "ax-kspin",
  "ax-log",
  "cfg-if",
  "chrono",
- "crate_interface 0.5.0",
  "log",
 ]
 
@@ -1047,11 +1056,11 @@ dependencies = [
 name = "ax-plat"
 version = "0.5.1"
 dependencies = [
+ "ax-crate-interface",
  "ax-kspin",
  "ax-plat-macros",
  "bitflags 2.11.0",
  "const-str",
- "crate_interface 0.5.0",
  "handler_table 0.3.2",
  "memory_addr 0.6.1",
  "percpu 0.4.3",
@@ -1156,10 +1165,10 @@ version = "0.5.0"
 dependencies = [
  "ax-config-macros",
  "ax-cpu",
+ "ax-crate-interface",
  "ax-kspin",
  "ax-plat",
  "axvisor_api",
- "crate_interface 0.5.0",
  "lazyinit 0.4.2",
  "log",
  "riscv 0.14.0",
@@ -1238,6 +1247,7 @@ version = "0.5.0"
 dependencies = [
  "ax-alloc",
  "ax-config",
+ "ax-crate-interface",
  "ax-display",
  "ax-driver",
  "ax-fs",
@@ -1255,7 +1265,6 @@ dependencies = [
  "axklib",
  "cfg-if",
  "chrono",
- "crate_interface 0.5.0",
  "ctor_bare",
  "indoc",
  "percpu 0.4.3",
@@ -1305,6 +1314,7 @@ name = "ax-task"
 version = "0.5.0"
 dependencies = [
  "ax-config",
+ "ax-crate-interface",
  "ax-errno",
  "ax-hal",
  "ax-kspin",
@@ -1313,7 +1323,6 @@ dependencies = [
  "axpoll",
  "cfg-if",
  "cpumask",
- "crate_interface 0.5.0",
  "extern-trait",
  "futures-util",
  "kernel_guard 0.3.3",
@@ -1714,6 +1723,7 @@ dependencies = [
  "anyhow",
  "arm-gic-driver 0.17.0",
  "ax-config",
+ "ax-crate-interface",
  "ax-errno",
  "ax-hal",
  "ax-kspin",
@@ -1734,7 +1744,6 @@ dependencies = [
  "cfg-if",
  "clap",
  "cpumask",
- "crate_interface 0.5.0",
  "extern-trait",
  "fdt-parser",
  "hashbrown 0.14.5",
@@ -1772,10 +1781,10 @@ dependencies = [
 name = "axvisor_api"
 version = "0.5.0"
 dependencies = [
+ "ax-crate-interface",
  "axaddrspace",
  "axvisor_api_proc",
  "cpumask",
- "crate_interface 0.5.0",
  "memory_addr 0.6.1",
 ]
 
@@ -2508,15 +2517,6 @@ name = "crate_interface"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51e5c7109dea31fc91ab584e99752baa997f76d46e49bab0a17b5e9679248df7"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "crate_interface"
-version = "0.5.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3678,7 +3678,7 @@ name = "fxmac_rs"
 version = "0.4.1"
 dependencies = [
  "aarch64-cpu 10.0.0",
- "crate_interface 0.5.0",
+ "ax-crate-interface",
  "log",
 ]
 
@@ -4548,8 +4548,8 @@ dependencies = [
 name = "kernel_guard"
 version = "0.3.3"
 dependencies = [
+ "ax-crate-interface",
  "cfg-if",
- "crate_interface 0.5.0",
 ]
 
 [[package]]
@@ -6441,6 +6441,7 @@ dependencies = [
 name = "riscv_vcpu"
 version = "0.5.0"
 dependencies = [
+ "ax-crate-interface",
  "ax-errno",
  "axaddrspace",
  "axvcpu",
@@ -6448,7 +6449,6 @@ dependencies = [
  "bit_field",
  "bitflags 2.11.0",
  "cfg-if",
- "crate_interface 0.5.0",
  "log",
  "memoffset",
  "memory_addr 0.6.1",
@@ -9401,6 +9401,7 @@ dependencies = [
 name = "x86_vcpu"
 version = "0.5.0"
 dependencies = [
+ "ax-crate-interface",
  "ax-errno",
  "axaddrspace",
  "axdevice_base",
@@ -9409,7 +9410,6 @@ dependencies = [
  "bit_field",
  "bitflags 2.11.0",
  "cfg-if",
- "crate_interface 0.5.0",
  "log",
  "memory_addr 0.6.1",
  "numeric-enum-macro",
