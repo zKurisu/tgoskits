@@ -231,7 +231,7 @@ crate_interface_lite = { path = "components/crate_interface/crate_interface_lite
 
 # === ctor_bare ===
 ctor_bare = { path = "components/ctor_bare/ctor_bare" }
-ctor_bare_macros = { path = "components/ctor_bare/ctor_bare_macros" }
+ax-ctor-bare-macros = { path = "components/ctor_bare/ctor_bare_macros" }
 
 # === memory (axmm_crates) ===
 memory_addr = { path = "components/axmm_crates/memory_addr" }

@@ -173,7 +173,7 @@ flowchart TB
         cargo_axplat["cargo-axplat\nv0.4.5"]
         crate_interface_lite["crate_interface_lite\nv0.3.0"]
         ctor_bare["ctor_bare\nv0.4.1"]
-        ctor_bare_macros["ctor_bare_macros\nv0.4.1"]
+        ax_ctor_bare_macros["ax-ctor-bare-macros\nv0.4.1"]
         define_simple_traits["define-simple-traits\nv0.3.0"]
         define_weak_traits["define-weak-traits\nv0.3.0"]
         fxmac_rs["fxmac_rs\nv0.4.1"]
@@ -631,7 +631,7 @@ flowchart TB
     axvm --> riscv_vcpu
     axvm --> x86_vcpu
     axvmconfig --> ax_errno
-    ctor_bare --> ctor_bare_macros
+    ctor_bare --> ax_ctor_bare_macros
     define_simple_traits --> ax_crate_interface
     define_weak_traits --> ax_crate_interface
     fxmac_rs --> ax_crate_interface
@@ -859,7 +859,7 @@ flowchart TB
     class cargo_axplat cat_comp
     class crate_interface_lite cat_comp
     class ctor_bare cat_comp
-    class ctor_bare_macros cat_comp
+    class ax_ctor_bare_macros cat_comp
     class define_simple_traits cat_comp
     class define_weak_traits cat_comp
     class deptool cat_arceos
@@ -956,7 +956,7 @@ flowchart TB
     L1["<b>层级 1</b><br/>堆叠层（依赖更底层 crate）<br/>`ax-allocator`、`ax-config-macros`、`ax-driver-block`、`ax-driver-display`、`ax-driver-input`、`ax-driver-vsock`、`ax-fs-vfs`、`ax-io`、`ax-kernel-guard`、`ax-memory-set`、`ax-page-table-entry`、`ax-plat-macros`、`ax-sched`、`axfs-ng-vfs`、`axhvc`、`axklib`、`axvmconfig`、`ctor_bare`、`define-simple-traits`、`define-weak-traits` …共23个"]
     classDef ls1 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
     class L1 ls1
-    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`axbacktrace`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cargo-axplat`、`crate_interface_lite`、`ctor_bare_macros`、`deptool`、`handler_table` …共33个"]
+    L0["<b>层级 0</b><br/>基础层（无仓库内直接依赖）<br/>`aarch64_sysreg`、`ax-arm-pl011`、`ax-arm-pl031`、`ax-cap-access`、`ax-config-gen`、`ax-cpumask`、`ax-crate-interface`、`ax-driver-base`、`ax-driver-pci`、`ax-errno`、`axbacktrace`、`axpoll`、`axvisor_api_proc`、`bitmap-allocator`、`bwbench-client`、`cargo-axplat`、`crate_interface_lite`、`ax-ctor-bare-macros`、`deptool`、`handler_table` …共33个"]
     classDef ls0 fill:#eceff1,stroke:#455a64,stroke-width:2px,color:#000
     class L0 ls0
     L16 --> L15
@@ -1001,7 +1001,7 @@ flowchart TB
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `bitmap-allocator` | `0.4.1` | `components/bitmap-allocator` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `cargo-axplat` | `0.4.5` | `components/axplat_crates/cargo-axplat` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `crate_interface_lite` | `0.3.0` | `components/crate_interface/crate_interface_lite` |
-| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ctor_bare_macros` | `0.4.1` | `components/ctor_bare/ctor_bare_macros` |
+| 0 | 基础层（无仓库内直接依赖） | 组件层 | `ax-ctor-bare-macros` | `0.4.1` | `components/ctor_bare/ctor_bare_macros` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `handler_table` | `0.3.2` | `components/handler_table` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `int_ratio` | `0.3.2` | `components/int_ratio` |
 | 0 | 基础层（无仓库内直接依赖） | 组件层 | `lazyinit` | `0.4.2` | `components/lazyinit` |
@@ -1135,7 +1135,7 @@ flowchart TB
 
 | 层级 | 数 | 成员 |
 |------|-----|------|
-| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-driver-base` `ax-driver-pci` `ax-errno` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `crate_interface_lite` `ctor_bare_macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
+| 0 | 33 | `aarch64_sysreg` `ax-arm-pl011` `ax-arm-pl031` `ax-cap-access` `ax-config-gen` `ax-cpumask` `ax-crate-interface` `ax-driver-base` `ax-driver-pci` `ax-errno` `axbacktrace` `axpoll` `axvisor_api_proc` `bitmap-allocator` `bwbench-client` `cargo-axplat` `crate_interface_lite` `ax-ctor-bare-macros` `deptool` `handler_table` `int_ratio` `lazyinit` `linked_list_r4l` `memory_addr` `mingo` `percpu_macros` `range-alloc-arceos` `riscv-h` `riscv_plic` `rsext4` `smoltcp` `tgmath` `timer_list` |
 | 1 | 23 | `ax-allocator` `ax-config-macros` `ax-driver-block` `ax-driver-display` `ax-driver-input` `ax-driver-vsock` `ax-fs-vfs` `ax-io` `ax-kernel-guard` `ax-memory-set` `ax-page-table-entry` `ax-plat-macros` `ax-sched` `axfs-ng-vfs` `axhvc` `axklib` `axvmconfig` `ctor_bare` `define-simple-traits` `define-weak-traits` `fxmac_rs` `smoltcp-fuzz` `starry-vm` |
 | 2 | 11 | `ax-config` `ax-driver-net` `ax-fs-devfs` `ax-fs-ramfs` `ax-kspin` `ax-page-table-multiarch` `ax-percpu` `axbuild` `impl-simple-traits` `impl-weak-partial` `impl-weak-traits` |
 | 3 | 12 | `ax-alloc` `ax-cpu` `ax-driver-virtio` `ax-log` `ax-plat` `axaddrspace` `scope-local` `starry-process` `test-simple` `test-weak` `test-weak-partial` `tg-xtask` |
@@ -1267,8 +1267,8 @@ flowchart TB
 | `bwbench-client` | 0 | A raw socket benchmark client. | — | — |
 | `cargo-axplat` | 0 | Manages hardware platform packages using `axplat` | — | — |
 | `crate_interface_lite` | 0 | Provides a way to define an interface (trait) in … | — | — |
-| `ctor_bare` | 1 | Register constructor functions for Rust at compli… | `ctor_bare_macros` | `ax-runtime` |
-| `ctor_bare_macros` | 0 | Macros for registering constructor functions for … | — | `ctor_bare` |
+| `ctor_bare` | 1 | Register constructor functions for Rust at compli… | `ax-ctor-bare-macros` | `ax-runtime` |
+| `ax-ctor-bare-macros` | 0 | Macros for registering constructor functions for … | — | `ctor_bare` |
 | `define-simple-traits` | 1 | Define simple traits without default implementati… | `ax-crate-interface` | `impl-simple-traits` `test-simple` |
 | `define-weak-traits` | 1 | Define traits with default implementations using … | `ax-crate-interface` | `impl-weak-partial` `impl-weak-traits` `test-weak` `test-weak-partial` |
 | `deptool` | 0 | ArceOS 配套工具与辅助程序 | — | — |
@@ -1384,59 +1384,59 @@ flowchart TB
 
 | 外部组件（name version） | 简介（≤100字） | 直接依赖该外部的内部组件 | 该外部直接依赖的内部组件 |
 |--------------------------|----------------|---------------------------|---------------------------|
-| `borsh-derive` `1.6.1` | — | — | — |
-| `bytecheck` `0.6.12` | — | — | — |
-| `bytecheck_derive` `0.6.12` | — | — | — |
-| `bytemuck_derive` `1.10.2` | — | — | — |
-| `ctor-proc-macro` `0.0.6` | — | — | — |
-| `ctor-proc-macro` `0.0.7` | — | — | — |
-| `darling` `0.13.4` | — | — | — |
-| `darling` `0.20.11` | — | — | — |
-| `darling` `0.21.3` | — | — | — |
-| `darling` `0.23.0` | — | — | — |
-| `darling_core` `0.13.4` | — | — | — |
-| `darling_core` `0.20.11` | — | — | — |
-| `darling_core` `0.21.3` | — | — | — |
-| `darling_core` `0.23.0` | — | — | — |
-| `darling_macro` `0.13.4` | — | — | — |
-| `darling_macro` `0.20.11` | — | — | — |
-| `darling_macro` `0.21.3` | — | — | — |
-| `darling_macro` `0.23.0` | — | — | — |
-| `derive_more` `2.1.1` | — | `starry-signal` | — |
-| `derive_more-impl` `2.1.1` | — | — | — |
-| `dtor-proc-macro` `0.0.5` | — | — | — |
-| `dtor-proc-macro` `0.0.6` | — | — | — |
-| `enum-map-derive` `0.17.0` | — | — | — |
-| `enumerable_derive` `1.2.0` | — | — | — |
-| `enumset_derive` `0.14.0` | — | — | — |
-| `heck` `0.4.1` | — | — | — |
-| `heck` `0.5.0` | — | — | — |
-| `num-derive` `0.4.2` | — | — | — |
-| `num_enum_derive` `0.7.6` | — | — | — |
-| `paste` `1.0.15` | — | `axbacktrace` `x86_vcpu` `x86_vlapic` | — |
-| `pest_derive` `2.8.6` | — | — | — |
-| `proc-macro-crate` `3.5.0` | — | `axvisor_api_proc` | — |
-| `proc-macro-error-attr2` `2.0.0` | — | — | — |
-| `proc-macro-error2` `2.0.1` | — | — | — |
-| `proc-macro2` `1.0.106` | — | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor_api_proc` `ctor_bare_macros` `percpu_macros` | — |
-| `proc-macro2-diagnostics` `0.10.1` | — | — | — |
-| `ptr_meta_derive` `0.1.4` | — | — | — |
-| `ptr_meta_derive` `0.3.1` | — | — | — |
-| `quote` `1.0.45` | — | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor` `axvisor_api_proc` `ctor_bare_macros` `percpu_macros` | — |
-| `regex-syntax` `0.8.10` | — | — | — |
-| `rkyv_derive` `0.7.46` | — | — | — |
-| `schemars_derive` `1.2.1` | — | — | — |
-| `syn` `1.0.109` | — | — | — |
-| `syn` `2.0.117` | — | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor` `axvisor_api_proc` `ctor_bare_macros` `percpu_macros` | — |
-| `sync_wrapper` `1.0.2` | — | — | — |
-| `synstructure` `0.13.2` | — | — | — |
-| `version_check` `0.9.5` | — | — | — |
-| `wezterm-dynamic-derive` `0.1.1` | — | — | — |
-| `yoke-derive` `0.7.5` | — | — | — |
-| `zerocopy-derive` `0.7.35` | — | — | — |
-| `zerocopy-derive` `0.8.48` | — | — | — |
-| `zerofrom-derive` `0.1.7` | — | — | — |
-| `zerovec-derive` `0.10.3` | — | — | — |
+| `borsh-derive` `1.6.1` | Binary Object Representation Serializer for Hashing | — | — |
+| `bytecheck` `0.6.12` | Derive macro for bytecheck | — | — |
+| `bytecheck_derive` `0.6.12` | Derive macro for bytecheck | — | — |
+| `bytemuck_derive` `1.10.2` | derive proc-macros for `bytemuck` | — | — |
+| `ctor-proc-macro` `0.0.6` | proc-macro support for the ctor crate | — | — |
+| `ctor-proc-macro` `0.0.7` | proc-macro support for the ctor crate | — | — |
+| `darling` `0.13.4` | A proc-macro library for reading attributes into structs when implementing custom derives. | — | — |
+| `darling` `0.20.11` | A proc-macro library for reading attributes into structs when implementing custom derives. | — | — |
+| `darling` `0.21.3` | A proc-macro library for reading attributes into structs when implementing custom derives. | — | — |
+| `darling` `0.23.0` | A proc-macro library for reading attributes into structs when implementing custom derives. | — | — |
+| `darling_core` `0.13.4` | Helper crate for proc-macro library for reading attributes into structs when implementing custom de… | — | — |
+| `darling_core` `0.20.11` | Helper crate for proc-macro library for reading attributes into structs when implementing custom de… | — | — |
+| `darling_core` `0.21.3` | Helper crate for proc-macro library for reading attributes into structs when implementing custom de… | — | — |
+| `darling_core` `0.23.0` | Helper crate for proc-macro library for reading attributes into structs when implementing custom de… | — | — |
+| `darling_macro` `0.13.4` | Internal support for a proc-macro library for reading attributes into structs when implementing cus… | — | — |
+| `darling_macro` `0.20.11` | Internal support for a proc-macro library for reading attributes into structs when implementing cus… | — | — |
+| `darling_macro` `0.21.3` | Internal support for a proc-macro library for reading attributes into structs when implementing cus… | — | — |
+| `darling_macro` `0.23.0` | Internal support for a proc-macro library for reading attributes into structs when implementing cus… | — | — |
+| `derive_more` `2.1.1` | Adds #[derive(x)] macros for more traits | `starry-signal` | — |
+| `derive_more-impl` `2.1.1` | Internal implementation of `derive_more` crate | — | — |
+| `dtor-proc-macro` `0.0.5` | proc-macro support for the dtor crate | — | — |
+| `dtor-proc-macro` `0.0.6` | proc-macro support for the dtor crate | — | — |
+| `enum-map-derive` `0.17.0` | Macros 1.1 implementation of #[derive(Enum)] | — | — |
+| `enumerable_derive` `1.2.0` | A proc-macro helping you to enumerate all possible values of a enum or struct | — | — |
+| `enumset_derive` `0.14.0` | An internal helper crate for enumset. Not public API. | — | — |
+| `heck` `0.4.1` | heck is a case conversion library. | — | — |
+| `heck` `0.5.0` | heck is a case conversion library. | — | — |
+| `num-derive` `0.4.2` | Numeric syntax extensions | — | — |
+| `num_enum_derive` `0.7.6` | Internal implementation details for ::num_enum (Procedural macros to make inter-operation between p… | — | — |
+| `paste` `1.0.15` | Macros for all your token pasting needs | `axbacktrace` `x86_vcpu` `x86_vlapic` | — |
+| `pest_derive` `2.8.6` | pest's derive macro | — | — |
+| `proc-macro-crate` `3.5.0` | Replacement for crate (macro_rules keyword) in proc-macros | `axvisor_api_proc` | — |
+| `proc-macro-error-attr2` `2.0.0` | Attribute macro for the proc-macro-error2 crate | — | — |
+| `proc-macro-error2` `2.0.1` | Almost drop-in replacement to panics in proc-macros | — | — |
+| `proc-macro2` `1.0.106` | A substitute implementation of the compiler's `proc_macro` API to decouple token-based libraries fr… | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor_api_proc` `ax-ctor-bare-macros` `percpu_macros` | — |
+| `proc-macro2-diagnostics` `0.10.1` | Diagnostics for proc-macro2. | — | — |
+| `ptr_meta_derive` `0.1.4` | Macros for ptr_meta | — | — |
+| `ptr_meta_derive` `0.3.1` | Proc macros for ptr_meta | — | — |
+| `quote` `1.0.45` | Quasi-quoting macro quote!(...) | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor` `axvisor_api_proc` `ax-ctor-bare-macros` `percpu_macros` | — |
+| `regex-syntax` `0.8.10` | A regular expression parser. | — | — |
+| `rkyv_derive` `0.7.46` | Derive macro for rkyv | — | — |
+| `schemars_derive` `1.2.1` | Macros for #[derive(JsonSchema)], for use with schemars | — | — |
+| `syn` `1.0.109` | Parser for Rust source code | — | — |
+| `syn` `2.0.117` | Parser for Rust source code | `ax-config-macros` `ax-crate-interface` `ax-plat-macros` `axvisor` `axvisor_api_proc` `ax-ctor-bare-macros` `percpu_macros` | — |
+| `sync_wrapper` `1.0.2` | A tool for enlisting the compiler's help in proving the absence of concurrency | — | — |
+| `synstructure` `0.13.2` | Helper methods and macros for custom derives | — | — |
+| `version_check` `0.9.5` | Tiny crate to check the version of the installed/running rustc. | — | — |
+| `wezterm-dynamic-derive` `0.1.1` | config serialization for wezterm via dynamic json-like data values | — | — |
+| `yoke-derive` `0.7.5` | Custom derive for the yoke crate | — | — |
+| `zerocopy-derive` `0.7.35` | Custom derive for traits from the zerocopy crate | — | — |
+| `zerocopy-derive` `0.8.48` | Custom derive for traits from the zerocopy crate | — | — |
+| `zerofrom-derive` `0.1.7` | Custom derive for the zerofrom crate | — | — |
+| `zerovec-derive` `0.10.3` | Custom derive for the zerovec crate | — | — |
 
 
 #### 嵌入式/裸机
@@ -2183,12 +2183,11 @@ flowchart TB
 
 | 外部组件（name version） | 简介（≤100字） | 直接依赖该外部的内部组件 | 该外部直接依赖的内部组件 |
 |--------------------------|----------------|---------------------------|---------------------------|
-| `fdt-edit` `0.2.3` | — | `axplat-dyn` | — |
-| `fdt-parser` `0.4.19` | — | `ax-hal` `axvisor` | — |
-| `fdt-raw` `0.3.0` | — | — | — |
-| `fitimage` `0.1.3` | — | — | — |
-| `kernel-elf-parser` `0.3.4` | — | `starry-kernel` | — |
-| `multiboot` `0.8.0` | — | `ax-plat-x86-pc` `axplat-x86-qemu-q35` | — |
-| `vm-fdt` `0.3.0` | — | — | — |
-| `xmas-elf` `0.9.1` | — | `starry-kernel` | — |
-
+| `fdt-edit` `0.2.3` | A high-level library for creating, editing, and encoding Flattened Device Tree (FDT) structures | `axplat-dyn` | — |
+| `fdt-parser` `0.4.19` | A crate for parsing FDT | `ax-hal` `axvisor` | — |
+| `fdt-raw` `0.3.0` | A low-level, no-std compatible library for parsing Flattened Device Tree (FDT) binary files | — | — |
+| `fitimage` `0.1.3` | A Rust library for creating U-Boot compatible FIT images | — | — |
+| `kernel-elf-parser` `0.3.4` | An lightweight ELF parser that parses ELF files and converts them into information needed for kerne… | `starry-kernel` | — |
+| `multiboot` `0.8.0` | Library to access multiboot structures. | `ax-plat-x86-pc` `axplat-x86-qemu-q35` | — |
+| `vm-fdt` `0.3.0` | Crate for writing Flattened Devicetree blobs | — | — |
+| `xmas-elf` `0.9.1` | Library for parsing and navigating ELF data; zero-allocation, type-safe. | `starry-kernel` | — |
