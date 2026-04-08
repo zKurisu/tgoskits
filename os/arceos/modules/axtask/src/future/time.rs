@@ -88,7 +88,7 @@ pub(crate) fn check_timer_events() {
 
 fn with_current<R>(f: impl FnOnce(&mut TimerRuntime) -> R) -> R {
     // FIXME: optimize `ax-percpu` crate! should disable irq and provide more apis
-    let _g = kernel_guard::NoPreemptIrqSave::new();
+    let _g = ax_kernel_guard::NoPreemptIrqSave::new();
     f(unsafe { TIMER_RUNTIME.current_ref_mut_raw() })
 }
 
