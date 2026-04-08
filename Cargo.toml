@@ -234,7 +234,7 @@ ctor_bare = { path = "components/ctor_bare/ctor_bare" }
 ctor_bare_macros = { path = "components/ctor_bare/ctor_bare_macros" }
 
 # === memory (axmm_crates) ===
-memory_addr = { path = "components/axmm_crates/memory_addr" }
+ax-memory-addr = { path = "components/axmm_crates/memory_addr" }
 ax-memory-set = { path = "components/axmm_crates/memory_set" }
 
 # === bitmap-allocator ===
@@ -388,7 +388,7 @@ starry-vm = { version = "0.5.0", path = "components/starry-vm" }
 lazy_static = { version = "1.5", features = ["spin_no_std"] }
 lock_api = { version = "0.4", default-features = false }
 log = "0.4"
-memory_addr = { version = "0.6.1", path = "components/axmm_crates/memory_addr" }
+ax-memory-addr = { version = "0.6.1", path = "components/axmm_crates/memory_addr" }
 ax-page-table-multiarch = { version = "0.8.1", features = ["ax-errno"], path = "components/page_table_multiarch/page_table_multiarch" }
 ax-percpu = { version = "0.4.3", path = "components/percpu/percpu" }
 scope-local = { version = "0.3.2", path = "components/scope-local" }
