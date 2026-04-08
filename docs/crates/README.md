@@ -50,6 +50,7 @@
 | `ax-crate-interface` | 组件层 | `components/crate_interface` | 0 | 22 | [查看](./ax-crate-interface.md) |
 | `ax-crate-interface-lite` | 组件层 | `components/crate_interface/crate_interface_lite` | 0 | 0 | [查看](./ax-crate-interface-lite.md) |
 | `ax-ctor-bare` | 组件层 | `components/ctor_bare/ctor_bare` | 1 | 1 | [查看](./ax-ctor-bare.md) |
+| `ax-ctor-bare-macros` | 组件层 | `components/ctor_bare/ctor_bare_macros` | 0 | 1 | [查看](./ax-ctor-bare-macros.md) |
 | `ax-display` | ArceOS 层 | `os/arceos/modules/axdisplay` | 3 | 4 | [查看](./ax-display.md) |
 | `ax-dma` | ArceOS 层 | `os/arceos/modules/axdma` | 7 | 2 | [查看](./ax-dma.md) |
 | `ax-driver` | ArceOS 层 | `os/arceos/modules/axdriver` | 15 | 10 | [查看](./ax-driver.md) |
@@ -92,6 +93,7 @@
 | `ax-page-table-entry` | 组件层 | `components/page_table_multiarch/page_table_entry` | 1 | 12 | [查看](./ax-page-table-entry.md) |
 | `ax-page-table-multiarch` | 组件层 | `components/page_table_multiarch/page_table_multiarch` | 3 | 7 | [查看](./ax-page-table-multiarch.md) |
 | `ax-percpu` | 组件层 | `components/percpu/percpu` | 2 | 17 | [查看](./ax-percpu.md) |
+| `ax-percpu-macros` | 组件层 | `components/percpu/percpu_macros` | 0 | 1 | [查看](./ax-percpu-macros.md) |
 | `ax-plat` | 组件层 | `components/axplat_crates/axplat` | 6 | 15 | [查看](./ax-plat.md) |
 | `ax-plat-aarch64-bsta1000b` | 组件层 | `components/axplat_crates/platforms/axplat-aarch64-bsta1000b` | 6 | 1 | [查看](./ax-plat-aarch64-bsta1000b.md) |
 | `ax-plat-aarch64-peripherals` | 组件层 | `components/axplat_crates/platforms/axplat-aarch64-peripherals` | 7 | 4 | [查看](./ax-plat-aarch64-peripherals.md) |
@@ -130,7 +132,6 @@
 | `bitmap-allocator` | 组件层 | `components/bitmap-allocator` | 0 | 1 | [查看](./bitmap-allocator.md) |
 | `bwbench-client` | ArceOS 层 | `os/arceos/tools/bwbench_client` | 0 | 0 | [查看](./bwbench-client.md) |
 | `cargo-axplat` | 组件层 | `components/axplat_crates/cargo-axplat` | 0 | 0 | [查看](./cargo-axplat.md) |
-| `ctor_bare_macros` | 组件层 | `components/ctor_bare/ctor_bare_macros` | 0 | 1 | [查看](./ctor_bare_macros.md) |
 | `define-simple-traits` | 组件层 | `components/crate_interface/test_crates/define-simple-traits` | 1 | 2 | [查看](./define-simple-traits.md) |
 | `define-weak-traits` | 组件层 | `components/crate_interface/test_crates/define-weak-traits` | 1 | 4 | [查看](./define-weak-traits.md) |
 | `deptool` | ArceOS 层 | `os/arceos/tools/deptool` | 0 | 0 | [查看](./deptool.md) |
@@ -141,7 +142,6 @@
 | `impl-weak-traits` | 组件层 | `components/crate_interface/test_crates/impl-weak-traits` | 2 | 1 | [查看](./impl-weak-traits.md) |
 | `irq-kernel` | 组件层 | `components/axplat_crates/examples/irq-kernel` | 7 | 0 | [查看](./irq-kernel.md) |
 | `mingo` | ArceOS 层 | `os/arceos/tools/raspi4/chainloader` | 0 | 0 | [查看](./mingo.md) |
-| `percpu_macros` | 组件层 | `components/percpu/percpu_macros` | 0 | 1 | [查看](./percpu_macros.md) |
 | `range-alloc-arceos` | 组件层 | `components/range-alloc-arceos` | 0 | 1 | [查看](./range-alloc-arceos.md) |
 | `riscv-h` | 组件层 | `components/riscv-h` | 0 | 2 | [查看](./riscv-h.md) |
 | `riscv_plic` | 组件层 | `components/riscv_plic` | 0 | 1 | [查看](./riscv_plic.md) |
