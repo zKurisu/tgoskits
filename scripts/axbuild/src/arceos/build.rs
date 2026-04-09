@@ -534,9 +534,13 @@ fn linker_platform_name(platform_package: &str) -> &str {
 }
 
 fn resolve_platform_config_path(app_dir: &Path, platform_package: &str) -> anyhow::Result<PathBuf> {
+    let workspace_root = workspace_root_path()?;
+    let root_manifest = workspace_root.join("Cargo.toml");
     let output = Command::new("cargo")
         .arg("axplat")
         .arg("info")
+        .arg("--manifest-path")
+        .arg(&root_manifest)
         .arg("-C")
         .arg(app_dir)
         .arg("-c")
