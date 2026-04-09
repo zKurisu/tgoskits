@@ -5,9 +5,9 @@ use anyhow::anyhow;
 use super::{
     ARCEOS_SNAPSHOT_FILE, AppContext, ArceosCommandSnapshot, ArceosQemuSnapshot,
     ArceosUbootSnapshot, AxvisorCliArgs, AxvisorCommandSnapshot, AxvisorQemuSnapshot,
-    AxvisorUbootSnapshot, BuildCliArgs, DEFAULT_ARCEOS_TARGET, ResolvedAxvisorRequest,
-    ResolvedBuildRequest, ResolvedStarryRequest, STARRY_PACKAGE, StarryCliArgs,
-    StarryCommandSnapshot, StarryQemuSnapshot, StarryUbootSnapshot,
+    AxvisorUbootSnapshot, BuildCliArgs, ResolvedAxvisorRequest, ResolvedBuildRequest,
+    ResolvedStarryRequest, STARRY_PACKAGE, StarryCliArgs, StarryCommandSnapshot,
+    StarryQemuSnapshot, StarryUbootSnapshot, resolve_arceos_arch_and_target,
     resolve_axvisor_arch_and_target, resolve_starry_arch_and_target,
 };
 
@@ -36,11 +36,21 @@ impl AppContext {
                     ARCEOS_SNAPSHOT_FILE
                 )
             })?;
-        let target = cli
-            .target
-            .clone()
-            .or_else(|| snapshot.target.clone())
-            .unwrap_or_else(|| DEFAULT_ARCEOS_TARGET.to_string());
+        let effective_arch = cli.arch.clone().or_else(|| {
+            if cli.target.is_some() {
+                None
+            } else {
+                snapshot.arch.clone()
+            }
+        });
+        let effective_target = cli.target.clone().or_else(|| {
+            if cli.arch.is_some() {
+                None
+            } else {
+                snapshot.target.clone()
+            }
+        });
+        let (arch, target) = resolve_arceos_arch_and_target(effective_arch, effective_target)?;
         let plat_dyn = cli.plat_dyn.or(snapshot.plat_dyn);
         let runtime_paths = self.resolve_runtime_paths(
             qemu_config,
@@ -53,6 +63,7 @@ impl AppContext {
 
         let request = ResolvedBuildRequest {
             package: package.clone(),
+            arch: arch.clone(),
             target: target.clone(),
             plat_dyn,
             build_info_path,
@@ -62,6 +73,7 @@ impl AppContext {
 
         let snapshot = ArceosCommandSnapshot {
             package: Some(package),
+            arch: Some(arch),
             target: Some(target),
             plat_dyn,
             qemu: ArceosQemuSnapshot {
