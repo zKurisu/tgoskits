@@ -339,7 +339,8 @@ uboot_config = "configs/uboot.toml"
     assert_eq!(request.plat_dyn, None);
     assert_eq!(
         request.build_info_path,
-        root.path().join("os/axvisor/.build.toml")
+        root.path()
+            .join("os/axvisor/.build-aarch64-unknown-none-softfloat.toml")
     );
     assert_eq!(
         request.qemu_config,
@@ -358,7 +359,9 @@ uboot_config = "configs/uboot.toml"
     );
     assert_eq!(
         snapshot.config,
-        Some(PathBuf::from("os/axvisor/.build.toml"))
+        Some(PathBuf::from(
+            "os/axvisor/.build-aarch64-unknown-none-softfloat.toml"
+        ))
     );
     assert_eq!(snapshot.arch.as_deref(), Some(DEFAULT_AXVISOR_ARCH));
     assert_eq!(snapshot.target.as_deref(), Some(DEFAULT_AXVISOR_TARGET));
@@ -400,6 +403,38 @@ fn prepare_axvisor_request_resolves_target_from_arch() {
     );
     assert_eq!(snapshot.arch.as_deref(), Some("x86_64"));
     assert_eq!(snapshot.target.as_deref(), Some("x86_64-unknown-none"));
+}
+
+#[test]
+fn prepare_axvisor_request_rewrites_stale_generated_snapshot_config_path() {
+    let root = tempdir().unwrap();
+    fs::write(
+        root.path().join(AXVISOR_SNAPSHOT_FILE),
+        r#"
+config = "os/axvisor/.build-riscv64gc-unknown-none-elf.toml"
+arch = "aarch64"
+target = "aarch64-unknown-none-softfloat"
+"#,
+    )
+    .unwrap();
+
+    let mut app = test_app_context(root.path());
+
+    let (request, snapshot) = app
+        .prepare_axvisor_request(AxvisorCliArgs::default(), None, None)
+        .unwrap();
+
+    assert_eq!(
+        request.build_info_path,
+        root.path()
+            .join("os/axvisor/.build-aarch64-unknown-none-softfloat.toml")
+    );
+    assert_eq!(
+        snapshot.config,
+        Some(PathBuf::from(
+            "os/axvisor/.build-aarch64-unknown-none-softfloat.toml"
+        ))
+    );
 }
 
 #[test]
