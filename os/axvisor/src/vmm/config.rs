@@ -226,7 +226,7 @@ pub fn init_guest_vm(raw_cfg: &str) -> AxResult<usize> {
 fn config_guest_address(vm: &VM, main_memory: &VMMemoryRegion) {
     const MB: usize = 1024 * 1024;
     vm.with_config(|config| {
-        if main_memory.is_identical() {
+        if main_memory.is_identical() && main_memory.needs_dealloc {
             debug!(
                 "Adjusting kernel load address from {:#x} to {:#x}",
                 config.image_config.kernel_load_gpa, main_memory.gpa
