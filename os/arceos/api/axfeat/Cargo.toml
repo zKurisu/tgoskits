@@ -1,12 +1,11 @@
 [package]
 name = "ax-feat"
 version.workspace = true
+repository = "https://github.com/rcore-os/tgoskits"
 edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 description = "Top-level feature selection for ArceOS"
 license.workspace = true
-homepage.workspace = true
-repository = "https://github.com/arceos-org/arceos/tree/main/api/axfeat"
 
 [features]
 default = []

@@ -8,7 +8,6 @@ authors = [
 ]
 description = "A Linux-compatible OS kernel built on ArceOS unikernel"
 edition.workspace = true
-homepage.workspace = true
 license.workspace = true
 name = "starryos"
 repository.workspace = true

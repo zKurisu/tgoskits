@@ -1,14 +1,12 @@
 [package]
 name = "ax-fs-vfs"
 description = "Virtual filesystem interfaces used by ArceOS"
-documentation = "https://docs.rs/axfs_vfs"
 keywords = ["arceos", "filesystem", "vfs"]
 edition.workspace = true
 version = "0.3.2"
+repository.workspace = true
 authors.workspace = true
 license.workspace = true
-homepage.workspace = true
-repository.workspace = true
 categories.workspace = true
 
 [features]

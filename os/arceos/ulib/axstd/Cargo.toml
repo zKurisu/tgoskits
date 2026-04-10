@@ -1,6 +1,7 @@
 [package]
 name = "ax-std"
 version.workspace = true
+repository = "https://github.com/rcore-os/tgoskits"
 edition.workspace = true
 authors = [
     "Yuekai Jia <equation618@gmail.com>",
@@ -12,8 +13,6 @@ authors = [
 ]
 description = "ArceOS user library with an interface similar to rust std"
 license.workspace = true
-homepage.workspace = true
-repository = "https://github.com/arceos-org/arceos/tree/main/ulib/axstd"
 
 [features]
 default = []
