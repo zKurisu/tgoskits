@@ -1,12 +1,11 @@
 [package]
 name = "ax-alloc"
 version.workspace = true
+repository = "https://github.com/rcore-os/tgoskits"
 edition.workspace = true
 authors = ["Yuekai Jia <equation618@gmail.com>"]
 description = "ArceOS global memory allocator"
-homepage.workspace = true
 license.workspace = true
-repository = "https://github.com/arceos-org/arceos/tree/main/modules/axalloc"
 
 [features]
 default = ["tlsf", "ax-allocator/page-alloc-256m"]
