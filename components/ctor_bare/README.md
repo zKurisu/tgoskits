@@ -1,66 +1,81 @@
-# ax-ctor-bare
+<h1 align="center">ax-ctor-bare-macros</h1>
 
-[![Crates.io](https://img.shields.io/crates/v/ax-ctor-bare)](https://crates.io/crates/ax-ctor-bare)
-[![Docs.rs](https://docs.rs/ax-ctor-bare/badge.svg)](https://docs.rs/ax-ctor-bare)
-[![CI](https://github.com/arceos-org/ctor_bare/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/arceos-org/ctor_bare/actions/workflows/ci.yml)
+<p align="center">Macros for registering constructor functions for Rust under no_std</p>
 
+<div align="center">
 
-Module initialization functions for Rust (like __attribute__((constructor)) in C/C++) under no_std.
+[![Crates.io](https://img.shields.io/crates/v/ax-ctor-bare-macros.svg)](https://crates.io/crates/ax-ctor-bare-macros)
+[![Docs.rs](https://docs.rs/ax-ctor-bare-macros/badge.svg)](https://docs.rs/ax-ctor-bare-macros)
+[![Rust](https://img.shields.io/badge/edition-2024-orange.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
+</div>
 
-After registering a constructor function, a function pointer pointing to it will be stored in the `.init_array` section.
+English | [中文](README_CN.md)
 
+# Introduction
 
-It can support Linux, MacOS and other systems, and can be also used in `no_std` environments when developing your own kernel.
+`ax-ctor-bare-macros` provides Macros for registering constructor functions for Rust under no_std. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+## Quick Start
 
-In Linux, Windows, MacOS and other systems, the `.init_array` section is a default section to store initialization functions. When the program starts, the system will call all functions in the `.init_array` section in order.
+### Installation
 
+Add this crate to your `Cargo.toml`:
 
-When you are running your own operating system, you can call `ax_ctor_bare::call_ctors` to invoke all registered constructor functions.
+```toml
+[dependencies]
+ax-ctor-bare-macros = "0.4.1"
+```
 
-## Usage
+### Run Check and Test
+
+```bash
+# Enter the crate directory
+cd components/ctor_bare/ctor_bare_macros
+
+# Format code
+cargo fmt --all
+
+# Run clippy
+cargo clippy --all-targets --all-features
+
+# Run tests
+cargo test --all-features
+
+# Build documentation
+cargo doc --no-deps
+```
+
+## Integration
+
+### Example
 
 ```rust
-use ax_ctor_bare::register_ctor;
-#[register_ctor]
-fn hello_world() {
-    println!("Hello, world!");
-}
-
-static MAX_NUM: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
-
-#[register_ctor]
-fn set_max_num() {
-    MAX_NUM.store(20, std::sync::atomic::Ordering::Relaxed);
-}
+use ax_ctor_bare_macros as _;
 
 fn main() {
-    assert_eq!(MAX_NUM.load(std::sync::atomic::Ordering::Relaxed), 20);
+    // Integrate `ax-ctor-bare-macros` into your project here.
 }
 ```
 
-Because the `.init_array` section is a default section to store initialization functions in Linux and some other systems, it will be included in the linker script of compilers like GCC and Clang.
+### Documentation
 
+Generate and view API documentation:
 
-**However**, if you are using a custom linker script, you need to **add the `.init_array` section and map them in the page table manually**, so that these functions can be executed correctly. You can add the following line to your linker script as a reference:
-
-```test, ignore
-.init_array : ALIGN(4K) {
-    PROVIDE_HIDDEN (__init_array_start = .);
-    *(.init_array .init_array.*)
-    PROVIDE_HIDDEN (__init_array_end = .);
-    . = ALIGN(4K);
-}
+```bash
+cargo doc --no-deps --open
 ```
 
-## Notes 
-To avoid section-related symbols being optimized by the compiler, you need to add "-z nostart-stop-gc" to the compile flags (see <https://lld.llvm.org/ELF/start-stop-gc>).
+Online documentation: [docs.rs/ax-ctor-bare-macros](https://docs.rs/ax-ctor-bare-macros)
 
+# Contributing
 
-For example, in `.cargo/config.toml`:
-```toml
-[build]
-rustflags = ["-C", "link-arg=-z", "link-arg=nostart-stop-gc"]
-rustdocflags = ["-C", "link-arg=-z", "-C", "link-arg=nostart-stop-gc"]
-```
+1. Fork the repository and create a branch
+2. Run local format and checks
+3. Run local tests relevant to this crate
+4. Submit a PR and ensure CI passes
+
+# License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for details.
