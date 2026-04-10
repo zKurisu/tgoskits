@@ -17,6 +17,9 @@
 
 `ax-config-macros` 提供了 Procedural macros for converting TOML format configurations to Rust constant definitions。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
 
+
+> ax-config-macros 派生自 https://github.com/arceos-org/axconfig-gen
+
 ## 快速开始
 
 ### 添加依赖

@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-lazyinit` provides Initialize a static value lazily. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-lazyinit was derived from https://github.com/arceos-org/lazyinit
+
 ## Quick Start
 
 ### Installation

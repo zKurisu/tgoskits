@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-timer-list` provides A list of timed events that will be triggered sequentially when the timer expires. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-timer-list was derived from https://github.com/arceos-org/timer_list
+
 ## Quick Start
 
 ### Installation

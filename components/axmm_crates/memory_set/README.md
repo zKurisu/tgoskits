@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-memory-set` provides Data structures and operations for managing memory mappings. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-memory-set was derived from https://github.com/arceos-org/axmm_crates
+
 ## Quick Start
 
 ### Installation

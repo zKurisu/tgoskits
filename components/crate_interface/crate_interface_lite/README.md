@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-crate-interface-lite` provides Provides a way to define an interface (trait) in a crate, but can implement or use it in any crate. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-crate-interface-lite was derived from https://github.com/arceos-org/crate_interface
+
 ## Quick Start
 
 ### Installation

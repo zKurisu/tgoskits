@@ -17,6 +17,9 @@
 
 `ax-int-ratio` 提供了 The type of ratios represented by two integers。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
 
+
+> ax-int-ratio 派生自 https://github.com/arceos-org/int_ratio
+
 ## 快速开始
 
 ### 添加依赖

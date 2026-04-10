@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-arm-pl011` provides ARM Uart pl011 register definitions and basic operations. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-arm-pl011 was derived from https://github.com/arceos-org/arm_pl011
+
 ## Quick Start
 
 ### Installation

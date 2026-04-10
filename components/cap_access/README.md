@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-cap-access` provides Provide basic capability-based access control to objects. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-cap-access was derived from https://github.com/arceos-org/cap_access
+
 ## Quick Start
 
 ### Installation

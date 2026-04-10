@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-kspin` provides Spinlocks used for kernel space that can disable preemption or IRQs in the critical section. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-kspin was derived from https://github.com/arceos-org/kspin
+
 ## Quick Start
 
 ### Installation

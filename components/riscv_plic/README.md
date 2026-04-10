@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-riscv-plic` provides RISC-V platform-level interrupt controller (PLIC) register definitions and basic operations. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-riscv-plic was derived from https://github.com/arceos-org/riscv_plic
+
 ## Quick Start
 
 ### Installation

@@ -1,11 +1,9 @@
 <h1 align="center">axvisor_api</h1>
 
-<p align="center">Basic API for components of the Hypervisor on ArceOS</p>
+<p align="center">Workspace for AxVisor API related crates</p>
 
 <div align="center">
 
-[![Crates.io](https://img.shields.io/crates/v/axvisor_api.svg)](https://crates.io/crates/axvisor_api)
-[![Docs.rs](https://docs.rs/axvisor_api/badge.svg)](https://docs.rs/axvisor_api)
 [![Rust](https://img.shields.io/badge/edition-2024-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
@@ -15,66 +13,29 @@ English | [中文](README_CN.md)
 
 # Introduction
 
-`axvisor_api` provides Basic API for components of the Hypervisor on ArceOS. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
+`axvisor_api` is a workspace that groups related TGOSKits components under a unified layout. It helps organize closely related crates that are typically developed, versioned, and used together.
+
+> axvisor_api was derived from https://github.com/arceos-org/axvisor_api
+
+## Workspace Members
+
+- `axvisor_api_proc`
 
 ## Quick Start
 
-### Installation
-
-Add this crate to your `Cargo.toml`:
-
-```toml
-[dependencies]
-axvisor_api = "0.5.0"
-```
-
-### Run Check and Test
-
 ```bash
-# Enter the crate directory
+# Enter the workspace directory
 cd components/axvisor_api
 
 # Format code
 cargo fmt --all
 
 # Run clippy
-cargo clippy --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features
 
 # Run tests
-cargo test --all-features
-
-# Build documentation
-cargo doc --no-deps
+cargo test --workspace --all-features
 ```
-
-## Integration
-
-### Example
-
-```rust
-use axvisor_api as _;
-
-fn main() {
-    // Integrate `axvisor_api` into your project here.
-}
-```
-
-### Documentation
-
-Generate and view API documentation:
-
-```bash
-cargo doc --no-deps --open
-```
-
-Online documentation: [docs.rs/axvisor_api](https://docs.rs/axvisor_api)
-
-# Contributing
-
-1. Fork the repository and create a branch
-2. Run local format and checks
-3. Run local tests relevant to this crate
-4. Submit a PR and ensure CI passes
 
 # License
 

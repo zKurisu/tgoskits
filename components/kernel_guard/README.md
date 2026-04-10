@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-kernel-guard` provides RAII wrappers to create a critical section with local IRQs or preemption disabled. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-kernel-guard was derived from https://github.com/arceos-org/kernel_guard
+
 ## Quick Start
 
 ### Installation

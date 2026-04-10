@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-ctor-bare` provides Register constructor functions for Rust at compile time under no_std. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-ctor-bare was derived from https://github.com/arceos-org/ctor_bare
+
 ## Quick Start
 
 ### Installation

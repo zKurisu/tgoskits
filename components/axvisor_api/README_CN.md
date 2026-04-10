@@ -1,11 +1,9 @@
 <h1 align="center">axvisor_api</h1>
 
-<p align="center">Basic API for components of the Hypervisor on ArceOS</p>
+<p align="center">AxVisor API 相关 crate 工作区</p>
 
 <div align="center">
 
-[![Crates.io](https://img.shields.io/crates/v/axvisor_api.svg)](https://crates.io/crates/axvisor_api)
-[![Docs.rs](https://docs.rs/axvisor_api/badge.svg)](https://docs.rs/axvisor_api)
 [![Rust](https://img.shields.io/badge/edition-2024-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
@@ -15,66 +13,29 @@
 
 # 介绍
 
-`axvisor_api` 提供了 Basic API for components of the Hypervisor on ArceOS。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
+`axvisor_api` 是一个工作区，用于将相关的 TGOSKits 组件放在统一的目录结构下，便于协同开发、版本管理与组合使用。
+
+> axvisor_api 派生自 https://github.com/arceos-org/axvisor_api
+
+## 工作区成员
+
+- `axvisor_api_proc`
 
 ## 快速开始
 
-### 添加依赖
-
-在 `Cargo.toml` 中加入：
-
-```toml
-[dependencies]
-axvisor_api = "0.5.0"
-```
-
-### 检查与测试
-
 ```bash
-# 进入 crate 目录
+# 进入工作区目录
 cd components/axvisor_api
 
 # 代码格式化
 cargo fmt --all
 
 # 运行 clippy
-cargo clippy --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features
 
 # 运行测试
-cargo test --all-features
-
-# 生成文档
-cargo doc --no-deps
+cargo test --workspace --all-features
 ```
-
-## 集成方式
-
-### 示例
-
-```rust
-use axvisor_api as _;
-
-fn main() {
-    // 在这里将 `axvisor_api` 集成到你的项目中。
-}
-```
-
-### 文档
-
-生成并查看 API 文档：
-
-```bash
-cargo doc --no-deps --open
-```
-
-在线文档：[docs.rs/axvisor_api](https://docs.rs/axvisor_api)
-
-# 贡献
-
-1. Fork 仓库并创建分支
-2. 在本地运行格式化与检查
-3. 运行与该 crate 相关的测试
-4. 提交 PR 并确保 CI 通过
 
 # 许可证
 

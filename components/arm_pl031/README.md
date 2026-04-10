@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-arm-pl031` provides System Real Time Clock (RTC) Drivers for aarch64 based on PL031. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-arm-pl031 was derived from https://github.com/arceos-org/arm_pl031
+
 ## Quick Start
 
 ### Installation

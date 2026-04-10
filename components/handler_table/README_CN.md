@@ -17,6 +17,9 @@
 
 `ax-handler-table` 提供了 A lock-free table of event handlers。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
 
+
+> ax-handler-table 派生自 https://github.com/arceos-org/handler_table
+
 ## 快速开始
 
 ### 添加依赖

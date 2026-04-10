@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-percpu` provides Define and access per-CPU data structures. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-percpu was derived from https://github.com/arceos-org/percpu
+
 ## Quick Start
 
 ### Installation

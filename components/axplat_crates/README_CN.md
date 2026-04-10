@@ -15,6 +15,8 @@
 
 `axplat_crates` 是一个工作区，用于将相关的 TGOSKits 组件放在统一的目录结构下，便于协同开发、版本管理与组合使用。
 
+> axplat_crates 派生自 https://github.com/arceos-org/axplat_crates
+
 ## 工作区成员
 
 - `axplat`

@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-driver-base` provides Common interfaces for all kinds of device drivers. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-driver-base was derived from https://github.com/arceos-org/axdriver_crates
+
 ## Quick Start
 
 ### Installation

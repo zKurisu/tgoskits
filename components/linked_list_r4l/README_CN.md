@@ -17,6 +17,9 @@
 
 `ax-linked-list-r4l` 提供了 Linked lists that supports arbitrary removal in constant time。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
 
+
+> ax-linked-list-r4l 派生自 https://github.com/arceos-org/linked_list_r4l
+
 ## 快速开始
 
 ### 添加依赖

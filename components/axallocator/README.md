@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-allocator` provides Various allocator algorithms in a unified interface. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-allocator was derived from https://github.com/arceos-org/allocator
+
 ## Quick Start
 
 ### Installation

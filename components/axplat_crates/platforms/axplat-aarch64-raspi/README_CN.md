@@ -17,6 +17,9 @@
 
 `ax-plat-aarch64-raspi` 提供了 Implementation of `axplat` hardware abstraction layer for Raspberry Pi 4B board。它是 TGOSKits 组件集合的一部分，可用于集成 ArceOS、AxVisor 及相关底层系统软件的 Rust 项目。
 
+
+> ax-plat-aarch64-raspi 派生自 https://github.com/arceos-org/axplat_crates
+
 ## 快速开始
 
 ### 添加依赖

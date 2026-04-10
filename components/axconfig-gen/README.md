@@ -15,6 +15,8 @@ English | [中文](README_CN.md)
 
 `axconfig-gen` is a workspace that groups related TGOSKits components under a unified layout. It helps organize closely related crates that are typically developed, versioned, and used together.
 
+> axconfig-gen was derived from https://github.com/arceos-org/axconfig-gen
+
 ## Workspace Members
 
 - `axconfig-gen`

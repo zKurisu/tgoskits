@@ -15,6 +15,8 @@
 
 `page_table_multiarch` 是一个工作区，用于将相关的 TGOSKits 组件放在统一的目录结构下，便于协同开发、版本管理与组合使用。
 
+> page_table_multiarch 派生自 https://github.com/arceos-org/page_table_multiarch
+
 ## 工作区成员
 
 - `page_table_multiarch`

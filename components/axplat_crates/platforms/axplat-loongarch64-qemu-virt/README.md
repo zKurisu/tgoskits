@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-plat-loongarch64-qemu-virt` provides Implementation of `axplat` hardware abstraction layer for QEMU LoongArch virtual machine. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-plat-loongarch64-qemu-virt was derived from https://github.com/arceos-org/axplat_crates
+
 ## Quick Start
 
 ### Installation

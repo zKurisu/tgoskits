@@ -17,6 +17,9 @@ English | [中文](README_CN.md)
 
 `ax-memory-addr` provides Wrappers and helper functions for physical and virtual addresses. It is maintained as part of the TGOSKits component set and is intended for Rust projects that integrate with ArceOS, AxVisor, or related low-level systems software.
 
+
+> ax-memory-addr was derived from https://github.com/arceos-org/axmm_crates
+
 ## Quick Start
 
 ### Installation

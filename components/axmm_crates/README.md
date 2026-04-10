@@ -15,6 +15,8 @@ English | [中文](README_CN.md)
 
 `axmm_crates` is a workspace that groups related TGOSKits components under a unified layout. It helps organize closely related crates that are typically developed, versioned, and used together.
 
+> axmm_crates was derived from https://github.com/arceos-org/axmm_crates
+
 ## Workspace Members
 
 - `memory_addr`
