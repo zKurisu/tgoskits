@@ -4,6 +4,7 @@
     {
       "label": "TGOS: Start ArceOS QEMU debug",
       "hide": true,
+      "isBackground": true,
       "type": "process",
       "command": "${workspaceFolder}/.vscode/session.sh",
       "args": [
@@ -21,8 +22,20 @@
       "presentation": {
         "close": true,
         "echo": false,
-        "panel": "shared",
-        "reveal": "silent"
+        "focus": false,
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^(QEMU_DEBUG_FAILED).*$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "endsPattern": "^QEMU_GDB_READY session=arceos\\b.*$"
+        }
       }
     },
     {
@@ -51,6 +64,7 @@
     {
       "label": "TGOS: Start Axvisor QEMU debug",
       "hide": true,
+      "isBackground": true,
       "type": "process",
       "command": "${workspaceFolder}/.vscode/session.sh",
       "args": [
@@ -68,8 +82,20 @@
       "presentation": {
         "close": true,
         "echo": false,
-        "panel": "shared",
-        "reveal": "silent"
+        "focus": false,
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^(QEMU_DEBUG_FAILED).*$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "endsPattern": "^QEMU_GDB_READY session=axvisor\\b.*$"
+        }
       }
     },
     {
@@ -98,6 +124,7 @@
     {
       "label": "TGOS: Start StarryOS QEMU debug",
       "hide": true,
+      "isBackground": true,
       "type": "process",
       "command": "${workspaceFolder}/.vscode/session.sh",
       "args": [
@@ -115,8 +142,20 @@
       "presentation": {
         "close": true,
         "echo": false,
-        "panel": "shared",
-        "reveal": "silent"
+        "focus": false,
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^(QEMU_DEBUG_FAILED).*$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "endsPattern": "^QEMU_GDB_READY session=starry\\b.*$"
+        }
       }
     },
     {
