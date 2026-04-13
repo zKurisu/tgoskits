@@ -82,7 +82,7 @@ cleanup_orphaned_session_processes() {
         kill "-${pgid}" 2>/dev/null || true
     done
 
-    for _ in $(seq 1 20); do
+    for (( i = 0; i < 20; i++ )); do
         local any_alive=0
 
         for pgid in "${orphaned_pgids[@]}"; do
@@ -141,20 +141,9 @@ port_is_owned_by_group() {
 
 wait_for_qemu_ready() {
     local pgid="$1"
-    for _ in $(seq 1 200); do
-        if has_qemu_process_in_group "${pgid}" && port_is_owned_by_group "${pgid}" && python3 - "${port}" <<'PY' >/dev/null 2>&1
-import socket
-import sys
-
-port = int(sys.argv[1])
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(0.2)
-try:
-    sys.exit(0 if sock.connect_ex(("127.0.0.1", port)) == 0 else 1)
-finally:
-    sock.close()
-PY
-        then
+    for (( i = 0; i < 200; i++ )); do
+        if has_qemu_process_in_group "${pgid}" && port_is_owned_by_group "${pgid}" &&
+                { : </dev/tcp/127.0.0.1/${port}; } 2>/dev/null; then
             return 0
         fi
         sleep 0.1
@@ -190,7 +179,12 @@ case "${cmd}" in
         if wait_for_qemu_ready "${child_pgid}"; then
             printf 'QEMU_GDB_READY session=%s port=%s pid=%s log=%s\n' \
                 "${session}" "${port}" "${child_pid}" "${log_file}"
-            wait "${child_pid}"
+            wait "${child_pid}" || true
+            # QEMU has exited (naturally or via `stop`). Remove state files and
+            # clear the EXIT trap to skip the redundant orphan scan: all
+            # processes in this session group are already gone.
+            trap - EXIT
+            rm -f "${pid_file}" "${pgid_file}"
             exit 0
         fi
 

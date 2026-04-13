@@ -27,7 +27,7 @@
         "reveal": "always"
       },
       "problemMatcher": {
-        "owner": "custom",
+        "owner": "arceos-qemu",
         "pattern": {
           "regexp": "^(QEMU_DEBUG_FAILED).*$",
           "message": 1
@@ -87,7 +87,7 @@
         "reveal": "always"
       },
       "problemMatcher": {
-        "owner": "custom",
+        "owner": "axvisor-qemu",
         "pattern": {
           "regexp": "^(QEMU_DEBUG_FAILED).*$",
           "message": 1
@@ -147,7 +147,7 @@
         "reveal": "always"
       },
       "problemMatcher": {
-        "owner": "custom",
+        "owner": "starry-qemu",
         "pattern": {
           "regexp": "^(QEMU_DEBUG_FAILED).*$",
           "message": 1
