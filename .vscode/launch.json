@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "TGOS: ArceOS Main (CodeLLDB)",
+      "name": "ArceOS Main (RISC-V64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "name": "TGOS: ArceOS Boot Chain (CodeLLDB)",
+      "name": "ArceOS Boot (RISC-V64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -50,7 +50,7 @@
       ]
     },
     {
-      "name": "TGOS: Axvisor Main (CodeLLDB)",
+      "name": "Axvisor Main (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -75,7 +75,7 @@
       ]
     },
     {
-      "name": "TGOS: Axvisor Boot Chain (CodeLLDB)",
+      "name": "Axvisor Boot (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -92,7 +92,7 @@
         "gdb-remote 127.0.0.1:1234"
       ],
       "postRunCommands": [
-        "breakpoint set --name kernel_entry",
+        "breakpoint set --file /home/zcs/WORKSPACE/tgoskits/platform/axplat-dyn/src/boot.rs --line 8",
         "breakpoint set --file /home/zcs/WORKSPACE/tgoskits/os/axvisor/src/main.rs --line 42"
       ],
       "sourceLanguages": [
@@ -100,7 +100,7 @@
       ]
     },
     {
-      "name": "TGOS: StarryOS Main (CodeLLDB)",
+      "name": "StarryOS Main (RISC-V64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -124,7 +124,7 @@
       ]
     },
     {
-      "name": "TGOS: StarryOS Boot Chain (CodeLLDB)",
+      "name": "StarryOS Boot (RISC-V64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
