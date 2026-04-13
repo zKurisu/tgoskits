@@ -6,8 +6,9 @@
       "hide": true,
       "isBackground": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "start"
       ],
       "options": {
@@ -42,8 +43,9 @@
       "label": "TGOS: Stop ArceOS QEMU debug",
       "hide": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "stop"
       ],
       "options": {
@@ -66,8 +68,9 @@
       "hide": true,
       "isBackground": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "start"
       ],
       "options": {
@@ -102,8 +105,9 @@
       "label": "TGOS: Stop Axvisor QEMU debug",
       "hide": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "stop"
       ],
       "options": {
@@ -126,8 +130,9 @@
       "hide": true,
       "isBackground": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "start"
       ],
       "options": {
@@ -162,8 +167,9 @@
       "label": "TGOS: Stop StarryOS QEMU debug",
       "hide": true,
       "type": "process",
-      "command": "${workspaceFolder}/.vscode/session.sh",
+      "command": "python3",
       "args": [
+        "${workspaceFolder}/.vscode/session.py",
         "stop"
       ],
       "options": {
