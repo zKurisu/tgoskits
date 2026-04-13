@@ -12,7 +12,7 @@
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
-          "TGOS_DEBUG_COMMAND": "cargo xtask arceos qemu --debug --package ax-helloworld --target riscv64gc-unknown-none-elf",
+          "TGOS_DEBUG_COMMAND": "cargo xtask arceos qemu --debug --package ax-helloworld --arch aarch64",
           "TGOS_DEBUG_PORT": "1234",
           "TGOS_DEBUG_SESSION": "arceos",
           "TGOS_DEBUG_STATE_DIR": "${workspaceFolder}/target/qemu-debug"
@@ -106,7 +106,7 @@
       "options": {
         "cwd": "${workspaceFolder}",
         "env": {
-          "TGOS_DEBUG_COMMAND": "cargo xtask starry qemu --debug --arch riscv64",
+          "TGOS_DEBUG_COMMAND": "cargo xtask starry qemu --debug --arch aarch64",
           "TGOS_DEBUG_PORT": "1234",
           "TGOS_DEBUG_SESSION": "starry",
           "TGOS_DEBUG_STATE_DIR": "${workspaceFolder}/target/qemu-debug"

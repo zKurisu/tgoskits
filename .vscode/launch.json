@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "ArceOS Main (RISC-V64)",
+      "name": "ArceOS Main (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -11,8 +11,8 @@
       "preLaunchTask": "TGOS: Start ArceOS QEMU debug",
       "postDebugTask": "TGOS: Stop ArceOS QEMU debug",
       "targetCreateCommands": [
-        "target create ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/ax-helloworld",
-        "target modules load --file ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/ax-helloworld --slide 0"
+        "target create ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/ax-helloworld",
+        "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/ax-helloworld --slide 0"
       ],
       "processCreateCommands": [
         "gdb-remote 127.0.0.1:1234"
@@ -26,7 +26,7 @@
       ]
     },
     {
-      "name": "ArceOS Boot (RISC-V64)",
+      "name": "ArceOS Boot (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -35,8 +35,8 @@
       "preLaunchTask": "TGOS: Start ArceOS QEMU debug",
       "postDebugTask": "TGOS: Stop ArceOS QEMU debug",
       "targetCreateCommands": [
-        "target create ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/ax-helloworld",
-        "target modules load --file ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/ax-helloworld --slide 0"
+        "target create ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/ax-helloworld",
+        "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/ax-helloworld --slide 0"
       ],
       "processCreateCommands": [
         "gdb-remote 127.0.0.1:1234"
@@ -100,7 +100,7 @@
       ]
     },
     {
-      "name": "StarryOS Main (RISC-V64)",
+      "name": "StarryOS Main (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -109,8 +109,8 @@
       "preLaunchTask": "TGOS: Start StarryOS QEMU debug",
       "postDebugTask": "TGOS: Stop StarryOS QEMU debug",
       "targetCreateCommands": [
-        "target create ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/starryos",
-        "target modules load --file ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/starryos --slide 0"
+        "target create ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/starryos",
+        "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/starryos --slide 0"
       ],
       "processCreateCommands": [
         "gdb-remote 127.0.0.1:1234"
@@ -124,7 +124,7 @@
       ]
     },
     {
-      "name": "StarryOS Boot (RISC-V64)",
+      "name": "StarryOS Boot (AArch64)",
       "type": "lldb",
       "request": "custom",
       "initCommands": [
@@ -133,8 +133,8 @@
       "preLaunchTask": "TGOS: Start StarryOS QEMU debug",
       "postDebugTask": "TGOS: Stop StarryOS QEMU debug",
       "targetCreateCommands": [
-        "target create ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/starryos",
-        "target modules load --file ${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/starryos --slide 0"
+        "target create ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/starryos",
+        "target modules load --file ${workspaceFolder}/target/aarch64-unknown-none-softfloat/debug/starryos --slide 0"
       ],
       "processCreateCommands": [
         "gdb-remote 127.0.0.1:1234"
