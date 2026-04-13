@@ -159,6 +159,9 @@ pub struct ArgsBuild {
     pub target: Option<String>,
     #[arg(long = "plat_dyn", alias = "plat-dyn")]
     pub plat_dyn: Option<bool>,
+
+    #[arg(long)]
+    pub debug: bool,
 }
 
 #[derive(Args)]
@@ -230,6 +233,7 @@ impl From<&ArgsBuild> for BuildCliArgs {
             arch: args.arch.clone(),
             target: args.target.clone(),
             plat_dyn: args.plat_dyn,
+            debug: args.debug,
         }
     }
 }
@@ -381,6 +385,7 @@ impl ArceOS {
             arch: None,
             target: Some(target.to_string()),
             plat_dyn: None,
+            debug: false,
         }
     }
 
