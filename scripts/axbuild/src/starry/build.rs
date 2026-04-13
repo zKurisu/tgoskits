@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use cargo_metadata::MetadataCommand;
 use ostool::build::config::Cargo;
 
 pub type StarryBuildInfo = crate::arceos::build::ArceosBuildInfo;
 pub use crate::arceos::build::LogLevel;
 use crate::context::{
-    ResolvedStarryRequest, STARRY_PACKAGE, starry_arch_for_target_checked, workspace_member_dir_in,
+    ResolvedStarryRequest, STARRY_PACKAGE, starry_arch_for_target_checked, workspace_manifest_path,
+    workspace_member_dir_in, workspace_metadata_root_manifest,
 };
 
 impl StarryBuildInfo {
@@ -126,14 +126,12 @@ fn ensure_starry_bin_arg(args: &mut Vec<String>, package: &str) -> anyhow::Resul
 }
 
 fn package_has_bin_named(package: &str, bin_name: &str) -> anyhow::Result<bool> {
-    let manifest_path = crate::arceos::build::resolve_package_manifest_path(package, None)?;
-    let mut command = MetadataCommand::new();
-    command.no_deps().manifest_path(&manifest_path);
-    let metadata = command.exec()?;
+    let workspace_manifest = workspace_manifest_path()?;
+    let metadata = workspace_metadata_root_manifest(&workspace_manifest)?;
     let package_info = metadata
         .packages
         .iter()
-        .find(|pkg| pkg.name == package)
+        .find(|pkg| metadata.workspace_members.contains(&pkg.id) && pkg.name == package)
         .ok_or_else(|| anyhow::anyhow!("workspace package `{package}` not found"))?;
 
     Ok(package_info.targets.iter().any(|target| {
@@ -320,7 +318,7 @@ HELLO = "world"
 
         assert_eq!(cargo.package, STARRY_PACKAGE);
         assert_eq!(cargo.target, "aarch64-unknown-none-softfloat");
-        assert_eq!(cargo.features, vec!["net".to_string(), "qemu".to_string()]);
+        assert_eq!(cargo.features, vec!["net".to_string()]);
         assert_eq!(
             cargo.env.get("AX_ARCH").map(String::as_str),
             Some("aarch64")
@@ -329,10 +327,7 @@ HELLO = "world"
             cargo.env.get("AX_TARGET").map(String::as_str),
             Some("aarch64-unknown-none-softfloat")
         );
-        assert_eq!(
-            cargo.env.get("AX_PLATFORM").map(String::as_str),
-            Some("aarch64-qemu-virt")
-        );
+        assert_eq!(cargo.env.get("AX_PLATFORM").map(String::as_str), None);
         assert_eq!(cargo.env.get("AX_LOG").map(String::as_str), Some("info"));
         assert_eq!(cargo.env.get("CUSTOM").map(String::as_str), Some("1"));
         assert!(cargo.to_bin);
