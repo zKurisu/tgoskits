@@ -26,8 +26,7 @@
 //! [3]: ax_sched::CFScheduler
 
 #![cfg_attr(not(test), no_std)]
-#![feature(doc_cfg)]
-#![feature(linkage)]
+#![cfg_attr(doc, feature(doc_cfg))]
 
 #[cfg(test)]
 mod tests;
@@ -50,7 +49,7 @@ cfg_if::cfg_if! {
         #[cfg(feature = "multitask")]
         pub mod future;
 
-        #[doc(cfg(feature = "multitask"))]
+        #[cfg_attr(doc, doc(cfg(feature = "multitask")))]
         pub use self::api::*;
         pub use self::api::{sleep, sleep_until, yield_now};
     } else {

@@ -12,7 +12,7 @@
 //!   feature is enabled by default.
 
 #![cfg_attr(not(test), no_std)]
-#![feature(doc_cfg)]
+#![cfg_attr(doc, feature(doc_cfg))]
 
 pub use ax_kspin as spin;
 
@@ -20,9 +20,9 @@ pub use ax_kspin as spin;
 mod mutex;
 
 #[cfg(not(feature = "multitask"))]
-#[doc(cfg(not(feature = "multitask")))]
+#[cfg_attr(doc, doc(cfg(not(feature = "multitask"))))]
 pub use ax_kspin::{SpinNoIrq as Mutex, SpinNoIrqGuard as MutexGuard};
 
 #[cfg(feature = "multitask")]
-#[doc(cfg(feature = "multitask"))]
+#[cfg_attr(doc, doc(cfg(feature = "multitask")))]
 pub use self::mutex::{Mutex, MutexGuard, RawMutex};
