@@ -266,13 +266,16 @@ mod tests {
             arch: "x86_64".to_string(),
             target: "x86_64-unknown-none".to_string(),
             plat_dyn: None,
+            smp: None,
             debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
             qemu_config: None,
             uboot_config: None,
         };
 
-        let args = default_qemu_args(root.path(), &request).await.unwrap();
+        let args = default_qemu_args(root.path(), &request)
+            .await
+            .unwrap();
 
         assert_eq!(
             args,
@@ -323,6 +326,7 @@ shell_prefix = "starry:~#"
             arch: "x86_64".to_string(),
             target: "x86_64-unknown-none".to_string(),
             plat_dyn: None,
+            smp: None,
             debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
             qemu_config: None,
