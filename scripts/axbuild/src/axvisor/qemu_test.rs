@@ -321,6 +321,7 @@ uefi = false
                 arch: "aarch64".to_string(),
                 target: "aarch64-unknown-none-softfloat".to_string(),
                 plat_dyn: None,
+                smp: None,
                 debug: false,
                 build_info_path: dir.path().join(".build.toml"),
                 qemu_config: None,

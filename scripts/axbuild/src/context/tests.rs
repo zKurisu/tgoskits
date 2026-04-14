@@ -62,6 +62,7 @@ fn snapshot_store_round_trips() {
         arch: Some("aarch64".into()),
         target: Some("target".into()),
         plat_dyn: Some(true),
+        smp: None,
         qemu: ArceosQemuSnapshot {
             qemu_config: Some(PathBuf::from("configs/qemu.toml")),
         },
@@ -84,6 +85,7 @@ fn axvisor_snapshot_store_round_trips() {
         arch: Some("aarch64".into()),
         target: Some(DEFAULT_AXVISOR_TARGET.into()),
         plat_dyn: Some(false),
+        smp: None,
         config: Some(PathBuf::from("os/axvisor/.build.toml")),
         vmconfigs: vec![PathBuf::from("tmp/vm1.toml"), PathBuf::from("tmp/vm2.toml")],
         qemu: AxvisorQemuSnapshot {
@@ -466,6 +468,7 @@ fn starry_snapshot_store_round_trips() {
         arch: Some("aarch64".into()),
         target: Some(DEFAULT_STARRY_TARGET.into()),
         plat_dyn: Some(false),
+        smp: None,
         qemu: StarryQemuSnapshot {
             qemu_config: Some(PathBuf::from("configs/qemu.toml")),
         },
