@@ -273,9 +273,7 @@ mod tests {
             uboot_config: None,
         };
 
-        let args = default_qemu_args(root.path(), &request)
-            .await
-            .unwrap();
+        let args = default_qemu_args(root.path(), &request).await.unwrap();
 
         assert_eq!(
             args,
