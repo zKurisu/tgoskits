@@ -513,6 +513,7 @@ impl Starry {
             config: Some(group.build_config_path.clone()),
             arch: None,
             target: Some(group.target.clone()),
+            smp: None,
             debug: false,
         }
     }
