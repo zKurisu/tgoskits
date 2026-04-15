@@ -101,12 +101,6 @@ pub(crate) fn load_cargo_config(request: &ResolvedAxvisorRequest) -> anyhow::Res
     to_cargo_config(load_build_config(request)?, request)
 }
 
-pub(crate) fn effective_max_cpu_num(
-    request: &ResolvedAxvisorRequest,
-) -> anyhow::Result<Option<usize>> {
-    Ok(load_build_config(request)?.build_info.max_cpu_num)
-}
-
 fn to_cargo_config(
     mut config: LoadedAxvisorBuildConfig,
     request: &ResolvedAxvisorRequest,

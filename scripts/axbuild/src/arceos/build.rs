@@ -350,12 +350,6 @@ pub(crate) fn load_build_info(request: &ResolvedBuildRequest) -> anyhow::Result<
     Ok(build_info)
 }
 
-pub(crate) fn effective_max_cpu_num(
-    request: &ResolvedBuildRequest,
-) -> anyhow::Result<Option<usize>> {
-    Ok(load_build_info(request)?.max_cpu_num)
-}
-
 pub(crate) fn load_cargo_config(request: &ResolvedBuildRequest) -> anyhow::Result<Cargo> {
     load_build_info(request)?.into_cargo_config(request)
 }
