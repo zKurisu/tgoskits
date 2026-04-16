@@ -1,6 +1,6 @@
 [package]
 name = "ax-plat-aarch64-peripherals"
-version.workspace = true
+version = "0.5.7"
 repository.workspace = true
 description = "ARM64 common peripheral drivers with `axplat` compatibility"
 keywords = ["arceos", "os", "hal", "peripheral", "aarch64"]

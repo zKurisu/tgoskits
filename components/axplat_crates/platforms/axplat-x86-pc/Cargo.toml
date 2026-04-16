@@ -1,6 +1,6 @@
 [package]
 name = "ax-plat-x86-pc"
-version.workspace = true
+version = "0.5.7"
 repository.workspace = true
 description = "Implementation of `axplat` hardware abstraction layer for x86 Standard PC machine."
 keywords = ["arceos", "os", "hal", "x86"]

@@ -3,7 +3,7 @@ name = "ax-memory-set"
 description = "Data structures and operations for managing memory mappings"
 keywords = ["arceos", "virtual-memory", "memory-area", "mmap"]
 
-version.workspace = true
+version = "0.6.7"
 repository.workspace = true
 edition.workspace = true
 authors.workspace = true

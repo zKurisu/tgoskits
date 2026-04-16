@@ -1,6 +1,6 @@
 [package]
 name = "ax-plat-riscv64-qemu-virt"
-version.workspace = true
+version = "0.5.7"
 repository.workspace = true
 description = "Implementation of `axplat` hardware abstraction layer for QEMU RISC-V virt board."
 keywords = ["arceos", "os", "hal", "embedded", "riscv"]

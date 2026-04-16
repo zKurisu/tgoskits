@@ -1,6 +1,6 @@
 [package]
 name = "ax-plat-aarch64-raspi"
-version.workspace = true
+version = "0.5.7"
 repository.workspace = true
 description = "Implementation of `axplat` hardware abstraction layer for Raspberry Pi 4B board."
 keywords = ["arceos", "os", "hal", "aarch64", "raspi"]
