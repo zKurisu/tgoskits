@@ -1,13 +1,14 @@
-board_type = "PhytiumPi"
+board_type = "RDK-S100"
 fail_regex = [
   "(?i)\\bpanic(?:ked)?\\b",
   "(?i)kernel panic",
   "(?i)login incorrect",
   "(?i)permission denied",
 ]
-shell_init_cmd = "root"
-shell_prefix = "login:"
-success_regex = [
-  "(?m)^root@.*#\\s*$",
+uboot_cmd = [
+  "run ab_select_cmd",
+  "run avb_boot",
 ]
-timeout = 300
+success_regex = [
+  "ubuntu login:",
+]
