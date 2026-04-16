@@ -15,6 +15,7 @@ categories = ["embedded", "network-programming"]
 # ensure that the correct features are enabled.
 autoexamples = false
 license = "Apache-2.0"
+publish = false
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
