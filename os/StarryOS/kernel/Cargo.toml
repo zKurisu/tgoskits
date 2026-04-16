@@ -1,6 +1,6 @@
 [package]
 name = "starry-kernel"
-version.workspace = true
+version = "0.5.8"
 edition.workspace = true
 description = "A Linux-compatible OS kernel built on ArceOS unikernel"
 authors = [
