@@ -33,7 +33,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.5.3"
+version = "0.5.4"
 edition = "2024"
 authors = [
     "Yuekai Jia <equation618@gmail.com>",
