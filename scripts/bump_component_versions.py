@@ -26,9 +26,6 @@ AUXILIARY_PUBLISH_FALSE_EXCLUDES = {
     (REPO_ROOT / "scripts/axbuild/Cargo.toml").resolve(),
     (REPO_ROOT / "xtask/Cargo.toml").resolve(),
 }
-FORCED_PUBLISH_FALSE_MANIFESTS = {
-    (REPO_ROOT / "os/axvisor/platform/riscv64-qemu-virt/Cargo.toml").resolve(),
-}
 CRATES_IO_API = "https://crates.io/api/v1/crates/{name}"
 
 PACKAGE_LINE_RE = re.compile(r'^(\s*version\s*=\s*")([^"]+)(".*)$')
@@ -98,8 +95,6 @@ def is_ignored_manifest(manifest: Path) -> bool:
 
 def should_force_publish_false(manifest: Path) -> bool:
     manifest = manifest.resolve()
-    if manifest in FORCED_PUBLISH_FALSE_MANIFESTS:
-        return True
     if manifest in AUXILIARY_PUBLISH_FALSE_EXCLUDES:
         return False
     relative = manifest.relative_to(REPO_ROOT)
