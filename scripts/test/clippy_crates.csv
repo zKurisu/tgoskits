@@ -3,7 +3,6 @@ aarch64_sysreg
 arceos-affinity
 arceos-display
 arceos-exception
-arceos-fs-shell
 arceos-ipi
 arceos-irq
 arceos-memtest
@@ -16,7 +15,6 @@ arceos-priority
 arceos-sleep
 arceos-tls
 arceos-wait-queue
-arceos-yield
 ax-allocator
 ax-arm-pl011
 ax-arm-pl031
@@ -31,7 +29,6 @@ ax-fs-ng
 ax-fs-vfs
 ax-handler-table
 ax-helloworld
-ax-helloworld-myplat
 ax-httpclient
 ax-httpserver
 ax-input
@@ -45,7 +42,6 @@ ax-log
 ax-mm
 ax-plat-riscv64-qemu-virt
 ax-riscv-plic
-ax-shell
 ax-sched
 ax-sync
 ax-timer-list
