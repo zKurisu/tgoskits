@@ -5,13 +5,14 @@ edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 license.workspace = true
+publish = false
 
 [dependencies]
-ax-config-macros = "0.4.1"
+ax-config-macros = "0.4.3"
 cfg-if = "1.0"
 ax-percpu.workspace = true
 const-str = "1.0"
-ax-memory-addr = "0.6.1"
+ax-memory-addr = "0.6.3"
 ax-cpu = { workspace = true }
 ax-plat = { workspace = true }
 

@@ -4,6 +4,7 @@ version = "0.8.0"
 authors = ["Andre Richter <andre.o.richter@gmail.com>"]
 edition = "2024"
 license.workspace = true
+publish = false
 
 [profile.release]
 lto = true

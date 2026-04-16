@@ -3,6 +3,7 @@ name = "arceos-priority"
 version = "0.3.0"
 edition.workspace = true
 authors = ["Haoxing Ye <yehx20@mails.tsinghua.edu.cn>"]
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
