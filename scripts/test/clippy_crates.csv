@@ -36,11 +36,11 @@ ax-int-ratio
 ax-io
 ax-ipi
 ax-kernel-guard
+ax-kspin
 ax-lazyinit
 ax-linked-list-r4l
 ax-log
 ax-mm
-ax-plat-riscv64-qemu-virt
 ax-riscv-plic
 ax-sched
 ax-sync
@@ -51,9 +51,11 @@ axfs-ng-vfs
 axhvc
 axklib
 axpoll
+axplat-x86-qemu-q35
 axvmconfig
 bitmap-allocator
 range-alloc-arceos
+riscv64-qemu-virt-hv
 riscv-h
 riscv_vcpu
 scope-local
