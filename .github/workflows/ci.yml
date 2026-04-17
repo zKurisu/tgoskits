@@ -1,0 +1,199 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.adoc"
+      - "docs/**"
+      - "**/docs/**"
+      - "**/doc/**"
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.rst"
+      - "**/*.adoc"
+      - "docs/**"
+      - "**/docs/**"
+      - "**/doc/**"
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect_changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      container_publish: ${{ steps.filter.outputs.container_publish }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect container-related changes
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            container_publish:
+              - ".github/workflows/ci.yml"
+              - ".github/workflows/container-publish.yml"
+              - "container/Dockerfile"
+              - "rust-toolchain.toml"
+
+  fmt:
+    name: Check formatting
+    needs: detect_changes
+    uses: ./.github/workflows/reusable-host-command.yml
+    with:
+      command: cargo fmt --all -- --check
+
+  clippy:
+    name: Run clippy
+    needs: detect_changes
+    uses: ./.github/workflows/reusable-container-command.yml
+    with:
+      command: cargo xtask clippy
+      cache_key: clippy
+      container_image: ghcr.io/${{ github.repository }}-container:latest
+
+  test_std:
+    name: Test with std
+    needs:
+      - fmt
+      - clippy
+    uses: ./.github/workflows/reusable-container-command.yml
+    with:
+      command: cargo xtask test
+      cache_key: test-std
+      container_image: ghcr.io/${{ github.repository }}-container:latest
+
+  test_qemu_matrix:
+    name: Test ${{ matrix.os }} ${{ matrix.arch }}
+    needs:
+      - fmt
+      - clippy
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: axvisor
+            arch: aarch64
+          - os: starry
+            arch: riscv64
+          - os: starry
+            arch: aarch64
+          - os: starry
+            arch: loongarch64
+          - os: starry
+            arch: x86_64
+          - os: arceos
+            arch: x86_64
+          - os: arceos
+            arch: riscv64
+          - os: arceos
+            arch: aarch64
+          - os: arceos
+            arch: loongarch64
+    uses: ./.github/workflows/reusable-container-command.yml
+    with:
+      command: cargo xtask ${{ matrix.os }} test qemu --target ${{ matrix.arch }}
+      cache_key: test-${{ matrix.os }}-${{ matrix.arch }}
+      container_image: ghcr.io/${{ github.repository }}-container:latest
+      install_fat_tools: true
+
+  test_starry_stress_matrix:
+    name: Stress starry ${{ matrix.arch }}
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    needs:
+      - fmt
+      - clippy
+    strategy:
+      fail-fast: true
+      matrix:
+        arch:
+          - aarch64
+          - riscv64
+          - loongarch64
+          - x86_64
+    uses: ./.github/workflows/reusable-container-command.yml
+    with:
+      # command: cargo xtask starry test qemu --stress --target ${{ matrix.arch }}
+      command: echo "TODO!"
+      cache_key: test-starry-stress-${{ matrix.arch }}
+      container_image: ghcr.io/${{ github.repository }}-container:latest
+      install_fat_tools: true
+
+  test_axvisor_self_hosted:
+    name: Test axvisor self-hosted ${{ matrix.label }}
+    if: github.repository_owner == 'rcore-os'
+    needs:
+      - fmt
+      - clippy
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - label: x86_64
+            runs_on: '["self-hosted","linux","intel"]'
+            command: AXVISOR_IMAGE_LOCAL_STORAGE=/home/runner/.axvisor-images cargo xtask axvisor test qemu --target x86_64
+          - label: orangepi-5-plus-linux
+            runs_on: '["self-hosted","linux","board"]'
+            command: AXVISOR_IMAGE_LOCAL_STORAGE=/home/runner/.axvisor-images cargo xtask axvisor test board -t orangepi-5-plus-linux
+          - label: roc-rk3568-pc-linux
+            runs_on: '["self-hosted","linux","board"]'
+            command: AXVISOR_IMAGE_LOCAL_STORAGE=/home/runner/.axvisor-images cargo xtask axvisor test board -t roc-rk3568-pc-linux
+        #   - label: rdk-s100-linux
+        #     runs_on: '["self-hosted","linux","board"]'
+        #     command: AXVISOR_IMAGE_LOCAL_STORAGE=/home/runner/.axvisor-images cargo xtask axvisor test board -t rdk-s100-linux
+    uses: ./.github/workflows/reusable-host-command.yml
+    with:
+      runs_on: ${{ matrix.runs_on }}
+      command: ${{ matrix.command }}
+
+  test_starry_self_hosted:
+    name: Test starry self-hosted ${{ matrix.label }}
+    if: github.repository_owner == 'rcore-os'
+    needs:
+      - fmt
+      - clippy
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - label: smoke-orangepi-5-plus
+            runs_on: '["self-hosted","linux","board"]'
+            command: cargo xtask starry test board -t smoke-orangepi-5-plus
+    uses: ./.github/workflows/reusable-host-command.yml
+    with:
+      runs_on: ${{ matrix.runs_on }}
+      command: ${{ matrix.command }}
+
+  container_publish:
+    name: Publish container image
+    if: >-
+      ${{
+        github.event_name == 'push'
+        && (github.ref_name == 'main' || github.ref_name == 'dev')
+        && needs.detect_changes.outputs.container_publish == 'true'
+      }}
+    needs:
+      - detect_changes
+    uses: ./.github/workflows/container-publish.yml
+    permissions:
+      contents: read
+      packages: write

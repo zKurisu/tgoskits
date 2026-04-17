@@ -2,11 +2,11 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{Context, bail};
 use indicatif::ProgressBar;
+use ostool::run::qemu::QemuConfig;
 use tokio::fs as tokio_fs;
 use xz2::read::XzDecoder;
 
@@ -16,42 +16,6 @@ use crate::{
 };
 
 const ROOTFS_URL: &str = "https://github.com/Starry-OS/rootfs/releases/download/20260214";
-
-/// Remove the timeout field from the configuration file
-fn remove_timeout_field(config: &str) -> String {
-    // Check if config contains timeout line
-    if !config.contains("timeout") {
-        return config.to_string();
-    }
-    // Remove timeout line while preserving original format
-    config
-        .lines()
-        .filter(|line| !line.trim().starts_with("timeout"))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-/// Update the timeout field in the configuration file to the specified value
-fn update_timeout_field(config: &str, timeout_seconds: u64) -> String {
-    let timeout_line = format!("timeout = {}", timeout_seconds);
-    if config.contains("timeout") {
-        // Replace existing timeout line
-        config
-            .lines()
-            .map(|line| {
-                if line.trim().starts_with("timeout") {
-                    timeout_line.clone()
-                } else {
-                    line.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
-    } else {
-        // Add timeout field
-        format!("{}\n{}", config, timeout_line)
-    }
-}
 
 pub(crate) fn rootfs_image_name(arch: &str) -> anyhow::Result<String> {
     let _ = starry_target_for_arch_checked(arch)?;
@@ -66,13 +30,6 @@ pub(crate) fn resolve_target_dir(workspace_root: &Path, target: &str) -> anyhow:
 fn rootfs_image_path(workspace_root: &Path, arch: &str, target: &str) -> anyhow::Result<PathBuf> {
     let target_dir = resolve_target_dir(workspace_root, target)?;
     Ok(target_dir.join(rootfs_image_name(arch)?))
-}
-
-fn shared_rootfs_image_path(target: &str, arch: &str) -> anyhow::Result<String> {
-    Ok(format!(
-        "${{workspace}}/target/{target}/{}",
-        rootfs_image_name(arch)?
-    ))
 }
 
 pub(crate) async fn ensure_rootfs_in_target_dir(
@@ -104,89 +61,132 @@ pub(crate) async fn ensure_rootfs_in_target_dir(
     Ok(rootfs_img)
 }
 
-pub(crate) async fn default_qemu_args(
+fn per_case_rootfs_path(
     workspace_root: &Path,
-    request: &ResolvedStarryRequest,
-) -> anyhow::Result<Vec<String>> {
-    let disk_img =
-        ensure_rootfs_in_target_dir(workspace_root, &request.arch, &request.target).await?;
-    qemu_args_for_disk_image(disk_img)
+    arch: &str,
+    target: &str,
+    case_name: &str,
+) -> anyhow::Result<PathBuf> {
+    let target_dir = resolve_target_dir(workspace_root, target)?;
+    Ok(target_dir.join(format!("rootfs-{arch}-{case_name}.img")))
 }
 
-pub(crate) async fn prepare_test_qemu_config(
+pub(crate) async fn prepare_per_case_rootfs(
     workspace_root: &Path,
-    request: &ResolvedStarryRequest,
-    template_path: &Path,
-    timeout_override: Option<u64>,
+    arch: &str,
+    target: &str,
+    case_name: &str,
 ) -> anyhow::Result<PathBuf> {
-    let base_disk_img =
-        ensure_rootfs_in_target_dir(workspace_root, &request.arch, &request.target).await?;
-    let isolated_disk_img = isolated_test_disk_image_path(workspace_root, request)?;
-    tokio_fs::copy(&base_disk_img, &isolated_disk_img)
-        .await
-        .with_context(|| {
+    let base = rootfs_image_path(workspace_root, arch, target)?;
+    let case_rootfs = per_case_rootfs_path(workspace_root, arch, target, case_name)?;
+
+    // Clean up old per-case copy from a previous run
+    if case_rootfs.exists() {
+        tokio_fs::remove_file(&case_rootfs).await.with_context(|| {
             format!(
-                "failed to copy {} to {}",
-                base_disk_img.display(),
-                isolated_disk_img.display()
+                "failed to remove old per-case rootfs {}",
+                case_rootfs.display()
             )
         })?;
+    }
 
-    let shared_disk = shared_rootfs_image_path(&request.target, &request.arch)?;
-    let config = tokio_fs::read_to_string(template_path)
-        .await
-        .with_context(|| format!("failed to read {}", template_path.display()))?;
-    let config = config.replace(&shared_disk, &isolated_disk_img.display().to_string());
+    // Copy base rootfs to per-case path
+    let src = base.clone();
+    let dst = case_rootfs.clone();
+    tokio::task::spawn_blocking(move || {
+        std::fs::copy(&src, &dst)
+            .with_context(|| format!("failed to copy {} to {}", src.display(), dst.display()))?;
+        Ok::<(), anyhow::Error>(())
+    })
+    .await
+    .context("rootfs copy task failed")??;
 
-    // Handle timeout override
-    let config = match timeout_override {
-        None => config,                           // Keep timeout from config file
-        Some(0) => remove_timeout_field(&config), // 0 means disable timeout
-        Some(seconds) => {
-            // Set the specified timeout value
-            update_timeout_field(&config, seconds)
-        }
-    };
-
-    let generated_config = std::env::temp_dir().join(format!(
-        "starry-test-qemu-{}-{}-{}.toml",
-        request.arch,
-        std::process::id(),
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .context("system time is before unix epoch")?
-            .as_nanos()
-    ));
-    tokio_fs::write(&generated_config, config)
-        .await
-        .with_context(|| format!("failed to write {}", generated_config.display()))?;
-
-    Ok(generated_config)
+    Ok(case_rootfs)
 }
 
-fn qemu_args_for_disk_image(disk_img: PathBuf) -> anyhow::Result<Vec<String>> {
-    Ok(vec![
-        "-device".to_string(),
-        "virtio-blk-pci,drive=disk0".to_string(),
-        "-drive".to_string(),
-        format!("id=disk0,if=none,format=raw,file={}", disk_img.display()),
-        "-device".to_string(),
-        "virtio-net-pci,netdev=net0".to_string(),
-        "-netdev".to_string(),
-        "user,id=net0".to_string(),
-    ])
-}
-
-fn isolated_test_disk_image_path(
+pub(crate) async fn apply_default_qemu_args(
     workspace_root: &Path,
     request: &ResolvedStarryRequest,
-) -> anyhow::Result<PathBuf> {
-    let target_dir = resolve_target_dir(workspace_root, &request.target)?;
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .context("system time is before unix epoch")?
-        .as_nanos();
-    Ok(target_dir.join(format!("disk-test-{}-{timestamp}.img", std::process::id())))
+    qemu: &mut QemuConfig,
+) -> anyhow::Result<()> {
+    let disk_img =
+        ensure_rootfs_in_target_dir(workspace_root, &request.arch, &request.target).await?;
+    apply_disk_image_qemu_args(qemu, disk_img);
+    Ok(())
+}
+
+pub(crate) fn apply_smp_qemu_arg(qemu: &mut QemuConfig, smp: Option<usize>) {
+    let Some(cpu_num) = smp else {
+        return;
+    };
+
+    if let Some(index) = qemu.args.iter().position(|arg| arg == "-smp")
+        && let Some(value) = qemu.args.get_mut(index + 1)
+    {
+        *value = cpu_num.to_string();
+        return;
+    }
+
+    qemu.args.push("-smp".to_string());
+    qemu.args.push(cpu_num.to_string());
+}
+
+pub(crate) fn apply_disk_image_qemu_args(qemu: &mut QemuConfig, disk_img: PathBuf) {
+    let disk_value = format!("id=disk0,if=none,format=raw,file={}", disk_img.display());
+    let args = &mut qemu.args;
+
+    let mut has_blk_device = false;
+    let mut has_drive = false;
+    let mut has_net_device = false;
+    let mut has_netdev = false;
+
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "-device" if index + 1 < args.len() => {
+                let value = &mut args[index + 1];
+                if value == "virtio-blk-pci,drive=disk0" {
+                    has_blk_device = true;
+                } else if value == "virtio-net-pci,netdev=net0" {
+                    has_net_device = true;
+                }
+                index += 2;
+            }
+            "-drive" if index + 1 < args.len() => {
+                let value = &mut args[index + 1];
+                if value.starts_with("id=disk0,if=none,format=raw,file=") {
+                    *value = disk_value.clone();
+                    has_drive = true;
+                }
+                index += 2;
+            }
+            "-netdev" if index + 1 < args.len() => {
+                let value = &mut args[index + 1];
+                if value == "user,id=net0" {
+                    has_netdev = true;
+                }
+                index += 2;
+            }
+            _ => index += 1,
+        }
+    }
+
+    if !has_blk_device {
+        args.push("-device".to_string());
+        args.push("virtio-blk-pci,drive=disk0".to_string());
+    }
+    if !has_drive {
+        args.push("-drive".to_string());
+        args.push(disk_value);
+    }
+    if !has_net_device {
+        args.push("-device".to_string());
+        args.push("virtio-net-pci,netdev=net0".to_string());
+    }
+    if !has_netdev {
+        args.push("-netdev".to_string());
+        args.push("user,id=net0".to_string());
+    }
 }
 
 async fn download_with_progress(url: &str, output_path: &Path) -> anyhow::Result<()> {
@@ -255,7 +255,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn default_qemu_args_include_rootfs_and_network_defaults() {
+    async fn apply_default_qemu_args_includes_rootfs_and_network_defaults() {
         let root = tempdir().unwrap();
         let target_dir = root.path().join("target/x86_64-unknown-none");
         fs::create_dir_all(&target_dir).unwrap();
@@ -266,15 +266,21 @@ mod tests {
             arch: "x86_64".to_string(),
             target: "x86_64-unknown-none".to_string(),
             plat_dyn: None,
+            smp: None,
+            debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
+            build_info_override: None,
             qemu_config: None,
             uboot_config: None,
         };
+        let mut qemu = QemuConfig::default();
 
-        let args = default_qemu_args(root.path(), &request).await.unwrap();
+        apply_default_qemu_args(root.path(), &request, &mut qemu)
+            .await
+            .unwrap();
 
         assert_eq!(
-            args,
+            qemu.args,
             vec![
                 "-device".to_string(),
                 "virtio-blk-pci,drive=disk0".to_string(),
@@ -302,91 +308,106 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn prepare_test_qemu_config_rewrites_shared_disk_path() {
+    async fn apply_default_qemu_args_preserves_existing_base_args() {
         let root = tempdir().unwrap();
-        let target_dir = root.path().join("target/x86_64-unknown-none");
+        let target_dir = root.path().join("target/riscv64gc-unknown-none-elf");
         fs::create_dir_all(&target_dir).unwrap();
-        fs::write(target_dir.join("rootfs-x86_64.img"), b"rootfs").unwrap();
-        let template = root.path().join("qemu-x86_64.toml");
-        fs::write(
-            &template,
-            r#"
-args = ["-nographic", "-drive", "id=disk0,if=none,format=raw,file=${workspace}/target/x86_64-unknown-none/rootfs-x86_64.img"]
-shell_prefix = "starry:~#"
-"#,
-        )
-        .unwrap();
+        fs::write(target_dir.join("rootfs-riscv64.img"), b"rootfs").unwrap();
 
         let request = ResolvedStarryRequest {
-            package: "starryos-test".to_string(),
-            arch: "x86_64".to_string(),
-            target: "x86_64-unknown-none".to_string(),
+            package: "starryos".to_string(),
+            arch: "riscv64".to_string(),
+            target: "riscv64gc-unknown-none-elf".to_string(),
             plat_dyn: None,
+            smp: None,
+            debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
+            build_info_override: None,
             qemu_config: None,
             uboot_config: None,
         };
+        let mut qemu = QemuConfig {
+            args: vec![
+                "-nographic".to_string(),
+                "-cpu".to_string(),
+                "rv64".to_string(),
+                "-machine".to_string(),
+                "virt".to_string(),
+            ],
+            ..Default::default()
+        };
 
-        let generated = prepare_test_qemu_config(root.path(), &request, &template, None)
+        apply_default_qemu_args(root.path(), &request, &mut qemu)
             .await
             .unwrap();
-        let content = fs::read_to_string(generated).unwrap();
 
-        assert!(content.contains("disk-test-"));
-        assert!(!content.contains("${workspace}/target/x86_64-unknown-none/rootfs-x86_64.img"));
-        assert!(content.contains("shell_prefix = \"starry:~#\""));
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-nographic".to_string(),
+                "-cpu".to_string(),
+                "rv64".to_string(),
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-device".to_string(),
+                "virtio-blk-pci,drive=disk0".to_string(),
+                "-drive".to_string(),
+                format!(
+                    "id=disk0,if=none,format=raw,file={}",
+                    root.path()
+                        .join("target/riscv64gc-unknown-none-elf/rootfs-riscv64.img")
+                        .display()
+                ),
+                "-device".to_string(),
+                "virtio-net-pci,netdev=net0".to_string(),
+                "-netdev".to_string(),
+                "user,id=net0".to_string(),
+            ]
+        );
     }
 
     #[test]
-    fn remove_timeout_field_removes_timeout_line() {
-        let config = r#"args = ["-nographic"]
-shell_prefix = "starry:~#"
-timeout = 3
-"#;
-        let result = remove_timeout_field(config);
-        assert!(!result.contains("timeout"));
-        assert!(result.contains("args = [\"-nographic\"]"));
-        assert!(result.contains("shell_prefix = \"starry:~#\""));
+    fn apply_smp_qemu_arg_appends_cpu_count() {
+        let mut qemu = QemuConfig {
+            args: vec!["-machine".to_string(), "virt".to_string()],
+            ..Default::default()
+        };
+
+        apply_smp_qemu_arg(&mut qemu, Some(4));
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "4".to_string(),
+            ]
+        );
     }
 
     #[test]
-    fn remove_timeout_field_handles_config_without_timeout() {
-        let config = r#"args = ["-nographic"]
-shell_prefix = "starry:~#"
-"#;
-        let result = remove_timeout_field(config);
-        assert_eq!(result, config);
-    }
+    fn apply_smp_qemu_arg_replaces_existing_cpu_count() {
+        let mut qemu = QemuConfig {
+            args: vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "1".to_string(),
+            ],
+            ..Default::default()
+        };
 
-    #[test]
-    fn update_timeout_field_replaces_existing_timeout() {
-        let config = r#"args = ["-nographic"]
-shell_prefix = "starry:~#"
-timeout = 3
-"#;
-        let result = update_timeout_field(config, 10);
-        assert!(result.contains("timeout = 10"));
-        assert!(!result.contains("timeout = 3"));
-    }
+        apply_smp_qemu_arg(&mut qemu, Some(4));
 
-    #[test]
-    fn update_timeout_field_adds_timeout_when_not_present() {
-        let config = r#"args = ["-nographic"]
-shell_prefix = "starry:~#"
-"#;
-        let result = update_timeout_field(config, 30);
-        assert!(result.contains("timeout = 30"));
-        assert!(result.contains("args = [\"-nographic\"]"));
-        assert!(result.contains("shell_prefix = \"starry:~#\""));
-    }
-
-    #[test]
-    fn update_timeout_field_with_zero_disables_timeout() {
-        let config = r#"args = ["-nographic"]
-shell_prefix = "starry:~#"
-timeout = 3
-"#;
-        let result = remove_timeout_field(config);
-        assert!(!result.contains("timeout"));
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "4".to_string(),
+            ]
+        );
     }
 }

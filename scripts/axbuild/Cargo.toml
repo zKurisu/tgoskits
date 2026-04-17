@@ -6,12 +6,12 @@ keywords.workspace = true
 license.workspace = true
 name = "axbuild"
 repository.workspace = true
-version = "0.4.0"
+version = "0.4.4"
 description = "An OS build lib toolkit used by arceos"
 
 [dependencies]
 anyhow = {workspace = true}
-axvmconfig = {version = "0.4.2", features = ["std"]}
+axvmconfig = {version = "0.4", features = ["std"]}
 cargo_metadata = "0.23"
 chrono = {version = "0.4", features = ["serde"]}
 clap = {version = "4.6", features = ["derive"], optional = true}
@@ -39,8 +39,10 @@ tracing-subscriber = {version = "0.3", features = ["fmt", "std", "time"]}
 xz2 = "0.1"
 
 [features]
-cli = ["clap", "tokio"]
+clap = ["dep:clap", "dep:tokio"]
+cli = ["clap"]
 default = ["cli"]
+tokio = ["dep:tokio", "dep:clap"]
 
 [dev-dependencies]
 tempfile = "3"
