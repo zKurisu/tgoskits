@@ -59,7 +59,6 @@ riscv64-qemu-virt-hv
 riscv-h
 riscv_vcpu
 scope-local
-smoltcp
 starry-process
 starry-vm
 tg-xtask

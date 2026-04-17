@@ -126,7 +126,10 @@ impl InterfaceInner {
                 // NOTE: according to the standard, the total length needs to be
                 // recomputed, as well as the checksum. However, we don't really use
                 // the IPv4 header after the packet is reassembled.
-                f.assemble()?
+                match f.assemble() {
+                    Some(payload) => payload,
+                    None => return None,
+                }
             } else {
                 ipv4_packet.payload()
             }
@@ -195,7 +198,7 @@ impl InterfaceInner {
             if self
                 .routes
                 .lookup(&IpAddress::Ipv4(ipv4_repr.dst_addr), self.now)
-                .is_none_or(|router_addr| !self.has_ip_addr(router_addr))
+                .map_or(true, |router_addr| !self.has_ip_addr(router_addr))
             {
                 net_trace!("Rejecting IPv4 packet; no matching routes");
 

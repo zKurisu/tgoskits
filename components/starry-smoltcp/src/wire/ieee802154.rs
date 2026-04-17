@@ -988,10 +988,8 @@ impl Repr {
             frame.set_dst_addr(dst_addr);
         }
 
-        if !self.pan_id_compression {
-            if let Some(src_pan_id) = self.src_pan_id {
-                frame.set_src_pan_id(src_pan_id);
-            }
+        if !self.pan_id_compression && self.src_pan_id.is_some() {
+            frame.set_src_pan_id(self.src_pan_id.unwrap());
         }
 
         if let Some(src_addr) = self.src_addr {

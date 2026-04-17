@@ -223,28 +223,16 @@ fn docs_rs_targets(package: &Package) -> Vec<String> {
     unique_targets.into_iter().collect()
 }
 
-fn feature_checks_enabled(package: &Package) -> bool {
-    !package
-        .metadata
-        .pointer("/axbuild/clippy/skip-feature-checks")
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-}
-
 fn expand_clippy_checks(packages: &[Package]) -> Vec<ClippyCheck> {
     let mut checks = Vec::new();
 
     for package in packages {
-        let features: BTreeSet<_> = if feature_checks_enabled(package) {
-            package
-                .features
-                .keys()
-                .filter(|feature| feature.as_str() != "default")
-                .cloned()
-                .collect()
-        } else {
-            BTreeSet::new()
-        };
+        let features: BTreeSet<_> = package
+            .features
+            .keys()
+            .filter(|feature| feature.as_str() != "default")
+            .cloned()
+            .collect();
         let targets = docs_rs_targets(package);
         let target_iter = if targets.is_empty() {
             vec![None]
@@ -435,28 +423,13 @@ mod tests {
         features: &[(&str, &[&str])],
         docs_rs_targets: Option<&[&str]>,
     ) -> Package {
-        pkg_with_metadata(name, id, features, docs_rs_targets, None)
-    }
-
-    fn pkg_with_metadata(
-        name: &str,
-        id: &str,
-        features: &[(&str, &[&str])],
-        docs_rs_targets: Option<&[&str]>,
-        extra_metadata: Option<serde_json::Value>,
-    ) -> Package {
-        let mut metadata = serde_json::Map::new();
-        if let Some(targets) = docs_rs_targets {
-            metadata.insert(
-                "docs.rs".to_string(),
-                serde_json::json!({
+        let metadata = docs_rs_targets.map(|targets| {
+            serde_json::json!({
+                "docs.rs": {
                     "targets": targets,
-                }),
-            );
-        }
-        if let Some(extra_metadata) = extra_metadata.and_then(|value| value.as_object().cloned()) {
-            metadata.extend(extra_metadata);
-        }
+                }
+            })
+        });
         let value = serde_json::json!({
             "name": name,
             "version": "0.1.0",
@@ -801,32 +774,6 @@ mod tests {
                 "-D",
                 "warnings",
             ]
-        );
-    }
-
-    #[test]
-    fn package_can_skip_feature_checks_via_metadata() {
-        let checks = expand_clippy_checks(&[pkg_with_metadata(
-            "alpha",
-            "alpha 0.1.0 (path+file:///tmp/alpha)",
-            &[("b", &[]), ("a", &[])],
-            None,
-            Some(serde_json::json!({
-                "axbuild": {
-                    "clippy": {
-                        "skip-feature-checks": true
-                    }
-                }
-            })),
-        )]);
-
-        assert_eq!(
-            checks,
-            vec![ClippyCheck {
-                package: "alpha".to_string(),
-                kind: ClippyCheckKind::Base,
-                target: None,
-            }]
         );
     }
 

@@ -1,8 +1,8 @@
 [package]
 name = "smoltcp"
 version = "0.14.2"
-edition = "2024"
-rust-version = "1.85"
+edition = "2021"
+rust-version = "1.81"
 authors = ["whitequark <whitequark@whitequark.org>"]
 description = "A TCP/IP stack designed for bare-metal, real-time systems without a heap."
 documentation = "https://docs.rs/smoltcp/"
@@ -19,9 +19,6 @@ publish = false
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }
-
-[package.metadata.axbuild.clippy]
-skip-feature-checks = true
 
 [dependencies]
 managed = { version = "0.8", default-features = false, features = ["map"] }
@@ -101,8 +98,9 @@ defmt = ["dep:defmt", "heapless/defmt-03"]
 "async" = []
 
 default = [
-  "log",
+  "std", "log", # needed for `cargo test --no-default-features --features default` :/
   "medium-ethernet", "medium-ip", "medium-ieee802154",
+  "phy-raw_socket", "phy-tuntap_interface",
   "proto-ipv4",  "proto-dhcpv4", "proto-ipv6", "proto-dns",
   "proto-ipv4-fragmentation", "proto-sixlowpan-fragmentation",
   "socket-raw", "socket-icmp", "socket-udp", "socket-tcp", "socket-dhcpv4", "socket-dns", "socket-mdns",

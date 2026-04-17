@@ -110,7 +110,7 @@ impl<T: AsRef<[u8]> + AsMut<[u8]>> Header<T> {
     }
 }
 
-impl<T: AsRef<[u8]> + AsMut<[u8]> + ?Sized> Header<&mut T> {
+impl<'a, T: AsRef<[u8]> + AsMut<[u8]> + ?Sized> Header<&'a mut T> {
     /// Return a mutable pointer to the payload data.
     #[inline]
     pub fn payload_mut(&mut self) -> &mut [u8] {

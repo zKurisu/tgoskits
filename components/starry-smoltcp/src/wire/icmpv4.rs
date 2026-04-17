@@ -348,7 +348,7 @@ impl<T: AsRef<[u8]> + AsMut<[u8]>> Packet<T> {
     }
 }
 
-impl<T: AsRef<[u8]> + AsMut<[u8]> + ?Sized> Packet<&mut T> {
+impl<'a, T: AsRef<[u8]> + AsMut<[u8]> + ?Sized> Packet<&'a mut T> {
     /// Return a mutable pointer to the type-specific data.
     #[inline]
     pub fn data_mut(&mut self) -> &mut [u8] {
@@ -557,7 +557,7 @@ impl<'a> Repr<'a> {
     }
 }
 
-impl<T: AsRef<[u8]> + ?Sized> fmt::Display for Packet<&T> {
+impl<'a, T: AsRef<[u8]> + ?Sized> fmt::Display for Packet<&'a T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match Repr::parse(self, &ChecksumCapabilities::default()) {
             Ok(repr) => write!(f, "{repr}"),
