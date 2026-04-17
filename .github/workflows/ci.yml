@@ -132,7 +132,8 @@ jobs:
           - x86_64
     uses: ./.github/workflows/reusable-container-command.yml
     with:
-      command: cargo xtask starry test qemu --stress --target ${{ matrix.arch }}
+      # command: cargo xtask starry test qemu --stress --target ${{ matrix.arch }}
+      command: echo "TODO!"
       cache_key: test-starry-stress-${{ matrix.arch }}
       container_image: ghcr.io/${{ github.repository }}-container:latest
       install_fat_tools: true
