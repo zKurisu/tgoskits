@@ -56,6 +56,9 @@ pub struct ArgsBuild {
     #[arg(short, long)]
     pub target: Option<String>,
 
+    #[arg(long, value_name = "CPUS")]
+    pub smp: Option<usize>,
+
     #[arg(long)]
     pub debug: bool,
 }
@@ -176,6 +179,7 @@ impl From<&ArgsBuild> for StarryCliArgs {
             config: args.config.clone(),
             arch: args.arch.clone(),
             target: args.target.clone(),
+            smp: args.smp,
             debug: args.debug,
         }
     }
@@ -499,6 +503,7 @@ impl Starry {
             config: None,
             arch: Some(arch.to_string()),
             target: None,
+            smp: None,
             debug: false,
         }
     }
@@ -508,6 +513,7 @@ impl Starry {
             config: Some(group.build_config_path.clone()),
             arch: None,
             target: Some(group.target.clone()),
+            smp: None,
             debug: false,
         }
     }
@@ -517,6 +523,7 @@ impl Starry {
             config: Some(config),
             arch: Some(arch.to_string()),
             target: None,
+            smp: None,
             debug: false,
         }
     }
@@ -545,6 +552,7 @@ impl Starry {
         if request.qemu_config.is_none() && apply_default_args {
             rootfs::apply_default_qemu_args(self.app.workspace_root(), request, &mut qemu).await?;
         }
+        rootfs::apply_smp_qemu_arg(&mut qemu, request.smp);
 
         Ok(qemu)
     }
@@ -608,6 +616,7 @@ impl Starry {
         )
         .await?;
         rootfs::apply_disk_image_qemu_args(&mut qemu, case_rootfs);
+        rootfs::apply_smp_qemu_arg(&mut qemu, request.smp);
 
         self.app
             .qemu(cargo.clone(), request.build_info_path.clone(), Some(qemu))

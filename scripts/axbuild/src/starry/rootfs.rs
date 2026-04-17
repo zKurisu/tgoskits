@@ -115,6 +115,22 @@ pub(crate) async fn apply_default_qemu_args(
     Ok(())
 }
 
+pub(crate) fn apply_smp_qemu_arg(qemu: &mut QemuConfig, smp: Option<usize>) {
+    let Some(cpu_num) = smp else {
+        return;
+    };
+
+    if let Some(index) = qemu.args.iter().position(|arg| arg == "-smp")
+        && let Some(value) = qemu.args.get_mut(index + 1)
+    {
+        *value = cpu_num.to_string();
+        return;
+    }
+
+    qemu.args.push("-smp".to_string());
+    qemu.args.push(cpu_num.to_string());
+}
+
 pub(crate) fn apply_disk_image_qemu_args(qemu: &mut QemuConfig, disk_img: PathBuf) {
     let disk_value = format!("id=disk0,if=none,format=raw,file={}", disk_img.display());
     let args = &mut qemu.args;
@@ -250,6 +266,7 @@ mod tests {
             arch: "x86_64".to_string(),
             target: "x86_64-unknown-none".to_string(),
             plat_dyn: None,
+            smp: None,
             debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
             build_info_override: None,
@@ -302,6 +319,7 @@ mod tests {
             arch: "riscv64".to_string(),
             target: "riscv64gc-unknown-none-elf".to_string(),
             plat_dyn: None,
+            smp: None,
             debug: false,
             build_info_path: PathBuf::from("/tmp/.build.toml"),
             build_info_override: None,
@@ -344,6 +362,51 @@ mod tests {
                 "virtio-net-pci,netdev=net0".to_string(),
                 "-netdev".to_string(),
                 "user,id=net0".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn apply_smp_qemu_arg_appends_cpu_count() {
+        let mut qemu = QemuConfig {
+            args: vec!["-machine".to_string(), "virt".to_string()],
+            ..Default::default()
+        };
+
+        apply_smp_qemu_arg(&mut qemu, Some(4));
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "4".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn apply_smp_qemu_arg_replaces_existing_cpu_count() {
+        let mut qemu = QemuConfig {
+            args: vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "1".to_string(),
+            ],
+            ..Default::default()
+        };
+
+        apply_smp_qemu_arg(&mut qemu, Some(4));
+
+        assert_eq!(
+            qemu.args,
+            vec![
+                "-machine".to_string(),
+                "virt".to_string(),
+                "-smp".to_string(),
+                "4".to_string(),
             ]
         );
     }

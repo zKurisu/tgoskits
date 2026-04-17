@@ -275,6 +275,7 @@ pub(crate) fn qemu_test_build_args(arch: &str, vmconfig: PathBuf) -> AxvisorCliA
         arch: Some(arch.to_string()),
         target: None,
         plat_dyn: None,
+        smp: None,
         debug: false,
         vmconfigs: vec![vmconfig],
     }
@@ -286,6 +287,7 @@ pub(crate) fn uboot_test_build_args(build_config: &str, vmconfig: &str) -> Axvis
         arch: None,
         target: None,
         plat_dyn: None,
+        smp: None,
         debug: false,
         vmconfigs: vec![PathBuf::from(vmconfig)],
     }
@@ -300,6 +302,7 @@ pub(crate) fn board_test_build_args(
         arch: None,
         target: None,
         plat_dyn: None,
+        smp: None,
         debug: false,
         vmconfigs,
     }

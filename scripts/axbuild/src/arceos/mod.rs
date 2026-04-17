@@ -369,6 +369,9 @@ pub struct ArgsBuild {
     #[arg(long = "plat_dyn", alias = "plat-dyn")]
     pub plat_dyn: Option<bool>,
 
+    #[arg(long, value_name = "CPUS")]
+    pub smp: Option<usize>,
+
     #[arg(long)]
     pub debug: bool,
 }
@@ -445,6 +448,7 @@ impl From<&ArgsBuild> for BuildCliArgs {
             arch: args.arch.clone(),
             target: args.target.clone(),
             plat_dyn: args.plat_dyn,
+            smp: args.smp,
             debug: args.debug,
         }
     }
@@ -592,6 +596,7 @@ impl ArceOS {
             arch: None,
             target: Some(target.to_string()),
             plat_dyn: None,
+            smp: None,
             debug: false,
         }
     }

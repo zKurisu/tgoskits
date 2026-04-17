@@ -52,6 +52,7 @@ impl AppContext {
         });
         let (arch, target) = resolve_arceos_arch_and_target(effective_arch, effective_target)?;
         let plat_dyn = cli.plat_dyn.or(snapshot.plat_dyn);
+        let smp = cli.smp.or(snapshot.smp);
         let inherit_snapshot_runtime =
             cli.package.is_none() && cli.arch.is_none() && cli.target.is_none();
         let runtime_paths = self.resolve_runtime_paths(
@@ -76,6 +77,7 @@ impl AppContext {
             arch: arch.clone(),
             target: target.clone(),
             plat_dyn,
+            smp,
             debug: cli.debug,
             build_info_path,
             qemu_config: runtime_paths.qemu_config.clone(),
@@ -87,6 +89,7 @@ impl AppContext {
             arch: Some(arch),
             target: Some(target),
             plat_dyn,
+            smp,
             qemu: ArceosQemuSnapshot {
                 qemu_config: runtime_paths
                     .qemu_config
@@ -133,6 +136,7 @@ impl AppContext {
             }
         });
         let (arch, target) = resolve_starry_arch_and_target(effective_arch, effective_target)?;
+        let smp = cli.smp.or(snapshot.smp);
         let inherit_snapshot_runtime = cli.arch.is_none() && cli.target.is_none();
         let runtime_paths = self.resolve_runtime_paths(
             qemu_config,
@@ -156,6 +160,7 @@ impl AppContext {
             arch: arch.clone(),
             target: target.clone(),
             plat_dyn: None,
+            smp,
             debug: cli.debug,
             build_info_path,
             build_info_override: None,
@@ -166,6 +171,7 @@ impl AppContext {
         let snapshot = StarryCommandSnapshot {
             arch: Some(arch),
             target: Some(target),
+            smp,
             qemu: StarryQemuSnapshot {
                 qemu_config: runtime_paths
                     .qemu_config
@@ -229,6 +235,7 @@ impl AppContext {
             resolved_config,
         )?;
         let plat_dyn = cli.plat_dyn.or(snapshot.plat_dyn);
+        let smp = cli.smp.or(snapshot.smp);
         let build_info_path =
             crate::axvisor::build::resolve_build_info_path(&axvisor_dir, &target, explicit_config)?;
         let inherit_snapshot_runtime = cli.arch.is_none()
@@ -261,6 +268,7 @@ impl AppContext {
             arch: arch.clone(),
             target: target.clone(),
             plat_dyn,
+            smp,
             debug: cli.debug,
             build_info_path: build_info_path.clone(),
             qemu_config: runtime_paths.qemu_config.clone(),
@@ -272,6 +280,7 @@ impl AppContext {
             arch: Some(arch),
             target: Some(target),
             plat_dyn,
+            smp,
             config: Some(snapshot_path_value(&self.root, &build_info_path)),
             vmconfigs: vmconfigs
                 .iter()

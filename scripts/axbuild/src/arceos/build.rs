@@ -343,6 +343,10 @@ pub(crate) fn load_build_info(request: &ResolvedBuildRequest) -> anyhow::Result<
         })?;
     }
 
+    if let Some(smp) = request.smp {
+        build_info.max_cpu_num = Some(smp);
+    }
+
     Ok(build_info)
 }
 
@@ -778,6 +782,7 @@ mod tests {
             },
             target: target.to_string(),
             plat_dyn,
+            smp: None,
             debug: false,
             build_info_path,
             qemu_config: None,
