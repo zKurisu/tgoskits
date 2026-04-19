@@ -17,6 +17,17 @@ on:
       - "docs/**"
       - "**/docs/**"
       - "**/doc/**"
+  workflow_dispatch:
+    inputs:
+      container_target:
+        description: Container image(s) to publish manually.
+        required: true
+        default: both
+        type: choice
+        options:
+          - base
+          - axvisor-lvz
+          - both
 
 permissions:
   contents: read
@@ -37,9 +48,9 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      ci_checks: ${{ steps.filter.outputs.ci_checks }}
-      base_container_publish: ${{ steps.filter.outputs.base_container_publish }}
-      axvisor_lvz_container_publish: ${{ steps.filter.outputs.axvisor_lvz_container_publish }}
+      ci_checks: ${{ steps.outputs.outputs.ci_checks }}
+      base_container_publish: ${{ steps.outputs.outputs.base_container_publish }}
+      axvisor_lvz_container_publish: ${{ steps.outputs.outputs.axvisor_lvz_container_publish }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -48,6 +59,7 @@ jobs:
 
       - name: Detect CI-relevant changes
         id: filter
+        if: github.event_name != 'workflow_dispatch'
         uses: dorny/paths-filter@v4
         with:
           filters: |
@@ -66,16 +78,52 @@ jobs:
               - "test-suit/**"
               - "xtask/**"
             base_container_publish:
-              - ".github/workflows/ci.yml"
-              - ".github/workflows/container-publish.yml"
               - "container/Dockerfile"
-              - "container/Dockerfile.axvisor-lvz"
               - "rust-toolchain.toml"
             axvisor_lvz_container_publish:
-              - ".github/workflows/ci.yml"
-              - ".github/workflows/container-publish.yml"
               - "container/Dockerfile.axvisor-lvz"
               - "rust-toolchain.toml"
+
+      - name: Resolve workflow outputs
+        id: outputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_TARGET: ${{ github.event.inputs.container_target }}
+          FILTER_CI_CHECKS: ${{ steps.filter.outputs.ci_checks }}
+          FILTER_BASE_CONTAINER_PUBLISH: ${{ steps.filter.outputs.base_container_publish }}
+          FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH: ${{ steps.filter.outputs.axvisor_lvz_container_publish }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            ci_checks=false
+            case "$MANUAL_TARGET" in
+              base)
+                base_container_publish=true
+                axvisor_lvz_container_publish=false
+                ;;
+              axvisor-lvz)
+                base_container_publish=false
+                axvisor_lvz_container_publish=true
+                ;;
+              both)
+                base_container_publish=true
+                axvisor_lvz_container_publish=true
+                ;;
+              *)
+                echo "Unexpected container_target: $MANUAL_TARGET" >&2
+                exit 1
+                ;;
+            esac
+          else
+            ci_checks="${FILTER_CI_CHECKS}"
+            base_container_publish="${FILTER_BASE_CONTAINER_PUBLISH}"
+            axvisor_lvz_container_publish="${FILTER_AXVISOR_LVZ_CONTAINER_PUBLISH}"
+          fi
+
+          {
+            echo "ci_checks=${ci_checks}"
+            echo "base_container_publish=${base_container_publish}"
+            echo "axvisor_lvz_container_publish=${axvisor_lvz_container_publish}"
+          } >> "$GITHUB_OUTPUT"
 
   fmt:
     name: Check formatting
@@ -302,16 +350,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Summarize skip reason
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           echo "## CI checks skipped" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Changed files do not match the test-relevant path set, so fmt and follow-up checks were skipped." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "This manual run is scoped to container publishing, so fmt and follow-up CI checks were skipped." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Changed files do not match the test-relevant path set, so fmt and follow-up checks were skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  manual_container_branch_guard:
+    name: Explain manual container branch restriction
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch'
+        && github.ref_name != 'main'
+        && github.ref_name != 'dev'
+      }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize branch restriction
+        run: |
+          echo "## Container publish skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Manual container publishing only runs from the \`main\` or \`dev\` branch. This run targeted \`${{ github.ref_name }}\`, so publish jobs were skipped." >> "$GITHUB_STEP_SUMMARY"
 
   publish_base_container:
     name: Publish base container image
     if: >-
       ${{
-        github.event_name == 'push'
+        (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         && (github.ref_name == 'main' || github.ref_name == 'dev')
         && needs.detect_changes.outputs.base_container_publish == 'true'
       }}
@@ -330,9 +400,14 @@ jobs:
     name: Publish axvisor-lvz container image
     if: >-
       ${{
-        github.event_name == 'push'
+        always()
+        && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         && (github.ref_name == 'main' || github.ref_name == 'dev')
         && needs.detect_changes.outputs.axvisor_lvz_container_publish == 'true'
+        && (
+          needs.detect_changes.outputs.base_container_publish != 'true'
+          || needs.publish_base_container.result == 'success'
+        )
       }}
     needs:
       - detect_changes
