@@ -4,7 +4,7 @@
 
 <div align="center">
 
-[![Build & Test](https://github.com/rcore-os/tgoskits/actions/workflows/test.yml/badge.svg)](https://github.com/rcore-os/tgoskits/actions/workflows/test.yml)
+[![Build & Test](https://github.com/rcore-os/tgoskits/actions/workflows/ci.yml/badge.svg)](https://github.com/rcore-os/tgoskits/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/edition-2024-orange.svg)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](./LICENSE)
 
@@ -20,14 +20,17 @@ This repository contains multiple systems and dozens of standalone components. D
 
 | Your Goal | Recommended First Reading | Shortest Command |
 | --- | --- | --- |
-| First successful run | [docs/docs/quickstart/qemu/aarch64.md](docs/docs/quickstart/qemu/aarch64.md) | `cargo xtask arceos qemu --package ax-helloworld --arch riscv64` |
-| Full development example | [docs/docs/demo.md](docs/docs/demo.md) | A complete example for creating or modifying a component from scratch |
-| Component development guide | [docs/docs/design/architecture/arch.md](docs/docs/design/architecture/arch.md) | Start from `components/` or `os/arceos/modules/` |
-| Develop ArceOS | [docs/docs/arceos-guide.md](docs/docs/arceos-guide.md) | `cargo xtask arceos qemu --package ax-helloworld --arch riscv64` |
-| Develop StarryOS | [docs/docs/starryos-guide.md](docs/docs/starryos-guide.md) | `cargo xtask starry qemu --arch riscv64` |
-| Develop Axvisor | [docs/docs/manual/deploy/qemu.md](docs/docs/manual/deploy/qemu.md) | `cargo xtask axvisor test qemu --target aarch64` |
+| First successful run | [docs/docs/quickstart/overview.md](docs/docs/quickstart/overview.md) | `cargo xtask arceos qemu --package ax-helloworld --arch aarch64` |
+| ArceOS quick start | [docs/docs/quickstart/arceos.md](docs/docs/quickstart/arceos.md) | `cargo xtask arceos qemu --package ax-helloworld --arch aarch64` |
+| StarryOS quick start | [docs/docs/quickstart/starryos.md](docs/docs/quickstart/starryos.md) | `cargo xtask starry qemu --arch aarch64` |
+| Axvisor quick start | [docs/docs/quickstart/axvisor.md](docs/docs/quickstart/axvisor.md) | `cargo xtask axvisor qemu --arch aarch64` |
+| Full development example | [docs/docs/design/reference/demo.md](docs/docs/design/reference/demo.md) | A complete example for creating or modifying a component from scratch |
+| Component development guide | [docs/docs/design/reference/components.md](docs/docs/design/reference/components.md) | Start from `components/` or `os/arceos/modules/` |
+| Develop ArceOS | [docs/docs/design/systems/arceos-guide.md](docs/docs/design/systems/arceos-guide.md) | `cargo xtask arceos qemu --package ax-helloworld --arch aarch64` |
+| Develop StarryOS | [docs/docs/design/systems/starryos-guide.md](docs/docs/design/systems/starryos-guide.md) | `cargo xtask starry qemu --arch aarch64` |
+| Develop Axvisor | [docs/docs/design/systems/axvisor-guide.md](docs/docs/design/systems/axvisor-guide.md) | `cargo xtask axvisor qemu --arch aarch64` |
 | Understand the build and test matrix | [docs/docs/design/build/flow.md](docs/docs/design/build/flow.md) | `cargo xtask test` |
-| Understand how the repository organizes many standalone components | [docs/docs/repo.md](docs/docs/repo.md) | `python3 scripts/repo/repo.py list` |
+| Understand how the repository organizes many standalone components | [docs/docs/design/reference/repo.md](docs/docs/design/reference/repo.md) | `python3 scripts/repo/repo.py list` |
 
 ## 2. Repository Layout
 
@@ -64,7 +67,7 @@ feature/* ──PR──► dev
                  main
 ```
 
-If you need to synchronize with component repositories, maintainers should explicitly run `scripts/repo/repo.py pull/push`. See [docs/docs/repo.md](docs/docs/repo.md) for details.
+If you need to synchronize with component repositories, maintainers should explicitly run `scripts/repo/repo.py pull/push`. See [docs/docs/design/reference/repo.md](docs/docs/design/reference/repo.md) for details.
 
 ## 3. Quick Experience
 
@@ -75,14 +78,14 @@ git clone https://github.com/rcore-os/tgoskits.git
 cd tgoskits
 
 # ArceOS: fastest Hello World path
-cargo xtask arceos qemu --package ax-helloworld --arch riscv64
+cargo xtask arceos qemu --package ax-helloworld --arch aarch64
 # Equivalent alias
-cargo arceos qemu --package ax-helloworld --arch riscv64
+cargo arceos qemu --package ax-helloworld --arch aarch64
 
 # StarryOS: prepare rootfs before the first run
-cargo xtask starry qemu --arch riscv64
+cargo xtask starry qemu --arch aarch64
 # Equivalent alias
-cargo starry qemu --arch riscv64
+cargo starry qemu --arch aarch64
 
 # Axvisor: recommended to use the official setup script for guest and rootfs
 cargo xtask axvisor qemu --arch aarch64
@@ -90,34 +93,37 @@ cargo xtask axvisor qemu --arch aarch64
 cargo axvisor qemu --arch aarch64
 ```
 
-Axvisor cannot be started only with `build/qemu`, because guest images, VM configuration, and rootfs are still required before runtime. It is recommended to use `os/axvisor/scripts/setup_qemu.sh` to prepare those runtime resources first, then run `cargo xtask axvisor qemu --arch <arch>`. See [docs/docs/manual/deploy/qemu.md](docs/docs/manual/deploy/qemu.md) and [docs/docs/axvisor-guide.md](docs/docs/axvisor-guide.md) for the full workflow.
+Axvisor cannot be started only with `build/qemu`, because guest images, VM configuration, and rootfs are still required before runtime. It is recommended to use `os/axvisor/scripts/setup_qemu.sh` to prepare those runtime resources first, then run `cargo xtask axvisor qemu --arch <arch>`. See [docs/docs/manual/deploy/qemu.md](docs/docs/manual/deploy/qemu.md) and [docs/docs/design/systems/axvisor-guide.md](docs/docs/design/systems/axvisor-guide.md) for the full workflow.
 
 ## 4. Quick Development
 
-For development, first locate the code entry point you want to modify under `components/`, `os/arceos/modules/`, `os/StarryOS/kernel/`, or `os/axvisor/src/`. During debugging, run the smallest `qemu` consumer first to confirm the behavior, then run the corresponding `test qemu` command for regression, and finally add host or std tests when the change is stable.
+The shortest daily development loop in this repository is now:
+
+1. edit code
+2. start a built-in VS Code debug target
+3. confirm the behavior in QEMU
+4. run the smallest matching regression command
+
+The repository already includes `.vscode/launch.json` and `.vscode/tasks.json`, so after opening the workspace in VS Code you can directly choose a prepared debug target from `Run and Debug`.
+
+![VS Code debug target selection](docs/docs/design/debug/images/entry_rust.png)
+
+This section is only a compact summary. The full design and startup sequence are documented in [docs/docs/design/debug/flow.md](docs/docs/design/debug/flow.md).
 
 ```bash
-# host / std crates
-cargo xtask test
+# ArceOS
+cargo xtask arceos test qemu --target aarch64
 
-# ArceOS: run the smallest app, then the unified QEMU tests
-cargo xtask arceos qemu --package ax-helloworld --arch riscv64
-cargo xtask arceos test qemu --target riscv64
+# StarryOS
+cargo xtask starry rootfs --arch aarch64
+cargo xtask starry test qemu --target aarch64
 
-# StarryOS: prepare rootfs, run the minimal boot, then unified QEMU tests
-cargo xtask starry rootfs --arch riscv64
-cargo xtask starry qemu --arch riscv64
-cargo xtask starry test qemu --target riscv64
-cargo xtask starry test qemu --stress -t riscv64
-cargo xtask starry test qemu --stress -t riscv64 -c stress-ng-0
-
-# Axvisor: prepare guest and rootfs, run the minimal boot, then unified QEMU tests
-(cd os/axvisor && ./scripts/setup_qemu.sh arceos)
-cargo xtask axvisor qemu --arch aarch64
+# Axvisor
 cargo xtask axvisor test qemu --target aarch64
-```
 
-See [docs/docs/design/test/test.md](docs/docs/design/test/test.md) and [docs/docs/components.md](docs/docs/components.md) for component validation strategies after modifications.
+# broader host/std regression
+cargo xtask test
+```
 
 ## 5. License
 
