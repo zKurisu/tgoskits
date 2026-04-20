@@ -3,7 +3,6 @@ use std::{
     fs,
     io::{Read, Write},
     net::IpAddr,
-    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
@@ -1105,11 +1104,17 @@ fn write_apk_wrapper_script(
 fn write_wrapper_script(path: &Path, body: &str) -> anyhow::Result<()> {
     fs::write(path, format!("#!/bin/sh\nset -eu\n{body}"))
         .with_context(|| format!("failed to write {}", path.display()))?;
-    let mut perms = fs::metadata(path)
-        .with_context(|| format!("failed to stat {}", path.display()))?
-        .permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(path, perms).with_context(|| format!("failed to chmod {}", path.display()))
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path)
+            .with_context(|| format!("failed to stat {}", path.display()))?
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(path, perms)
+            .with_context(|| format!("failed to chmod {}", path.display()))?;
+    }
+    Ok(())
 }
 
 fn inject_overlay_tree(rootfs_img: &Path, overlay_dir: &Path) -> anyhow::Result<()> {
@@ -1179,12 +1184,16 @@ fn sync_runtime_dependencies(staging_root: &Path, overlay_dir: &Path) -> anyhow:
                     overlay_path.display()
                 )
             })?;
-            let mode = fs::metadata(&resolved_source)
-                .with_context(|| format!("failed to stat {}", resolved_source.display()))?
-                .permissions()
-                .mode();
-            fs::set_permissions(&overlay_path, fs::Permissions::from_mode(mode))
-                .with_context(|| format!("failed to chmod {}", overlay_path.display()))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mode = fs::metadata(&resolved_source)
+                    .with_context(|| format!("failed to stat {}", resolved_source.display()))?
+                    .permissions()
+                    .mode();
+                fs::set_permissions(&overlay_path, fs::Permissions::from_mode(mode))
+                    .with_context(|| format!("failed to chmod {}", overlay_path.display()))?;
+            }
             pending.push(overlay_path);
         }
     }
@@ -1302,18 +1311,22 @@ fn collect_overlay_debugfs_commands(
             "unsupported overlay entry `{}`; only regular files and directories are supported",
             entry.path().display()
         );
-        let metadata = fs::metadata(entry.path())
-            .with_context(|| format!("failed to stat {}", entry.path().display()))?;
         commands.push(format!(
             "write {} /{}",
             entry.path().display(),
             relative_path.display()
         ));
-        commands.push(format!(
-            "sif /{} mode 0{:o}",
-            relative_path.display(),
-            metadata.permissions().mode()
-        ));
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(entry.path())
+                .with_context(|| format!("failed to stat {}", entry.path().display()))?;
+            commands.push(format!(
+                "sif /{} mode 0{:o}",
+                relative_path.display(),
+                metadata.permissions().mode()
+            ));
+        }
     }
 
     Ok(())
@@ -1904,6 +1917,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn overlay_debugfs_commands_include_paths_and_modes() {
         let root = tempdir().unwrap();
@@ -1911,7 +1925,10 @@ mod tests {
         fs::create_dir_all(overlay_dir.join("usr/bin")).unwrap();
         let binary = overlay_dir.join("usr/bin/test-bin");
         fs::write(&binary, b"bin").unwrap();
-        fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+        }
 
         let mut commands = Vec::new();
         collect_overlay_debugfs_commands(&overlay_dir, Path::new(""), &mut commands).unwrap();
