@@ -155,6 +155,9 @@ impl<T> UserPtr<T> {
     }
 
     pub fn get_as_mut_slice(self, len: usize) -> AxResult<&'static mut [T]> {
+        if len == 0 {
+            return Ok(&mut []);
+        }
         check_region(
             self.address(),
             Layout::array::<T>(len).unwrap(),
@@ -216,6 +219,9 @@ impl<T> UserConstPtr<T> {
     }
 
     pub fn get_as_slice(self, len: usize) -> AxResult<&'static [T]> {
+        if len == 0 {
+            return Ok(&[]);
+        }
         check_region(
             self.address(),
             Layout::array::<T>(len).unwrap(),
