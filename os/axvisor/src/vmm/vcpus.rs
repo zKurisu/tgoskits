@@ -530,6 +530,8 @@ fn vcpu_run() {
                 AxVCpuExitReason::SystemDown => {
                     warn!("VM[{vm_id}] run VCpu[{vcpu_id}] SystemDown");
                     vm.shutdown().expect("VM shutdown failed");
+                    // Notify all vCPUs to wake up to check the shutdown flag
+                    notify_all_vcpus(vm_id);
                 }
                 AxVCpuExitReason::SendIPI {
                     target_cpu,
@@ -563,6 +565,8 @@ fn vcpu_run() {
                 error!("VM[{vm_id}] run VCpu[{vcpu_id}] get error {err:?}");
                 // wait(vm_id)
                 vm.shutdown().expect("VM shutdown failed");
+                // Notify all vCPUs to wake up to check the shutdown flag
+                notify_all_vcpus(vm_id);
             }
         }
 
