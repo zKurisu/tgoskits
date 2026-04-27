@@ -999,7 +999,6 @@ version = "0.3.6"
 name = "ax-io"
 version = "0.5.4"
 dependencies = [
- "autocfg",
  "ax-errno",
  "heapless 0.9.2",
  "memchr",
@@ -1303,7 +1302,7 @@ dependencies = [
  "riscv 0.16.0",
  "riscv_goldfish",
  "sbi-rt",
- "uart_16550 0.5.0",
+ "some-serial 0.4.0",
 ]
 
 [[package]]
@@ -1671,7 +1670,7 @@ dependencies = [
  "riscv 0.14.0",
  "riscv_goldfish",
  "sbi-rt",
- "uart_16550 0.4.0",
+ "some-serial 0.4.0",
 ]
 
 [[package]]
