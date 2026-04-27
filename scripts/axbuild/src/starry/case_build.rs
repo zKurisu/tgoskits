@@ -650,11 +650,40 @@ fn detect_gcc_runtime_dir(sysroot: &Path, guest_tool_dir: &str) -> Option<PathBu
     let triplet = Path::new(guest_tool_dir).parent()?.file_name()?;
     let gcc_root = sysroot.join("usr/lib/gcc").join(triplet);
     let entries = fs::read_dir(&gcc_root).ok()?;
-    entries
+    let runtime_dirs = entries
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.is_dir())
-        .max()
+        .collect::<Vec<_>>();
+
+    runtime_dirs
+        .iter()
+        .filter_map(|path| {
+            let dir_name = path.file_name()?.to_str()?;
+            let version = parse_gcc_runtime_version(dir_name)?;
+            Some((version, path))
+        })
+        .max_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(right.1)))
+        .map(|(_, path)| path.clone())
+        .or_else(|| runtime_dirs.into_iter().max())
+}
+
+fn parse_gcc_runtime_version(dir_name: &str) -> Option<Vec<u64>> {
+    let mut version = Vec::new();
+    for segment in dir_name.split('.') {
+        if segment.is_empty() {
+            return None;
+        }
+        let digits = segment
+            .chars()
+            .take_while(|ch| ch.is_ascii_digit())
+            .collect::<String>();
+        if digits.is_empty() {
+            return None;
+        }
+        version.push(digits.parse().ok()?);
+    }
+    Some(version)
 }
 
 pub(crate) fn build_prebuild_command(
@@ -1185,6 +1214,19 @@ mod tests {
         assert!(content.contains("-B"));
         assert!(content.contains("-L"));
         assert!(content.contains("CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER"));
+    }
+
+    #[test]
+    fn detect_gcc_runtime_dir_prefers_highest_version() {
+        let root = tempdir().unwrap();
+        let sysroot = root.path().join("sysroot");
+        let gcc_root = sysroot.join("usr/lib/gcc/aarch64-alpine-linux-musl");
+        fs::create_dir_all(gcc_root.join("9.5.0")).unwrap();
+        fs::create_dir_all(gcc_root.join("15.2.0")).unwrap();
+
+        let selected =
+            detect_gcc_runtime_dir(&sysroot, "usr/aarch64-alpine-linux-musl/bin").unwrap();
+        assert_eq!(selected, gcc_root.join("15.2.0"));
     }
 
     #[test]
