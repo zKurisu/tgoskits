@@ -543,12 +543,23 @@ fn resolve_platform_package(
             feature.as_str(),
             "myplat" | "ax-std/myplat" | "ax-feat/myplat"
         )
-    }) && let Some(dep) = package_info
-        .dependencies
-        .iter()
-        .find(|dep| dep.name.starts_with(&format!("axplat-{arch}")))
-    {
-        return Ok(dep.name.clone());
+    }) {
+        if let Some(dep_name) = explicit_myplat_platform_package(package, arch)
+            && package_info
+                .dependencies
+                .iter()
+                .any(|dep| dep.name == dep_name)
+        {
+            return Ok(dep_name.to_string());
+        }
+
+        if let Some(dep) = package_info
+            .dependencies
+            .iter()
+            .find(|dep| myplat_dependency_matches_arch(&dep.name, arch))
+        {
+            return Ok(dep.name.clone());
+        }
     }
 
     Ok(default_platform_package(arch).to_string())
@@ -575,6 +586,30 @@ fn default_platform_package(arch: &str) -> &'static str {
         "riscv64" => "ax-plat-riscv64-qemu-virt",
         "loongarch64" => "ax-plat-loongarch64-qemu-virt",
         _ => unreachable!("unsupported arch"),
+    }
+}
+
+fn explicit_myplat_platform_package(package: &str, arch: &str) -> Option<&'static str> {
+    match (package, arch) {
+        ("axvisor", "x86_64") => Some("axplat-x86-qemu-q35"),
+        ("axvisor", "riscv64") => Some("axplat-riscv64-qemu-virt-hv"),
+        _ => None,
+    }
+}
+
+fn myplat_dependency_matches_arch(dep_name: &str, arch: &str) -> bool {
+    myplat_dependency_prefixes_for_arch(arch)
+        .iter()
+        .any(|prefix| dep_name.starts_with(prefix))
+}
+
+fn myplat_dependency_prefixes_for_arch(arch: &str) -> &'static [&'static str] {
+    match arch {
+        "x86_64" => &["axplat-x86-", "axplat-x86_64-"],
+        "aarch64" => &["axplat-aarch64-"],
+        "riscv64" => &["axplat-riscv64-"],
+        "loongarch64" => &["axplat-loongarch64-"],
+        _ => &[],
     }
 }
 
@@ -624,17 +659,35 @@ fn resolve_platform_config_path(app_dir: &Path, platform_package: &str) -> anyho
 }
 
 fn find_local_platform_config_path(platform_package: &str) -> anyhow::Result<Option<PathBuf>> {
+    let workspace_manifest = workspace_manifest_path()?;
+    let metadata = workspace_metadata_root_manifest(&workspace_manifest)?;
+
+    if let Some(pkg) = metadata
+        .packages
+        .iter()
+        .find(|pkg| metadata.workspace_members.contains(&pkg.id) && pkg.name == platform_package)
+    {
+        let candidate = Path::new(pkg.manifest_path.as_std_path())
+            .parent()
+            .map(|dir| dir.join("axconfig.toml"));
+        if let Some(candidate) = candidate
+            && candidate.exists()
+        {
+            return Ok(Some(candidate));
+        }
+    }
+
     let workspace_root = workspace_root_path()?;
     let platform_dir_name = platform_package
         .strip_prefix("ax-plat-")
         .map(|suffix| format!("axplat-{suffix}"))
         .unwrap_or_else(|| platform_package.to_string());
-    let candidate = workspace_root
+    let component_candidate = workspace_root
         .join("components/axplat_crates/platforms")
         .join(platform_dir_name)
         .join("axconfig.toml");
 
-    Ok(candidate.exists().then_some(candidate))
+    Ok(component_candidate.exists().then_some(component_candidate))
 }
 
 fn ensure_arceos_tooling_installed() -> anyhow::Result<()> {
@@ -1184,6 +1237,15 @@ AX_IP = "10.0.2.15"
     }
 
     #[test]
+    fn find_local_platform_config_path_resolves_workspace_platform_dir() {
+        let path = find_local_platform_config_path("axplat-riscv64-qemu-virt-hv")
+            .unwrap()
+            .expect("workspace platform config should exist");
+
+        assert!(path.ends_with("platform/riscv64-qemu-virt/axconfig.toml"));
+    }
+
+    #[test]
     fn build_info_toml_equivalent_config_converts_to_non_dynamic_cargo() {
         let toml = r#"
 features = ["ax-std"]
@@ -1299,5 +1361,29 @@ AX_GW = "10.0.2.2"
         .unwrap();
 
         assert_eq!(package, "ax-plat-riscv64-qemu-virt");
+    }
+
+    #[test]
+    fn resolve_platform_package_prefers_x86_alias_myplat_dependency() {
+        let package = resolve_platform_package(
+            "axvisor",
+            "x86_64-unknown-none",
+            &["ax-std/myplat".to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(package, "axplat-x86-qemu-q35");
+    }
+
+    #[test]
+    fn resolve_platform_package_prefers_riscv_myplat_dependency() {
+        let package = resolve_platform_package(
+            "axvisor",
+            "riscv64gc-unknown-none-elf",
+            &["ax-std/myplat".to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(package, "axplat-riscv64-qemu-virt-hv");
     }
 }

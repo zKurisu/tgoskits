@@ -16,14 +16,17 @@ use crate::{
 };
 
 pub const LINUX_AARCH64_IMAGE_SPEC: &str = "qemu_aarch64_linux";
-pub const ARCEOS_RISCV64_IMAGE_SPEC: &str = "qemu_riscv64_arceos";
+pub const LINUX_RISCV64_IMAGE_SPEC: &str = "qemu_riscv64_linux";
 pub const LINUX_AARCH64_VMCONFIG_TEMPLATE: &str =
     "os/axvisor/configs/vms/linux-aarch64-qemu-smp1.toml";
 pub const LINUX_AARCH64_GENERATED_VMCONFIG: &str =
     "os/axvisor/tmp/vmconfigs/linux-aarch64-qemu-smp1.generated.toml";
+pub const LINUX_RISCV64_VMCONFIG_TEMPLATE: &str =
+    "os/axvisor/configs/vms/linux-riscv64-qemu-smp1.toml";
+pub const LINUX_RISCV64_GENERATED_VMCONFIG: &str =
+    "os/axvisor/tmp/vmconfigs/linux-riscv64-qemu-smp1.generated.toml";
 pub const NIMBOS_X86_64_IMAGE_SPEC: &str = "qemu_x86_64_nimbos";
 pub const NIMBOS_X86_64_VMCONFIG: &str = "os/axvisor/configs/vms/nimbos-x86_64-qemu-smp1.toml";
-pub const AXVISOR_ROOTFS_IMAGE: &str = "os/axvisor/tmp/rootfs.img";
 const RDK_S100_LINUX_GROUP_NAME: &str = "rdk-s100-linux";
 const RDK_S100_LINUX_VMCONFIG_TEMPLATE: &str =
     "os/axvisor/configs/vms/linux-aarch64-s100-smp1.toml";
@@ -36,7 +39,6 @@ const RDK_S100_LINUX_KERNEL_IN_IMAGE: &str = "rdk-s100p";
 pub struct PreparedLinuxGuestAssets {
     pub image_dir: PathBuf,
     pub generated_vmconfig: PathBuf,
-    pub rootfs_path: PathBuf,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,9 +54,7 @@ pub(crate) async fn prepare_linux_aarch64_guest_assets(
 ) -> anyhow::Result<PreparedLinuxGuestAssets> {
     let image_dir = pull_guest_image(ctx, LINUX_AARCH64_IMAGE_SPEC).await?;
     let kernel_path = image_dir.join("qemu-aarch64");
-    let rootfs_src = guest_rootfs_path(&image_dir);
     ensure_guest_kernel_exists(&kernel_path, "linux guest")?;
-    ensure_guest_rootfs_exists(&rootfs_src, "linux guest")?;
 
     let workspace_root = ctx.workspace_root();
     let generated_vmconfig = workspace_root.join(LINUX_AARCH64_GENERATED_VMCONFIG);
@@ -64,40 +64,33 @@ pub(crate) async fn prepare_linux_aarch64_guest_assets(
         &kernel_path,
     )?;
 
-    let rootfs_path = workspace_root.join(AXVISOR_ROOTFS_IMAGE);
-    copy_rootfs(&rootfs_src, &rootfs_path)?;
+    Ok(PreparedLinuxGuestAssets {
+        image_dir,
+        generated_vmconfig,
+    })
+}
+
+pub(crate) async fn prepare_linux_riscv64_guest_assets(
+    ctx: &AxvisorContext,
+) -> anyhow::Result<PreparedLinuxGuestAssets> {
+    let image_dir = pull_guest_image(ctx, LINUX_RISCV64_IMAGE_SPEC).await?;
+    let kernel_path = image_dir.join("qemu-riscv64");
+    let rootfs_path = guest_rootfs_path(&image_dir);
+    ensure_guest_kernel_exists(&kernel_path, "linux guest")?;
+    ensure_guest_rootfs_exists(&rootfs_path, "linux guest")?;
+
+    let workspace_root = ctx.workspace_root();
+    let generated_vmconfig = workspace_root.join(LINUX_RISCV64_GENERATED_VMCONFIG);
+    generate_linux_vmconfig(
+        &workspace_root.join(LINUX_RISCV64_VMCONFIG_TEMPLATE),
+        &generated_vmconfig,
+        &kernel_path,
+    )?;
 
     Ok(PreparedLinuxGuestAssets {
         image_dir,
         generated_vmconfig,
-        rootfs_path,
     })
-}
-
-pub(crate) async fn prepare_default_rootfs_for_arch(
-    ctx: &AxvisorContext,
-    arch: &str,
-) -> anyhow::Result<PathBuf> {
-    let image_spec = match arch {
-        "aarch64" => LINUX_AARCH64_IMAGE_SPEC,
-        "riscv64" => ARCEOS_RISCV64_IMAGE_SPEC,
-        "x86_64" => NIMBOS_X86_64_IMAGE_SPEC,
-        _ => return Ok(ctx.workspace_root().join(AXVISOR_ROOTFS_IMAGE)),
-    };
-    let guest_name = match arch {
-        "aarch64" => "linux guest",
-        "riscv64" => "riscv64 arceos guest",
-        "x86_64" => "nimbos guest",
-        _ => unreachable!(),
-    };
-
-    let image_dir = pull_guest_image(ctx, image_spec).await?;
-    let rootfs_src = guest_rootfs_path(&image_dir);
-    ensure_guest_rootfs_exists(&rootfs_src, guest_name)?;
-
-    let rootfs_dst = ctx.workspace_root().join(AXVISOR_ROOTFS_IMAGE);
-    copy_rootfs(&rootfs_src, &rootfs_dst)?;
-    Ok(rootfs_dst)
 }
 
 pub(crate) async fn prepare_nimbos_x86_64_guest_vmconfig(
@@ -201,21 +194,6 @@ fn update_optional_guest_path(
     }
 }
 
-fn copy_rootfs(rootfs_src: &Path, rootfs_dst: &Path) -> anyhow::Result<()> {
-    if let Some(parent) = rootfs_dst.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create {}", parent.display()))?;
-    }
-    fs::copy(rootfs_src, rootfs_dst).with_context(|| {
-        format!(
-            "failed to copy rootfs {} to {}",
-            rootfs_src.display(),
-            rootfs_dst.display()
-        )
-    })?;
-    Ok(())
-}
-
 async fn pull_guest_image(ctx: &AxvisorContext, image_spec: &str) -> anyhow::Result<PathBuf> {
     let mut config = ImageConfig::read_config(ctx.workspace_root())?;
     config.local_storage = absolute_path(ctx.workspace_root(), &config.local_storage);
@@ -269,7 +247,7 @@ fn absolute_path(workspace_root: &Path, path: &Path) -> PathBuf {
     }
 }
 
-pub(crate) fn qemu_test_build_args(arch: &str, vmconfig: PathBuf) -> AxvisorCliArgs {
+pub(crate) fn qemu_test_build_args(arch: &str, vmconfigs: Vec<PathBuf>) -> AxvisorCliArgs {
     AxvisorCliArgs {
         config: None,
         arch: Some(arch.to_string()),
@@ -277,7 +255,7 @@ pub(crate) fn qemu_test_build_args(arch: &str, vmconfig: PathBuf) -> AxvisorCliA
         plat_dyn: None,
         smp: None,
         debug: false,
-        vmconfigs: vec![vmconfig],
+        vmconfigs,
     }
 }
 
@@ -341,18 +319,6 @@ entry_point = 1
         );
         assert_eq!(value["kernel"]["entry_point"].as_integer(), Some(1));
         assert_eq!(value["base"]["id"].as_integer(), Some(1));
-    }
-
-    #[test]
-    fn copy_rootfs_places_image_at_requested_path() {
-        let dir = tempdir().unwrap();
-        let src = dir.path().join("rootfs.img");
-        let dst = dir.path().join("tmp/rootfs.img");
-        fs::write(&src, b"rootfs").unwrap();
-
-        copy_rootfs(&src, &dst).unwrap();
-
-        assert_eq!(fs::read(&dst).unwrap(), b"rootfs");
     }
 
     #[test]
@@ -422,6 +388,15 @@ ramdisk_path = "old.ramdisk"
             Some("pwd && echo 'test pass!'")
         );
         assert_eq!(qemu.success_regex, vec!["^test pass!$".to_string()]);
+        assert_eq!(qemu.fail_regex, vec!["(?i)panic".to_string()]);
+    }
+
+    #[test]
+    fn qemu_test_build_args_allows_empty_vmconfigs() {
+        let args = qemu_test_build_args("loongarch64", vec![]);
+
+        assert_eq!(args.arch.as_deref(), Some("loongarch64"));
+        assert!(args.vmconfigs.is_empty());
     }
 
     #[test]

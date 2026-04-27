@@ -1,7 +1,7 @@
 use alloc::sync::Arc;
 
 use ax_errno::{AxError, AxResult};
-use ax_fs::FileBackend;
+use ax_fs::{FileBackend, FileFlags};
 use ax_hal::paging::{MappingFlags, PageSize};
 use ax_memory_addr::{MemoryAddr, VirtAddr, VirtAddrRange, align_up_4k};
 use ax_task::current;
@@ -9,7 +9,7 @@ use linux_raw_sys::general::*;
 use starry_vm::{vm_load, vm_write_slice};
 
 use crate::{
-    file::{File, FileLike},
+    file::get_file_like,
     mm::{Backend, SharedPages},
     pseudofs::{Device, DeviceMmap},
     task::AsThread,
@@ -48,6 +48,10 @@ impl From<MmapProt> for MappingFlags {
         }
         flags
     }
+}
+
+fn capped_device_map_len(request_len: usize, available_len: usize, page_size: PageSize) -> usize {
+    request_len.min(available_len.align_up(page_size))
 }
 
 bitflags::bitflags! {
@@ -113,11 +117,13 @@ pub fn sys_mmap(
             MmapFlags::from_bits_truncate(flags)
         }
     };
+    // Exactly one of MAP_PRIVATE or MAP_SHARED must be set. `MAP_PRIVATE|MAP_SHARED`
+    // shares the bit pattern 0x03 with `MAP_SHARED_VALIDATE`; Linux rejects this
+    // ambiguous combo with EINVAL, and StarryOS does not implement `SHARED_VALIDATE`
+    // semantics separately, so we reject 0x03 here too.
     let map_type = map_flags & MmapFlags::TYPE;
-    if !matches!(
-        map_type,
-        MmapFlags::PRIVATE | MmapFlags::SHARED | MmapFlags::SHARED_VALIDATE
-    ) {
+    let type_bits = map_type.bits();
+    if type_bits != MAP_PRIVATE && type_bits != MAP_SHARED {
         return Err(AxError::InvalidInput);
     }
     if map_flags.contains(MmapFlags::ANONYMOUS) != (fd <= 0) {
@@ -173,23 +179,50 @@ pub fn sys_mmap(
     };
 
     let file = if fd > 0 {
-        Some(File::from_fd(fd)?)
+        Some(get_file_like(fd)?)
     } else {
         None
     };
 
     let backend = match map_type {
         MmapFlags::SHARED | MmapFlags::SHARED_VALIDATE => {
-            if let Some(file) = file {
-                let file = file.inner();
-                let backend = file.backend()?.clone();
-                match file.backend()?.clone() {
+            if let Some(ref file) = file {
+                // Try device mmap first (ExportedGemBuffer, etc.)
+                if let Ok(device_mmap) = file.device_mmap(offset as u64) {
+                    match device_mmap {
+                        DeviceMmap::Physical(mut range) => {
+                            range.start += offset;
+                            if range.is_empty() {
+                                return Err(AxError::InvalidInput);
+                            }
+                            length = length.min(range.size().align_down(page_size));
+                            Backend::new_linear(
+                                start.as_usize() as isize - range.start.as_usize() as isize,
+                            );
+                        }
+                        DeviceMmap::None => return Err(AxError::NoSuchDevice),
+                        _ => return Err(AxError::InvalidInput),
+                    }
+                }
+
+                // Fall through to file-backed mmap
+                let (backend, flags) = file.file_mmap()?;
+                // man 2 mmap EACCES: a file mapping requires the fd to be
+                // open for reading, and MAP_SHARED+PROT_WRITE additionally
+                // requires the fd to be open for writing.
+                if !flags.contains(FileFlags::READ) {
+                    return Err(AxError::PermissionDenied);
+                }
+                if permission_flags.contains(MmapProt::WRITE) && !flags.contains(FileFlags::WRITE) {
+                    return Err(AxError::PermissionDenied);
+                }
+                match backend.clone() {
                     FileBackend::Cached(cache) => {
                         // TODO(mivik): file mmap page size
                         Backend::new_file(
                             start,
                             cache,
-                            file.flags(),
+                            flags,
                             offset,
                             &curr.as_thread().proc_data.aspace,
                         )
@@ -200,19 +233,18 @@ pub fn sys_mmap(
                             .downcast::<Device>()
                             .map_err(|_| AxError::NoSuchDevice)?;
 
-                        match device.mmap() {
+                        match device.mmap(offset as u64) {
                             DeviceMmap::None => {
                                 return Err(AxError::NoSuchDevice);
                             }
                             DeviceMmap::ReadOnly => {
                                 Backend::new_cow(start, page_size, backend, offset as u64, None)
                             }
-                            DeviceMmap::Physical(mut range) => {
-                                range.start += offset;
+                            DeviceMmap::Physical(range) => {
                                 if range.is_empty() {
                                     return Err(AxError::InvalidInput);
                                 }
-                                length = length.min(range.size().align_down(page_size));
+                                length = capped_device_map_len(length, range.size(), page_size);
                                 Backend::new_linear(
                                     start.as_usize() as isize - range.start.as_usize() as isize,
                                 )
@@ -220,7 +252,7 @@ pub fn sys_mmap(
                             DeviceMmap::Cache(cache) => Backend::new_file(
                                 start,
                                 cache,
-                                file.flags(),
+                                flags,
                                 offset,
                                 &curr.as_thread().proc_data.aspace,
                             ),
@@ -232,9 +264,15 @@ pub fn sys_mmap(
             }
         }
         MmapFlags::PRIVATE => {
-            if let Some(file) = file {
-                // Private mapping from a file
-                let backend = file.inner().backend()?.clone();
+            if let Some(ref file) = file {
+                // Private file-backed mmap
+                let (backend, file_flags) = file.file_mmap()?;
+                // man 2 mmap EACCES: a file mapping requires the fd to be
+                // open for reading (MAP_PRIVATE still page-faults from file
+                // on initial access even when later writes are CoW).
+                if !file_flags.contains(FileFlags::READ) {
+                    return Err(AxError::PermissionDenied);
+                }
                 Backend::new_cow(start, page_size, backend, offset as u64, None)
             } else {
                 Backend::new_alloc(start, page_size)
@@ -250,6 +288,10 @@ pub fn sys_mmap(
 }
 
 pub fn sys_munmap(addr: usize, length: usize) -> AxResult<isize> {
+    // man 2 munmap: "length was 0" → EINVAL (since Linux 2.6.12).
+    if length == 0 {
+        return Err(AxError::InvalidInput);
+    }
     debug!("sys_munmap <= addr: {addr:#x}, length: {length:x}");
     let curr = current();
     let mut aspace = curr.as_thread().proc_data.aspace.lock();
@@ -270,10 +312,23 @@ pub fn sys_mprotect(addr: usize, length: usize, prot: u32) -> AxResult<isize> {
         return Err(AxError::InvalidInput);
     }
 
+    // man 2 mprotect: addr is not a multiple of page size → EINVAL.
+    if !PageSize::Size4K.is_aligned(addr) {
+        return Err(AxError::InvalidInput);
+    }
+    // length=0 is a no-op success on Linux.
+    if length == 0 {
+        return Ok(0);
+    }
+
     let curr = current();
     let mut aspace = curr.as_thread().proc_data.aspace.lock();
     let length = align_up_4k(length);
     let start_addr = VirtAddr::from(addr);
+    // man 2 mprotect: addresses without a mapping → ENOMEM.
+    if aspace.find_area(start_addr).is_none() {
+        return Err(AxError::NoMemory);
+    }
     aspace.protect(start_addr, length, permission_flags.into())?;
 
     Ok(0)
@@ -297,13 +352,20 @@ pub fn sys_mremap(addr: usize, old_size: usize, new_size: usize, flags: u32) -> 
     let old_size = align_up_4k(old_size);
     let new_size = align_up_4k(new_size);
 
-    let flags = aspace.find_area(addr).ok_or(AxError::NoMemory)?.flags();
+    let area = aspace.find_area(addr).ok_or(AxError::NoMemory)?;
+    let flags = area.flags();
+    // Determine the sharing type from the backend: Shared/File backends are
+    // MAP_SHARED, Cow/Linear backends are MAP_PRIVATE.
+    let mmap_flags = match area.backend() {
+        Backend::Shared(_) | Backend::File(_) => MmapFlags::SHARED | MmapFlags::ANONYMOUS,
+        Backend::Cow(_) | Backend::Linear(_) => MmapFlags::PRIVATE | MmapFlags::ANONYMOUS,
+    };
     drop(aspace);
     let new_addr = sys_mmap(
         addr.as_usize(),
         new_size,
         flags.bits() as _,
-        MmapFlags::PRIVATE.bits(),
+        mmap_flags.bits(),
         -1,
         0,
     )? as usize;
@@ -319,6 +381,28 @@ pub fn sys_mremap(addr: usize, old_size: usize, new_size: usize, flags: u32) -> 
 
 pub fn sys_madvise(addr: usize, length: usize, advice: i32) -> AxResult<isize> {
     debug!("sys_madvise <= addr: {addr:#x}, length: {length:x}, advice: {advice:#x}");
+
+    match advice as u32 {
+        MADV_NORMAL | MADV_RANDOM | MADV_SEQUENTIAL | MADV_WILLNEED | MADV_DONTNEED | MADV_FREE
+        | MADV_REMOVE | MADV_DONTFORK | MADV_DOFORK | MADV_MERGEABLE | MADV_UNMERGEABLE
+        | MADV_HUGEPAGE | MADV_NOHUGEPAGE | MADV_DONTDUMP | MADV_DODUMP | MADV_WIPEONFORK
+        | MADV_KEEPONFORK | MADV_COLD | MADV_PAGEOUT | MADV_POPULATE_READ | MADV_POPULATE_WRITE
+        | MADV_DONTNEED_LOCKED | MADV_COLLAPSE | MADV_HWPOISON | MADV_SOFT_OFFLINE => {}
+        _ => return Err(AxError::InvalidInput),
+    }
+
+    if !addr.is_multiple_of(PageSize::Size4K as usize) {
+        return Err(AxError::InvalidInput);
+    }
+
+    if length > 0 {
+        let curr = current();
+        let aspace = curr.as_thread().proc_data.aspace.lock();
+        if aspace.find_area(VirtAddr::from(addr)).is_none() {
+            return Err(AxError::NoMemory);
+        }
+    }
+
     Ok(0)
 }
 

@@ -10,9 +10,8 @@ use core::{
 use ax_errno::{AxError, AxResult};
 use ax_hal::{asm::user_copy, paging::MappingFlags, trap::page_fault_handler};
 use ax_io::prelude::*;
-use ax_kernel_guard::IrqSave;
 use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};
-use ax_task::current;
+use ax_task::{current, might_sleep};
 use extern_trait::extern_trait;
 use starry_vm::{VmError, VmIo, VmResult, vm_load_until_nul, vm_read_slice, vm_write_slice};
 
@@ -23,7 +22,13 @@ use crate::{
 
 /// Enables scoped access into user memory, allowing page faults to occur inside
 /// kernel.
+#[track_caller]
 pub fn access_user_memory<R>(f: impl FnOnce() -> R) -> R {
+    assert!(
+        ax_hal::asm::irqs_enabled(),
+        "faultable user memory access requires IRQs enabled"
+    );
+
     let curr = current();
     let Some(thr) = curr.try_as_thread() else {
         panic!("access_user_memory called outside of thread context");
@@ -150,6 +155,9 @@ impl<T> UserPtr<T> {
     }
 
     pub fn get_as_mut_slice(self, len: usize) -> AxResult<&'static mut [T]> {
+        if len == 0 {
+            return Ok(&mut []);
+        }
         check_region(
             self.address(),
             Layout::array::<T>(len).unwrap(),
@@ -211,6 +219,9 @@ impl<T> UserConstPtr<T> {
     }
 
     pub fn get_as_slice(self, len: usize) -> AxResult<&'static [T]> {
+        if len == 0 {
+            return Ok(&[]);
+        }
         check_region(
             self.address(),
             Layout::array::<T>(len).unwrap(),
@@ -264,6 +275,7 @@ fn handle_page_fault(vaddr: VirtAddr, access_flags: MappingFlags) -> bool {
         return false;
     }
 
+    might_sleep();
     thr.proc_data
         .aspace
         .lock()
@@ -276,8 +288,7 @@ pub fn vm_load_string(ptr: *const c_char) -> AxResult<String> {
     String::from_utf8(bytes).map_err(|_| AxError::IllegalBytes)
 }
 
-#[allow(dead_code)]
-struct Vm(IrqSave);
+struct Vm;
 
 /// Briefly checks if the given memory region is valid user memory.
 pub fn check_access(start: usize, len: usize) -> VmResult {
@@ -293,7 +304,7 @@ pub fn check_access(start: usize, len: usize) -> VmResult {
 #[extern_trait]
 unsafe impl VmIo for Vm {
     fn new() -> Self {
-        Self(IrqSave::new())
+        Self
     }
 
     fn read(&mut self, start: usize, buf: &mut [MaybeUninit<u8>]) -> VmResult {

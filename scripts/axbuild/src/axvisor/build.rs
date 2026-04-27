@@ -106,6 +106,10 @@ fn to_cargo_config(
     request: &ResolvedAxvisorRequest,
 ) -> anyhow::Result<Cargo> {
     config.target = request.target.clone();
+    let plat_dyn = config
+        .build_info
+        .effective_plat_dyn(&config.target, request.plat_dyn);
+    normalize_axvisor_platform_features(&mut config.build_info.features, plat_dyn);
     let mut cargo = config.build_info.into_prepared_base_cargo_config(
         &request.package,
         &config.target,
@@ -121,6 +125,7 @@ fn patch_axvisor_cargo_config(
 ) -> anyhow::Result<()> {
     cargo.package = request.package.clone();
     cargo.target = request.target.clone();
+    cargo.to_bin = default_axvisor_to_bin(&request.arch);
     ensure_axvisor_bin_arg(&mut cargo.args);
     cargo
         .env
@@ -138,10 +143,15 @@ fn patch_axvisor_cargo_config(
         );
     }
 
-    normalize_axvisor_platform_features(&mut cargo.features);
+    let cargo_uses_plat_dyn = cargo.features.iter().any(|f| f == "ax-std/plat-dyn");
+    normalize_axvisor_platform_features(&mut cargo.features, cargo_uses_plat_dyn);
     cargo.features.sort();
     cargo.features.dedup();
     Ok(())
+}
+
+fn default_axvisor_to_bin(arch: &str) -> bool {
+    !matches!(arch, "x86_64" | "loongarch64")
 }
 
 fn ensure_axvisor_bin_arg(args: &mut Vec<String>) {
@@ -153,9 +163,10 @@ fn ensure_axvisor_bin_arg(args: &mut Vec<String>) {
     args.push(AXVISOR_PACKAGE.to_string());
 }
 
-fn normalize_axvisor_platform_features(features: &mut Vec<String>) {
+fn normalize_axvisor_platform_features(features: &mut Vec<String>, plat_dyn: bool) {
     let has_axstd_defplat = features.iter().any(|feature| feature == "ax-std/defplat");
     let has_axstd_myplat = features.iter().any(|feature| feature == "ax-std/myplat");
+    let has_axstd_plat_dyn = features.iter().any(|feature| feature == "ax-std/plat-dyn");
 
     if has_axstd_defplat && !has_axstd_myplat {
         for feature in features.iter_mut() {
@@ -165,6 +176,13 @@ fn normalize_axvisor_platform_features(features: &mut Vec<String>) {
         }
     } else {
         features.retain(|feature| feature != "ax-std/defplat");
+    }
+
+    if !plat_dyn
+        && !has_axstd_plat_dyn
+        && !features.iter().any(|feature| feature == "ax-std/myplat")
+    {
+        features.push("ax-std/myplat".to_string());
     }
 }
 
@@ -543,5 +561,39 @@ plat_dyn = false
 
         assert!(!cargo.features.contains(&"ax-std/defplat".to_string()));
         assert!(cargo.features.contains(&"ax-std/myplat".to_string()));
+        assert!(cargo.args.iter().any(|arg| arg.contains("-Tlinker.x")));
+    }
+
+    #[test]
+    fn load_cargo_config_keeps_loongarch_axvisor_as_elf() {
+        let root = tempdir().unwrap();
+        let config_path = root.path().join(".build.toml");
+        fs::write(
+            &config_path,
+            r#"
+env = {}
+features = ["ept-level-4", "ax-std/bus-mmio"]
+log = "Info"
+"#,
+        )
+        .unwrap();
+
+        let cargo = load_cargo_config(&ResolvedAxvisorRequest {
+            package: AXVISOR_PACKAGE.to_string(),
+            axvisor_dir: root.path().join("os/axvisor"),
+            arch: "loongarch64".to_string(),
+            target: "loongarch64-unknown-none-softfloat".to_string(),
+            plat_dyn: None,
+            smp: None,
+            debug: false,
+            build_info_path: config_path,
+            qemu_config: None,
+            uboot_config: None,
+            vmconfigs: vec![],
+        })
+        .unwrap();
+
+        assert!(!cargo.to_bin);
+        assert!(cargo.args.iter().any(|arg| arg.contains("-Tlinker.x")));
     }
 }
