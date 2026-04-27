@@ -1303,7 +1303,7 @@ dependencies = [
  "riscv 0.16.0",
  "riscv_goldfish",
  "sbi-rt",
- "uart_16550 0.5.0",
+ "some-serial 0.4.0",
 ]
 
 [[package]]
@@ -1671,7 +1671,7 @@ dependencies = [
  "riscv 0.14.0",
  "riscv_goldfish",
  "sbi-rt",
- "uart_16550 0.4.0",
+ "some-serial 0.4.0",
 ]
 
 [[package]]
