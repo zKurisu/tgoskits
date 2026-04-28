@@ -1,7 +1,7 @@
 [package]
 name = "rk3588-clk"
 version = "0.1.4"
-edition = "2024"
+edition.workspace = true
 authors = ["Yang Jinquan <YJQ980314@Gmail.com>", "Bai Qiaosen<baiqiaosen@gmail.com>"]
 description = "Clock and Reset Unit (CRU) driver for RK3588 SoC"
 documentation = "https://docs.rs/rk3588_clk"
@@ -18,8 +18,7 @@ tock-registers = "0.10"
 [dev-dependencies]
 bare-test = "0.7"
 sdmmc = "0.1"
-rockchip-pm = "0.4"
-
+rockchip-pm = { workspace = true }
 [build-dependencies]
 bare-test-macros = "0.2"
 
