@@ -4,8 +4,9 @@
 
 #![allow(dead_code)]
 
-use crate::clock::ClkId;
 use thiserror::Error;
+
+use crate::clock::ClkId;
 
 // =============================================================================
 // 时钟操作错误类型

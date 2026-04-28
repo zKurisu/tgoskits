@@ -21,10 +21,10 @@ use crate::PinId;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Pull {
-    Disabled = 0,
-    BusHold = 2,
-    PullUp = 3,
-    PullDown = 4,
+    Disabled       = 0,
+    BusHold        = 2,
+    PullUp         = 3,
+    PullDown       = 4,
     PullPinDefault = 5,
 }
 
@@ -85,12 +85,12 @@ impl PinConfig {
 
         let fdt = unsafe { fdt_edit::Fdt::from_ptr(fdt_addr.as_ptr()).unwrap() };
 
-        let conf_node = fdt.find_by_phandle(conf_phandle.into()).unwrap();
+        let conf_node = fdt.get_by_phandle(conf_phandle.into()).unwrap();
 
         let mut pull = Pull::Disabled;
         let mut drive = None;
 
-        for prop in conf_node.properties() {
+        for prop in conf_node.as_node().properties() {
             match prop.name() {
                 "bias-disable" => {
                     pull = Pull::Disabled;

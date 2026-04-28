@@ -10,8 +10,7 @@
 //! 使能时钟：清除对应的 bit
 //! 禁止时钟：设置对应的 bit
 
-use super::consts::*;
-use super::*;
+use super::{consts::*, *};
 use crate::clock::ClkId;
 
 #[derive(Debug, Clone, Copy)]

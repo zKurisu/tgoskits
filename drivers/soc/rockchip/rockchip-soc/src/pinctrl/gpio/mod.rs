@@ -1,4 +1,7 @@
-use crate::{GpioDirection, Mmio, PinId, PinctrlResult, pinctrl::Iomux, pinctrl::PinctrlError};
+use crate::{
+    GpioDirection, Mmio, PinId, PinctrlResult,
+    pinctrl::{Iomux, PinctrlError},
+};
 
 mod reg;
 

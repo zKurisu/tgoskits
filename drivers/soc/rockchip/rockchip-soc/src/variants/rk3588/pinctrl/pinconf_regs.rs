@@ -2,8 +2,7 @@
 //!
 //! 从 u-boot 提取的静态寄存器映射表。
 
-use crate::PinId;
-use crate::pinctrl::id::*;
+use crate::{PinId, pinctrl::id::*};
 
 /// Pull 寄存器条目
 #[derive(Debug, Clone, Copy)]

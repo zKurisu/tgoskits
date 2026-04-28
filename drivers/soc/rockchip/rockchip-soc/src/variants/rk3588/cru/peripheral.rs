@@ -4,9 +4,7 @@
 
 use alloc::vec::Vec;
 
-use super::clock::*;
-use super::consts::*;
-use super::*;
+use super::{clock::*, consts::*, *};
 use crate::clock::{ClockError, ClockResult};
 
 impl Cru {

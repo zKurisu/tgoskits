@@ -21,19 +21,19 @@ pub enum PllId {
     /// BIGCORE1 PLL - 大核1 PLL
     B1PLL = 2,
     /// DSU PLL - 小核共享单元 PLL
-    LPLL = 3,
+    LPLL  = 3,
     /// 视频 PLL
     V0PLL = 4,
     /// 音频 PLL
     AUPLL = 5,
     /// 中心/通用 PLL
-    CPLL = 6,
+    CPLL  = 6,
     /// 通用 PLL
-    GPLL = 7,
+    GPLL  = 7,
     /// 网络/视频 PLL
-    NPLL = 8,
+    NPLL  = 8,
     /// PMU PLL
-    PPLL = 9,
+    PPLL  = 9,
 }
 
 // =============================================================================

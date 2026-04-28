@@ -8,13 +8,13 @@ keywords = ["driver", "cru", "clock", "power"]
 license = "MIT"
 name = "rockchip-soc"
 repository = "https://github.com/drivercraft/rockchip-soc"
-version = "0.1.0"
+version = "0.1.1"
 
 [dependencies]
 bitflags = "2"
-dma-api = {version = "0.5", features = ["alloc"]}
+dma-api = { workspace = true }
 enum_dispatch = "0.3.13"
-fdt-edit = "0.1"
+fdt-edit = "0.2.3"
 log = "0.4"
 mbarrier = "0.1"
 thiserror = {version = "2", default-features = false}

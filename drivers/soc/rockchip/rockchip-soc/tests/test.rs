@@ -9,9 +9,9 @@ mod pin;
 
 #[bare_test::tests]
 mod tests {
+    use alloc::vec::Vec;
     use core::ptr::NonNull;
 
-    use alloc::vec::Vec;
     use bare_test::{
         globals::{PlatformInfoKind, global_val},
         mem::{iomap, page_size},
@@ -128,7 +128,8 @@ mod tests {
 
                         if data_match {
                             println!(
-                                "Data verification successful: written and read data match perfectly!"
+                                "Data verification successful: written and read data match \
+                                 perfectly!"
                             );
                         } else {
                             println!(

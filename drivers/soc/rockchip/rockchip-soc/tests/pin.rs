@@ -1,8 +1,5 @@
 use alloc::vec::Vec;
 use core::ptr::NonNull;
-use num_align::NumAlign;
-use rockchip_soc::PinConfig;
-use rockchip_soc::rk3588::PinCtrl;
 
 use bare_test::{
     fdt_parser::Node,
@@ -10,6 +7,8 @@ use bare_test::{
     mem::{iomap, page_size},
 };
 use log::*;
+use num_align::NumAlign;
+use rockchip_soc::{PinConfig, rk3588::PinCtrl};
 
 pub fn test_pin() {
     info!("Testing RK3588 PinManager...");
