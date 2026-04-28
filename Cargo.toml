@@ -110,6 +110,7 @@ members = [
     "drivers/npu/rockchip-npu",
     "drivers/soc/rockchip/rk3588-clk",
     "drivers/soc/rockchip/rockchip-pm",
+    "drivers/soc/rockchip/rockchip-soc",
     "examples/tgmath",
     "os/StarryOS/kernel",
     "os/StarryOS/starryos",
@@ -306,6 +307,7 @@ riscv_vplic = { version = "0.4.8", path = "components/riscv_vplic" }
 rk3588-clk = { version = "0.1.4", path = "drivers/soc/rockchip/rk3588-clk" }
 rockchip-npu = { version = "0.1.1", path = "drivers/npu/rockchip-npu" }
 rockchip-pm = { version = "0.4.2", path = "drivers/soc/rockchip/rockchip-pm" }
+rockchip-soc = { version = "0.1.1", path = "drivers/soc/rockchip/rockchip-soc" }
 rsext4 = { version = "0.3.7", path = "components/rsext4" }
 scope-local = { version = "0.3.6", path = "components/scope-local" }
 smoltcp = { version = "0.14.2", path = "components/starry-smoltcp" }
