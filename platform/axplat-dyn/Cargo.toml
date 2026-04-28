@@ -29,8 +29,8 @@ rknpu = ["dep:rockchip-npu", "rockchip-pm", "rk3588-clk"]
 
 [dependencies]
 anyhow = { version = "1", default-features = false }
-ax-alloc = { version = "0.6", path = "../../os/arceos/modules/axalloc", default-features = false, features = ["buddy-slab"] }
-ax-config-macros = "0.4"
+ax-alloc = { path = "../../os/arceos/modules/axalloc", default-features = false, features = ["buddy-slab"] }
+ax-config-macros = { workspace = true }
 ax-cpu.workspace = true
 ax-driver-base.workspace = true
 ax-driver-block.workspace = true
