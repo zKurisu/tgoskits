@@ -11,9 +11,13 @@ pub enum Command<'a> {
     SendCsd(u32),
     ReadSingleBlock(u32, &'a mut [u8]),
     WriteSingleBlock(u32, &'a [u8]),
+    ReadMultipleBlock(u32, &'a mut [u8]),
+    WriteMultipleBlock(u32, &'a [u8]),
+    StopTransmission,
     SdSendOpCond(u32),
     SendScr(&'a mut [u8]),
     AppCmd(u32),
+    SetBusWidth(u32),
     /// Psuedo-command to reset the clock
     ResetClock,
 }
@@ -29,9 +33,13 @@ impl fmt::Debug for Command<'_> {
             Command::SendCsd(rca) => write!(f, "SendCsd({rca})"),
             Command::ReadSingleBlock(block, _) => write!(f, "ReadSingleBlock({block})"),
             Command::WriteSingleBlock(block, _) => write!(f, "WriteSingleBlock({block})"),
+            Command::ReadMultipleBlock(block, _) => write!(f, "ReadMultipleBlock({block})"),
+            Command::WriteMultipleBlock(block, _) => write!(f, "WriteMultipleBlock({block})"),
+            Command::StopTransmission => write!(f, "StopTransmission"),
             Command::SdSendOpCond(arg) => write!(f, "SdSendOpCond({arg})"),
             Command::SendScr(_) => write!(f, "SendScr"),
             Command::AppCmd(arg) => write!(f, "AppCmd({arg})"),
+            Command::SetBusWidth(arg) => write!(f, "SetBusWidth({arg})"),
             Command::ResetClock => write!(f, "ResetClock"),
         }
     }
@@ -53,9 +61,13 @@ impl<'a> Command<'a> {
             Command::SendCsd(_) => 9,
             Command::ReadSingleBlock(..) => 17,
             Command::WriteSingleBlock(..) => 24,
+            Command::ReadMultipleBlock(..) => 18,
+            Command::WriteMultipleBlock(..) => 25,
+            Command::StopTransmission => 12,
             Command::SdSendOpCond(_) => 41,
             Command::SendScr(_) => 51,
             Command::AppCmd(_) => 55,
+            Command::SetBusWidth(_) => 6,
 
             Command::ResetClock => 0, // Special case, not a real command
         }
@@ -93,6 +105,27 @@ impl<'a> Command<'a> {
                 block,
                 Some(DataXfer::Write(buf)),
             ),
+            Command::ReadMultipleBlock(block, buf) => (
+                cmd_crc
+                    .with_data_expected(true)
+                    .with_send_auto_stop(true),
+                block,
+                Some(DataXfer::Read(buf)),
+            ),
+            Command::WriteMultipleBlock(block, buf) => (
+                cmd_crc
+                    .with_data_expected(true)
+                    .with_read_write(true)
+                    .with_send_auto_stop(true),
+                block,
+                Some(DataXfer::Write(buf)),
+            ),
+            Command::StopTransmission => (
+                cmd_crc.with_stop_abort_cmd(true),
+                0,
+                None,
+            ),
+            Command::SetBusWidth(arg) => (cmd_crc, arg, None),
 
             Command::ResetClock => (
                 Cmd::default().with_update_clock_registers_only(true),

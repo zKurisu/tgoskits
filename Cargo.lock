@@ -760,7 +760,7 @@ dependencies = [
  "gpt_disk_io",
  "log",
  "simple-ahci",
- "simple-sdmmc",
+ "simple-sdmmc 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1659,6 +1659,7 @@ dependencies = [
  "rockchip-pm",
  "rockchip-soc",
  "sdmmc",
+ "simple-sdmmc 0.1.0",
  "some-serial 0.3.1",
  "somehal 0.6.6",
  "spin 0.10.0",
@@ -7847,6 +7848,15 @@ dependencies = [
  "bitfield-struct",
  "log",
  "thiserror 2.0.18",
+ "volatile 0.6.1",
+]
+
+[[package]]
+name = "simple-sdmmc"
+version = "0.1.0"
+dependencies = [
+ "bitfield-struct",
+ "log",
  "volatile 0.6.1",
 ]
 
