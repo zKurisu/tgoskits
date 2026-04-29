@@ -5,7 +5,7 @@ use volatile::VolatilePtr;
 
 use crate::{
     cmd::{Command, DataXfer},
-    regs::{ClkDiv, ClkEna, Cmd, CType, RegisterBlock, RegisterBlockVolatileFieldAccess},
+    regs::{CType, ClkDiv, ClkEna, Cmd, RegisterBlock, RegisterBlockVolatileFieldAccess},
     utils::{Cid, CsdV2},
 };
 
@@ -153,7 +153,9 @@ impl SdMmc {
         self.regs.clkena().write(ClkEna::new());
         self.send_cmd(Command::ResetClock);
 
-        self.regs.clkdiv().write(ClkDiv::new().with_clk_divider0(divider));
+        self.regs
+            .clkdiv()
+            .write(ClkDiv::new().with_clk_divider0(divider));
 
         self.regs
             .clkena()
@@ -366,9 +368,7 @@ impl SdMmc {
         self.regs.dbaddr().write(desc_addr);
 
         // Enable internal DMAC + IDMAC
-        self.regs
-            .ctrl()
-            .update(|r| r.with_use_internal_dmac(true));
+        self.regs.ctrl().update(|r| r.with_use_internal_dmac(true));
         self.regs.bmod().update(|r| r.with_fb(true).with_de(true));
 
         // Build command: CMD18 (read) or CMD25 (write) with auto-stop
@@ -407,9 +407,7 @@ impl SdMmc {
 
         // Disable IDMAC
         self.regs.bmod().update(|r| r.with_de(false));
-        self.regs
-            .ctrl()
-            .update(|r| r.with_use_internal_dmac(false));
+        self.regs.ctrl().update(|r| r.with_use_internal_dmac(false));
 
         // Clear interrupts
         let rintsts = self.regs.rintsts().read();

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use alloc::format;
+
 use rdrive::{
     DriverGeneric, PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo,
 };

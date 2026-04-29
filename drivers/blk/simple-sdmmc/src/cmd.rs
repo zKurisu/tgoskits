@@ -106,9 +106,7 @@ impl<'a> Command<'a> {
                 Some(DataXfer::Write(buf)),
             ),
             Command::ReadMultipleBlock(block, buf) => (
-                cmd_crc
-                    .with_data_expected(true)
-                    .with_send_auto_stop(true),
+                cmd_crc.with_data_expected(true).with_send_auto_stop(true),
                 block,
                 Some(DataXfer::Read(buf)),
             ),
@@ -120,11 +118,7 @@ impl<'a> Command<'a> {
                 block,
                 Some(DataXfer::Write(buf)),
             ),
-            Command::StopTransmission => (
-                cmd_crc.with_stop_abort_cmd(true),
-                0,
-                None,
-            ),
+            Command::StopTransmission => (cmd_crc.with_stop_abort_cmd(true), 0, None),
             Command::SetBusWidth(arg) => (cmd_crc, arg, None),
 
             Command::ResetClock => (
