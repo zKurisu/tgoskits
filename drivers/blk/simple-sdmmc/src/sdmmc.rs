@@ -19,6 +19,11 @@ where
     }
 }
 
+fn scr_bus_widths(scr: &[u8; 8]) -> u64 {
+    let scr = u64::from_le_bytes(*scr);
+    (scr >> 8) & 0xf
+}
+
 /// SD/MMC driver.
 pub struct SdMmc {
     regs: VolatilePtr<'static, RegisterBlock>,
@@ -245,15 +250,7 @@ impl SdMmc {
         let mut buf = [0u8; 512];
         self.send_cmd(Command::SendScr(&mut buf)).unwrap();
 
-        trace!("fifo count: {}", self.fifo_cnt());
-        let resp = unsafe {
-            self.regs
-                .as_raw_ptr()
-                .byte_add(Self::FIFO)
-                .cast::<u64>()
-                .read_volatile()
-        };
-        let bus_widths = (resp >> 8) & 0xf;
+        let bus_widths = scr_bus_widths(buf[..8].try_into().unwrap());
         debug!("Bus width supported: {:#x?}", bus_widths);
 
         trace!("fifo count: {}", self.fifo_cnt());

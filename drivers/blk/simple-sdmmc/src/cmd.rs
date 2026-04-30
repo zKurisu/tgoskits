@@ -13,6 +13,7 @@ pub enum Command<'a> {
     WriteSingleBlock(u32, &'a [u8]),
     ReadMultipleBlock(u32, &'a mut [u8]),
     WriteMultipleBlock(u32, &'a [u8]),
+    #[allow(dead_code)]
     StopTransmission,
     SdSendOpCond(u32),
     SendScr(&'a mut [u8]),
