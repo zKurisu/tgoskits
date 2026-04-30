@@ -107,6 +107,7 @@ members = [
     "components/timer_list",
     "components/x86_vcpu",
     "components/x86_vlapic",
+    "drivers/blk/simple-sdmmc",
     "drivers/npu/rockchip-npu",
     "drivers/pci/rk3588-pci",
     "drivers/soc/rockchip/rockchip-pm",
@@ -310,6 +311,7 @@ rockchip-pm = { version = "0.4.2", path = "drivers/soc/rockchip/rockchip-pm" }
 rockchip-soc = { version = "0.1.1", path = "drivers/soc/rockchip/rockchip-soc" }
 rsext4 = { version = "0.3.7", path = "components/rsext4" }
 scope-local = { version = "0.3.6", path = "components/scope-local" }
+simple-sdmmc = { version = "0.1", path = "drivers/blk/simple-sdmmc" }
 smoltcp = { version = "0.14.2", path = "components/starry-smoltcp" }
 smoltcp-fuzz = { version = "0.2.2", path = "components/starry-smoltcp/fuzz" }
 smp-kernel = { version = "0.3.1", path = "components/axplat_crates/examples/smp-kernel" }
