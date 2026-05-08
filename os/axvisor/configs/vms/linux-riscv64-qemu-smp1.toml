@@ -19,11 +19,10 @@ phys_cpu_ids = [0]
 # The entry point of the kernel image.
 entry_point = 0x9020_0000
 # The location of image: "memory" | "fs".
-# load from memory.
-image_location = "memory"
+# Load from file system.
+image_location = "fs"
 # The file path of the kernel image.
-# kernel_path = "linux-6.6.62.bin"
-kernel_path = "/tmp/.axvisor-images/qemu_riscv64_linux/qemu-riscv64"
+kernel_path = "/guest/linux/linux-qemu"
 # The load address of the kernel image.
 kernel_load_addr = 0x9020_0000
 # The file path of the device tree blob (DTB).
@@ -41,6 +40,9 @@ memory_regions = [
 # Device specifications
 #
 [devices]
+# The interrupt mode.
+interrupt_mode = "passthrough"
+
 # Pass-through devices.
 # Name Base-Ipa Base-Pa Length Alloc-Irq.
 passthrough_devices = [
@@ -71,5 +73,3 @@ excluded_devices = [
 emu_devices = [
     ["plic", 0x0c00_0000, 0x60_0000, 0, 0x30, [2]],     # [context_num]
 ]
-
-interrupt_mode = "passthrough"

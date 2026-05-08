@@ -36,12 +36,27 @@ pub fn sys_gettimeofday(ts: *mut timeval) -> AxResult<isize> {
     Ok(0)
 }
 
-pub fn sys_clock_getres(clock_id: __kernel_clockid_t, res: *mut timespec) -> AxResult<isize> {
-    if clock_id as u32 != CLOCK_MONOTONIC && clock_id as u32 != CLOCK_REALTIME {
-        warn!("Called sys_clock_getres for unsupported clock {clock_id}");
+pub fn sys_time(tloc: *mut usize) -> AxResult<isize> {
+    let secs = wall_time().as_secs() as isize;
+    if let Some(tloc) = tloc.nullable() {
+        tloc.vm_write(secs as usize)?;
     }
+    Ok(secs)
+}
+
+pub fn sys_clock_getres(clock_id: __kernel_clockid_t, res: *mut timespec) -> AxResult<isize> {
+    let resolution = match clock_id as u32 {
+        CLOCK_REALTIME
+        | CLOCK_MONOTONIC
+        | CLOCK_MONOTONIC_RAW
+        | CLOCK_BOOTTIME
+        | CLOCK_PROCESS_CPUTIME_ID
+        | CLOCK_THREAD_CPUTIME_ID => TimeValue::from_nanos(1),
+        CLOCK_REALTIME_COARSE | CLOCK_MONOTONIC_COARSE => TimeValue::from_millis(4),
+        _ => return Err(AxError::InvalidInput),
+    };
     if let Some(res) = res.nullable() {
-        res.vm_write(timespec::from_time_value(TimeValue::from_micros(1)))?;
+        res.vm_write(timespec::from_time_value(resolution))?;
     }
     Ok(0)
 }

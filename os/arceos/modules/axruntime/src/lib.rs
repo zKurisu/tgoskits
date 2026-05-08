@@ -45,9 +45,6 @@ mod mp;
 #[cfg(feature = "paging")]
 mod klib;
 
-#[cfg(feature = "buddy-slab")]
-use ax_alloc::eii::ax_alloc_virt_to_phys_impl;
-
 #[cfg(feature = "smp")]
 pub use self::mp::rust_main_secondary;
 
@@ -67,18 +64,12 @@ unsafe extern "C" {
     fn main();
 }
 
-#[cfg(feature = "buddy-slab")]
-#[ax_alloc_virt_to_phys_impl]
-fn ax_alloc_virt_to_phys(vaddr: usize) -> usize {
-    ax_hal::mem::virt_to_phys(vaddr.into()).as_usize()
-}
-
 struct LogIfImpl;
 
 #[ax_crate_interface::impl_interface]
 impl ax_log::LogIf for LogIfImpl {
     fn console_write_str(s: &str) {
-        ax_hal::console::write_bytes(s.as_bytes());
+        ax_hal::console::write_text_bytes(s.as_bytes());
     }
 
     fn current_time() -> core::time::Duration {

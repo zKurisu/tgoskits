@@ -31,6 +31,7 @@ static SESSION_TABLE: RwLock<WeakMap<Pid, Weak<Session>>> = RwLock::new(WeakMap:
 ///
 /// This function is intended to be used during memory leak analysis to remove
 /// possible noise caused by expired entries in the [`WeakMap`].
+#[cfg(feature = "memtrack")]
 pub fn cleanup_task_tables() {
     TASK_TABLE.write().cleanup();
     PROCESS_TABLE.write().cleanup();
@@ -114,11 +115,6 @@ pub fn register_process_group(pg: &Arc<ProcessGroup>) {
 pub fn register_session(session: &Arc<Session>) {
     let mut session_table = SESSION_TABLE.write();
     session_table.insert(session.sid(), session);
-}
-
-/// Finds the session with the given SID.
-pub fn get_session(sid: Pid) -> AxResult<Arc<Session>> {
-    SESSION_TABLE.read().get(&sid).ok_or(AxError::NoSuchProcess)
 }
 
 /// Poll the timer
@@ -239,6 +235,11 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
 
     let process = &thr.proc_data.proc;
     if process.exit_thread(curr.id().as_u64() as Pid, exit_code) {
+        // Close all file descriptors before marking the process as exited.
+        // This ensures pipe write ends and other resources are properly released,
+        // so parent processes blocking on pipe reads will receive EOF.
+        crate::file::close_all_fds();
+
         // Snapshot children BEFORE process.exit() reparents them to init
         // via mem::take. Otherwise process.children() returns an empty
         // list and pdeathsig never reaches the real children.
@@ -255,24 +256,24 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
         // Send pdeathsig to child processes
         for child in children_snapshot {
             let child_pid = child.pid();
-            if let Ok(child_task) = get_task(child_pid) {
-                if let Some(child_thr) = child_task.try_as_thread() {
-                    let sig = child_thr.pdeathsig();
-                    if sig > 0 {
-                        if let Some(signo) = Signo::from_repr(sig as u8) {
-                            let _ = send_signal_to_process(
-                                child_pid,
-                                Some(SignalInfo::new_kernel(signo)),
-                            );
-                        }
-                    }
+            if let Ok(child_task) = get_task(child_pid)
+                && let Some(child_thr) = child_task.try_as_thread()
+            {
+                let sig = child_thr.pdeathsig();
+                if sig > 0
+                    && let Some(signo) = Signo::from_repr(sig as u8)
+                {
+                    let _ = send_signal_to_process(child_pid, Some(SignalInfo::new_kernel(signo)));
                 }
             }
         }
 
         thr.proc_data.exit_event.wake();
 
-        crate::syscall::clear_proc_shm(process.pid(), &thr.proc_data.aspace);
+        // Unblock a vfork parent waiting for this child to exit.
+        thr.proc_data.notify_vfork_done();
+
+        crate::syscall::clear_proc_shm(process.pid(), &thr.proc_data.aspace());
     }
     thr.exit_event.wake();
 
