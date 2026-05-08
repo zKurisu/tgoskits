@@ -50,6 +50,7 @@ pub struct Device {
     config_desc: Vec<ConfigurationDescriptor>,
     port_speed: Speed,
     eps: BTreeMap<u8, Endpoint>,
+    ep_interfaces: BTreeMap<u8, u8>,
     cmd: CommandRing,
 }
 
@@ -81,6 +82,7 @@ impl Device {
             config_desc: vec![],
             port_speed: Speed::Full,
             eps: BTreeMap::new(),
+            ep_interfaces: BTreeMap::new(),
             cmd: host.cmd.clone(),
         })
     }
@@ -369,6 +371,8 @@ impl Device {
             .await?;
 
         self.current_config_value = Some(configuration_value);
+        self.eps.clear();
+        self.ep_interfaces.clear();
 
         self.ctx.with_input(|input| {
             let c = input.control_mut();
@@ -399,19 +403,37 @@ impl Device {
                 &[],
             )
             .await?;
-        self.setup_all_endpoints(interface, alternate).await?;
+        self.setup_interface_endpoints(interface, alternate).await?;
         debug!("Interface {interface} set successfully");
         Ok(())
     }
 
-    async fn setup_all_endpoints(&mut self, interface: u8, alternate: u8) -> Result {
-        let mut max_dci = 1;
+    async fn setup_interface_endpoints(&mut self, interface: u8, alternate: u8) -> Result {
         self.ctx.perper_change();
-        self.eps.clear();
+        let stale_endpoints = self
+            .ep_interfaces
+            .iter()
+            .filter_map(|(address, ep_interface)| (*ep_interface == interface).then_some(*address))
+            .collect::<Vec<_>>();
+        let drop_dcis = stale_endpoints
+            .iter()
+            .filter_map(|address| {
+                self.find_ep_desc_in_current_config(*address)
+                    .ok()
+                    .map(|desc| desc.dci())
+            })
+            .collect::<Vec<_>>();
+        let mut old_endpoints = Vec::with_capacity(stale_endpoints.len());
+        for address in &stale_endpoints {
+            if let Some(endpoint) = self.eps.remove(address) {
+                old_endpoints.push(endpoint);
+            }
+            self.ep_interfaces.remove(address);
+        }
         self.ctx.with_input(|input| {
             let control_context = input.control_mut();
-            for i in 2..32 {
-                control_context.set_drop_context_flag(i);
+            for dci in drop_dcis {
+                control_context.set_drop_context_flag(dci as _);
             }
         });
 
@@ -420,9 +442,6 @@ impl Device {
             .to_vec()
         {
             let dci = desc.dci();
-            if dci > max_dci {
-                max_dci = dci;
-            }
             let mut ep_raw = self.new_ep(dci.into())?;
             let periodic_burst_size = match self.port_speed {
                 Speed::High
@@ -435,10 +454,15 @@ impl Device {
                 }
                 _ => 0,
             };
-            ep_raw.configure_periodic(desc.max_packet_size as usize, periodic_burst_size);
+            ep_raw.configure_periodic(
+                desc.max_packet_size as usize,
+                periodic_burst_size,
+                desc.interval,
+            );
             let ring_addr = ep_raw.bus_addr();
             self.eps
                 .insert(desc.address, Endpoint::new((&desc).into(), ep_raw));
+            self.ep_interfaces.insert(desc.address, interface);
 
             let xhci_interval =
                 self.calculate_xhci_interval(desc.interval, desc.transfer_type, desc.interval);
@@ -490,11 +514,21 @@ impl Device {
             });
         }
 
+        let max_dci = self
+            .eps
+            .keys()
+            .filter_map(|address| {
+                self.find_ep_desc_in_current_config(*address)
+                    .ok()
+                    .map(|desc| desc.dci())
+            })
+            .max()
+            .unwrap_or(1);
         self.ctx.with_input(|input| {
             input
                 .device_mut()
                 .slot_mut()
-                .set_context_entries(max_dci + 1);
+                .set_context_entries(max_dci + 1)
         });
         mb();
 
@@ -506,6 +540,8 @@ impl Device {
                     .set_input_context_pointer(self.ctx.input_bus_addr()),
             ))
             .await?;
+        // Keep old endpoint rings alive until hardware accepts the new input context.
+        drop(old_endpoints);
 
         Ok(())
     }
@@ -529,6 +565,30 @@ impl Device {
         Err(USBError::NotFound)
     }
 
+    fn current_config_desc(&self) -> Result<&ConfigurationDescriptor> {
+        let Some(current_config_value) = self.current_config_value else {
+            return Err(USBError::ConfigurationNotSet);
+        };
+        self.config_desc
+            .iter()
+            .find(|config| config.configuration_value == current_config_value)
+            .ok_or(USBError::NotFound)
+    }
+
+    fn find_ep_desc_in_current_config(&self, address: u8) -> Result<&EndpointDescriptor> {
+        let config = self.current_config_desc()?;
+        for iface in &config.interfaces {
+            for alt in &iface.alt_settings {
+                for desc in &alt.endpoints {
+                    if desc.address == address {
+                        return Ok(desc);
+                    }
+                }
+            }
+        }
+        Err(USBError::NotFound)
+    }
+
     /// 根据 XHCI 规范计算端点的 interval 值
     /// 参考 xHCI 规范第 6.2.3.6 节
     fn calculate_xhci_interval(
@@ -544,7 +604,7 @@ impl Device {
                         // HighSpeed, SuperSpeed, SuperSpeedPlus ISO 端点
                         // Interval = max(1, min(16, bInterval))
                         let interval = binterval.clamp(1, 16);
-                        info!(
+                        debug!(
                             "ISO endpoint HS/SS: bInterval={} -> XHCI interval={}",
                             binterval, interval
                         );
@@ -559,7 +619,7 @@ impl Device {
                             // 计算 floor(log2(bInterval))
                             let log2_binterval = 31 - (binterval as u32).leading_zeros() as u8 - 1;
                             let interval = (log2_binterval + 3).clamp(1, 16);
-                            info!(
+                            debug!(
                                 "ISO endpoint FS/LS: bInterval={} -> log2={} -> XHCI interval={}",
                                 binterval, log2_binterval, interval
                             );
@@ -574,7 +634,7 @@ impl Device {
                         // HighSpeed, SuperSpeed, SuperSpeedPlus 中断端点
                         // Interval = max(1, min(16, bInterval))
                         let interval = binterval.clamp(1, 16);
-                        info!(
+                        debug!(
                             "INT endpoint HS/SS: bInterval={} -> XHCI interval={}",
                             binterval, interval
                         );
@@ -589,7 +649,7 @@ impl Device {
                             // 计算 floor(log2(bInterval))
                             let log2_binterval = 31 - (binterval as u32).leading_zeros() as u8 - 1;
                             let interval = (log2_binterval + 3).clamp(1, 16);
-                            info!(
+                            debug!(
                                 "INT endpoint FS/LS: bInterval={} -> log2={} -> XHCI interval={}",
                                 binterval, log2_binterval, interval
                             );

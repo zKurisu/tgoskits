@@ -14,6 +14,7 @@ pub mod transfer;
 pub enum Event {
     Nothing,
     PortChange { port: u8 },
+    TransferActivity { count: usize },
     Stopped,
 }
 

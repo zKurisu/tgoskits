@@ -1,4 +1,7 @@
+use alloc::vec::Vec;
+
 use dma_api::{DArray, DmaDirection};
+use mbarrier::mb;
 use xhci::ring::trb::{Link, command, transfer};
 
 use crate::{
@@ -9,7 +12,8 @@ use crate::{
 };
 
 const TRB_LEN: usize = 4;
-const TRB_SIZE: usize = size_of::<TrbData>();
+pub(crate) const TRB_SIZE: usize = size_of::<TrbData>();
+pub(crate) const TRBS_PER_SEGMENT: usize = 256;
 const DEFAULT_RING_PAGES: usize = 2;
 
 #[derive(Clone)]
@@ -64,16 +68,25 @@ impl Ring {
     }
 
     pub fn new(link: bool, direction: DmaDirection, dma: &Kernel) -> Result<Self> {
-        let len = (dma.page_size() * DEFAULT_RING_PAGES) / TRB_SIZE;
+        Self::new_with_pages(DEFAULT_RING_PAGES, link, direction, dma)
+    }
+
+    pub fn new_with_pages(
+        pages: usize,
+        link: bool,
+        direction: DmaDirection,
+        dma: &Kernel,
+    ) -> Result<Self> {
+        let len = (dma.page_size() * pages.max(1)) / TRB_SIZE;
         Ok(Self::new_with_len(len, link, direction, dma)?)
+    }
+
+    pub fn new_segment(link: bool, direction: DmaDirection, dma: &Kernel) -> Result<Self> {
+        Ok(Self::new_with_len(TRBS_PER_SEGMENT, link, direction, dma)?)
     }
 
     pub fn len(&self) -> usize {
         self.trbs.len()
-    }
-
-    fn get_trb(&self) -> Option<TrbData> {
-        self.trbs.read(self.i)
     }
 
     pub fn bus_addr(&self) -> BusAddr {
@@ -102,15 +115,33 @@ impl Ring {
         addr
     }
 
+    fn enque_transfer_deferred_cycle(
+        &mut self,
+        mut trb: transfer::Allowed,
+    ) -> (BusAddr, usize, transfer::Allowed) {
+        let mut visible_trb = trb;
+        if self.cycle {
+            visible_trb.set_cycle_bit();
+            trb.clear_cycle_bit();
+        } else {
+            visible_trb.clear_cycle_bit();
+            trb.set_cycle_bit();
+        }
+        let index = self.i;
+        let addr = self.enque_trb(trb.into());
+        trace!("[Transfer] >> deferred first {visible_trb:X?} @{addr:X?}");
+        (addr, index, visible_trb)
+    }
+
+    fn set_transfer_trb(&mut self, index: usize, trb: transfer::Allowed) {
+        self.trbs.set(index, trb.into());
+    }
+
     pub fn enque_trb(&mut self, trb: TrbData) -> BusAddr {
         self.trbs.set(self.i, trb);
         let addr = self.trb_bus_addr(self.i);
         self.next_index();
         addr
-    }
-
-    pub fn current_data(&mut self) -> (TrbData, bool) {
-        (self.get_trb().unwrap(), self.cycle)
     }
 
     fn next_index(&mut self) -> usize {
@@ -143,22 +174,9 @@ impl Ring {
         self.i
     }
 
-    pub fn inc_deque(&mut self) {
-        self.i += 1;
-        let len = self.len();
-        if self.i >= len {
-            self.i = 0;
-            self.cycle = !self.cycle;
-        }
-    }
-
     pub fn trb_bus_addr(&self, i: usize) -> BusAddr {
         let base = self.bus_addr().raw();
         (base + (i * size_of::<TrbData>()) as u64).into()
-    }
-
-    pub fn current_trb_addr(&self) -> BusAddr {
-        self.trb_bus_addr(self.i)
     }
 
     pub fn trb_bus_addr_list(&self) -> impl Iterator<Item = BusAddr> + '_ {
@@ -178,6 +196,12 @@ impl<R> SendRing<R> {
         Ok(Self { ring, finished })
     }
 
+    pub fn new_with_pages(pages: usize, direction: DmaDirection, dma: &Kernel) -> Result<Self> {
+        let ring = Ring::new_with_pages(pages, true, direction, dma)?;
+        let finished = Finished::new(ring.trb_bus_addr_list());
+        Ok(Self { ring, finished })
+    }
+
     pub fn enque_command(&mut self, trb: command::Allowed) -> BusAddr {
         let addr = self.ring.enque_command(trb);
         self.finished.clear_finished(addr);
@@ -188,6 +212,28 @@ impl<R> SendRing<R> {
         let addr = self.ring.enque_transfer(trb);
         self.finished.clear_finished(addr);
         addr
+    }
+
+    pub fn enqueue_transfer_td(&mut self, trbs: &mut [transfer::Allowed]) -> Vec<BusAddr> {
+        let mut addrs = Vec::with_capacity(trbs.len());
+        let Some((first, rest)) = trbs.split_first_mut() else {
+            return addrs;
+        };
+
+        let (first_addr, first_index, visible_first) =
+            self.ring.enque_transfer_deferred_cycle(*first);
+        self.finished.clear_finished(first_addr);
+        addrs.push(first_addr);
+
+        for trb in rest {
+            let addr = self.ring.enque_transfer(*trb);
+            self.finished.clear_finished(addr);
+            addrs.push(addr);
+        }
+
+        mb();
+        self.ring.set_transfer_trb(first_index, visible_first);
+        addrs
     }
 
     pub fn take_finished_future(&self, addr: BusAddr) -> TWaiter<R> {

@@ -598,7 +598,11 @@ impl Parser {
                 file.write_all(raw_data).await?;
 
                 // 尝试用 FFmpeg 转换为 PNG
-                if let Err(_) = self.convert_jpeg_to_png(&jpeg_path, output_path).await {
+                if self
+                    .convert_jpeg_to_png(&jpeg_path, output_path)
+                    .await
+                    .is_err()
+                {
                     // 如果转换失败，至少我们有 JPEG 文件
                     debug!("Kept JPEG file: {}", jpeg_path);
                 }
@@ -939,10 +943,9 @@ impl Parser {
     async fn convert_raw_frames_to_images(
         &self,
         frame_numbers: Vec<u32>,
-        format_type: &UncompressedFormat,
+        _format_type: &UncompressedFormat,
         video_format: &VideoFormat,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let format_type = format_type.clone();
         let video_format = video_format.clone();
         let input_dir = self.input_dir.clone();
         let output_dir = self.output_dir.clone();

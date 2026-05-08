@@ -72,7 +72,10 @@ impl Endpoint {
             Some(res) => Poll::Ready(res),
             None => {
                 self.raw.register_waker(id, cx);
-                Poll::Pending
+                match self.raw.reclaim_request(id) {
+                    Some(res) => Poll::Ready(res),
+                    None => Poll::Pending,
+                }
             }
         }
     }

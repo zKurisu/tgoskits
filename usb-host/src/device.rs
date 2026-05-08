@@ -1,5 +1,4 @@
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-use anyhow::anyhow;
 use core::{
     any::Any,
     fmt::{Debug, Display},
@@ -194,7 +193,7 @@ pub struct Device {
     pub(crate) inner: Box<dyn DeviceOp>,
     lang_id: LanguageId,
     manufacturer: Option<String>,
-    current_interface: Option<(u8, u8)>,
+    claimed_interfaces: BTreeMap<u8, u8>,
 }
 
 impl Debug for Device {
@@ -211,7 +210,7 @@ impl<T: DeviceOp> From<T> for Device {
     fn from(inner: T) -> Self {
         Self {
             inner: Box::new(inner),
-            current_interface: None,
+            claimed_interfaces: BTreeMap::new(),
             lang_id: LanguageId::default(),
             manufacturer: None,
         }
@@ -222,7 +221,7 @@ impl From<Box<dyn DeviceOp>> for Device {
     fn from(inner: Box<dyn DeviceOp>) -> Self {
         Self {
             inner,
-            current_interface: None,
+            claimed_interfaces: BTreeMap::new(),
             lang_id: LanguageId::default(),
             manufacturer: None,
         }
@@ -250,7 +249,7 @@ impl Device {
     pub async fn claim_interface(&mut self, interface: u8, alternate: u8) -> Result<(), USBError> {
         trace!("Claiming interface {interface}, alternate {alternate}");
         self.inner.claim_interface(interface, alternate).await?;
-        self.current_interface = Some((interface, alternate));
+        self.claimed_interfaces.insert(interface, alternate);
         Ok(())
     }
 
@@ -269,7 +268,7 @@ impl Device {
     pub async fn set_configuration(&mut self, configuration_value: u8) -> crate::err::Result {
         let result = self.inner.set_configuration(configuration_value).await;
         if result.is_ok() {
-            self.current_interface = None;
+            self.claimed_interfaces.clear();
         }
         result
     }
@@ -298,11 +297,18 @@ impl Device {
     pub async fn string_descriptor(&mut self, index: u8) -> Result<String, USBError> {
         let mut data = alloc::vec![0u8; 256];
         let lang_id = self.lang_id();
-        self.ctrl_ep_mut()
+        let len = self
+            .ctrl_ep_mut()
             .get_descriptor(DescriptorType::STRING, index, lang_id.into(), &mut data)
             .await?;
-        let res = decode_string_descriptor(&data)?;
-        Ok(res)
+        let descriptor_len = data
+            .first()
+            .copied()
+            .map(usize::from)
+            .unwrap_or(0)
+            .min(len)
+            .min(data.len());
+        decode_string_descriptor(&data[..descriptor_len]).map_err(USBError::from)
     }
 
     pub async fn control_in(
@@ -351,12 +357,24 @@ impl Device {
         self.inner.endpoint(&ep_desc)
     }
 
-    pub fn take_endpoints(&mut self) -> Result<BTreeMap<u8, Endpoint>, USBError> {
-        let descriptors = self.current_endpoint_descriptors()?;
+    pub fn take_endpoints_for_interface(
+        &mut self,
+        interface: u8,
+    ) -> Result<BTreeMap<u8, Endpoint>, USBError> {
+        let descriptors = self.current_endpoint_descriptors(interface)?;
         let mut endpoints = BTreeMap::new();
         for desc in descriptors {
             let address = desc.address;
             endpoints.insert(address, self.inner.endpoint(&desc)?);
+        }
+        Ok(endpoints)
+    }
+
+    pub fn take_endpoints(&mut self) -> Result<BTreeMap<u8, Endpoint>, USBError> {
+        let mut endpoints = BTreeMap::new();
+        let interfaces = self.claimed_interfaces.keys().copied().collect::<Vec<_>>();
+        for interface in interfaces {
+            endpoints.extend(self.take_endpoints_for_interface(interface)?);
         }
         Ok(endpoints)
     }
@@ -379,30 +397,44 @@ impl Device {
         &self,
         address: u8,
     ) -> core::result::Result<&usb_if::descriptor::EndpointDescriptor, USBError> {
-        self.current_endpoint_descriptors_ref()?
-            .iter()
-            .find(|ep| ep.address == address)
-            .ok_or(USBError::NotFound)
+        for interface in self.claimed_interfaces.keys().copied() {
+            if let Ok(desc) =
+                self.current_endpoint_descriptors_ref(interface)
+                    .and_then(|descriptors| {
+                        descriptors
+                            .iter()
+                            .find(|ep| ep.address == address)
+                            .ok_or(USBError::NotFound)
+                    })
+            {
+                return Ok(desc);
+            }
+        }
+        Err(USBError::NotFound)
     }
 
     fn current_endpoint_descriptors(
         &self,
+        interface_number: u8,
     ) -> core::result::Result<Vec<usb_if::descriptor::EndpointDescriptor>, USBError> {
-        Ok(self.current_endpoint_descriptors_ref()?.to_vec())
+        Ok(self
+            .current_endpoint_descriptors_ref(interface_number)?
+            .to_vec())
     }
 
     fn current_endpoint_descriptors_ref(
         &self,
+        interface_number: u8,
     ) -> core::result::Result<&[usb_if::descriptor::EndpointDescriptor], USBError> {
-        let (interface_number, alternate_setting) = match self.current_interface {
-            Some((i, a)) => (i, a),
-            None => Err(anyhow!("Interface not claim"))?,
-        };
+        let alternate_setting = self
+            .claimed_interfaces
+            .get(&interface_number)
+            .ok_or(USBError::NotFound)?;
         for config in self.configurations() {
             for interface in &config.interfaces {
                 if interface.interface_number == interface_number {
                     for alt in &interface.alt_settings {
-                        if alt.alternate_setting == alternate_setting {
+                        if alt.alternate_setting == *alternate_setting {
                             return Ok(&alt.endpoints);
                         }
                     }

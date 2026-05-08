@@ -109,7 +109,12 @@ impl Xhci {
 
         let cmd = CommandRing::new(DmaDirection::Bidirectional, &kernel, reg_shared.clone())?;
         let cmd_finished = cmd.finished_handle();
-        let event_ring = EventRing::new(&kernel)?;
+        let max_event_ring_segments = reg
+            .capability
+            .hcsparams2
+            .read_volatile()
+            .event_ring_segment_table_max() as usize;
+        let event_ring = EventRing::new(max_event_ring_segments, &kernel)?;
         let event_ring_info = event_ring.info();
 
         let root_hub = XhciRootHub::new(reg.clone())?;
@@ -385,8 +390,8 @@ impl Xhci {
             debug!("ERDP: {erdp:x}");
 
             ir0.erdp.update_volatile(|r| {
-                r.set_event_ring_dequeue_pointer(erdp);
-                r.set_dequeue_erst_segment_index(0);
+                r.set_event_ring_dequeue_pointer(erdp & !0xf);
+                r.set_dequeue_erst_segment_index((erdp & 0x7) as u8);
                 r.clear_event_handler_busy();
             });
 
@@ -552,21 +557,50 @@ impl EventHandler {
         unsafe { &mut *self.reg.get() }
     }
 
+    fn update_erdp(&self, clear_ehb: bool) {
+        let erdp = self.event_ring().erdp();
+        let segment_index = self.event_ring().segment_index();
+        self.reg()
+            .interrupter_register_set
+            .interrupter_mut(0)
+            .erdp
+            .update_volatile(|r| {
+                r.set_event_ring_dequeue_pointer(erdp);
+                r.set_dequeue_erst_segment_index(segment_index);
+                if clear_ehb {
+                    r.clear_event_handler_busy();
+                } else {
+                    r.set_0_event_handler_busy();
+                }
+            });
+    }
+
     fn clean_event_ring(&self) -> Event {
         use xhci::ring::trb::event::Allowed;
         let mut event = Event::Nothing;
+        let mut command_events = 0usize;
+        let mut port_events = 0usize;
+        let mut transfer_events = 0usize;
+        let mut other_events = 0usize;
+        let mut event_loop = 0usize;
 
         while let Some(allowed) = self.event_ring().next() {
             match allowed {
                 Allowed::CommandCompletion(c) => {
+                    command_events += 1;
                     let addr = c.command_trb_pointer();
-                    // trace!("[Command] << {allowed:?} @{addr:X}");
+                    trace!(
+                        "xhci: event command ptr={:#x} slot={} code={:?}",
+                        addr,
+                        c.slot_id(),
+                        c.completion_code()
+                    );
                     self.cmd_finished.set_finished(addr.into(), c);
                 }
                 Allowed::PortStatusChange(st) => {
-                    // debug!("Port {} status change event", st.port_id());
-                    // let idx = (st.port_id() - 1) as usize;
+                    port_events += 1;
                     let port_id = st.port_id();
+                    trace!("xhci: event port status change port={}", port_id);
                     self.ports.set_port_changed(port_id);
 
                     event = Event::PortChange {
@@ -574,9 +608,19 @@ impl EventHandler {
                     };
                 }
                 Allowed::TransferEvent(c) => {
+                    transfer_events += 1;
                     let slot_id = c.slot_id();
                     let ep_id = c.endpoint_id();
                     let ptr = c.trb_pointer();
+                    trace!(
+                        "xhci: event transfer slot={} ep={} ptr={:#x} code={:?} len={} event_data={}",
+                        slot_id,
+                        ep_id,
+                        ptr,
+                        c.completion_code(),
+                        c.trb_transfer_length(),
+                        c.event_data()
+                    );
 
                     // Interrupts synchronize queue state only. Do not call
                     // into OS glue or take manager/file/device locks here; the
@@ -587,9 +631,28 @@ impl EventHandler {
                     };
                 }
                 _ => {
-                    // debug!("unhandled event {allowed:?}");
+                    other_events += 1;
+                    trace!("xhci: event other {:?}", allowed);
                 }
             }
+            event_loop += 1;
+            if event_loop > super::ring::TRBS_PER_SEGMENT / 2 {
+                self.update_erdp(false);
+                event_loop = 0;
+            }
+        }
+        trace!(
+            "xhci: event ring drained command={} port={} transfer={} other={} erdp={:#x}",
+            command_events,
+            port_events,
+            transfer_events,
+            other_events,
+            self.event_ring().erst_dequeue_pointer()
+        );
+        if matches!(event, Event::Nothing) && transfer_events > 0 {
+            event = Event::TransferActivity {
+                count: transfer_events,
+            };
         }
         event
     }
@@ -599,14 +662,43 @@ impl EventHandlerOp for EventHandler {
     fn handle_event(&self) -> Event {
         let mut res = Event::Nothing;
         let sts = self.reg().operational.usbsts.read_volatile();
+        let has_event_interrupt = sts.event_interrupt();
+        let has_pending_event = self.event_ring().has_pending_event();
 
-        if !sts.event_interrupt() {
+        if !has_event_interrupt && !has_pending_event {
             return res;
         }
 
-        self.reg().operational.usbsts.update_volatile(|r| {
-            r.clear_event_interrupt();
-        });
+        {
+            let irq = self.reg().interrupter_register_set.interrupter_mut(0);
+            let iman = irq.iman.read_volatile();
+            let erdp = irq.erdp.read_volatile();
+            if has_event_interrupt {
+                trace!(
+                    "xhci: handle_event USBSTS.EINT=1 IMAN.IP={} IMAN.IE={} EHB={} ERDP={:#x} sw_erdp={:#x}",
+                    iman.interrupt_pending(),
+                    iman.interrupt_enable(),
+                    erdp.event_handler_busy(),
+                    erdp.event_ring_dequeue_pointer(),
+                    self.event_ring().erst_dequeue_pointer()
+                );
+            } else {
+                trace!(
+                    "xhci: handle_event draining pending event with USBSTS.EINT=0 IMAN.IP={} IMAN.IE={} EHB={} ERDP={:#x} sw_erdp={:#x}",
+                    iman.interrupt_pending(),
+                    iman.interrupt_enable(),
+                    erdp.event_handler_busy(),
+                    erdp.event_ring_dequeue_pointer(),
+                    self.event_ring().erst_dequeue_pointer()
+                );
+            }
+        }
+
+        if has_event_interrupt {
+            self.reg().operational.usbsts.update_volatile(|r| {
+                r.clear_event_interrupt();
+            });
+        }
 
         // 【关键】GIC 中断模式下，需要手动清除 IMAN.IP
         // 参考: Linux xhci_irq() in xhci-ring.c:3054-3059
@@ -615,16 +707,8 @@ impl EventHandlerOp for EventHandler {
             r.clear_interrupt_pending();
         });
 
-        let erdp = {
-            res = self.clean_event_ring();
-            self.event_ring().erdp()
-        };
-        {
-            irq.erdp.update_volatile(|r| {
-                r.set_event_ring_dequeue_pointer(erdp);
-                r.clear_event_handler_busy();
-            });
-        }
+        res = self.clean_event_ring();
+        self.update_erdp(true);
 
         res
     }

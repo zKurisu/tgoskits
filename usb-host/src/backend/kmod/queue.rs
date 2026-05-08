@@ -4,13 +4,23 @@ use core::task::Context;
 use core::task::Poll;
 use core::{
     cell::UnsafeCell,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use futures::task::AtomicWaker;
 
 use alloc::collections::BTreeMap;
 
 use crate::BusAddr;
+
+static FINISHED_QUEUE_LOG_BUDGET: AtomicUsize = AtomicUsize::new(128);
+
+fn take_queue_log_budget() -> bool {
+    FINISHED_QUEUE_LOG_BUDGET
+        .fetch_update(Ordering::AcqRel, Ordering::Acquire, |left| {
+            left.checked_sub(1)
+        })
+        .is_ok()
+}
 
 pub struct Finished<C> {
     inner: Arc<FinishedInner<C>>,
@@ -89,6 +99,11 @@ impl<C> Finished<C> {
             }
             slot.finished.store(true, Ordering::Release);
             slot.waker.wake();
+        } else if take_queue_log_budget() {
+            warn!(
+                "usb queue: completion address {:#x} is not registered",
+                addr.raw()
+            );
         }
     }
 
@@ -134,7 +149,10 @@ impl<C> Future for TWaiter<C> {
             return Poll::Ready(res);
         }
         this.finished.register(cx.waker());
-        Poll::Pending
+        match this.finished.get_finished() {
+            Some(res) => Poll::Ready(res),
+            None => Poll::Pending,
+        }
     }
 }
 

@@ -44,7 +44,24 @@ impl TransferResultHandler {
     pub unsafe fn set_finished(&self, slot_id: u8, ep_id: u8, ptr: BusAddr, res: TransferEvent) {
         let queue_id = TransQueueId { slot_id, ep_id };
         if let Some(q) = unsafe { self.inner.force_use().get(&queue_id) } {
+            trace!(
+                "xhci: dispatch transfer event slot={} ep={} ptr={:#x} code={:?} len={}",
+                slot_id,
+                ep_id,
+                ptr.raw(),
+                res.completion_code(),
+                res.trb_transfer_length()
+            );
             q.set_finished(ptr, res);
+        } else {
+            warn!(
+                "xhci: transfer event has no endpoint queue slot={} ep={} ptr={:#x} code={:?} len={}",
+                slot_id,
+                ep_id,
+                ptr.raw(),
+                res.completion_code(),
+                res.trb_transfer_length()
+            );
         }
     }
 }

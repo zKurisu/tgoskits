@@ -4,7 +4,6 @@
 
 use clap::{Arg, Command};
 use crab_uvc::{UncompressedFormat, VideoFormat, VideoFormatType};
-use env_logger;
 use log::{error, info, warn};
 use regex::Regex;
 use std::fs::File;
@@ -140,7 +139,6 @@ async fn parse_serial_log(
             continue;
         }
         if trimmed.contains("FRAME_DATA_END") {
-            in_frame_data = false;
             break;
         }
         if in_frame_data {
@@ -299,18 +297,13 @@ fn clean_mjpeg_data(mut data: Vec<u8>) -> Result<Vec<u8>, Box<dyn std::error::Er
 
 /// 查找JPEG结束标记的位置
 fn find_jpeg_end(data: &[u8]) -> Option<usize> {
-    for i in 0..data.len().saturating_sub(1) {
-        if data[i] == 0xFF && data[i + 1] == 0xD9 {
-            return Some(i);
-        }
-    }
-    None
+    (0..data.len().saturating_sub(1)).find(|&i| data[i] == 0xFF && data[i + 1] == 0xD9)
 }
 
 /// 将十六进制字符串转换为字节数组
 fn hex_to_bytes(hex_str: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let hex_clean = hex_str.replace(" ", "");
-    if hex_clean.len() % 2 != 0 {
+    if !hex_clean.len().is_multiple_of(2) {
         return Err("Invalid hex string length".into());
     }
 

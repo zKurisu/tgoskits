@@ -49,7 +49,7 @@ impl Endpoint {
         desc_index: u8,
         language_id: u16,
         buff: &mut [u8],
-    ) -> Result<(), TransferError> {
+    ) -> Result<usize, TransferError> {
         self.control_in(
             ControlSetup {
                 request_type: RequestType::Standard,
@@ -60,8 +60,7 @@ impl Endpoint {
             },
             buff,
         )
-        .await?;
-        Ok(())
+        .await
     }
 
     pub async fn get_device_descriptor(&mut self) -> Result<DeviceDescriptor, USBError> {
