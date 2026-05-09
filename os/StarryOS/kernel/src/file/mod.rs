@@ -2,6 +2,7 @@ pub mod epoll;
 pub mod event;
 mod fs;
 mod net;
+pub mod netlink;
 mod pidfd;
 mod pipe;
 pub mod signalfd;
