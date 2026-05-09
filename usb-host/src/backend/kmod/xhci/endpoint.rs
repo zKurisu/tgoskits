@@ -85,6 +85,7 @@ enum SubmittedTdKind {
 #[derive(Clone, Copy)]
 struct IsoPacketTd {
     trb: TransferId,
+    final_packet: bool,
     event: Option<TransferEvent>,
     actual: Option<usize>,
 }
@@ -365,21 +366,21 @@ impl Endpoint {
         &mut self,
         id: RequestId,
         request_id: EndpointRequestId,
-        packets: &[IsoPacketTd],
     ) -> Option<Result<TransferCompletion, TransferError>> {
-        for (index, packet) in packets.iter().copied().enumerate() {
+        let packet_count = self.iso_packet_count(request_id)?;
+        for index in 0..packet_count {
             if self.iso_packet_done(request_id, index) {
                 continue;
             }
+            let (packet_trb, requested) = self.iso_packet_info(request_id, index)?;
 
-            let Some(event) = self.ring.get_finished(packet.trb.0) else {
+            let Some(event) = self.ring.get_finished(packet_trb.0) else {
                 continue;
             };
-            let requested = self.iso_requested_length(request_id, index)?;
             let actual = match iso_packet_actual_length(requested, event) {
                 Ok(actual) => actual,
                 Err(err) => {
-                    let cleanup_result = self.complete_request(request_id, packet.trb, event);
+                    let cleanup_result = self.complete_request(request_id, packet_trb, event);
                     let result = match cleanup_result {
                         Ok(_) => Err(err),
                         Err(cleanup_err) => Err(cleanup_err),
@@ -389,15 +390,25 @@ impl Endpoint {
             };
 
             let fatal = iso_packet_is_fatal(event);
-            let all_completed = self.record_iso_packet(request_id, index, event, actual)?;
-            if fatal || all_completed {
+            let should_complete =
+                self.record_iso_packet(request_id, index, event, actual, fatal)?;
+            if should_complete {
                 return Some(
-                    self.complete_request(request_id, packet.trb, event)
+                    self.complete_request(request_id, packet_trb, event)
                         .map(|transfer| transfer_to_completion(id, transfer)),
                 );
             }
         }
         None
+    }
+
+    fn iso_packet_count(&self, request_id: EndpointRequestId) -> Option<usize> {
+        self.inflight
+            .get(&request_id)
+            .and_then(|submitted| match &submitted.kind {
+                SubmittedTdKind::Iso { packets } => Some(packets.len()),
+                _ => None,
+            })
     }
 
     fn iso_packet_done(&self, request_id: EndpointRequestId, index: usize) -> bool {
@@ -412,13 +423,23 @@ impl Endpoint {
             .unwrap_or(true)
     }
 
-    fn iso_requested_length(&self, request_id: EndpointRequestId, index: usize) -> Option<usize> {
-        self.inflight
-            .get(&request_id)
-            .and_then(|submitted| match &submitted.transfer.kind {
-                TransferKind::Isochronous { packet_lengths } => packet_lengths.get(index).copied(),
-                _ => None,
-            })
+    fn iso_packet_info(
+        &self,
+        request_id: EndpointRequestId,
+        index: usize,
+    ) -> Option<(TransferId, usize)> {
+        let submitted = self.inflight.get(&request_id)?;
+        let SubmittedTdKind::Iso { packets } = &submitted.kind else {
+            return None;
+        };
+        let packet = packets.get(index)?;
+        let requested = match &submitted.transfer.kind {
+            TransferKind::Isochronous { packet_lengths } => {
+                packet_lengths.get(index).copied().unwrap_or(0)
+            }
+            _ => return None,
+        };
+        Some((packet.trb, requested))
     }
 
     fn record_iso_packet(
@@ -427,21 +448,25 @@ impl Endpoint {
         index: usize,
         event: TransferEvent,
         actual: usize,
+        fatal: bool,
     ) -> Option<bool> {
         let submitted = self.inflight.get_mut(&request_id)?;
         let SubmittedTdKind::Iso { packets } = &mut submitted.kind else {
             return None;
         };
-        for packet in packets.iter_mut().take(index) {
-            if packet.actual.is_none() {
-                packet.actual = Some(0);
+        let final_packet = packets.get(index).is_some_and(|packet| packet.final_packet);
+        if final_packet || fatal {
+            for packet in packets.iter_mut().take(index) {
+                if packet.actual.is_none() {
+                    packet.actual = Some(0);
+                }
             }
         }
         if let Some(packet) = packets.get_mut(index) {
             packet.event = Some(event);
             packet.actual = Some(actual);
         }
-        Some(packets.iter().all(|packet| packet.actual.is_some()))
+        Some(final_packet || fatal || packets.iter().all(|packet| packet.actual.is_some()))
     }
 
     fn enque_trb(&mut self, trb: transfer::Allowed) -> TransferId {
@@ -473,6 +498,7 @@ impl Endpoint {
             );
             packets.push(IsoPacketTd {
                 trb,
+                final_packet: last_packet,
                 event: None,
                 actual: None,
             });
@@ -746,7 +772,7 @@ impl EndpointOp for Endpoint {
             SubmittedTdKind::Control(control_td) => {
                 self.reclaim_control_request(id, request_id, control_td)
             }
-            SubmittedTdKind::Iso { packets } => self.reclaim_iso_request(id, request_id, &packets),
+            SubmittedTdKind::Iso { .. } => self.reclaim_iso_request(id, request_id),
         }
     }
 

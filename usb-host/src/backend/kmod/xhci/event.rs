@@ -25,7 +25,7 @@ pub struct EventRing {
 unsafe impl Send for EventRing {}
 unsafe impl Sync for EventRing {}
 
-const EVENT_RING_SEGMENTS: usize = 16;
+const EVENT_RING_SEGMENTS: usize = 2;
 
 impl EventRing {
     pub fn new(max_segments: usize, dma: &Kernel) -> Result<Self> {

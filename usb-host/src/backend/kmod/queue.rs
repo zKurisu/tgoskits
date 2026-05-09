@@ -1,10 +1,10 @@
 use alloc::sync::Arc;
-use core::pin::Pin;
-use core::task::Context;
-use core::task::Poll;
 use core::{
     cell::UnsafeCell,
-    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    hint::spin_loop,
+    pin::Pin,
+    sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
+    task::{Context, Poll},
 };
 use futures::task::AtomicWaker;
 
@@ -35,12 +35,17 @@ impl<C> Clone for Finished<C> {
 }
 
 pub struct FinishedInner<C> {
-    data: UnsafeCell<BTreeMap<BusAddr, Arc<FinishedData<C>>>>,
+    data: BTreeMap<BusAddr, Arc<FinishedData<C>>>,
 }
+
+const SLOT_EMPTY: u8 = 0;
+const SLOT_WRITING: u8 = 1;
+const SLOT_READY: u8 = 2;
+const SLOT_READING: u8 = 3;
 
 pub struct FinishedData<C> {
     taken: AtomicBool,
-    finished: AtomicBool,
+    state: AtomicU8,
     waker: AtomicWaker,
     data: UnsafeCell<Option<C>>,
 }
@@ -48,7 +53,7 @@ pub struct FinishedData<C> {
 impl<C> FinishedData<C> {
     fn new() -> Self {
         Self {
-            finished: AtomicBool::new(false),
+            state: AtomicU8::new(SLOT_EMPTY),
             taken: AtomicBool::new(false),
             waker: AtomicWaker::new(),
             data: UnsafeCell::new(None),
@@ -56,19 +61,16 @@ impl<C> FinishedData<C> {
     }
 }
 
-unsafe impl<C> Send for FinishedInner<C> {}
-unsafe impl<C> Sync for FinishedInner<C> {}
-unsafe impl<C> Send for FinishedData<C> {}
-unsafe impl<C> Sync for FinishedData<C> {}
+unsafe impl<C: Send> Send for FinishedData<C> {}
+unsafe impl<C: Send> Sync for FinishedData<C> {}
+
+unsafe impl<C: Send> Send for FinishedInner<C> {}
+unsafe impl<C: Send> Sync for FinishedInner<C> {}
 
 impl<C> FinishedInner<C> {
     fn clear_finished(&self, addr: BusAddr) {
-        if let Some(data) = unsafe { &mut *self.data.get() }.get(&addr) {
-            data.finished.store(false, Ordering::Release);
-            data.taken.store(false, Ordering::Release);
-            unsafe {
-                (*data.data.get()).take();
-            }
+        if let Some(data) = self.data.get(&addr) {
+            data.clear();
         }
     }
 }
@@ -81,9 +83,7 @@ impl<C> Finished<C> {
             data.insert(addr, Arc::new(FinishedData::new()));
         }
         Self {
-            inner: Arc::new(FinishedInner {
-                data: UnsafeCell::new(data),
-            }),
+            inner: Arc::new(FinishedInner { data }),
         }
     }
 
@@ -92,13 +92,8 @@ impl<C> Finished<C> {
     }
 
     pub fn set_finished(&self, addr: BusAddr, value: C) {
-        let data = unsafe { &mut *self.inner.data.get() };
-        if let Some(slot) = data.get_mut(&addr) {
-            unsafe {
-                *slot.data.get() = Some(value);
-            }
-            slot.finished.store(true, Ordering::Release);
-            slot.waker.wake();
+        if let Some(slot) = self.inner.data.get(&addr) {
+            slot.set_finished(value);
         } else if take_queue_log_budget() {
             warn!(
                 "usb queue: completion address {:#x} is not registered",
@@ -112,8 +107,7 @@ impl<C> Finished<C> {
     }
 
     fn waiter(&self, addr: BusAddr) -> &FinishedData<C> {
-        let data = unsafe { &mut *self.inner.data.get() };
-        let slot = data.get(&addr).unwrap();
+        let slot = self.inner.data.get(&addr).unwrap();
         if slot.taken.load(Ordering::Acquire) {
             panic!("waiter called after take_waiter");
         }
@@ -126,7 +120,7 @@ impl<C> Finished<C> {
     }
 
     pub fn take_waiter(&self, addr: BusAddr) -> TWaiter<C> {
-        let data = unsafe { &mut *self.inner.data.get() }.get(&addr).unwrap();
+        let data = self.inner.data.get(&addr).unwrap();
         if data.taken.swap(true, Ordering::AcqRel) {
             panic!("take_waiter called multiple times for the same addr");
         }
@@ -161,10 +155,76 @@ impl<C> FinishedData<C> {
         self.waker.register(waker);
     }
 
+    fn clear(&self) {
+        loop {
+            match self.state.load(Ordering::Acquire) {
+                SLOT_EMPTY => return,
+                SLOT_READY => {
+                    if self
+                        .state
+                        .compare_exchange(
+                            SLOT_READY,
+                            SLOT_READING,
+                            Ordering::AcqRel,
+                            Ordering::Acquire,
+                        )
+                        .is_ok()
+                    {
+                        unsafe {
+                            (*self.data.get()).take();
+                        }
+                        self.state.store(SLOT_EMPTY, Ordering::Release);
+                        return;
+                    }
+                }
+                SLOT_WRITING | SLOT_READING => spin_loop(),
+                _ => {
+                    self.state.store(SLOT_EMPTY, Ordering::Release);
+                    return;
+                }
+            }
+        }
+    }
+
+    pub fn set_finished(&self, value: C) {
+        if self
+            .state
+            .compare_exchange(
+                SLOT_EMPTY,
+                SLOT_WRITING,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_err()
+        {
+            if take_queue_log_budget() {
+                warn!("usb queue: dropping duplicate completion for busy slot");
+            }
+            return;
+        }
+
+        unsafe {
+            *self.data.get() = Some(value);
+        }
+        self.state.store(SLOT_READY, Ordering::Release);
+        self.waker.wake();
+    }
+
     pub fn get_finished(&self) -> Option<C> {
-        if !self.finished.load(Ordering::Acquire) {
+        if self
+            .state
+            .compare_exchange(
+                SLOT_READY,
+                SLOT_READING,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            )
+            .is_err()
+        {
             return None;
         }
-        unsafe { (*self.data.get()).take() }
+        let value = unsafe { (*self.data.get()).take() };
+        self.state.store(SLOT_EMPTY, Ordering::Release);
+        value
     }
 }
