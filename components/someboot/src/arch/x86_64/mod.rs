@@ -11,11 +11,11 @@ pub(crate) mod power;
 pub(crate) mod relocate;
 mod trap;
 
+use core::ptr::null;
+
 pub(crate) use entry::_secondary_entry;
 pub use paging::Entry;
 pub use relocate::relocate;
-
-use core::ptr::null;
 
 use crate::{ArchTrait, DCacheOp, mem::PageTableInfo, power::CpuOnError};
 

@@ -43,9 +43,7 @@ mod trap;
 /// #[entry(Kernel)]
 /// fn main() -> ! {
 ///     // somehal::init(&Kernel) 已自动生成
-///     loop {
-///         /* .. */
-///     }
+///     loop { /* .. */ }
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -64,9 +62,7 @@ pub fn entry(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # use pie_boot::secondary_entry;
 /// #[entry]
 /// fn secondary(cpu_id: usize) -> ! {
-///     loop {
-///         /* .. */
-///     }
+///     loop { /* .. */ }
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -85,9 +81,7 @@ pub fn someboot_secondary_entry(args: TokenStream, input: TokenStream) -> TokenS
 /// # use pie_boot::secondary_entry;
 /// #[entry]
 /// fn secondary(cpu_id: usize) -> ! {
-///     loop {
-///         /* .. */
-///     }
+///     loop { /* .. */ }
 /// }
 /// ```
 #[proc_macro_attribute]

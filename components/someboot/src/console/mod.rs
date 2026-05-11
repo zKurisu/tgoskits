@@ -1,11 +1,13 @@
+use core::{cell::UnsafeCell, fmt::Write, ptr::NonNull};
+
 use byte_unit::{Byte, UnitType};
-use core::fmt::Write;
-use core::{cell::UnsafeCell, ptr::NonNull};
 use kernutil::memory::{MemoryDescriptor, MemoryType};
 use some_serial::*;
 
-use crate::cmdline::EarlyconConfig;
-use crate::mem::{_fixmap_io, page_size};
+use crate::{
+    cmdline::EarlyconConfig,
+    mem::{_fixmap_io, page_size},
+};
 
 pub(crate) static mut DEBUG_BASE: usize = 0;
 pub(crate) static mut DEBUG_IS_MMIO: bool = false;

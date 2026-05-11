@@ -12,9 +12,8 @@ mod trap;
 
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-use page_table_generic::{PageTableEntry, PhysAddr, PteConfig, TableMeta, VirtAddr};
-
 pub(crate) use entry::_secondary_entry;
+use page_table_generic::{PageTableEntry, PhysAddr, PteConfig, TableMeta, VirtAddr};
 pub use relocate::apply as relocate;
 
 use crate::{
@@ -22,7 +21,6 @@ use crate::{
     mem::{PageTableInfo, mmu},
     power::CpuOnError,
 };
-
 #[cfg(uspace)]
 use crate::{mem::__kimage_va_to_pa, smp::percpu_va_range};
 

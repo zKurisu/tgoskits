@@ -81,7 +81,7 @@ impl Parse for AdrLArgs {
         Ok(Self { reg, symbol })
     }
 }
-///`pub fn __dcache_inval_poc(_start: usize, _end: usize)`
+/// `pub fn __dcache_inval_poc(_start: usize, _end: usize)`
 #[proc_macro]
 pub fn def_dcache_inval_poc(input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(input as DCacheMacroArgs);

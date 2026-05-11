@@ -15,8 +15,7 @@ use crate::{
 
 mod pte;
 
-pub use pte::Entry;
-pub use pte::Generic;
+pub use pte::{Entry, Generic};
 
 pub fn enable_mmu() -> ! {
     if let Err(e) = setup_page_table() {

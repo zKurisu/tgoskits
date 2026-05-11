@@ -1,9 +1,8 @@
-use crate::mem::{__kimage_va, __percpu, phys_to_virt, stack_size};
-
 use super::{
     __cpu_id_list, PerCpuMeta, align_up_pow2, alloc_percpu_region, cpu_count, meta_align,
     percpu_data_range, percpu_link_range, percpu_region_align, set_percpu_range,
 };
+use crate::mem::{__kimage_va, __percpu, phys_to_virt, stack_size};
 
 fn meta_offset() -> usize {
     let link_size = percpu_link_range().len();

@@ -1,5 +1,7 @@
-use ranges_ext::VecOp;
-use ranges_ext::test_helper::{RangeKind, TestRange};
+use ranges_ext::{
+    VecOp,
+    test_helper::{RangeKind, TestRange},
+};
 
 #[test]
 fn test_merge_same_kind() {
@@ -259,8 +261,7 @@ fn test_heapless_vec_capacity_error() {
 
 #[test]
 fn test_merge_add() {
-    use ranges_ext::VecOp;
-    use ranges_ext::test_helper::RangeKind;
+    use ranges_ext::{VecOp, test_helper::RangeKind};
 
     // 测试用例集合
     let test_cases: &[(&str, Vec<TestRange>, TestRange, Result<Vec<TestRange>, ()>)] = &[
@@ -373,8 +374,10 @@ fn test_merge_add() {
 
 #[test]
 fn test_merge_add_conflict() {
-    use ranges_ext::test_helper::{RangeKind, TestRange};
-    use ranges_ext::{RangeError, VecOp};
+    use ranges_ext::{
+        RangeError, VecOp,
+        test_helper::{RangeKind, TestRange},
+    };
 
     // 测试不可覆盖的冲突
     let mut vec: Vec<TestRange> = vec![TestRange::new_with_overwritable(

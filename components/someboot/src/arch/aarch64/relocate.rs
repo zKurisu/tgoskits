@@ -1,7 +1,6 @@
 use aarch64_cpu_ext::cache::icache_flush_all;
 
-use crate::arch::head::_head;
-use crate::consts::VM_LOAD_ADDRESS;
+use crate::{arch::head::_head, consts::VM_LOAD_ADDRESS};
 
 // AArch64 重定位类型常量
 const R_AARCH64_RELATIVE: u32 = 1027;

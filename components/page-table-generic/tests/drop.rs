@@ -1,6 +1,5 @@
 mod mocks;
 use mocks::*;
-
 use page_table_generic::*;
 
 #[test]

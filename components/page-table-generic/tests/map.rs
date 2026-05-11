@@ -3,8 +3,9 @@
 //! This module provides mock implementations used in tests for the page-table-generic crate.
 #![cfg(not(target_os = "none"))]
 
-use page_table_generic::*;
 use std::vec::Vec;
+
+use page_table_generic::*;
 
 mod mocks;
 
@@ -289,7 +290,7 @@ fn test_huge<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     let mapped_range = mappings
         .iter()
         .filter(|(_, _, _, level)| *level <= 2) // 只考虑Level 2及以下的最终映射
-        .map(|(vaddr, _, _, _)| *vaddr)
+        .map(|(vaddr, ..)| *vaddr)
         .collect::<Vec<_>>();
 
     assert!(mapped_range.contains(&0), "应该映射地址0");
@@ -361,7 +362,7 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc
 
     // 验证起始地址被正确映射
     let start_addr = 2 * MB - 0x1000;
-    let has_start_mapping = mappings.iter().any(|(vaddr, _, _, _)| {
+    let has_start_mapping = mappings.iter().any(|(vaddr, ..)| {
         *vaddr <= start_addr && start_addr < *vaddr + (*vaddr % 0x1000 + 0x1000)
     });
     assert!(has_start_mapping, "应该包含起始地址{:#x}的映射", start_addr);
@@ -373,7 +374,7 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc
     let max_mapped = mappings
         .iter()
         .filter(|(_, _, _, level)| *level <= 2)
-        .map(|(vaddr, _, _, _)| *vaddr)
+        .map(|(vaddr, ..)| *vaddr)
         .max()
         .unwrap_or(0);
 
@@ -390,7 +391,7 @@ fn test_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc
     let mapping_vaddrs: Vec<_> = mappings
         .iter()
         .filter(|(_, _, _, level)| *level <= 2)
-        .map(|(vaddr, _, _, _)| *vaddr)
+        .map(|(vaddr, ..)| *vaddr)
         .collect();
 
     let has_range_coverage = mapping_vaddrs
@@ -484,7 +485,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, 
     println!("总映射数: {}", total_mappings);
 
     // 验证高地址映射存在(使用实际的有效虚拟地址)
-    let high_mapping = mappings.iter().find(|(va, _, _, _)| *va == actual_vaddr);
+    let high_mapping = mappings.iter().find(|(va, ..)| *va == actual_vaddr);
     assert!(
         high_mapping.is_some(),
         "应该有从{:#x}开始的映射 (实际有效地址)",
@@ -507,7 +508,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, 
     // 检查是否有映射覆盖起始地址
     let covers_start = mappings
         .iter()
-        .any(|(va, _, _, _)| *va <= start_addr && start_addr < *va + T::PAGE_SIZE);
+        .any(|(va, ..)| *va <= start_addr && start_addr < *va + T::PAGE_SIZE);
 
     assert!(covers_start, "应该有映射覆盖起始地址 {:#x}", start_addr);
 
@@ -515,7 +516,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, 
     let expected_pages = size / T::PAGE_SIZE;
     let pages_in_range = mappings
         .iter()
-        .filter(|(va, _, _, _)| *va >= start_addr && *va < end_addr)
+        .filter(|(va, ..)| *va >= start_addr && *va < end_addr)
         .count();
 
     assert_eq!(
@@ -525,9 +526,7 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, 
     );
 
     // 验证物理地址映射正确
-    if let Some((first_va, first_pa, _, _)) =
-        mappings.iter().find(|(va, _, _, _)| *va == start_addr)
-    {
+    if let Some((first_va, first_pa, ..)) = mappings.iter().find(|(va, ..)| *va == start_addr) {
         assert_eq!(
             *first_pa, paddr,
             "第一个页面的物理地址应该是{:#x},实际是{:#x}",
@@ -536,9 +535,9 @@ fn test_high_huge_not_align<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, 
 
         // 验证后续页面的物理地址连续
         let mut expected_pa = paddr;
-        for (va, pa, _, _) in mappings
+        for (va, pa, ..) in mappings
             .iter()
-            .filter(|(va, _, _, _)| *va >= start_addr && *va < end_addr)
+            .filter(|(va, ..)| *va >= start_addr && *va < end_addr)
         {
             let expected_offset = (va - start_addr) / T::PAGE_SIZE;
             expected_pa = paddr + expected_offset * T::PAGE_SIZE;
@@ -738,11 +737,11 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
     // 验证地址空间分离
     let low_mappings: Vec<_> = mappings
         .iter()
-        .filter(|(vaddr, _, _, _)| *vaddr < 2 * MB + 0x1000 * 3)
+        .filter(|(vaddr, ..)| *vaddr < 2 * MB + 0x1000 * 3)
         .collect();
     let high_mappings: Vec<_> = mappings
         .iter()
-        .filter(|(vaddr, _, _, _)| *vaddr >= 0x4000_0000)
+        .filter(|(vaddr, ..)| *vaddr >= 0x4000_0000)
         .collect();
 
     assert!(!low_mappings.is_empty(), "应该有低地址区域的映射");
@@ -753,7 +752,7 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
         .iter()
         .find(|(_, _, is_huge, level)| *is_huge && *level == 2);
     assert!(low_huge.is_some(), "低地址区域应该有一个2MB大页");
-    if let Some((vaddr, paddr, _, _)) = low_huge {
+    if let Some((vaddr, paddr, ..)) = low_huge {
         assert_eq!(*vaddr, 0, "低地址大页应该从0开始");
         assert_eq!(*paddr, 0, "低地址大页的物理地址应该从0开始");
     }
@@ -763,7 +762,7 @@ fn test_huge_big<T: TableGeneric, A: FrameAllocator>(pte: PteConfig, alloc: A) {
         .iter()
         .find(|(_, _, is_huge, level)| *is_huge && *level <= 3);
     assert!(high_huge.is_some(), "高地址区域应该有大页映射");
-    if let Some((vaddr, paddr, _, _)) = high_huge {
+    if let Some((vaddr, paddr, ..)) = high_huge {
         assert_eq!(*vaddr, 0x4000_0000, "高地址大页应该从0x4000_0000开始");
         assert_eq!(
             *paddr, 0x4000_0000,

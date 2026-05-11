@@ -1,9 +1,7 @@
 use core::ffi::c_void;
 
-use crate::entry::PrimaryCpuInitInfo;
-use crate::smp::PerCpuMeta;
-
 use super::head::_head;
+use crate::{entry::PrimaryCpuInitInfo, smp::PerCpuMeta};
 
 unsafe extern "C" {
     fn __kernel_code_end();

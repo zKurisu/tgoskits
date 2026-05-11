@@ -1,6 +1,6 @@
-use crate::{FrameAllocator, PageTableEntry, PageTableRef, TableMeta, VirtAddr, frame::Frame};
-
 use heapless::Vec;
+
+use crate::{FrameAllocator, PageTableEntry, PageTableRef, TableMeta, VirtAddr, frame::Frame};
 
 /// Maximum stack depth for page table walker
 const MAX_WALK_DEPTH: usize = 8;

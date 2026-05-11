@@ -14,9 +14,8 @@ use x86::{
     segmentation::{BuildDescriptor, DescriptorBuilder, GateDescriptorBuilder, cs},
 };
 
-use crate::{irq, mem::page_size};
-
 use super::irq::{LAPIC_SPURIOUS_VECTOR, LAPIC_TIMER_VECTOR};
+use crate::{irq, mem::page_size};
 
 const IA32_EFER: u32 = 0xc000_0080;
 const IA32_EFER_NXE: u64 = 1 << 11;

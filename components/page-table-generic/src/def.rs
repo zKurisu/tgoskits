@@ -132,7 +132,8 @@ pub enum PagingError {
     #[error("Address alignment error: {details}")]
     AlignmentError { details: &'static str },
     #[error(
-        "Mapping conflict: virtual address {vaddr:#x} already mapped to physical address {existing_paddr:#x}"
+        "Mapping conflict: virtual address {vaddr:#x} already mapped to physical address \
+         {existing_paddr:#x}"
     )]
     MappingConflict {
         vaddr: VirtAddr,

@@ -1,5 +1,6 @@
-use crate::RangeOp;
 use core::ops::Range;
+
+use crate::RangeOp;
 
 /// 测试用的 Range 类型
 #[derive(Debug, Clone, PartialEq, Eq)]

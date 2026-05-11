@@ -1,5 +1,4 @@
 use page_table_generic::{MemAttributes, PageTableEntry, TableMeta};
-
 use tock_registers::{interfaces::*, register_bitfields, registers::ReadWrite};
 
 register_bitfields![u64,

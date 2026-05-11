@@ -1,5 +1,6 @@
-use acpi::AcpiTables;
 use core::{ffi::c_void, ptr::NonNull};
+
+use acpi::AcpiTables;
 
 pub mod cpu;
 pub(crate) mod earlycon;
@@ -7,8 +8,9 @@ mod handle;
 pub mod power;
 // pub mod ram;
 
-use crate::mem::phys_to_virt;
 pub(crate) use handle::AcpiHandle;
+
+use crate::mem::phys_to_virt;
 
 /// RSDP存储
 static mut RSDP: usize = 0;

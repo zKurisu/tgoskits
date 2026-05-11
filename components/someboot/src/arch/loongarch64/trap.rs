@@ -214,11 +214,8 @@ extern "C" fn do_page_fault(tf: &TrapFrame, write: usize, address: usize) -> ! {
         "PAGE FAULT",
         tf,
         format_args!(
-            "Type:        {} (ecode=0x{:x}, esubcode=0x{:x})\n\
-            Access:      {}\n\
-            Address:     0x{:016x}\n\
-            ERA (PC):    0x{:016x}\n\
-            PRMD:        0x{:016x}",
+            "Type:        {} (ecode=0x{:x}, esubcode=0x{:x})\nAccess:      {}\nAddress:     \
+             0x{:016x}\nERA (PC):    0x{:016x}\nPRMD:        0x{:016x}",
             fault_type, ecode, esubcode, access_type, address, tf.era, tf.prmd
         ),
     )
@@ -234,9 +231,7 @@ extern "C" fn do_tlb_refill(tf: &TrapFrame, address: usize) -> ! {
         "TLB REFILL",
         tf,
         format_args!(
-            "Address:     0x{:016x}\n\
-            ERA (PC):    0x{:016x}\n\
-            PRMD:        0x{:016x}",
+            "Address:     0x{:016x}\nERA (PC):    0x{:016x}\nPRMD:        0x{:016x}",
             address, tf.era, tf.prmd
         ),
     )
@@ -674,10 +669,8 @@ extern "C" fn do_reserved_exception(tf: &TrapFrame) -> ! {
         "RESERVED",
         tf,
         format_args!(
-            "Ecode:       0x{:x}\n\
-            Esubcode:    0x{:x}\n\
-            ERA (PC):    0x{:016x}\n\
-            PRMD:        0x{:016x}",
+            "Ecode:       0x{:x}\nEsubcode:    0x{:x}\nERA (PC):    0x{:016x}\nPRMD:        \
+             0x{:016x}",
             ecode, esubcode, tf.era, tf.prmd
         ),
     )
@@ -725,30 +718,16 @@ extern "C" fn do_address_error(tf: &TrapFrame, badv: usize) -> ! {
 fn panic_on_exception(name: &str, tf: &TrapFrame, fmt: Arguments<'_>) -> ! {
     println!(
         "
-        ============================================================\n\
-        {name} EXCEPTION\n\
-        ============================================================\n\
-        {fmt}
-        \n\
-        General Registers:\n\
-        ------------------------------------------------------------\n\
-        ra:  0x{:016x}    tp:  0x{:016x}\n\
-        sp:  0x{:016x}    a0:  0x{:016x}\n\
-        a1:  0x{:016x}    a2:  0x{:016x}\n\
-        a3:  0x{:016x}    a4:  0x{:016x}\n\
-        a5:  0x{:016x}    a6:  0x{:016x}\n\
-        a7:  0x{:016x}    t0:  0x{:016x}\n\
-        t1:  0x{:016x}    t2:  0x{:016x}\n\
-        t3:  0x{:016x}    t4:  0x{:016x}\n\
-        t5:  0x{:016x}    t6:  0x{:016x}\n\
-        t7:  0x{:016x}    t8:  0x{:016x}\n\
-        u0:  0x{:016x}    fp:  0x{:016x}\n\
-        s0:  0x{:016x}    s1:  0x{:016x}\n\
-        s2:  0x{:016x}    s3:  0x{:016x}\n\
-        s4:  0x{:016x}    s5:  0x{:016x}\n\
-        s6:  0x{:016x}    s7:  0x{:016x}\n\
-        s8:  0x{:016x}\n\
-        ============================================================\n",
+        ============================================================\n{name} \
+         EXCEPTION\n============================================================\n{fmt}
+        \nGeneral Registers:\n------------------------------------------------------------\nra:  \
+         0x{:016x}    tp:  0x{:016x}\nsp:  0x{:016x}    a0:  0x{:016x}\na1:  0x{:016x}    a2:  \
+         0x{:016x}\na3:  0x{:016x}    a4:  0x{:016x}\na5:  0x{:016x}    a6:  0x{:016x}\na7:  \
+         0x{:016x}    t0:  0x{:016x}\nt1:  0x{:016x}    t2:  0x{:016x}\nt3:  0x{:016x}    t4:  \
+         0x{:016x}\nt5:  0x{:016x}    t6:  0x{:016x}\nt7:  0x{:016x}    t8:  0x{:016x}\nu0:  \
+         0x{:016x}    fp:  0x{:016x}\ns0:  0x{:016x}    s1:  0x{:016x}\ns2:  0x{:016x}    s3:  \
+         0x{:016x}\ns4:  0x{:016x}    s5:  0x{:016x}\ns6:  0x{:016x}    s7:  0x{:016x}\ns8:  \
+         0x{:016x}\n============================================================\n",
         tf.regs.ra,
         tf.regs.tp,
         tf.regs.sp,

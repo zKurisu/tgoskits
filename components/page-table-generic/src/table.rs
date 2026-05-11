@@ -319,7 +319,6 @@ impl<T: TableMeta, A: FrameAllocator> PageTableRef<T, A> {
     ///   - 地址未映射
     ///   - 页表项无效
     ///   - 页表层次结构错误
-    ///
     pub fn translate(&self, vaddr: VirtAddr) -> PagingResult<(PhysAddr, T::P)> {
         let (pte, level) = self
             .root
@@ -356,7 +355,6 @@ impl<T: TableMeta, A: FrameAllocator> PageTableRef<T, A> {
     /// # 返回值
     /// - `Ok(PhysAddr)`: 找到的物理地址
     /// - `Err(PagingError)`: 查询失败
-    ///
     pub fn translate_phys(&self, vaddr: VirtAddr) -> PagingResult<PhysAddr> {
         let (p, _) = self.translate(vaddr)?;
         Ok(p)

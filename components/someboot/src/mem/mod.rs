@@ -10,9 +10,9 @@ pub mod mmu;
 pub(crate) mod ram;
 pub(crate) mod region;
 
-use crate::{ArchTrait, DCacheOp, arch::Arch, smp::percpu_range};
-
 pub use page_table_generic::*;
+
+use crate::{ArchTrait, DCacheOp, arch::Arch, smp::percpu_range};
 
 pub const KB: usize = 1024;
 pub const MB: usize = 1024 * KB;

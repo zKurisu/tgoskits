@@ -1,5 +1,6 @@
-use crate::{RangeError, RangeOp, VecOp};
 use alloc::vec::Vec;
+
+use crate::{RangeError, RangeOp, VecOp};
 
 impl<T: RangeOp + Send + 'static> VecOp<T> for Vec<T> {
     fn push(&mut self, item: T) -> Result<(), RangeError<T>> {

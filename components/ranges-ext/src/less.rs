@@ -1,5 +1,6 @@
-use crate::{RangeError, RangeOp, VecOp};
 use heapless::Vec;
+
+use crate::{RangeError, RangeOp, VecOp};
 
 impl<T: RangeOp + Send + 'static, const N: usize> VecOp<T> for Vec<T, N> {
     fn push(&mut self, item: T) -> Result<(), RangeError<T>> {

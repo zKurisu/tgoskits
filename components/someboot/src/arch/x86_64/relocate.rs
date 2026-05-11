@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use super::addrspace::KERNEL_BASE;
-use super::head::_head;
+use super::{addrspace::KERNEL_BASE, head::_head};
 
 const R_X86_64_RELATIVE: u32 = 8;
 

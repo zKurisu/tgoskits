@@ -1,5 +1,6 @@
-use aarch64_cpu::registers::{Readable as _, *};
 use core::arch::{asm, global_asm};
+
+use aarch64_cpu::registers::{Readable as _, *};
 use kasm_aarch64::aarch64_trap_handler;
 use log::*;
 
@@ -40,7 +41,8 @@ fn handle_sync(ctx: &Context) {
             }
             _ => {
                 panic!(
-                    "\r\n{:?}\r\nUnhandled synchronous exception @ {:p}: ESR={:#x} (EC {:#08b}, ISS {:#x})",
+                    "\r\n{:?}\r\nUnhandled synchronous exception @ {:p}: ESR={:#x} (EC {:#08b}, \
+                     ISS {:#x})",
                     ctx,
                     elr,
                     esr.get(),

@@ -1,9 +1,8 @@
-use crate::mem::{__kimage_va, __percpu, phys_to_virt, stack_size};
-
 use super::{
     __cpu_id_list, PerCpuMeta, align_up_pow2, alloc_percpu_region, cpu_count, meta_align,
     percpu_data_range, percpu_link_range, percpu_region_align, set_percpu_range,
 };
+use crate::mem::{__kimage_va, __percpu, phys_to_virt, stack_size};
 
 struct LayoutInfo {
     meta_region_offset: usize,
@@ -123,7 +122,8 @@ pub fn alloc_percpu() {
         debug_assert_eq!(stack_start % crate::mem::page_size(), 0);
         debug_assert_eq!(cpu_data_start % percpu_region_align(), 0);
         println!(
-            "Initializing per-CPU RAM for CPU{idx} - hard id {hard_id:#x}, meta @ {meta_start:#x}, stack @ {stack_start:#x}, percpu @ {cpu_data_start:#x}"
+            "Initializing per-CPU RAM for CPU{idx} - hard id {hard_id:#x}, meta @ \
+             {meta_start:#x}, stack @ {stack_start:#x}, percpu @ {cpu_data_start:#x}"
         );
         unsafe {
             core::ptr::copy_nonoverlapping(

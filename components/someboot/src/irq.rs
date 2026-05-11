@@ -1,5 +1,4 @@
 use crate::ArchTrait;
-
 #[allow(unused_imports)]
 pub use crate::arch::irq::*;
 

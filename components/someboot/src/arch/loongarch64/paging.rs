@@ -11,7 +11,6 @@ use page_table_generic::{MapConfig, MemAttributes, PteConfig, TableMeta, VirtAdd
 
 // 导入 tock-registers 风格的页表项
 pub use super::pte::Entry;
-
 use crate::{
     arch::addrspace::to_phys,
     console::print_mapping,

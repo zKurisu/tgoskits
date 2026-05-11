@@ -1,11 +1,9 @@
 use core::{cell::UnsafeCell, ptr::NonNull};
 
 use acpi::{AcpiError, Handler, PhysicalMapping, sdt::spcr::Spcr};
-use some_serial::ns16550::Ns16550;
-use some_serial::*;
+use some_serial::{ns16550::Ns16550, *};
 
-use crate::console::Con;
-use crate::mem::_fixmap_io;
+use crate::{console::Con, mem::_fixmap_io};
 
 pub(crate) fn acpi_setup_earlycon() -> Result<(), AcpiError> {
     let tb = crate::acpi::tables()?;

@@ -1,5 +1,6 @@
 use core::arch::naked_asm;
 
+use super::addrspace::KERNEL_BASE;
 use crate::efi_stub::{
     __x86_64_efi_pe_entry,
     pe::{
@@ -9,8 +10,6 @@ use crate::efi_stub::{
         LINUX_PE_MAGIC,
     },
 };
-
-use super::addrspace::KERNEL_BASE;
 
 #[unsafe(naked)]
 #[unsafe(no_mangle)]

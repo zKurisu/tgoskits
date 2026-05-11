@@ -1,7 +1,6 @@
-use core::{fmt::Write, ptr::null, sync::atomic::AtomicBool};
-
 #[cfg(target_arch = "x86_64")]
 use core::arch::naked_asm;
+use core::{fmt::Write, ptr::null, sync::atomic::AtomicBool};
 
 use uefi::{
     Result,
@@ -13,7 +12,6 @@ use uefi::{
     system::with_config_table,
     table::{self, cfg::ConfigTableEntry},
 };
-
 pub use uefi::{Status, runtime::ResetType};
 
 use crate::{

@@ -2,14 +2,13 @@ use core::{arch::naked_asm, mem::offset_of};
 
 use aarch64_cpu::registers::{CurrentEL, Readable};
 
+use super::{switch_to_elx, switch_to_elx_secondary};
 use crate::{
     arch::{elx, paging::init_mmu_secondary},
     consts::VM_LOAD_ADDRESS,
     entry::PrimaryCpuInitInfo,
     smp::PerCpuMeta,
 };
-
-use super::{switch_to_elx, switch_to_elx_secondary};
 
 #[unsafe(naked)]
 #[unsafe(no_mangle)]

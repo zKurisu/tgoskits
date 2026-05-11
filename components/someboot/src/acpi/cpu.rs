@@ -63,9 +63,8 @@ where
 
 #[cfg(target_arch = "x86_64")]
 mod x86_64_impl {
-    use super::super::tables;
     use super::{
-        ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, Madt, non_empty_cpu_info_iter,
+        super::tables, ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, Madt, non_empty_cpu_info_iter,
         non_empty_enabled_cpu_id_iter,
     };
 
@@ -186,9 +185,8 @@ pub use x86_64_impl::*;
 
 #[cfg(target_arch = "aarch64")]
 mod aarch64_impl {
-    use super::super::tables;
     use super::{
-        ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, Madt, non_empty_cpu_info_iter,
+        super::tables, ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, Madt, non_empty_cpu_info_iter,
         non_empty_enabled_cpu_id_iter,
     };
 
@@ -286,12 +284,12 @@ pub use aarch64_impl::*;
 
 #[cfg(target_arch = "riscv64")]
 mod riscv64_impl {
-    use super::super::tables;
+    use acpi::sdt::madt::Madt;
+
     use super::{
-        ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, non_empty_cpu_info_iter,
+        super::tables, ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, non_empty_cpu_info_iter,
         non_empty_enabled_cpu_id_iter,
     };
-    use acpi::sdt::madt::Madt;
 
     /// MADT RINTC 条目类型 (RISC-V)
     /// 参考 Linux: include/acpi/actbl2.h - ACPI_MADT_TYPE_RINTC
@@ -432,12 +430,12 @@ pub use riscv64_impl::*;
 
 #[cfg(target_arch = "loongarch64")]
 mod loongarch64_impl {
-    use super::super::tables;
+    use acpi::sdt::madt::Madt;
+
     use super::{
-        ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, non_empty_cpu_info_iter,
+        super::tables, ACPI_MADT_ENABLED, CpuInfo, MADT_HEADER_SIZE, non_empty_cpu_info_iter,
         non_empty_enabled_cpu_id_iter,
     };
-    use acpi::sdt::madt::Madt;
 
     /// MADT Core PIC 条目类型 (LoongArch64)
     /// 参考 Linux: include/acpi/actbl2.h - ACPI_MADT_TYPE_CORE_PIC
