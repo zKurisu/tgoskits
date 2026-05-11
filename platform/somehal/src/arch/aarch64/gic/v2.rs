@@ -1,4 +1,5 @@
 use alloc::format;
+
 use arm_gic_driver::v2::*;
 use kernutil::StaticCell;
 use rdrive::{PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo};

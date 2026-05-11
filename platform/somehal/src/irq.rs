@@ -1,9 +1,7 @@
 use rdif_intc::Intc;
+pub use rdif_intc::{self, IrqId};
 use rdrive::DeviceId;
 pub use someboot::irq::*;
-
-pub use rdif_intc;
-pub use rdif_intc::IrqId;
 
 use crate::{arch::Plat, common::PlatOp};
 

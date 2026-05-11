@@ -1,5 +1,6 @@
-use aarch64_cpu::registers::ID_AA64PFR0_EL1;
 use alloc::format;
+
+use aarch64_cpu::registers::ID_AA64PFR0_EL1;
 use arm_gic_driver::v3::*;
 use kernutil::StaticCell;
 use rdrive::{PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo};

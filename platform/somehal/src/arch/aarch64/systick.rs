@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+
 use rdif_intc::Intc;
 use rdrive::{PlatformDevice, module_driver, probe::OnProbeError, register::FdtInfo};
 
