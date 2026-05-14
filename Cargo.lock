@@ -1583,6 +1583,7 @@ dependencies = [
  "ostool",
  "proc-macro2",
  "quote",
+ "raw-cpuid 11.6.0",
  "regex",
  "reqwest",
  "schemars",
