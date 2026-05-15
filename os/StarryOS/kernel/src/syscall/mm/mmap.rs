@@ -189,7 +189,8 @@ pub fn sys_mmap(
         use crate::file::ion::IonBufferFile;
         if let Some(ion_file) = file.downcast_ref::<IonBufferFile>() {
             let range = ion_file.phys_range();
-            let map_length = length.max(range.size()).align_up(page_size);
+            let buffer_len = range.size().align_up(page_size);
+            let map_length = length.align_up(page_size);
             info!(
                 "Ion buffer mmap: phys_addr=0x{:x}, buffer_size={}, requested_length={}, \
                  map_length={}",
@@ -200,6 +201,15 @@ pub fn sys_mmap(
             );
             if map_length == 0 {
                 warn!("Ion buffer mmap: map_length is 0, this should not happen");
+                return Err(AxError::InvalidInput);
+            }
+            // 不允许越过 buffer 物理边界：否则 Backend::new_linear 会按线性偏移把
+            // `range.start + range.size()` 之后的物理页映射进进程地址空间。
+            if map_length > buffer_len {
+                warn!(
+                    "Ion buffer mmap: requested length {} exceeds buffer size {}",
+                    map_length, buffer_len
+                );
                 return Err(AxError::InvalidInput);
             }
             let mut ion_mapping_flags: MappingFlags = permission_flags.into();

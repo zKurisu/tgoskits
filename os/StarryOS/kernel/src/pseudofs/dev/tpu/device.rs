@@ -6,7 +6,7 @@
 use alloc::sync::Arc;
 
 use sg2002_tpu::{
-    ion::{IonBufferManager, IonHandle},
+    ion::IonBuffer,
     tpu::{
         Sg2002Tpu,
         error::TpuError,
@@ -21,15 +21,13 @@ use sg2002_tpu::{
 
 use crate::{
     file::{get_file_like, ion::IonBufferFile},
-    pseudofs::{DeviceOps, dev::ion::global_ion_buffer_manager},
+    pseudofs::DeviceOps,
 };
 
 /// TPU 字符设备
 pub struct TpuDevice {
     /// 硬件层
     hw: Sg2002Tpu,
-    /// Ion buffer 管理器引用
-    ion_manager: Arc<IonBufferManager>,
 }
 
 impl TpuDevice {
@@ -40,7 +38,6 @@ impl TpuDevice {
     pub unsafe fn new() -> Self {
         Self {
             hw: unsafe { Sg2002Tpu::new() },
-            ion_manager: global_ion_buffer_manager(),
         }
     }
 
@@ -52,7 +49,6 @@ impl TpuDevice {
     pub unsafe fn from_vaddr(tdma_vaddr: *mut u8, tiu_vaddr: *mut u8) -> Self {
         Self {
             hw: unsafe { Sg2002Tpu::from_vaddr(tdma_vaddr, tiu_vaddr) },
-            ion_manager: global_ion_buffer_manager(),
         }
     }
 
@@ -132,15 +128,11 @@ impl TpuDevice {
     fn dmabuf_flush_fd(&self, arg: usize) -> Result<usize, TpuError> {
         let fd = arg as i32;
         debug!("TPU dmabuf flush fd: {}", fd);
-
-        let handle = IonHandle(fd as u32);
-        if let Ok(buffer) = self.ion_manager.get_buffer(handle) {
-            let paddr = buffer.dma_info.bus_addr.as_u64();
-            let size = buffer.size as u64;
-            self.hw.cache_flush_paddr(paddr, size)?;
-            debug!("Flushed buffer: paddr=0x{:x}, size={}", paddr, size);
-        }
-
+        let buffer = self.lookup_ion_buffer(fd)?;
+        let paddr = buffer.dma_info.bus_addr.as_u64();
+        let size = buffer.size as u64;
+        self.hw.cache_flush_paddr(paddr, size)?;
+        debug!("Flushed buffer: paddr=0x{:x}, size={}", paddr, size);
         Ok(0)
     }
 
@@ -148,15 +140,29 @@ impl TpuDevice {
     fn dmabuf_invld_fd(&self, arg: usize) -> Result<usize, TpuError> {
         let fd = arg as i32;
         debug!("TPU dmabuf invalidate fd: {}", fd);
-
-        let handle = IonHandle(fd as u32);
-        if let Ok(buffer) = self.ion_manager.get_buffer(handle) {
-            let paddr = buffer.dma_info.bus_addr.as_u64();
-            let size = buffer.size as u64;
-            self.hw.cache_invalidate_paddr(paddr, size)?;
-        }
-
+        let buffer = self.lookup_ion_buffer(fd)?;
+        let paddr = buffer.dma_info.bus_addr.as_u64();
+        let size = buffer.size as u64;
+        self.hw.cache_invalidate_paddr(paddr, size)?;
         Ok(0)
+    }
+
+    /// 把用户传入的 fd 解析为底层 [`sg2002_tpu::ion::IonBuffer`]。
+    ///
+    /// fd（由 `add_file_like` 分配的文件描述符）与 Ion 内部 handle（来自
+    /// `IonHandle` 的全局递增计数）属于两个独立的编号空间，不能直接互相替代。
+    /// 因此这里走和 `submit_dmabuf` 一致的路径：fd → `IonBufferFile` →
+    /// 持有的 `Arc<IonBuffer>`。
+    fn lookup_ion_buffer(&self, fd: i32) -> Result<Arc<IonBuffer>, TpuError> {
+        let file = get_file_like(fd).map_err(|err| {
+            error!("[TPU] failed to get file for fd={}: {:?}", fd, err);
+            TpuError::InvalidDmabuf
+        })?;
+        let ion_file: Arc<IonBufferFile> = file.downcast_arc::<IonBufferFile>().map_err(|_| {
+            error!("[TPU] fd={} is not an IonBufferFile", fd);
+            TpuError::InvalidDmabuf
+        })?;
+        Ok(ion_file.buffer().clone())
     }
 }
 
