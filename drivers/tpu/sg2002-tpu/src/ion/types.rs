@@ -1,8 +1,12 @@
 //! Ion 驱动数据结构定义
 
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::{
+    alloc::Layout,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 use ax_dma::DMAInfo;
+use ax_memory_addr::PAGE_SIZE_4K;
 
 /// Ion 堆类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,6 +72,24 @@ impl IonBuffer {
             handle: IonHandle::new(),
             dma_info,
             size,
+        }
+    }
+}
+
+impl Drop for IonBuffer {
+    fn drop(&mut self) {
+        // 最后一个 `Arc<IonBuffer>` 被释放时，物理页才交还给 DMA 分配器，
+        // 以避免 fd / mmap 还存活时交还后被另一路 DMA 者重复占用。
+        match Layout::from_size_align(self.size, PAGE_SIZE_4K) {
+            Ok(layout) => unsafe {
+                ax_dma::dealloc_coherent_pages(self.dma_info, layout);
+            },
+            Err(err) => {
+                error!(
+                    "IonBuffer drop: invalid layout (size={}, align={}): {:?}",
+                    self.size, PAGE_SIZE_4K, err
+                );
+            }
         }
     }
 }

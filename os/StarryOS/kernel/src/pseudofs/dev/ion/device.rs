@@ -14,10 +14,7 @@ use sg2002_tpu::ion::{
 
 use super::global_ion_buffer_manager;
 use crate::{
-    file::{
-        add_file_like,
-        ion::{IonBufferFile, IonBufferInfo},
-    },
+    file::{add_file_like, ion::IonBufferFile},
     pseudofs::{DeviceMmap, DeviceOps},
 };
 
@@ -71,19 +68,16 @@ impl IonDevice {
             .alloc_buffer(alloc_data.len as usize, 1, heap_type)
             .map_err(AxError::from)?;
 
-        // 注册缓冲区
+        // 注册缓冲区（全局表保持一份强引用，供后续查找）
         self.buffer_manager
             .register_buffer(buffer.clone())
             .map_err(AxError::from)?;
 
-        // 创建 IonBufferFile 并添加到文件描述符表
+        // 创建 IonBufferFile 并在 fd 表中保有另一份强引用：
+        // 只要 fd 未关闭，物理页就不会被归还。
         let phys_addr = buffer.dma_info.bus_addr.as_u64() as usize;
-        let buffer_info = IonBufferInfo {
-            phys_addr,
-            size: buffer.size,
-            handle: buffer.handle.0,
-        };
-        let ion_file = IonBufferFile::new(buffer_info);
+        let handle = buffer.handle.as_u32();
+        let ion_file = IonBufferFile::new(buffer.clone());
         let fd = add_file_like(alloc::sync::Arc::new(ion_file), false)
             .map_err(|_| AxError::TooManyOpenFiles)?;
 
@@ -98,7 +92,7 @@ impl IonDevice {
 
         info!(
             "Allocated Ion buffer: fd={}, handle={}, phys_addr=0x{:x}, size={}",
-            fd, buffer.handle.0, phys_addr, alloc_data.len
+            fd, handle, phys_addr, alloc_data.len
         );
 
         Ok(0)
@@ -112,20 +106,22 @@ impl IonDevice {
         let handle_data = unsafe { ptr::read(user_ptr as *const IonHandleData) };
 
         let handle = IonHandle(handle_data.handle);
-        debug!("Freeing buffer with handle: {:?}", handle);
+        debug!("Releasing buffer with handle: {:?}", handle);
 
-        // 取消注册缓冲区
-        let buffer = self
-            .buffer_manager
-            .unregister_buffer(handle)
-            .map_err(AxError::from)?;
-
-        // 释放缓冲区
-        self.heap_manager
-            .free_buffer(buffer)
-            .map_err(AxError::from)?;
-
-        info!("Freed Ion buffer: handle={}", handle_data.handle);
+        // 仅从全局表中移除强引用；物理页的释放交给最后一个
+        // `Arc<IonBuffer>` 在 Drop 中完成（可能是全局表、fd 或 mmap 所持的那一份）。
+        // 允许 "未找到"，因为 IonBufferFile::Drop 也会调用 FREE，会出现重复释放。
+        match self.buffer_manager.unregister_buffer(handle) {
+            Ok(_buffer) => {
+                info!("Unregistered Ion buffer: handle={}", handle_data.handle);
+            }
+            Err(err) => {
+                debug!(
+                    "ION_IOC_FREE: handle {} not in global table ({:?})",
+                    handle_data.handle, err
+                );
+            }
+        }
         Ok(0)
     }
 

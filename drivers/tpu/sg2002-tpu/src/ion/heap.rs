@@ -4,7 +4,6 @@ use alloc::sync::Arc;
 use core::alloc::Layout;
 
 use ax_dma::{self, DMAInfo};
-use ax_memory_addr::PAGE_SIZE_4K;
 
 use super::{
     error::{IonError, IonResult},
@@ -62,24 +61,6 @@ impl IonHeapManager {
         debug!("Allocated Ion buffer with handle: {:?}", buffer.handle);
 
         Ok(buffer)
-    }
-
-    /// 释放缓冲区
-    pub fn free_buffer(&self, buffer: Arc<IonBuffer>) -> IonResult<()> {
-        debug!("Freeing Ion buffer with handle: {:?}", buffer.handle);
-
-        // 释放 DMA 内存
-        // 使用 dealloc_coherent_pages 与 alloc_coherent_pages 对称，
-        // 避免 dealloc_coherent 因 size < PAGE_SIZE 误路由到 slab 导致 panic。
-        let layout =
-            Layout::from_size_align(buffer.size, PAGE_SIZE_4K).map_err(|_| IonError::InvalidArg)?;
-
-        unsafe {
-            ax_dma::dealloc_coherent_pages(buffer.dma_info, layout);
-        }
-
-        debug!("Ion buffer freed successfully");
-        Ok(())
     }
 
     /// 分配 DMA 内存

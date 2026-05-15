@@ -79,19 +79,14 @@ impl TpuDevice {
             TpuError::InvalidDmabuf
         })?;
 
-        // 获取缓冲区信息
-        let buffer_info = ion_file.info();
+        // 获取底层 Ion buffer（fd 持有强引用，保证生命周期）
+        let buffer = ion_file.buffer();
         debug!(
             "[TPU] dmabuf info: handle={}, size={}, paddr=0x{:x}",
-            buffer_info.handle, buffer_info.size, buffer_info.phys_addr
+            buffer.handle.as_u32(),
+            buffer.size,
+            buffer.dma_info.bus_addr.as_u64()
         );
-
-        // 从 Ion 管理器获取完整的 buffer 信息
-        let handle = IonHandle(buffer_info.handle);
-        let buffer = self
-            .ion_manager
-            .get_buffer(handle)
-            .map_err(|_| TpuError::InvalidDmabuf)?;
 
         let dmabuf_vaddr = buffer.dma_info.cpu_addr.as_ptr() as usize;
         let dmabuf_paddr = buffer.dma_info.bus_addr.as_u64();
