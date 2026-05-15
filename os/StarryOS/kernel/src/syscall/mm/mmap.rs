@@ -214,10 +214,11 @@ pub fn sys_mmap(
             }
             let mut ion_mapping_flags: MappingFlags = permission_flags.into();
             ion_mapping_flags |= MappingFlags::UNCACHED;
-            let backend = Backend::new_linear(
+            let backend = Backend::new_linear_anchored(
                 start,
                 start.as_usize() as isize - range.start.as_usize() as isize,
                 true,
+                ion_file.buffer().clone(),
             );
             let populate = map_flags.contains(MmapFlags::POPULATE);
             aspace.map(start, map_length, ion_mapping_flags, populate, backend)?;

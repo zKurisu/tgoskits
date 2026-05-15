@@ -1,9 +1,10 @@
 //! Ion 设备实现
 
 use alloc::sync::Arc;
-use core::{any::Any, ptr};
+use core::any::Any;
 
 use ax_errno::AxError;
+use starry_vm::{VmMutPtr, VmPtr};
 use ax_memory_addr::PhysAddrRange;
 use axfs_ng_vfs::{NodeFlags, VfsResult};
 use sg2002_tpu::ion::{
@@ -40,7 +41,8 @@ impl IonDevice {
         debug!("Processing ION_IOC_ALLOC");
 
         // 从用户空间读取分配数据
-        let alloc_data = unsafe { ptr::read(user_ptr as *const IonAllocData) };
+        let alloc_data =
+            unsafe { (user_ptr as *const IonAllocData).vm_read_uninit()?.assume_init() };
 
         debug!(
             "Alloc request: len={}, heap_id_mask=0x{:x}, flags=0x{:x}",
@@ -86,9 +88,7 @@ impl IonDevice {
         result_data.fd = fd as u32;
         result_data.paddr = phys_addr as u64;
 
-        unsafe {
-            ptr::write(user_ptr as *mut IonAllocData, result_data);
-        }
+        (user_ptr as *mut IonAllocData).vm_write(result_data)?;
 
         info!(
             "Allocated Ion buffer: fd={}, handle={}, phys_addr=0x{:x}, size={}",
@@ -103,7 +103,8 @@ impl IonDevice {
         debug!("Processing ION_IOC_FREE");
 
         // 从用户空间读取句柄数据
-        let handle_data = unsafe { ptr::read(user_ptr as *const IonHandleData) };
+        let handle_data =
+            unsafe { (user_ptr as *const IonHandleData).vm_read_uninit()?.assume_init() };
 
         let handle = IonHandle(handle_data.handle);
         debug!("Releasing buffer with handle: {:?}", handle);
@@ -130,7 +131,8 @@ impl IonDevice {
         debug!("Processing ION_IOC_IMPORT");
 
         // 从用户空间读取 FD 数据
-        let fd_data = unsafe { ptr::read(user_ptr as *const IonFdData) };
+        let fd_data =
+            unsafe { (user_ptr as *const IonFdData).vm_read_uninit()?.assume_init() };
 
         debug!("Import request: fd={}", fd_data.fd);
 
@@ -141,9 +143,7 @@ impl IonDevice {
         let mut result_data = fd_data;
         result_data.handle = handle.0;
 
-        unsafe {
-            ptr::write(user_ptr as *mut IonFdData, result_data);
-        }
+        (user_ptr as *mut IonFdData).vm_write(result_data)?;
 
         info!(
             "Imported Ion buffer: fd={}, handle={}",
@@ -157,7 +157,8 @@ impl IonDevice {
         debug!("Processing ION_IOC_HEAP_QUERY");
 
         // 从用户空间读取查询数据
-        let mut heap_query = unsafe { ptr::read(user_ptr as *const IonHeapQuery) };
+        let mut heap_query =
+            unsafe { (user_ptr as *const IonHeapQuery).vm_read_uninit()?.assume_init() };
 
         debug!(
             "Heap query request: cnt={}, heaps=0x{:x}",
@@ -198,9 +199,8 @@ impl IonDevice {
                 heap_data.name[..copy_len].copy_from_slice(&name_bytes[..copy_len]);
 
                 // 写入堆数据
-                unsafe {
-                    ptr::write(heap_data_ptr.add(i), heap_data);
-                }
+                let item_ptr = unsafe { heap_data_ptr.add(i) };
+                item_ptr.vm_write(heap_data)?;
 
                 info!(
                     "Added heap {}: type={}, heap_id={}, name={}",
@@ -213,9 +213,7 @@ impl IonDevice {
         heap_query.cnt = available_heap_count;
 
         // 写回结果
-        unsafe {
-            ptr::write(user_ptr as *mut IonHeapQuery, heap_query);
-        }
+        (user_ptr as *mut IonHeapQuery).vm_write(heap_query)?;
 
         info!(
             "Heap query completed: {} heaps available, {} requested",

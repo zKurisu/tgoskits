@@ -546,7 +546,7 @@ impl DeviceOps for LoopDevice {
                 let mut name = self.file_name.lock();
                 for (i, &c) in info.lo_name.iter().enumerate() {
                     if i < 64 {
-                        name[i] = c as u8;
+                        name[i] = c as _;
                     }
                     if c == 0 {
                         break;
