@@ -210,6 +210,13 @@ members = [
     "test-suit/arceos/rust/task/tls",
     "test-suit/arceos/rust/task/wait_queue",
     "test-suit/arceos/rust/task/yield",
+    "test-suit/arceos/std/qemu-smp1/arce_agent",
+    "test-suit/arceos/std/qemu-smp1/helloworld",
+    "test-suit/arceos/std/qemu-smp1/httpclient",
+    "test-suit/arceos/std/qemu-smp1/httpserver",
+    "test-suit/arceos/std/qemu-smp1/io_test",
+    "test-suit/arceos/std/qemu-smp1/thread_test",
+    "test-suit/arceos/std/qemu-smp1/tokio_test",
     "xtask",
 ]
 
