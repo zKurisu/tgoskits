@@ -250,6 +250,10 @@ pub fn sys_mmap(
                         )
                     }
                     Ok(DeviceMmap::None) => return Err(AxError::NoSuchDevice),
+                    #[cfg(feature = "kcov")]
+                    Ok(DeviceMmap::NotConfigured) => return Err(AxError::InvalidInput),
+                    #[cfg(feature = "kcov")]
+                    Ok(DeviceMmap::SharedPages(pages)) => Backend::new_shared(start, pages),
                     Ok(_) => return Err(AxError::InvalidInput),
                     Err(_) => {
                         // Fall through to file-backed mmap
@@ -287,6 +291,10 @@ pub fn sys_mmap(
                                     DeviceMmap::None => {
                                         return Err(AxError::NoSuchDevice);
                                     }
+                                    #[cfg(feature = "kcov")]
+                                    DeviceMmap::NotConfigured => {
+                                        return Err(AxError::InvalidInput);
+                                    }
                                     DeviceMmap::Physical(range) => {
                                         mapping_flags |= MappingFlags::UNCACHED;
                                         if range.is_empty() {
@@ -309,6 +317,10 @@ pub fn sys_mmap(
                                         &curr.as_thread().proc_data.aspace(),
                                         true,
                                     ),
+                                    #[cfg(feature = "kcov")]
+                                    DeviceMmap::SharedPages(pages) => {
+                                        Backend::new_shared(start, pages)
+                                    }
                                 }
                             }
                         }
