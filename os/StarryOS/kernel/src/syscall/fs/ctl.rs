@@ -655,7 +655,11 @@ pub fn sys_renameat2(
 }
 
 pub fn sys_sync() -> AxResult<isize> {
-    warn!("dummy sys_sync");
+    debug!("sys_sync");
+    // Only syncs root filesystem; does not iterate all mount points like Linux sync(2).
+    // ext4 NodeOps::sync is a no-op (Ok(())); FAT NodeOps::sync calls file.flush()
+    // to write dirty data to disk.
+    FS_CONTEXT.lock().root_dir().sync(false)?;
     Ok(0)
 }
 
