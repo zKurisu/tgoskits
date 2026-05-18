@@ -2,7 +2,7 @@
 //!
 //! 表示一个 Hub 设备（Root Hub 或 External Hub），管理端口状态和设备枚举。
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use core::time::Duration;
 
 use futures::{FutureExt, future::BoxFuture};

@@ -1,4 +1,4 @@
-use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
+use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 
 use futures::{FutureExt, future::BoxFuture};
 use mbarrier::mb;
