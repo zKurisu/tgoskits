@@ -1,10 +1,11 @@
 [package]
+authors = ["周睿 <zrufo747@outlook.com>"]
 description = "USB Interface definitions for CrabUSB"
 edition.workspace = true
 license.workspace = true
 name = "usb-if"
 repository.workspace = true
-version = "0.7.0"
+version = "0.7.1"
 
 [dependencies]
 anyhow = { version = "1", default-features = false}
