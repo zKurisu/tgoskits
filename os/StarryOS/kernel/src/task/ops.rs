@@ -475,6 +475,10 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
         thr.proc_data.notify_vfork_done();
 
         crate::syscall::clear_proc_shm(process.pid(), &thr.proc_data.aspace());
+
+        // Drop memfd inode accounting before waitpid returns (SMP); use
+        // process_slots refcounting — not vm_aspace_shared + clear().
+        thr.proc_data.release_aspace_slot_if_needed();
     }
     thr.exit_event.wake();
 
