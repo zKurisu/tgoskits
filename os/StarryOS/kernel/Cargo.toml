@@ -18,6 +18,7 @@ default = ["dynamic_debug"]
 dev-log = []
 kprobe_test = []
 ext4 = ["ax-fs-ng/ext4"]
+fat = ["ax-fs-ng/fat"]
 input = ["dep:ax-input", "ax-feat/input"]
 ipi = ["ax-feat/ipi"]
 memtrack = ["ax-feat/backtrace", "ax-alloc/tracking"]
@@ -41,6 +42,7 @@ sg2002 = [
     "dep:some-serial",
     "dep:sg200x-bsp",
     "dep:tock-registers",
+    "fat",
 ]
 # SG2002 AIC8800 SoftAP Wi-Fi. The whole bring-up (FDT probe + SoftAP + stack
 # registration) now lives in ax-driver / ax-runtime; the kernel just turns the
@@ -84,7 +86,7 @@ ax-net = { workspace = true }
 ax-driver = { workspace = true, features = ["serial", "usb"] }
 axklib = { workspace = true, optional = true }
 axplat-dyn.workspace = true
-ax-runtime.workspace = true
+ax-runtime = { workspace = true }
 ax-sync.workspace = true
 ax-task.workspace = true
 ax-dma = { workspace = true, optional = true }

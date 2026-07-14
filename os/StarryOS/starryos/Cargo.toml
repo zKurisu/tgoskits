@@ -50,7 +50,7 @@ ax-std = { workspace = true, features = ["ext-ld", "fs", "multitask", "irq"] }
 ax-driver.workspace = true
 ax-hal.workspace = true
 axplat-dyn.workspace = true
-starry-kernel = { workspace = true, features = ["dev-log", "ext4"] }
+starry-kernel = { workspace = true, features = ["dev-log", "ext4", "fat"] }
 
 [target.'cfg(any(windows, all(unix, not(target_env = "musl"))))'.dependencies]
 anyhow = "1.0"

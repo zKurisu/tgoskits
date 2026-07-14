@@ -580,15 +580,23 @@ fn create_transient_mountpoint_dir(
 }
 
 fn mount_path_for_partition(partition: &PartitionInfo) -> String {
-    let name = partition
-        .name
-        .as_deref()
-        .filter(|name| !name.is_empty())
-        .unwrap_or("partition");
-    if name.to_ascii_lowercase().contains("boot") {
-        String::from("/boot")
-    } else {
-        format!("/{name}")
+    match partition.name.as_deref() {
+        Some(name) if !name.is_empty() => {
+            if name.to_ascii_lowercase().contains("boot") {
+                String::from("/boot")
+            } else {
+                format!("/{name}")
+            }
+        }
+        _ => {
+            // MBR fallback: when partition name is not available,
+            // use the bootable flag to identify the boot partition.
+            if partition.bootable {
+                String::from("/boot")
+            } else {
+                String::from("/partition")
+            }
+        }
     }
 }
 

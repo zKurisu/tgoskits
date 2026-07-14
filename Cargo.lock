@@ -667,6 +667,7 @@ dependencies = [
  "dma-api",
  "dwmmc-host",
  "eth-intel",
+ "fakedisk",
  "fdt-edit",
  "fxmac_rs",
  "heapless",
@@ -3244,6 +3245,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "fakedisk"
+version = "0.1.0"
+dependencies = [
+ "rdif-block",
 ]
 
 [[package]]
