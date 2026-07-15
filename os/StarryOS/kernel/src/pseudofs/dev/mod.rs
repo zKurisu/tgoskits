@@ -238,6 +238,25 @@ impl DeviceOps for CpuDmaLatency {
     }
 }
 
+struct FakeDiskDev;
+
+impl DeviceOps for FakeDiskDev {
+    fn read_at(&self, buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
+        buf.fill(0);   // fakedisk 读永远返回零
+        Ok(buf.len())
+    }
+
+    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
+        Ok(buf.len())  // 写永远成功（空操作）
+    }
+
+    fn as_any(&self) -> &dyn Any { self }
+
+    fn flags(&self) -> NodeFlags {
+        NodeFlags::NON_CACHEABLE
+    }
+}
+
 fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     let mut root = DirMapping::new();
     root.add(
@@ -258,6 +277,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Arc::new(Zero),
         ),
     );
+
+    root.add(
+        "fakedisk0",
+        Device::new(
+            fs.clone(),
+            NodeType::BlockDevice,
+            DeviceId::new(252, 0),            // major 随便取一个不冲突的
+            Arc::new(FakeDiskDev), // 实现 DeviceOps, 转发 read/write
+        ),
+    );
+
     root.add(
         "full",
         Device::new(
