@@ -217,6 +217,7 @@ riscv_vcpu = { version = "0.5.16", path = "virtualization/riscv_vcpu" }
 riscv_vplic = { version = "0.4.18", path = "virtualization/riscv_vplic" }
 nvme-driver = { version = "0.6.3", path = "drivers/blk/nvme-driver" }
 pcie = { version = "0.6.5", path = "drivers/pci/pcie" }
+fakedisk = { path = "drivers/blk/fakedisk" }
 ramdisk = { version = "0.1.8", path = "drivers/blk/ramdisk" }
 rd-net = { version = "0.2.0", path = "drivers/net/rd-net" }
 rdif-base = { version = "0.8.3", path = "drivers/interface/rdif-base" }
