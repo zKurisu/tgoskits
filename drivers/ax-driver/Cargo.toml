@@ -33,6 +33,7 @@ virtio-input = ["input", "virtio", "pci"]
 virtio-socket = ["vsock", "virtio", "pci"]
 
 ramdisk = ["block", "dep:ramdisk"]
+fakedisk = ["block", "dep:fakedisk"]
 bcm2835-sdhci = ["block", "dep:bcm2835-sdhci"]
 ahci = ["block", "pci", "dep:simple-ahci"]
 nvme = ["block", "pci", "dep:nvme-driver"]
@@ -148,6 +149,7 @@ log.workspace = true
 mmio-api.workspace = true
 nvme-driver = { workspace = true, optional = true }
 pcie = { workspace = true, optional = true }
+fakedisk = { workspace = true, optional = true }
 ramdisk = { workspace = true, optional = true }
 rd-net = { workspace = true, optional = true }
 rdif-block = { workspace = true, optional = true }

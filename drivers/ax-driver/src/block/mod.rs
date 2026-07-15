@@ -9,6 +9,8 @@ pub mod ahci;
 pub mod bcm2835;
 #[cfg(feature = "cvsd")]
 pub mod cvsd;
+#[cfg(feature = "fakedisk")]
+pub mod fakedisk;
 #[cfg(feature = "k230-sdhci")]
 pub mod k230_sdhci;
 #[cfg(feature = "nvme")]
