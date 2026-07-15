@@ -2,6 +2,7 @@ features = [
   "ax-feat/display",
   "ax-feat/rtc",
   "ax-driver/serial",
+  "ax-driver/fakedisk",
   "ax-driver/virtio-blk",
   "ax-driver/virtio-net",
   "ax-driver/virtio-gpu",
@@ -10,5 +11,5 @@ features = [
   "starry-kernel/input",
   "starry-kernel/vsock",
 ]
-log = "Warn"
+log = "Info"
 target = "riscv64gc-unknown-none-elf"

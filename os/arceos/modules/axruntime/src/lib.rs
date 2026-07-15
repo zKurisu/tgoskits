@@ -305,6 +305,15 @@ pub fn rust_main(cpu_id: usize, arg: usize) -> ! {
 
     fs::init(ax_hal::boot::bootargs());
 
+    // The .driver.register linker section is only preserved by the bare-metal
+    // linker script (runtime.ld). In Linux PIE builds the default linker drops
+    // it, so register the fakedisk driver explicitly after rootfs init so it
+    // doesn't interfere with root device selection.
+    #[cfg(feature = "fakedisk")]
+    ax_driver::block::fakedisk::register(rdrive::PlatformDevice {
+        descriptor: rdrive::Descriptor::new(),
+    });
+
     #[cfg(feature = "display")]
     devices::init_display();
 
