@@ -1,15 +1,20 @@
 //! Linux wireless-extensions (WE) `ioctl` support for socket fds.
 //!
-//! Implements the small subset of the wireless extensions a userspace program
+//! Implements the subset of the wireless extensions a userspace program
 //! (or the on-device HTTP control server) needs to switch a Wi-Fi interface
 //! between Station and SoftAP at runtime:
 //!
+//! Setters (staged, never touch hardware):
 //! - `SIOCSIWMODE`    — stage the target mode (Managed/STA vs Master/AP).
 //! - `SIOCSIWESSID`   — stage the SSID.
 //! - `SIOCSIWENCODEEXT` — stage the passphrase (STA) / open (AP).
 //! - `SIOCSIWFREQ`    — stage the channel (AP only).
 //! - `SIOCSIWCOMMIT`  — atomically apply the staged config via
 //!   [`ax_net::reconfigure_wifi`] (link-layer teardown + switch + IP/DHCP role).
+//!
+//! Getters (return best-effort current state):
+//! - `SIOCGIWNAME`  — protocol name.
+//! - `SIOCGIWMODE`  — current mode from staging or probe default.
 //!
 //! The `SIOCSIW*` setters never touch hardware; they only stage into a
 //! per-interface pending config. `SIOCSIWCOMMIT` performs the whole transition
@@ -29,14 +34,29 @@ use starry_vm::{vm_read_slice, vm_write_slice};
 // ---------------------------------------------------------------------------
 
 pub const SIOCSIWCOMMIT: u32 = 0x8B00;
+pub const SIOCGIWNAME: u32 = 0x8B01;
 pub const SIOCSIWFREQ: u32 = 0x8B04;
+#[allow(dead_code)]
+pub const SIOCGIWFREQ: u32 = 0x8B05;
 pub const SIOCSIWMODE: u32 = 0x8B06;
+pub const SIOCGIWMODE: u32 = 0x8B07;
 pub const SIOCSIWESSID: u32 = 0x8B1A;
+#[allow(dead_code)]
+pub const SIOCGIWESSID: u32 = 0x8B1B;
 pub const SIOCSIWENCODEEXT: u32 = 0x8B34;
+#[allow(dead_code)]
+pub const SIOCGIWRANGE: u32 = 0x8B0B;
+pub const SIOCGIWAP: u32 = 0x8B15;
+
+/// WEXT ioctl range: SIOCDEVPRIVATE … SIOCDEVPRIVATE + 0xFF.
+const WEXT_FIRST: u32 = 0x8B00;
+const WEXT_LAST: u32 = 0x8BFF;
 
 /// `iw_mode` values from <linux/wireless.h>.
 const IW_MODE_INFRA: u32 = 2; // Managed / Station
 const IW_MODE_MASTER: u32 = 3; // Master / Access Point
+#[allow(dead_code)]
+const IW_MODE_ADHOC: u32 = 1; // Ad-hoc
 
 /// Offsets within `struct iwreq` (size 32 on both 32/64-bit: 16-byte ifrn_name
 /// union followed by a 16-byte `union iwreq_data`).
@@ -163,11 +183,14 @@ fn read_iw_point(arg: usize, max: usize) -> AxResult<Vec<u8>> {
 // ---------------------------------------------------------------------------
 
 /// Returns `true` if `cmd` is a wireless-extensions ioctl handled here.
+///
+/// Uses the full WEXT range so that unrecognised getter ioctls
+/// (`SIOCGIW*`) reach [`handle`] and return `AxError::Unsupported`
+/// instead of `AxError::NotATty`.  That lets userspace tools (iwconfig,
+/// wpa_supplicant) distinguish "unsupported" from "not a wireless
+/// interface" and fall back gracefully.
 pub fn is_wext_ioctl(cmd: u32) -> bool {
-    matches!(
-        cmd,
-        SIOCSIWCOMMIT | SIOCSIWFREQ | SIOCSIWMODE | SIOCSIWESSID | SIOCSIWENCODEEXT
-    )
+    (WEXT_FIRST..=WEXT_LAST).contains(&cmd)
 }
 
 /// Handles a wireless-extensions `ioctl`. Setters stage config; `SIOCSIWCOMMIT`
@@ -209,6 +232,25 @@ pub fn handle(cmd: u32, arg: usize) -> AxResult<usize> {
             with_pending(&ifname, |p| p.channel = Some(chan as u8));
         }
         SIOCSIWCOMMIT => return commit(&ifname),
+        // ---- getters ----
+        SIOCGIWNAME => {
+            let mut buf = [0u8; 16];
+            let name = b"IEEE 802.11bgn";
+            let n = name.len().min(buf.len());
+            buf[..n].copy_from_slice(&name[..n]);
+            write_iwreq_data(arg, &buf)?;
+        }
+        SIOCGIWMODE => {
+            let mode = with_pending(&ifname, |p| match p.mode {
+                Some(StagedMode::Station) => IW_MODE_INFRA,
+                Some(StagedMode::AccessPoint) => IW_MODE_MASTER,
+                None => IW_MODE_MASTER,
+            });
+            write_iwreq_data(arg, &mode.to_ne_bytes())?;
+        }
+        SIOCGIWAP => {
+            write_iwreq_data(arg, &[0u8; 6])?;
+        }
         _ => return Err(AxError::Unsupported),
     }
     Ok(0)
@@ -251,9 +293,7 @@ fn commit(ifname: &str) -> AxResult<usize> {
     Ok(0)
 }
 
-/// Silences unused-write-helper warnings if a setter that echoes data back is
-/// added later. Currently all WE setters here only stage, so no write-back.
-#[allow(dead_code)]
-fn _write_iwreq_data(arg: usize, data: &[u8]) -> AxResult<()> {
+/// Writes `data` into the `iwreq_data` union at `arg + 16`.
+fn write_iwreq_data(arg: usize, data: &[u8]) -> AxResult<()> {
     Ok(vm_write_slice((arg + IWREQ_DATA_OFFSET) as *mut u8, data)?)
 }

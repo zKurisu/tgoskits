@@ -274,6 +274,10 @@ impl NetControl {
         self.routes
             .write()
             .replace_ipv4_rules_for_interface(update.interface_id, routes);
+
+        let servers: Vec<Ipv4Address> = state.dns.iter().map(|e| e.server).collect();
+        drop(state);
+        crate::notify_dns_change(&servers);
     }
 
     fn add_interface(&self, interface: NetInterface, routes: Vec<crate::router::Rule>) {

@@ -71,7 +71,7 @@ use alloc::{
 };
 use core::{
     net::{IpAddr, Ipv4Addr},
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     task::Waker,
     time::Duration,
 };
@@ -158,6 +158,22 @@ static WIFI_CONTROLS: LazyLock<Mutex<Vec<(alloc::string::String, rd_net::WifiCon
     LazyLock::new(|| Mutex::new(Vec::new()));
 
 static NET_IRQ_NOTIFY: IrqNotify = IrqNotify::new();
+
+static DNS_CHANGE_CALLBACK: AtomicUsize = AtomicUsize::new(0);
+
+/// DNS change callback takes `core::net::Ipv4Addr` (not smoltcp) so
+/// consumers like the kernel don't need a smoltcp dependency.
+pub fn set_dns_change_callback(cb: fn(&[Ipv4Addr])) {
+    DNS_CHANGE_CALLBACK.store(cb as usize, Ordering::Release);
+}
+
+pub(crate) fn notify_dns_change(servers: &[Ipv4Addr]) {
+    let ptr = DNS_CHANGE_CALLBACK.load(Ordering::Acquire);
+    if ptr != 0 {
+        let cb: fn(&[Ipv4Addr]) = unsafe { core::mem::transmute(ptr) };
+        cb(servers);
+    }
+}
 
 const DHCP_BOOTSTRAP_ATTEMPTS: usize = 200;
 const DHCP_BOOTSTRAP_POLL_INTERVAL: Duration = Duration::from_millis(10);

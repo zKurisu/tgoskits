@@ -9,7 +9,7 @@ use slab::Slab;
 use super::{dir::FatDirNode, disk::SeekableDisk, ff, util::into_vfs_err};
 use crate::{
     block::{BlockRegion, FsBlockDevice},
-    os::sync::{IrqMutex as Mutex, IrqMutexGuard as MutexGuard},
+    os::sync::{SleepMutex as Mutex, SleepMutexGuard as MutexGuard},
 };
 
 pub struct FatFilesystemInner {
