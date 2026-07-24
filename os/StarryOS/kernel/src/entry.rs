@@ -41,6 +41,10 @@ pub fn init(args: &[String], envs: &[String]) {
     static_keys::global_init();
     tracepoint_init().expect("Failed to initialize tracepoints");
 
+    // Bridge kernel log messages into the syslog ring buffer so `dmesg`
+    // sees every info!/warn!/error! call in addition to the serial console.
+    ax_runtime::set_aux_log_writer(crate::syscall::syslog_write);
+
     crate::ebpf::init_ebpf();
     crate::perf::perf_event_init();
     crate::kmod::init_kmod();
