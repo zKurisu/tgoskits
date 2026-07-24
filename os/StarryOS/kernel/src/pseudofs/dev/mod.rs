@@ -11,6 +11,8 @@ mod drm;
 #[cfg(feature = "input")]
 pub mod event;
 mod fb;
+#[cfg(feature = "sg2002")]
+mod gpio;
 mod kmsg;
 #[cfg(feature = "k230-kpu")]
 mod kpu;
@@ -38,6 +40,7 @@ pub mod tty;
 
 #[cfg(feature = "sg2002")]
 mod cvi_usb_camera;
+mod mem;
 
 use alloc::{format, sync::Arc};
 use core::{
@@ -507,6 +510,15 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     // /dev/kmsg — standard char major 1, minor 11 (LANANA memory-device major,
     // same group as null/zero/random above).
     root.add(
+        "mem",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(1, 1),
+            Arc::new(mem::MemDev),
+        ),
+    );
+    root.add(
         "kmsg",
         Device::new(
             fs.clone(),
@@ -694,8 +706,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Device::new(
                 fs.clone(),
                 NodeType::CharacterDevice,
-                DeviceId::new(1, 1),
+                DeviceId::new(1, 254),
                 Arc::new(pinmux::PinmuxDev),
+            ),
+        );
+        root.add(
+            "gpio",
+            Device::new(
+                fs.clone(),
+                NodeType::CharacterDevice,
+                DeviceId::new(1, 253),
+                Arc::new(gpio::GPIODev),
             ),
         );
         root.add(
