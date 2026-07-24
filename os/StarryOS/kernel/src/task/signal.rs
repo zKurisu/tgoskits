@@ -6,7 +6,7 @@ use ax_errno::{AxError, AxResult};
 use ax_runtime::hal::cpu::uspace::UserContext;
 use ax_task::{
     TaskInner, current,
-    future::{block_on, interruptible},
+    future::block_on,
 };
 use axpoll::IoEvents;
 use linux_raw_sys::general::{CLD_CONTINUED, CLD_STOPPED, CLD_TRAPPED};
@@ -206,8 +206,7 @@ pub fn wait_existing_ptrace_stop_current(thr: &Thread, uctx: &mut UserContext) {
 }
 
 fn wait_ptrace_resume(thr: &Thread, tid: u32, uctx: &mut UserContext) {
-    current().clear_interrupt();
-    let wait_result = block_on(interruptible(poll_fn(|cx| {
+    block_on(poll_fn(|cx| {
         if thr.proc_data.ptrace_stop_signo_for(tid).is_none() {
             Poll::Ready(())
         } else {
@@ -218,11 +217,8 @@ fn wait_ptrace_resume(thr: &Thread, tid: u32, uctx: &mut UserContext) {
                 Poll::Pending
             }
         }
-    })));
-
-    if wait_result.is_err() {
-        thr.proc_data.clear_ptrace_stop();
-    } else if let Some(resume_uctx) = thr.proc_data.take_ptrace_stop_user_context_for(tid) {
+    }));
+    if let Some(resume_uctx) = thr.proc_data.take_ptrace_stop_user_context_for(tid) {
         *uctx = resume_uctx;
         thr.proc_data.restore_current_fp_for_ptrace(tid, uctx);
     }
@@ -359,7 +355,18 @@ pub fn check_signals(
                 let _ = thr.signal.send_signal(SignalInfo::new_kernel(new_signo));
                 return true;
             }
-            Some(_) => {}
+            Some(_) => {
+                // The tracer injected the same signal that caused the
+                // ptrace stop, e.g. PTRACE_SYSCALL(data=SIGSTOP).  The
+                // ptrace mechanism already reported this signal to the
+                // tracer; the injection is the delivery.  Do not apply
+                // the default action (e.g. do_job_stop for SIGSTOP)
+                // because the tracee should continue running — otherwise
+                // a forwarded SIGSTOP would park the tracee in a
+                // job-control stop that the tracer's waitpid(WALL) can
+                // never observe, creating a deadlock.
+                return true;
+            }
         }
     }
 
