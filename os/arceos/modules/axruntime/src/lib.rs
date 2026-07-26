@@ -111,6 +111,26 @@ fn ax_app_entry() {
 
 struct LogIfImpl;
 
+static AUX_LOG_WRITER: core::sync::atomic::AtomicPtr<()> =
+    core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
+
+/// Register an auxiliary function to receive all log messages in addition
+/// to the console UART output. The hook is called for every `info!`,
+/// `warn!`, `error!`, etc. message after it is written to the console.
+pub fn set_aux_log_writer(f: fn(&str)) {
+    use core::sync::atomic::Ordering;
+    AUX_LOG_WRITER.store(f as *mut (), Ordering::Release);
+}
+
+fn call_aux_log_writer(s: &str) {
+    use core::sync::atomic::Ordering;
+    let ptr = AUX_LOG_WRITER.load(Ordering::Acquire);
+    if !ptr.is_null() {
+        let f: fn(&str) = unsafe { core::mem::transmute(ptr) };
+        f(s);
+    }
+}
+
 #[cfg(feature = "paging")]
 fn runtime_page_fault_handler(
     addr: ax_memory_addr::VirtAddr,
@@ -128,6 +148,7 @@ fn runtime_page_fault_handler(
 impl ax_log::LogIf for LogIfImpl {
     fn console_write_str(s: &str) {
         ax_hal::console::write_text_bytes(s.as_bytes());
+        call_aux_log_writer(s);
     }
 
     fn current_time() -> core::time::Duration {

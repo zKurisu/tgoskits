@@ -2,6 +2,7 @@ use alloc::{
     string::{String, ToString},
     sync::Arc,
 };
+use core::net::Ipv4Addr;
 
 use ax_fs_ng::vfs::FS_CONTEXT;
 use ax_kernel_guard::NoPreemptIrqSave;
@@ -18,10 +19,31 @@ use crate::{
     tracepoint::tracepoint_init,
 };
 
+fn write_resolv_conf(servers: &[Ipv4Addr]) {
+    use core::fmt::Write;
+    let mut content = alloc::string::String::new();
+    for server in servers {
+        let _ = writeln!(&mut content, "nameserver {server}");
+    }
+    if content.is_empty() {
+        return;
+    }
+    // FS_CONTEXT.write() creates the file if it doesn't exist and replaces
+    // contents if it does. Failures (e.g. rootfs not yet mounted at this
+    // point) are silent — the callback is fire-and-forget.
+    let _ = FS_CONTEXT
+        .lock()
+        .write("/etc/resolv.conf", content.as_bytes());
+}
+
 /// Initialize and run initproc.
 pub fn init(args: &[String], envs: &[String]) {
     static_keys::global_init();
     tracepoint_init().expect("Failed to initialize tracepoints");
+
+    // Bridge kernel log messages into the syslog ring buffer so `dmesg`
+    // sees every info!/warn!/error! call in addition to the serial console.
+    ax_runtime::set_aux_log_writer(crate::syscall::syslog_write);
 
     crate::ebpf::init_ebpf();
     crate::perf::perf_event_init();
@@ -30,6 +52,9 @@ pub fn init(args: &[String], envs: &[String]) {
     pseudofs::mount_all().expect("Failed to mount pseudofs");
     spawn_alarm_task();
     pseudofs::usbfs::start_event_pump();
+
+    // Auto-update /etc/resolv.conf whenever DNS servers change (e.g. via DHCP).
+    ax_net::set_dns_change_callback(write_resolv_conf);
 
     ax_alloc::register_page_reclaim_fn(ax_fs_ng::vfs::page_cache_reclaim);
 

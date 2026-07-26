@@ -3,7 +3,7 @@ use core::{ffi::c_char, mem::MaybeUninit};
 
 use ax_errno::{AxError, AxResult, LinuxError};
 use ax_fs_ng::vfs::FS_CONTEXT;
-use ax_sync::Mutex;
+use ax_kspin::SpinNoPreempt;
 use ax_task::current;
 use linux_raw_sys::{
     general::{GRND_INSECURE, GRND_NONBLOCK, GRND_RANDOM},
@@ -11,7 +11,7 @@ use linux_raw_sys::{
 };
 use ringbuf::{
     HeapRb,
-    traits::{Consumer, Observer, Producer},
+    traits::{Consumer, Observer, Producer, RingBuffer},
 };
 use starry_vm::{VmMutPtr, VmPtr, vm_read_slice, vm_write_slice};
 
@@ -37,7 +37,7 @@ const SYSLOG_ACTION_CONSOLE_ON: i32 = 7;
 const SYSLOG_ACTION_CONSOLE_LEVEL: i32 = 8;
 const SYSLOG_ACTION_SIZE_UNREAD: i32 = 9;
 const SYSLOG_ACTION_SIZE_BUFFER: i32 = 10;
-const SYSLOG_BUFFER_CAPACITY: usize = 4096;
+const SYSLOG_BUFFER_CAPACITY: usize = 65536;
 const SYSLOG_SEED_MESSAGE: &[u8] = b"StarryOS kernel log buffer initialized\n";
 const SECCOMP_SET_MODE_STRICT: u32 = 0;
 const SECCOMP_SET_MODE_FILTER: u32 = 1;
@@ -121,10 +121,19 @@ impl SyslogState {
         let len = self.buffer.occupied_len();
         unsafe { self.buffer.advance_read_index(len) };
     }
+
+    fn push_str(&mut self, s: &str) {
+        self.buffer.push_slice_overwrite(s.as_bytes());
+    }
 }
 
-static SYSLOG_STATE: spin::LazyLock<Mutex<SyslogState>> =
-    spin::LazyLock::new(|| Mutex::new(SyslogState::new()));
+static SYSLOG_STATE: spin::LazyLock<SpinNoPreempt<SyslogState>> =
+    spin::LazyLock::new(|| SpinNoPreempt::new(SyslogState::new()));
+
+/// Write a message to the kernel log ring buffer (visible via `dmesg`).
+pub fn syslog_write(s: &str) {
+    SYSLOG_STATE.lock().push_str(s);
+}
 
 pub fn sys_reboot(magic: u32, magic2: u32, cmd: u32, _arg: usize) -> AxResult<isize> {
     if !current().as_thread().cred().has_cap_sys_boot() {
