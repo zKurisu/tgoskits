@@ -2,7 +2,7 @@ use core::{any::Any, time::Duration};
 
 use ax_errno::AxError;
 use ax_memory_addr::{PhysAddr, VirtAddr};
-use ax_runtime::hal::{mem::virt_to_phys, time::busy_wait};
+use ax_runtime::hal::{mem::virt_to_phys, time::{busy_wait, monotonic_time_nanos}};
 use ax_sync::Mutex;
 use axfs_ng_vfs::{NodeFlags, VfsResult};
 use sg200x_bsp::{
@@ -394,6 +394,38 @@ impl CviCamera {
     }
 }
 
+ktracepoint::define_event_trace!(
+    cvi_camera_ioctl,
+    TP_kops(crate::tracepoint::KernelTraceAux),
+    TP_system(camera),
+    TP_PROTO(cmd: u32, elapsed_us: u64, ok: bool),
+    TP_STRUCT__entry{
+        cmd: u32,
+        elapsed_us: u64,
+        ok: u8,
+    },
+    TP_fast_assign{
+        cmd: cmd,
+        elapsed_us: elapsed_us,
+        ok: ok as u8,
+    },
+    TP_ident(__entry),
+    TP_printk({
+        let name = match __entry.cmd {
+            CVI_CAMERA_IOCTL_INIT => "INIT",
+            CVI_CAMERA_IOCTL_GET_INFO => "GET_INFO",
+            CVI_CAMERA_IOCTL_GET_FRAME => "GET_FRAME",
+            CVI_CAMERA_IOCTL_GET_YUV_FRAME => "GET_YUV_FRAME",
+            CVI_CAMERA_IOCTL_HARD_RESET => "HARD_RESET",
+            _ => "?",
+        };
+        alloc::format!(
+            "{} (cmd={}) elapsed={}us ok={}",
+            name, __entry.cmd, __entry.elapsed_us, __entry.ok != 0
+        )
+    })
+);
+
 impl DeviceOps for CviCamera {
     fn read_at(&self, _buf: &mut [u8], _offset: u64) -> VfsResult<usize> {
         Ok(0)
@@ -417,12 +449,12 @@ impl DeviceOps for CviCamera {
     }
 
     fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
-        match cmd {
+        let start = monotonic_time_nanos();
+        let result = match cmd {
             CVI_CAMERA_IOCTL_INIT => {
                 // Clear any stale session so full hardware init runs again.
                 self.state.lock().reset();
-                self.state.lock().ensure_initialized()?;
-                Ok(0)
+                self.state.lock().ensure_initialized().map(|_| 0)
             }
             CVI_CAMERA_IOCTL_HARD_RESET => {
                 // VBUS power-cycle: physically power-cycle the camera
@@ -433,8 +465,7 @@ impl DeviceOps for CviCamera {
                 // gracefully rather than blocking.
                 drop(self.state.lock());
                 power_cycle_camera_vbus();
-                self.state.lock().ensure_initialized()?;
-                Ok(0)
+                self.state.lock().ensure_initialized().map(|_| 0)
             }
             CVI_CAMERA_IOCTL_GET_INFO => {
                 let info = self.state.lock().info()?;
@@ -452,6 +483,9 @@ impl DeviceOps for CviCamera {
                 Ok(yuv.len())
             }
             _ => Err(AxError::InvalidInput),
-        }
+        };
+        let elapsed_us = (monotonic_time_nanos() - start) / 1_000;
+        trace_cvi_camera_ioctl(cmd, elapsed_us, result.is_ok());
+        result
     }
 }

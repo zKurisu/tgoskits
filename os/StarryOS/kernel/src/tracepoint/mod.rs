@@ -16,7 +16,6 @@ use ax_kspin::SpinNoPreempt;
 use ax_lazyinit::LazyInit;
 use ax_memory_addr::VirtAddr;
 use ax_runtime::hal::{percpu::this_cpu_id, time::monotonic_time_nanos};
-use ax_sync::Mutex;
 use ax_task::{IrqNotify, current};
 use axfs_ng_vfs::NodePermission;
 use axpoll::{IoEvents, PollSet};
@@ -65,10 +64,10 @@ pub fn find_ext_tracepoint_by_name(name: &str) -> Option<KernelExtTracePoint> {
 
 struct TraceState {
     point_map: LazyInit<TracePointMap<KernelTraceAux>>,
-    raw_pipe: Mutex<TracePipeRaw>,
+    raw_pipe: SpinNoPreempt<TracePipeRaw>,
     pipe_event: PollSet,
     pipe_notify: IrqNotify,
-    cmdline_cache: LazyInit<Mutex<TraceCmdLineCache>>,
+    cmdline_cache: LazyInit<SpinNoPreempt<TraceCmdLineCache>>,
     ext_tracepoints: LazyInit<BTreeMap<u32, KernelExtTracePoint>>,
 }
 
@@ -76,7 +75,7 @@ impl TraceState {
     const fn new() -> Self {
         Self {
             point_map: LazyInit::new(),
-            raw_pipe: Mutex::new(TracePipeRaw::new(TRACE_RAW_PIPE_CAPACITY)),
+            raw_pipe: SpinNoPreempt::new(TracePipeRaw::new(TRACE_RAW_PIPE_CAPACITY)),
             pipe_event: PollSet::new(),
             pipe_notify: IrqNotify::new(),
             cmdline_cache: LazyInit::new(),
@@ -281,7 +280,7 @@ pub fn tracepoint_init() -> AxResult<()> {
     TRACE_STATE.ext_tracepoints.init_once(ext_tps);
     TRACE_STATE
         .cmdline_cache
-        .init_once(Mutex::new(TraceCmdLineCache::new(
+        .init_once(SpinNoPreempt::new(TraceCmdLineCache::new(
             NonZero::new(TRACE_CMDLINE_CACHE_SIZE).unwrap(),
         )));
     start_trace_pipe_notify_worker();
