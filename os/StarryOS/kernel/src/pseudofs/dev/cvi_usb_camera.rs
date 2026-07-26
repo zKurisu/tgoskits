@@ -61,6 +61,10 @@ pub const CVI_CAMERA_IOCTL_INIT: u32 = 1;
 pub const CVI_CAMERA_IOCTL_GET_INFO: u32 = 2;
 pub const CVI_CAMERA_IOCTL_GET_FRAME: u32 = 3;
 pub const CVI_CAMERA_IOCTL_GET_YUV_FRAME: u32 = 4;
+/// Power-cycle the camera VBUS and perform a full hardware re-initialization.
+/// This is the strongest recovery mechanism — use when persistent EIO cannot
+/// be fixed by INIT alone.
+pub const CVI_CAMERA_IOCTL_HARD_RESET: u32 = 5;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -152,9 +156,28 @@ fn pinmux_usb_vbus_det_gpio_output_prep() {
 }
 
 fn enable_usb_vbus_gpio() {
+    set_vbus(true);
+}
+
+fn disable_usb_vbus_gpio() {
+    set_vbus(false);
+}
+
+fn set_vbus(enable: bool) {
     let gpio = unsafe { GPIO::new(iomap_usize(GPIO1_BASE, REG_MMIO_SIZE)) };
     gpio.pin(VBUS_GPIO_PIN).set_direction(Direction::Output);
-    gpio.pin(VBUS_GPIO_PIN).set(VBUS_GPIO_ACTIVE_HIGH);
+    gpio.pin(VBUS_GPIO_PIN).set(if VBUS_GPIO_ACTIVE_HIGH { enable } else { !enable });
+}
+
+/// Power-cycle the camera over VBUS: off → wait → on → wait for
+/// device to settle.  Caller should re-init afterwards.
+fn power_cycle_camera_vbus() {
+    info!("cvi-camera: power-cycling VBUS ...");
+    disable_usb_vbus_gpio();
+    ax_task::sleep(Duration::from_micros(500_000)); // 500 ms off
+    enable_usb_vbus_gpio();
+    ax_task::sleep(Duration::from_micros(2_000_000)); // 2 s on for device init
+    info!("cvi-camera: VBUS power-cycle complete");
 }
 
 fn map_usb_init_error(e: UsbError) -> &'static str {
@@ -294,6 +317,13 @@ fn capture_frame(session: &UsbCameraSession) -> Result<&'static [u8], &'static s
 }
 
 impl UsbCameraState {
+    /// Clear the USB camera session and JPU state so the next
+    /// `ensure_initialized` call performs a full hardware re-init.
+    fn reset(&mut self) {
+        self.session = None;
+        self.jpu = None;
+    }
+
     fn ensure_initialized(&mut self) -> VfsResult<()> {
         if self.session.is_none() {
             self.session = Some(init_usb_camera().map_err(|msg| {
@@ -381,9 +411,28 @@ impl DeviceOps for CviCamera {
         NodeFlags::NON_CACHEABLE | NodeFlags::STREAM
     }
 
+    fn close(&self, _exclusive: bool) {
+        info!("cvi-camera: close — clearing session and JPU state");
+        self.state.lock().reset();
+    }
+
     fn ioctl(&self, cmd: u32, arg: usize) -> VfsResult<usize> {
         match cmd {
             CVI_CAMERA_IOCTL_INIT => {
+                // Clear any stale session so full hardware init runs again.
+                self.state.lock().reset();
+                self.state.lock().ensure_initialized()?;
+                Ok(0)
+            }
+            CVI_CAMERA_IOCTL_HARD_RESET => {
+                // VBUS power-cycle: physically power-cycle the camera
+                // module, then do a full hardware init from scratch.
+                info!("cvi-camera: HARD_RESET ioctl — power-cycling VBUS ...");
+                self.state.lock().reset();
+                // Drop the lock before the long sleep so other ops can fail
+                // gracefully rather than blocking.
+                drop(self.state.lock());
+                power_cycle_camera_vbus();
                 self.state.lock().ensure_initialized()?;
                 Ok(0)
             }
