@@ -179,6 +179,19 @@ fn probe(probe: ProbeFdt<'_>) -> Result<(), OnProbeError> {
     };
     info!("[wifi] chip probe complete");
 
+    // Enable the SDIO1 controller IRQ now that the FDRV threads are running
+    // and the card IRQ callback is registered. The RX thread for D80 chips
+    // relies exclusively on CARD_INT → ISR wakeups (no polling kicker), so
+    // the host IRQ must be enabled before any LMAC command that waits for a
+    // firmware confirmation (including AP start).
+    if let Err(e) = axklib::irq::enable(irq_handle) {
+        let _ = axklib::irq::free(irq_handle);
+        return Err(OnProbeError::other(alloc::format!(
+            "[wifi] failed to enable SDIO1 IRQ {irq:?}: {e:?}"
+        )));
+    }
+    info!("[wifi] SDIO1 IRQ {irq:?} enabled");
+
     // Start an open SoftAP. SSID/channel are board policy expressed here, not in
     // the protocol stack. `start_ap_open` comes from the device's `WifiControl`
     // control plane.
@@ -190,14 +203,6 @@ fn probe(probe: ProbeFdt<'_>) -> Result<(), OnProbeError> {
         )));
     }
     info!("[wifi] SoftAP started, channel {AP_CHANNEL}");
-
-    if let Err(e) = axklib::irq::enable(irq_handle) {
-        let _ = axklib::irq::free(irq_handle);
-        return Err(OnProbeError::other(alloc::format!(
-            "[wifi] failed to enable SDIO1 IRQ {irq:?}: {e:?}"
-        )));
-    }
-    info!("[wifi] SDIO1 IRQ {irq:?} registered and enabled");
 
     // Attach the board's SoftAP link policy to the device, then register it
     // through the ordinary net device path. The runtime reads the policy back
