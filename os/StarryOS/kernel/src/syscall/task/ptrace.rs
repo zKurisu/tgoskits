@@ -260,7 +260,7 @@ pub fn sys_ptrace(request: u32, pid: usize, addr: usize, data: usize) -> AxResul
         PTRACE_SETSIGINFO => ptrace_setsiginfo(pid, data),
         PTRACE_GETREGSET => ptrace_getregset(pid, addr, data),
         PTRACE_SETREGSET => ptrace_setregset(pid, addr, data),
-        PTRACE_SEIZE => ptrace_seize(pid, addr),
+        PTRACE_SEIZE => ptrace_seize(pid, data),
         PTRACE_INTERRUPT => ptrace_interrupt(pid),
         _ => Err(AxError::Unsupported),
     }
@@ -598,7 +598,7 @@ fn ptrace_setfpregs(pid: usize, data: usize) -> AxResult<isize> {
     Err(AxError::Unsupported)
 }
 
-fn ptrace_seize(pid: usize, _addr: usize) -> AxResult<isize> {
+fn ptrace_seize(pid: usize, options: usize) -> AxResult<isize> {
     let tracer_pid = current().as_thread().proc_data.proc.pid();
     let tracee_pid = Pid::try_from(pid).map_err(|_| AxError::from(LinuxError::ESRCH))?;
     if tracee_pid == tracer_pid {
@@ -613,6 +613,7 @@ fn ptrace_seize(pid: usize, _addr: usize) -> AxResult<isize> {
     }
     tracee.set_ptrace_tracer_pid(tracer_pid);
     tracee.set_ptrace_attached();
+    tracee.set_ptrace_options(options);
     Ok(0)
 }
 

@@ -81,12 +81,6 @@ pub fn new_user_task(name: &str, mut uctx: UserContext, set_child_tid: usize) ->
                         {
                             continue;
                         }
-                        if matches!(
-                            thr.proc_data.take_ptrace_syscall_trace_for(tid),
-                            SyscallTraceState::Exit
-                        ) {
-                            let _ = ptrace_syscall_stop_current(thr, Signo::SIGTRAP, &mut uctx);
-                        }
                         if thr.proc_data.take_ptrace_exec_stop_pending() {
                             let _is_event =
                                 crate::syscall::ptrace_notify_exec(thr.proc_data.proc.pid());
@@ -95,6 +89,12 @@ pub fn new_user_task(name: &str, mut uctx: UserContext, set_child_tid: usize) ->
                             {
                                 continue;
                             }
+                        }
+                        if matches!(
+                            thr.proc_data.take_ptrace_syscall_trace_for(tid),
+                            SyscallTraceState::Exit
+                        ) {
+                            let _ = ptrace_syscall_stop_current(thr, Signo::SIGTRAP, &mut uctx);
                         }
                     }
                     ReturnReason::PageFault(addr, flags) => {
