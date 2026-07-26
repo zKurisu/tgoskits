@@ -52,6 +52,12 @@ if [ -x /test_runner.sh ]; then
     echo "[init] /test_runner.sh started pid=$!"
 fi
 
+if [ -x /root/init.sh ]; then
+    echo "[init] /root/init.sh detected, running init script"
+    /bin/sh /root/init.sh
+    echo "[init] /root/init.sh finished"
+fi
+
 cd "$HOME" || cd /
 
 cat > /tmp/starry-shrc <<'EOF'
