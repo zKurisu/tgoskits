@@ -585,7 +585,7 @@ fn mount_path_for_partition(partition: &PartitionInfo) -> String {
         .as_deref()
         .filter(|name| !name.is_empty())
         .unwrap_or("partition");
-    if name.to_ascii_lowercase().contains("boot") {
+    if name.to_ascii_lowercase().contains("boot") || partition.bootable {
         String::from("/boot")
     } else {
         format!("/{name}")

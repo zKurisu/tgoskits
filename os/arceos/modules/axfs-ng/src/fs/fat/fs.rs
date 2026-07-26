@@ -9,7 +9,7 @@ use slab::Slab;
 use super::{dir::FatDirNode, disk::SeekableDisk, ff, util::into_vfs_err};
 use crate::{
     block::{BlockRegion, FsBlockDevice},
-    os::sync::{IrqMutex as Mutex, IrqMutexGuard as MutexGuard},
+    os::sync::{SleepMutex as Mutex, SleepMutexGuard as MutexGuard},
 };
 
 pub struct FatFilesystemInner {
@@ -67,11 +67,10 @@ impl FatFilesystem {
 impl FatFilesystem {
     /// Locks the shared FAT state.
     ///
-    /// FAT operations may perform block I/O while this guard is held. The
-    /// current rootfs setup can also run in early atomic contexts where a
-    /// blocking mutex trips `might_sleep()`, so use an IRQ-safe mutex instead
-    /// of a sleepable lock to close same-CPU IRQ reentry without changing the
-    /// boot-time calling contract.
+    /// FAT operations perform block I/O while this guard is held, which may
+    /// sleep. A sleeping mutex (`SleepMutex`) allows the scheduler to
+    /// preempt the task during block I/O rather than spinning or disabling
+    /// interrupts for the entire I/O duration.
     pub(crate) fn lock(&self) -> MutexGuard<'_, FatFilesystemInner> {
         self.inner.lock()
     }
