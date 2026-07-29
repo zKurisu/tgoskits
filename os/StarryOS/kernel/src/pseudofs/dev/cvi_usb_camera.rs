@@ -1,8 +1,11 @@
 use core::{any::Any, time::Duration};
 
-use ax_errno::AxError;
+use ax_errno::{AxError, LinuxError};
 use ax_memory_addr::{PhysAddr, VirtAddr};
-use ax_runtime::hal::{mem::virt_to_phys, time::{busy_wait, monotonic_time_nanos}};
+use ax_runtime::hal::{
+    mem::virt_to_phys,
+    time::{busy_wait, monotonic_time_nanos},
+};
 use ax_sync::Mutex;
 use axfs_ng_vfs::{NodeFlags, VfsResult};
 use sg200x_bsp::{
@@ -81,10 +84,19 @@ struct UsbCameraSession {
     sel: uvc::UvcStreamSelection,
 }
 
+/// After this many successful decodes the JPU is transparently recycled
+/// (Drop + fresh construction) so that its internal state (BBC/GBU
+/// pointers, FIFOs, error counters) is reset via `hardware_init_at()`.
+/// The C reference driver calls `JPU_SWReset()` between *every* frame;
+/// we amortise a single full reset over this many frames to keep the
+/// overhead negligible (< 0.1 % at 2.5 fps).
+const JPU_RECYCLE_INTERVAL: u32 = 100;
+
 #[derive(Default)]
 struct UsbCameraState {
     session: Option<UsbCameraSession>,
     jpu: Option<JpuDecoder>,
+    jpu_decode_count: u32,
 }
 
 fn jpu_dma_to_phys(v: usize) -> usize {
@@ -166,7 +178,11 @@ fn disable_usb_vbus_gpio() {
 fn set_vbus(enable: bool) {
     let gpio = unsafe { GPIO::new(iomap_usize(GPIO1_BASE, REG_MMIO_SIZE)) };
     gpio.pin(VBUS_GPIO_PIN).set_direction(Direction::Output);
-    gpio.pin(VBUS_GPIO_PIN).set(if VBUS_GPIO_ACTIVE_HIGH { enable } else { !enable });
+    gpio.pin(VBUS_GPIO_PIN).set(if VBUS_GPIO_ACTIVE_HIGH {
+        enable
+    } else {
+        !enable
+    });
 }
 
 /// Power-cycle the camera over VBUS: off → wait → on → wait for
@@ -281,14 +297,19 @@ fn capture_frame(session: &UsbCameraSession) -> Result<&'static [u8], &'static s
     for attempt in 0..MAX_CAPTURE_TRIES {
         let n = uvc::uvc_capture_one_frame(dev, ep0, &session.sel).map_err(|e| {
             warn!("cvi-camera: capture failed: {e:?}");
+            trace_camera_capture_frame(false, attempt, 0);
             "frame capture failed"
         })?;
         last_n = n;
-        let frame = dwc2_ep0::dma_rx_slice(uvc::UVC_ASSEMBLED_JPEG_DMA_OFF, n)
-            .ok_or("DMA slice out of bounds")?;
+        let frame =
+            dwc2_ep0::dma_rx_slice(uvc::UVC_ASSEMBLED_JPEG_DMA_OFF, n).ok_or_else(|| {
+                trace_camera_capture_frame(false, attempt, n as u32);
+                "DMA slice out of bounds"
+            })?;
         let starts_jpeg = n >= 2 && frame[0] == 0xff && frame[1] == 0xd8;
         let ends_jpeg = n >= 2 && frame[n - 2] == 0xff && frame[n - 1] == 0xd9;
         if starts_jpeg && ends_jpeg && n >= MIN_VALID_JPEG_BYTES {
+            trace_camera_capture_frame(true, attempt + 1, n as u32);
             return Ok(frame);
         }
         last_msg = Some(if !starts_jpeg {
@@ -313,6 +334,7 @@ fn capture_frame(session: &UsbCameraSession) -> Result<&'static [u8], &'static s
         last_n,
         last_msg.unwrap_or("?")
     );
+    trace_camera_capture_frame(false, MAX_CAPTURE_TRIES, last_n as u32);
     dwc2_ep0::dma_rx_slice(uvc::UVC_ASSEMBLED_JPEG_DMA_OFF, last_n).ok_or("DMA slice out of bounds")
 }
 
@@ -322,14 +344,22 @@ impl UsbCameraState {
     fn reset(&mut self) {
         self.session = None;
         self.jpu = None;
+        self.jpu_decode_count = 0;
     }
 
     fn ensure_initialized(&mut self) -> VfsResult<()> {
         if self.session.is_none() {
-            self.session = Some(init_usb_camera().map_err(|msg| {
-                warn!("cvi-camera: init failed: {msg}");
-                AxError::Io
-            })?);
+            match init_usb_camera() {
+                Ok(session) => {
+                    self.session = Some(session);
+                    trace_camera_ensure_init(true);
+                }
+                Err(msg) => {
+                    warn!("cvi-camera: init failed: {msg}");
+                    trace_camera_ensure_init(false);
+                    return Err(AxError::Io);
+                }
+            }
         }
         Ok(())
     }
@@ -354,6 +384,20 @@ impl UsbCameraState {
     }
 
     fn ensure_jpu(&mut self) -> VfsResult<&mut JpuDecoder> {
+        // Proactively recycle the JPU every N successful decodes so its
+        // internal hardware state (BBC/GBU pointers, FIFOs, error counters)
+        // does not accumulate drift over hundreds of frames.  The C
+        // reference driver does this between *every* frame via JPU_SWReset;
+        // amortising to one Reset+Init every 100 frames keeps the overhead
+        // negligible (< 0.1 % at 2.5 fps).
+        if self.jpu.is_some() && self.jpu_decode_count >= JPU_RECYCLE_INTERVAL {
+            debug!(
+                "cvi-camera: recycling JPU after {} decodes",
+                self.jpu_decode_count
+            );
+            self.jpu = None;
+            self.jpu_decode_count = 0;
+        }
         if self.jpu.is_none() {
             let jpu_v = iomap_usize(JPU_REG_BASE, REG_MMIO_SIZE);
             let top_v = iomap_usize(TOP_BASE, TOP_MMIO_SIZE);
@@ -371,11 +415,13 @@ impl UsbCameraState {
 
     fn yuv_frame(&mut self) -> VfsResult<&'static [u8]> {
         let jpeg = self.frame()?;
-        let jpu = self.ensure_jpu()?;
-        let result = jpu.decode(jpeg).map_err(|e| {
-            warn!("cvi-camera: JPU decode failed: {e}");
+        let result = self.ensure_jpu()?.decode(jpeg).map_err(|e| {
+            warn!("cvi-camera: JPU decode failed ({e}), resetting JPU (next frame will re-init)");
+            self.jpu = None;
+            self.jpu_decode_count = 0;
             AxError::Io
         })?;
+        self.jpu_decode_count = self.jpu_decode_count.saturating_add(1);
         info!(
             "cvi-camera: JPU decode OK {}x{} yuv={} bytes",
             result.width,
@@ -398,16 +444,18 @@ ktracepoint::define_event_trace!(
     cvi_camera_ioctl,
     TP_kops(crate::tracepoint::KernelTraceAux),
     TP_system(camera),
-    TP_PROTO(cmd: u32, elapsed_us: u64, ok: bool),
+    TP_PROTO(cmd: u32, elapsed_us: u64, ok: bool, ret: i32),
     TP_STRUCT__entry{
         cmd: u32,
         elapsed_us: u64,
         ok: u8,
+        ret: i32,
     },
     TP_fast_assign{
         cmd: cmd,
         elapsed_us: elapsed_us,
         ok: ok as u8,
+        ret: ret,
     },
     TP_ident(__entry),
     TP_printk({
@@ -420,9 +468,47 @@ ktracepoint::define_event_trace!(
             _ => "?",
         };
         alloc::format!(
-            "{} (cmd={}) elapsed={}us ok={}",
-            name, __entry.cmd, __entry.elapsed_us, __entry.ok != 0
+            "{} (cmd={}) elapsed={}us ok={} ret={}",
+            name, __entry.cmd, __entry.elapsed_us, __entry.ok != 0, __entry.ret
         )
+    })
+);
+
+ktracepoint::define_event_trace!(
+    camera_ensure_init,
+    TP_kops(crate::tracepoint::KernelTraceAux),
+    TP_system(camera),
+    TP_PROTO(ok: bool),
+    TP_STRUCT__entry{
+        ok: u8,
+    },
+    TP_fast_assign{
+        ok: ok as u8,
+    },
+    TP_ident(__entry),
+    TP_printk({
+        alloc::format!("initialized={}", __entry.ok != 0)
+    })
+);
+
+ktracepoint::define_event_trace!(
+    camera_capture_frame,
+    TP_kops(crate::tracepoint::KernelTraceAux),
+    TP_system(camera),
+    TP_PROTO(ok: bool, attempts: u32, bytes: u32),
+    TP_STRUCT__entry{
+        ok: u8,
+        attempts: u32,
+        bytes: u32,
+    },
+    TP_fast_assign{
+        ok: ok as u8,
+        attempts: attempts,
+        bytes: bytes,
+    },
+    TP_ident(__entry),
+    TP_printk({
+        alloc::format!("ok={} attempts={} bytes={}", __entry.ok != 0, __entry.attempts, __entry.bytes)
     })
 );
 
@@ -485,7 +571,11 @@ impl DeviceOps for CviCamera {
             _ => Err(AxError::InvalidInput),
         };
         let elapsed_us = (monotonic_time_nanos() - start) / 1_000;
-        trace_cvi_camera_ioctl(cmd, elapsed_us, result.is_ok());
+        let ret = match &result {
+            Ok(_) => 0,
+            Err(e) => -(LinuxError::from(*e).code()),
+        };
+        trace_cvi_camera_ioctl(cmd, elapsed_us, result.is_ok(), ret);
         result
     }
 }
