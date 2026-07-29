@@ -4,10 +4,7 @@ use core::{future::poll_fn, task::Poll};
 
 use ax_errno::{AxError, AxResult};
 use ax_runtime::hal::cpu::uspace::UserContext;
-use ax_task::{
-    TaskInner, current,
-    future::block_on,
-};
+use ax_task::{TaskInner, current, future::block_on};
 use axpoll::IoEvents;
 use linux_raw_sys::general::{CLD_CONTINUED, CLD_STOPPED, CLD_TRAPPED};
 use starry_process::Pid;
