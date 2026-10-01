@@ -37,6 +37,19 @@ mkdir -p "$install_dir/model" "$install_dir/validation" "$install_dir/lib"
 install -m 0755 \
   "$src_dir/target/$AKARS_TENNIS_TARGET/release/akars-tennis-validator" \
   "$install_dir/akars-tennis-validator"
+install -m 0755 \
+  "$src_dir/target/$AKARS_TENNIS_TARGET/release/akars-tennis-live" \
+  "$install_dir/akars-tennis-live"
+"$AKARS_TENNIS_CC" \
+  -std=c11 -O2 -Wall -Wextra -Werror \
+  -I"$case_dir/include" \
+  "$case_dir/tools/cvi-camera-bench.c" \
+  -o "$install_dir/cvi-camera-bench"
+"$AKARS_TENNIS_CC" \
+  -std=c11 -O2 -Wall -Wextra -Werror \
+  -I"$case_dir/include" \
+  "$case_dir/tools/cvi-vpss-smoke.c" \
+  -o "$install_dir/cvi-vpss-smoke"
 install -m 0644 "$case_dir/model/yolov8n_tennis_v2.cvimodel" "$install_dir/model/"
 install -m 0644 "$case_dir/validation/"*.jpg "$case_dir/validation/images.txt" "$case_dir/validation/expected.txt" "$install_dir/validation/"
 install -m 0644 "$AKARS_TPU_SDK_DIR/lib/"*.so* "$install_dir/lib/"
@@ -78,5 +91,43 @@ export LD_LIBRARY_PATH=/akars_tennis/lib:${LD_LIBRARY_PATH:-}
 echo STARRY_AKA00_TENNIS_DETECT_OK
 RUN_SH
 chmod 0755 "$install_dir/run.sh"
+
+cat > "$install_dir/run-live.sh" <<'RUN_LIVE_SH'
+#!/bin/sh
+set -eu
+
+load_tpu_drivers() {
+  [ -e /dev/cvi-tpu0 ] && return 0
+
+  for module in cv181x_sys cv181x_base cv181x_tpu; do
+    if ! grep -q "^${module} " /proc/modules 2>/dev/null; then
+      insmod "/mnt/system/ko/${module}.ko"
+    fi
+  done
+}
+
+frames="${1:-100}"
+input="${2:-vpss-rgb}"
+verify_arg=""
+if [ "${3:-}" = "verify" ]; then
+  verify_arg="--verify-input"
+fi
+load_tpu_drivers
+
+cd /akars_tennis
+export LD_LIBRARY_PATH=/akars_tennis/lib:${LD_LIBRARY_PATH:-}
+
+exec ./akars-tennis-live \
+  model/yolov8n_tennis_v2.cvimodel \
+  --device /dev/cvi-usb-camera0 \
+  --vpss-device /dev/cvi-vpss0 \
+  --frames "$frames" \
+  --input "$input" \
+  $verify_arg \
+  --classes 1 \
+  --conf 0.5 \
+  --iou 0.5
+RUN_LIVE_SH
+chmod 0755 "$install_dir/run-live.sh"
 
 echo "installed: $install_dir"

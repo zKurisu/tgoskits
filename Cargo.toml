@@ -80,6 +80,7 @@ members = [
     "drivers/soc/rockchip/*",
     "drivers/test_crates/*",
     "drivers/tpu/*",
+    "drivers/video/*",
     "drivers/vpu/*",
     "drivers/usb/test_crates/*",
     "drivers/usb/usb-device/hid/*",
@@ -122,6 +123,10 @@ members = [
     "os/StarryOS/lkm/*",
 ]
 exclude = [
+    # Locally vendored upstream crate. It is a path dependency, not a project
+    # workspace member; keeping it excluded avoids rewriting unrelated
+    # upstream sources with this workspace's rustfmt settings.
+    "drivers/soc/sg200x-bsp",
     "os/StarryOS/lkm/linux-hello",
     "virtualization/test_crates",
 ]
@@ -246,6 +251,7 @@ realtek-rtl8125 = { version = "0.2.9", path = "drivers/net/realtek-rtl8125" }
 rockchip-pm = { version = "0.4.6", path = "drivers/soc/rockchip/rockchip-pm" }
 rockchip-soc = { version = "0.4.1", path = "drivers/soc/rockchip/rockchip-soc" }
 sg2002-tpu = { version = "0.3.5", path = "drivers/tpu/sg2002-tpu" }
+sg2002-vpss = { version = "0.1.0", path = "drivers/video/sg2002-vpss" }
 rdrive = { version = "0.23.5", path = "drivers/rdrive" }
 rdrive-macros = { version = "0.4.2", path = "drivers/rdrive-macros" }
 rsext4 = { version = "0.7.5", path = "components/rsext4" }
@@ -320,7 +326,7 @@ fdt-edit = "0.2.3"
 fdt-raw = "0.3"
 thiserror = { version = "2", default-features = false }
 tock-registers = "0.10"
-sg200x-bsp = { version = "0.7.1", default-features = false }
+sg200x-bsp = { version = "0.7.1", path = "drivers/soc/sg200x-bsp", default-features = false }
 simple-ahci = "0.1.1-preview.1"
 bcm2835-sdhci = "0.1.1-preview.1"
 x86 = "0.52"

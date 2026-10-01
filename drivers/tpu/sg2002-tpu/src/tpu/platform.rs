@@ -122,6 +122,7 @@ pub fn handle_tdma_irq(tdma: &TdmaRegs, tiu: &TiuRegs, state: &mut TpuRuntimeSta
 
 /// 轮询等待命令完成
 pub fn poll_cmdbuf_done(
+    tdma: &TdmaRegs,
     tiu: &TiuRegs,
     id_node: &CmdIdNode,
     state: &mut TpuRuntimeState,
@@ -129,10 +130,13 @@ pub fn poll_cmdbuf_done(
 ) -> Result<(), TpuError> {
     // 检查 TDMA
     if id_node.tdma_cmd_id > 0 {
+        // The OS IRQ glue clears TDMA_INT_MASK before waking the worker, but
+        // TDMA_SYNC_STATUS remains readable.  Read it here instead of relying
+        // on `state.reg_backup`: the IRQ handler and worker intentionally do
+        // not share a mutable runtime state.
+        state.reg_backup.tdma_sync_status = tdma.read(super::tdma::TDMA_SYNC_STATUS);
         let tdma_id = state.reg_backup.tdma_sync_status >> 16;
-        if tdma_id < id_node.tdma_cmd_id {
-            // return Err(TpuError::TdmaError(tdma_id));
-        }
+        validate_tdma_completion(tdma_id, id_node.tdma_cmd_id)?;
     }
 
     // 轮询 TIU
@@ -162,6 +166,32 @@ pub fn poll_cmdbuf_done(
     }
 
     Ok(())
+}
+
+/// Validate that the TDMA engine reached the final command in the submitted
+/// descriptor list.
+fn validate_tdma_completion(observed_id: u32, expected_id: u32) -> Result<(), TpuError> {
+    if observed_id < expected_id {
+        Err(TpuError::TdmaError(observed_id))
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn incomplete_tdma_command_list_is_rejected() {
+        assert_eq!(validate_tdma_completion(3, 4), Err(TpuError::TdmaError(3)));
+    }
+
+    #[test]
+    fn completed_tdma_command_list_is_accepted() {
+        assert_eq!(validate_tdma_completion(4, 4), Ok(()));
+        assert_eq!(validate_tdma_completion(5, 4), Ok(()));
+    }
 }
 
 /// 执行 DMA buffer
@@ -249,7 +279,7 @@ pub unsafe fn run_dmabuf(
         }
 
         // 检查完成状态
-        poll_cmdbuf_done(tiu, &id_node, state, &timeout_checker)?;
+        poll_cmdbuf_done(tdma, tiu, &id_node, state, &timeout_checker)?;
     }
 
     // 禁用 PMU

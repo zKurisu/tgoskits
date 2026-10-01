@@ -37,6 +37,8 @@ mod rtc;
 #[cfg(feature = "sg2002")]
 pub mod tpu;
 pub mod tty;
+#[cfg(feature = "sg2002")]
+mod vpss;
 
 #[cfg(feature = "sg2002")]
 mod cvi_usb_camera;
@@ -687,6 +689,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
                     NodeType::CharacterDevice,
                     DeviceId::new(240, 0),
                     Arc::new(tpu),
+                ),
+            );
+        }
+        if let Some(vpss) = vpss::VpssDevice::probe() {
+            root.add(
+                "cvi-vpss0",
+                Device::new(
+                    fs.clone(),
+                    NodeType::CharacterDevice,
+                    DeviceId::new(240, 2),
+                    Arc::new(vpss),
                 ),
             );
         }

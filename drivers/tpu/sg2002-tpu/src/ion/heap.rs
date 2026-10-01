@@ -10,12 +10,43 @@ use super::{
     types::{IonBuffer, IonHeapType},
 };
 
+fn dma_range_fits_tpu(start: u64, size: usize) -> bool {
+    let Some(last) = size
+        .checked_sub(1)
+        .and_then(|offset| start.checked_add(offset as u64))
+    else {
+        return false;
+    };
+    last <= u64::from(u32::MAX)
+}
+
 /// Ion 堆管理器
 pub struct IonHeapManager;
 
 impl Default for IonHeapManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dma_range_fits_tpu;
+
+    #[test]
+    fn rejects_dma_range_starting_above_4gib() {
+        assert!(!dma_range_fits_tpu(0x1_0000_0000, 4096));
+    }
+
+    #[test]
+    fn rejects_dma_range_crossing_4gib() {
+        assert!(!dma_range_fits_tpu(0xffff_f000, 8192));
+    }
+
+    #[test]
+    fn accepts_dma_range_below_4gib() {
+        assert!(dma_range_fits_tpu(0x1000, 4096));
+        assert!(dma_range_fits_tpu(0xffff_f000, 4096));
     }
 }
 
@@ -66,7 +97,21 @@ impl IonHeapManager {
     /// 分配 DMA 内存
     fn alloc_dma_buffer(&self, size: usize, align: usize) -> IonResult<DMAInfo> {
         let layout = Layout::from_size_align(size, align).map_err(|_| IonError::InvalidArg)?;
-
-        unsafe { ax_dma::alloc_coherent_pages(layout).map_err(|_| IonError::NoMemory) }
+        // SG2002 multimedia engines and TPU TDMA program raw 32-bit physical
+        // addresses without an IOMMU.  A generic coherent allocation may sit
+        // above 4 GiB and would then be silently truncated in the hardware
+        // array-base registers.
+        let dma =
+            unsafe { ax_dma::alloc_coherent_pages_dma32(layout).map_err(|_| IonError::NoMemory)? };
+        if !dma_range_fits_tpu(dma.bus_addr.as_u64(), size) {
+            error!(
+                "ION DMA32 allocator returned unreachable range: paddr=0x{:x}, size={}",
+                dma.bus_addr.as_u64(),
+                size
+            );
+            unsafe { ax_dma::dealloc_coherent_pages(dma, layout) };
+            return Err(IonError::NoMemory);
+        }
+        Ok(dma)
     }
 }

@@ -10,5 +10,9 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 zune-core = "0.5"
 zune-jpeg = "0.5"
 
+[[bin]]
+name = "akars-tennis-live"
+path = "src/live.rs"
+
 [profile.release]
 lto = "thin"

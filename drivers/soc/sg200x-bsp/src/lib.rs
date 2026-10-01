@@ -1,0 +1,81 @@
+//! SG2002 BSP (Board Support Package)
+//!
+//! 本 crate 提供 SG2002 芯片的底层硬件抽象层驱动程序。
+//!
+//! # 模块
+//!
+//! - `pinmux`: 引脚复用控制驱动
+//! - `gpio`: GPIO 控制驱动
+//! - `dma`: DMA 控制驱动 (Synopsys DesignWare AXI DMA)
+//! - `sdmmc`: SD/MMC 控制驱动
+//! - `i2c`: I2C 控制驱动
+//! - `pwm`: PWM 控制驱动
+//! - `usb`: USB 主机栈（DWC2 控制器）+ 类协议（UVC / Mass Storage）
+//! - `ethernet` (feature `ethernet`): 板载 cvitek-eth (DWMAC + 内部 EPHY) 驱动
+//! - `jpu`: JPEG Processing Unit 硬件解码驱动
+//! - `soc`: SoC 外设 MMIO 物理基址常量
+//! - `utils`: 与具体外设无关的内部 helper（D-cache / DMA 一致性、忙等延时等）
+//!
+//! # I2C 使用示例
+//!
+//! ```rust,ignore
+//! use sg200x_bsp::i2c::{I2c, I2cInstance, I2cSpeed};
+//!
+//! // 创建 I2C0 驱动实例
+//! let mut i2c = unsafe { I2c::new(I2cInstance::I2c0) };
+//!
+//! // 初始化 I2C，使用快速模式
+//! i2c.init(I2cSpeed::Fast);
+//!
+//! // 写入数据到设备
+//! let slave_addr = 0x50;
+//! let data = [0x00, 0x01, 0x02];
+//! i2c.write(slave_addr, &data).unwrap();
+//!
+//! // 从设备读取数据
+//! let mut buf = [0u8; 4];
+//! i2c.read(slave_addr, &mut buf).unwrap();
+//! ```
+//!
+//! # PWM 使用示例
+//!
+//! ```rust,ignore
+//! use sg200x_bsp::pwm::{Pwm, PwmChannel, PwmMode, PwmPolarity};
+//! use sg200x_bsp::soc::PWM0_BASE;
+//!
+//! // 创建 PWM0 控制器驱动实例
+//! let mut pwm = unsafe { Pwm::new(PWM0_BASE) };
+//!
+//! // 配置通道 0: 1KHz, 50% 占空比
+//! pwm.configure_channel(
+//!     PwmChannel::Channel0,
+//!     1_000,      // 1KHz 频率
+//!     50,         // 50% 占空比
+//!     PwmPolarity::ActiveHigh,
+//! ).unwrap();
+//!
+//! // 使能 IO 输出并启动
+//! pwm.enable_output(PwmChannel::Channel0);
+//! pwm.start(PwmChannel::Channel0);
+//! ```
+
+#![no_std]
+#![recursion_limit = "512"]
+
+#[cfg(feature = "ethernet")]
+extern crate alloc;
+
+pub mod dma;
+#[cfg(feature = "ethernet")]
+pub mod ethernet;
+pub mod gpio;
+pub mod i2c;
+pub mod jpu;
+pub mod mp;
+pub mod pinmux;
+pub mod pwm;
+pub mod rstc;
+pub mod sdmmc;
+pub mod soc;
+pub mod usb;
+pub mod utils;

@@ -6,6 +6,11 @@ use image::{
 use zune_core::{bytestream::ZCursor, colorspace::ColorSpace, options::DecoderOptions};
 use zune_jpeg::JpegDecoder;
 
+use crate::camera::{
+    CAMERA_FORMAT_YUV400, CAMERA_FORMAT_YUV420_PLANAR, CAMERA_FORMAT_YUV422_PLANAR,
+    CAMERA_FORMAT_YUV440_PLANAR, CAMERA_FORMAT_YUV444_PLANAR,
+};
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ImagePreprocessTiming {
     pub src_w: i32,
@@ -123,6 +128,225 @@ impl ImagePreprocessor {
             resize_us,
         })
     }
+
+    /// Convert a JPU-produced planar YUV frame directly into the model's RGB
+    /// planar tensor. This avoids software JPEG decode and avoids allocating a
+    /// full intermediate RGB image. The selected 640x480 camera mode only
+    /// needs color conversion plus 80-row letterbox padding for a 640x640
+    /// model; the nearest-neighbour branch is retained for other dimensions.
+    pub fn yuv_to_rgb_planar(
+        &mut self,
+        yuv: &[u8],
+        src_w: u32,
+        src_h: u32,
+        format: u8,
+        dst: &mut [u8],
+        dst_w: i32,
+        dst_h: i32,
+    ) -> Result<ImagePreprocessTiming, ImageBridgeError> {
+        if yuv.is_empty() || src_w == 0 || src_h == 0 {
+            return Err(ImageBridgeError::InvalidInput("empty YUV input"));
+        }
+        let layout = YuvLayout::new(src_w, src_h, format)?;
+        if yuv.len() < layout.required_len {
+            return Err(ImageBridgeError::InvalidInput(
+                "planar YUV input is smaller than its aligned layout",
+            ));
+        }
+
+        let (dst_w, dst_h) = valid_dimensions(dst_w, dst_h)?;
+        let channel_size = checked_image_len(dst_w, dst_h, 1)?;
+        let required_len = checked_image_len(dst_w, dst_h, 3)?;
+        if dst.len() < required_len {
+            return Err(ImageBridgeError::InvalidInput(
+                "destination tensor buffer is too small",
+            ));
+        }
+
+        let scale = (dst_w as f64 / src_w as f64).min(dst_h as f64 / src_h as f64);
+        let resized_w = ((src_w as f64 * scale) as u32).max(1);
+        let resized_h = ((src_h as f64 * scale) as u32).max(1);
+        let pad_left = (dst_w - resized_w) / 2;
+        let pad_top = (dst_h - resized_h) / 2;
+
+        let start = Instant::now();
+        clear_letterbox_padding(
+            dst,
+            dst_w,
+            dst_h,
+            resized_w,
+            resized_h,
+            channel_size,
+            pad_left,
+            pad_top,
+        );
+        resize_convert_yuv_planar(
+            yuv,
+            layout,
+            src_w,
+            src_h,
+            dst,
+            dst_w,
+            resized_w,
+            resized_h,
+            channel_size,
+            pad_left,
+            pad_top,
+        );
+
+        Ok(ImagePreprocessTiming {
+            src_w: src_w as i32,
+            src_h: src_h as i32,
+            decode_us: 0,
+            resize_us: elapsed_us(start),
+        })
+    }
+}
+
+#[derive(Clone, Copy)]
+struct YuvLayout {
+    y_stride: usize,
+    chroma_stride: usize,
+    u_offset: usize,
+    v_offset: usize,
+    horizontal_subsample: usize,
+    vertical_subsample: usize,
+    monochrome: bool,
+    required_len: usize,
+}
+
+impl YuvLayout {
+    fn new(width: u32, height: u32, format: u8) -> Result<Self, ImageBridgeError> {
+        let (aligned_width, aligned_height, horizontal_subsample, vertical_subsample) = match format
+        {
+            CAMERA_FORMAT_YUV420_PLANAR => {
+                (width.div_ceil(16) * 16, height.div_ceil(16) * 16, 2, 2)
+            }
+            CAMERA_FORMAT_YUV422_PLANAR => (width.div_ceil(16) * 16, height.div_ceil(8) * 8, 2, 1),
+            CAMERA_FORMAT_YUV440_PLANAR => (width.div_ceil(8) * 8, height.div_ceil(16) * 16, 1, 2),
+            CAMERA_FORMAT_YUV444_PLANAR | CAMERA_FORMAT_YUV400 => {
+                (width.div_ceil(8) * 8, height.div_ceil(8) * 8, 1, 1)
+            }
+            _ => {
+                return Err(ImageBridgeError::InvalidInput(
+                    "unsupported planar YUV format",
+                ));
+            }
+        };
+        let y_stride = aligned_width as usize;
+        let aligned_height = aligned_height as usize;
+        let luma_len =
+            y_stride
+                .checked_mul(aligned_height)
+                .ok_or(ImageBridgeError::InvalidInput(
+                    "YUV dimensions overflow usize",
+                ))?;
+        let monochrome = format == CAMERA_FORMAT_YUV400;
+        let chroma_stride = if monochrome {
+            0
+        } else {
+            y_stride / horizontal_subsample
+        };
+        let chroma_len = if monochrome {
+            0
+        } else {
+            chroma_stride
+                .checked_mul(aligned_height / vertical_subsample)
+                .ok_or(ImageBridgeError::InvalidInput(
+                    "YUV dimensions overflow usize",
+                ))?
+        };
+        let chroma_total = chroma_len
+            .checked_mul(2)
+            .ok_or(ImageBridgeError::InvalidInput(
+                "YUV dimensions overflow usize",
+            ))?;
+        let required_len =
+            luma_len
+                .checked_add(chroma_total)
+                .ok_or(ImageBridgeError::InvalidInput(
+                    "YUV dimensions overflow usize",
+                ))?;
+        Ok(Self {
+            y_stride,
+            chroma_stride,
+            u_offset: luma_len,
+            v_offset: luma_len + chroma_len,
+            horizontal_subsample,
+            vertical_subsample,
+            monochrome,
+            required_len,
+        })
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resize_convert_yuv_planar(
+    src: &[u8],
+    layout: YuvLayout,
+    src_w: u32,
+    src_h: u32,
+    dst: &mut [u8],
+    dst_w: u32,
+    resized_w: u32,
+    resized_h: u32,
+    channel_size: usize,
+    pad_left: u32,
+    pad_top: u32,
+) {
+    let (r_plane, rest) = dst.split_at_mut(channel_size);
+    let (g_plane, b_plane) = rest.split_at_mut(channel_size);
+    let same_size = src_w == resized_w && src_h == resized_h;
+
+    for dy in 0..resized_h as usize {
+        let sy = if same_size {
+            dy
+        } else {
+            dy * src_h as usize / resized_h as usize
+        };
+        let dst_row = (pad_top as usize + dy) * dst_w as usize + pad_left as usize;
+        let y_row = sy * layout.y_stride;
+        let chroma_row = sy / layout.vertical_subsample * layout.chroma_stride;
+        for dx in 0..resized_w as usize {
+            let sx = if same_size {
+                dx
+            } else {
+                dx * src_w as usize / resized_w as usize
+            };
+            let y = src[y_row + sx];
+            let (u, v) = if layout.monochrome {
+                (128, 128)
+            } else {
+                let chroma_index = chroma_row + sx / layout.horizontal_subsample;
+                (
+                    src[layout.u_offset + chroma_index],
+                    src[layout.v_offset + chroma_index],
+                )
+            };
+            let (r, g, b) = yuv_to_rgb(y, u, v);
+            let dst_index = dst_row + dx;
+            r_plane[dst_index] = r;
+            g_plane[dst_index] = g;
+            b_plane[dst_index] = b;
+        }
+    }
+}
+
+#[inline]
+fn yuv_to_rgb(y: u8, u: u8, v: u8) -> (u8, u8, u8) {
+    let y = i32::from(y) << 8;
+    let u = i32::from(u) - 128;
+    let v = i32::from(v) - 128;
+    (
+        clamp_u8((y + 359 * v + 128) >> 8),
+        clamp_u8((y - 88 * u - 183 * v + 128) >> 8),
+        clamp_u8((y + 454 * u + 128) >> 8),
+    )
+}
+
+#[inline]
+fn clamp_u8(value: i32) -> u8 {
+    value.clamp(0, 255) as u8
 }
 
 pub fn draw_detections(
@@ -562,7 +786,10 @@ mod tests {
     use image::{ExtendedColorType, Rgb, RgbImage, codecs::jpeg::JpegEncoder};
 
     use super::{ImagePreprocessor, draw_detection, pack_rgb_planar_copy, text_size};
-    use crate::detector::{Box2d, Detection};
+    use crate::{
+        camera::CAMERA_FORMAT_YUV422_PLANAR,
+        detector::{Box2d, Detection},
+    };
 
     #[test]
     fn letterboxes_and_packs_rgb_planes() {
@@ -613,6 +840,24 @@ mod tests {
                 .mjpeg_to_rgb_planar(&jpeg, &mut dst, 1, 1)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn converts_aligned_yuv422_to_rgb_planes() {
+        // A 2x2 4:2:2 frame is stored in the JPU's 16x8 aligned layout:
+        // 128 luma bytes followed by two 64-byte chroma planes.
+        let mut yuv = vec![0; 256];
+        yuv[..128].fill(255);
+        yuv[128..].fill(128);
+        let mut dst = vec![0; 2 * 2 * 3];
+        let mut preprocessor = ImagePreprocessor::new();
+
+        let timing = preprocessor
+            .yuv_to_rgb_planar(&yuv, 2, 2, CAMERA_FORMAT_YUV422_PLANAR, &mut dst, 2, 2)
+            .unwrap();
+
+        assert_eq!((timing.src_w, timing.src_h), (2, 2));
+        assert!(dst.iter().all(|value| *value == 255));
     }
 
     #[test]

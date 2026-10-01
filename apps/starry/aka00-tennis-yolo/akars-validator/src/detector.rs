@@ -136,9 +136,136 @@ pub fn parse_yolov8_output(
     detections
 }
 
+/// Parse a signed INT8 YOLOv8 tensor without expanding the complete tensor to
+/// FP32 first. Class scores are compared in the quantized domain; only boxes
+/// that pass the confidence threshold have their coordinates dequantized.
+pub fn parse_yolov8_i8_output(
+    data: &[i8],
+    shape: [i32; 4],
+    classes_num: i32,
+    confidence_threshold: f32,
+    qscale: f32,
+    zero_point: i32,
+) -> Vec<Detection> {
+    parse_yolov8_quantized_output(
+        data.len(),
+        |index| i32::from(data[index]),
+        shape,
+        classes_num,
+        confidence_threshold,
+        qscale,
+        zero_point,
+    )
+}
+
+/// UINT8 variant of [`parse_yolov8_i8_output`].
+pub fn parse_yolov8_u8_output(
+    data: &[u8],
+    shape: [i32; 4],
+    classes_num: i32,
+    confidence_threshold: f32,
+    qscale: f32,
+    zero_point: i32,
+) -> Vec<Detection> {
+    parse_yolov8_quantized_output(
+        data.len(),
+        |index| i32::from(data[index]),
+        shape,
+        classes_num,
+        confidence_threshold,
+        qscale,
+        zero_point,
+    )
+}
+
+fn parse_yolov8_quantized_output(
+    data_len: usize,
+    raw_at: impl Fn(usize) -> i32,
+    shape: [i32; 4],
+    classes_num: i32,
+    confidence_threshold: f32,
+    qscale: f32,
+    zero_point: i32,
+) -> Vec<Detection> {
+    if shape[0] <= 0
+        || shape[1] <= 4
+        || shape[2] <= 0
+        || classes_num <= 0
+        || classes_num > shape[1] - 4
+        || !qscale.is_finite()
+        || qscale <= 0.0
+    {
+        return Vec::new();
+    }
+
+    let batch = shape[0] as usize;
+    let channels = shape[1] as usize;
+    let num_boxes = shape[2] as usize;
+    let classes_num = classes_num as usize;
+    let Some(required_len) = batch
+        .checked_mul(channels)
+        .and_then(|value| value.checked_mul(num_boxes))
+    else {
+        return Vec::new();
+    };
+    if data_len < required_len {
+        return Vec::new();
+    }
+
+    // qscale is positive, so ordering quantized values is equivalent to
+    // ordering their FP32 values. This keeps rejected candidates entirely in
+    // the quantized domain.
+    let mut detections = Vec::new();
+    for b in 0..batch {
+        let batch_base = b * channels * num_boxes;
+        let cx_row = batch_base;
+        let cy_row = batch_base + num_boxes;
+        let w_row = batch_base + 2 * num_boxes;
+        let h_row = batch_base + 3 * num_boxes;
+
+        for j in 0..num_boxes {
+            let mut max_raw = i32::MIN;
+            let mut max_cls = 0usize;
+            for c in 0..classes_num {
+                let raw_score = raw_at(batch_base + (4 + c) * num_boxes + j);
+                if raw_score > max_raw {
+                    max_raw = raw_score;
+                    max_cls = c;
+                }
+            }
+
+            let max_score = dequantize(max_raw, qscale, zero_point);
+            if max_score <= confidence_threshold {
+                continue;
+            }
+
+            detections.push(Detection {
+                bbox: Box2d {
+                    x: dequantize(raw_at(cx_row + j), qscale, zero_point),
+                    y: dequantize(raw_at(cy_row + j), qscale, zero_point),
+                    w: dequantize(raw_at(w_row + j), qscale, zero_point),
+                    h: dequantize(raw_at(h_row + j), qscale, zero_point),
+                },
+                cls: max_cls as i32,
+                score: max_score,
+                batch_idx: b as i32,
+            });
+        }
+    }
+    detections
+}
+
+#[inline]
+fn dequantize(raw: i32, qscale: f32, zero_point: i32) -> f32 {
+    (raw - zero_point) as f32 * qscale
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Box2d, Detection, cal_iou, correct_yolo_boxes, nms, parse_yolov8_output};
+    use super::{
+        Box2d, Detection, cal_iou, correct_yolo_boxes, nms, parse_yolov8_i8_output,
+        parse_yolov8_output, parse_yolov8_u8_output,
+    };
 
     #[test]
     fn iou_identical_boxes_is_one() {
@@ -195,6 +322,36 @@ mod tests {
         assert_eq!(detections.len(), 1);
         assert_eq!(detections[0].bbox.x, 20.0);
         assert_eq!(detections[0].score, 0.9);
+    }
+
+    #[test]
+    fn parses_i8_output_after_quantized_threshold() {
+        let data = [
+            10, 20, // cx
+            11, 21, // cy
+            4, 5, // w
+            6, 7, // h
+            4, 9, // class 0
+        ];
+        let detections = parse_yolov8_i8_output(&data, [1, 5, 2, 1], 1, 0.5, 0.1, 0);
+        assert_eq!(detections.len(), 1);
+        assert!((detections[0].bbox.x - 2.0).abs() < 0.0001);
+        assert!((detections[0].score - 0.9).abs() < 0.0001);
+    }
+
+    #[test]
+    fn parses_u8_output_with_asymmetric_zero_point() {
+        let data = [
+            110, 120, // cx
+            111, 121, // cy
+            104, 105, // w
+            106, 107, // h
+            104, 109, // class 0
+        ];
+        let detections = parse_yolov8_u8_output(&data, [1, 5, 2, 1], 1, 0.5, 0.1, 100);
+        assert_eq!(detections.len(), 1);
+        assert!((detections[0].bbox.x - 2.0).abs() < 0.0001);
+        assert!((detections[0].score - 0.9).abs() < 0.0001);
     }
 
     #[test]

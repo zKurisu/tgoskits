@@ -7292,10 +7292,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "sg2002-vpss"
+version = "0.1.0"
+
+[[package]]
 name = "sg200x-bsp"
 version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbf592a879bf76d524c19b13e0294d9564967c3a90e7d93d74cd6abed97d965e"
 dependencies = [
  "bit-struct",
  "log",
@@ -7710,6 +7712,7 @@ dependencies = [
  "riscv",
  "scope-local",
  "sg2002-tpu",
+ "sg2002-vpss",
  "sg200x-bsp",
  "slab",
  "some-serial",

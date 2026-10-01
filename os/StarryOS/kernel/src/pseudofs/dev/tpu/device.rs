@@ -47,6 +47,7 @@ use sg2002_tpu::{
         },
     },
 };
+use starry_vm::{VmMutPtr, VmPtr};
 
 use crate::{
     file::{get_file_like, ion::IonBufferFile},
@@ -272,7 +273,7 @@ fn tpu_worker(hw: Arc<Sg2002Tpu>) {
         // 跑硬件：内部等待 TDMA 完成时经注入的 tpu_wait_irq 睡眠让出 CPU。
         task.ret = hw
             .run_one(task.seq_no, task.vaddr, task.paddr)
-            .map_or(-1, |_| 0);
+            .map_or_else(|error| error.as_errno(), |_| 0);
 
         // 入队完成结果并唤醒等待者。若提交线程从不 wait（或 wait 前退出），其
         // 完成项会滞留并攥住 `Arc<IonBuffer>` 永不释放——故对 DONE_LIST 设上限，
@@ -342,8 +343,13 @@ impl TpuDevice {
 
     /// 提交 DMA buffer 任务：解析 fd → 入队 → 唤醒 worker → 立即返回。
     fn submit_dmabuf(&self, arg: usize) -> Result<usize, TpuError> {
-        // 从用户空间读取参数
-        let submit_arg = unsafe { &*(arg as *const CviSubmitDmaArg) };
+        // 从用户空间复制参数，不能直接解引用用户指针。
+        let submit_arg = unsafe {
+            (arg as *const CviSubmitDmaArg)
+                .vm_read_uninit()
+                .map_err(|_| TpuError::InvalidDmabuf)?
+                .assume_init()
+        };
 
         debug!(
             "[TPU] submit dmabuf: fd={}, seq_no={}",
@@ -396,7 +402,13 @@ impl TpuDevice {
     /// 取结果。用调用线程 tid 与用户 seq_no 组成复合键，隔离跨进程/线程的相同
     /// seq_no——否则两个进程都从 seq 0 开始会互相取走对方的完成项。
     fn wait_dmabuf(&self, arg: usize) -> Result<usize, TpuError> {
-        let wait_arg = unsafe { &mut *(arg as *mut CviWaitDmaArg) };
+        let user_pointer = arg as *mut CviWaitDmaArg;
+        let mut wait_arg = unsafe {
+            user_pointer
+                .vm_read_uninit()
+                .map_err(|_| TpuError::InvalidDmabuf)?
+                .assume_init()
+        };
         let seq_no = wait_arg.seq_no;
         let tid = ax_task::current().id().as_u64();
 
@@ -420,13 +432,19 @@ impl TpuDevice {
         match found {
             Some(task) => {
                 wait_arg.ret = task.ret;
-                if task.ret != 0 {
-                    return Err(TpuError::Timeout);
-                }
+                user_pointer
+                    .vm_write(wait_arg)
+                    .map_err(|_| TpuError::InvalidDmabuf)?;
+                // Match the vendor ABI: ioctl itself succeeds once a result
+                // was found; hardware failure is returned in `wait_arg.ret`.
+                // Returning an ioctl error here makes cviruntime retry forever.
                 Ok(0)
             }
             None => {
                 wait_arg.ret = -1;
+                user_pointer
+                    .vm_write(wait_arg)
+                    .map_err(|_| TpuError::InvalidDmabuf)?;
                 warn!(
                     "[TPU] wait dmabuf: (tid={}, seq_no={}) not found (timed_out={})",
                     tid, seq_no, timed_out
@@ -438,14 +456,24 @@ impl TpuDevice {
 
     /// 刷新 DMA buffer 缓存 (通过物理地址)
     fn cache_flush(&self, arg: usize) -> Result<usize, TpuError> {
-        let flush_arg = unsafe { &*(arg as *const CviCacheOpArg) };
+        let flush_arg = unsafe {
+            (arg as *const CviCacheOpArg)
+                .vm_read_uninit()
+                .map_err(|_| TpuError::InvalidDmabuf)?
+                .assume_init()
+        };
         self.hw.cache_flush_paddr(flush_arg.paddr, flush_arg.size)?;
         Ok(0)
     }
 
     /// 无效化 DMA buffer 缓存 (通过物理地址)
     fn cache_invalidate(&self, arg: usize) -> Result<usize, TpuError> {
-        let invalidate_arg = unsafe { &*(arg as *const CviCacheOpArg) };
+        let invalidate_arg = unsafe {
+            (arg as *const CviCacheOpArg)
+                .vm_read_uninit()
+                .map_err(|_| TpuError::InvalidDmabuf)?
+                .assume_init()
+        };
         self.hw
             .cache_invalidate_paddr(invalidate_arg.paddr, invalidate_arg.size)?;
         Ok(0)
@@ -453,7 +481,9 @@ impl TpuDevice {
 
     /// 刷新 DMA buffer 缓存 (通过 fd)
     fn dmabuf_flush_fd(&self, arg: usize) -> Result<usize, TpuError> {
-        let fd = arg as i32;
+        let fd = (arg as *const i32)
+            .vm_read()
+            .map_err(|_| TpuError::InvalidDmabuf)?;
         debug!("TPU dmabuf flush fd: {}", fd);
         let buffer = self.lookup_ion_buffer(fd)?;
         let paddr = buffer.dma_info.bus_addr.as_u64();
@@ -465,7 +495,9 @@ impl TpuDevice {
 
     /// 无效化 DMA buffer 缓存 (通过 fd)
     fn dmabuf_invld_fd(&self, arg: usize) -> Result<usize, TpuError> {
-        let fd = arg as i32;
+        let fd = (arg as *const i32)
+            .vm_read()
+            .map_err(|_| TpuError::InvalidDmabuf)?;
         debug!("TPU dmabuf invalidate fd: {}", fd);
         let buffer = self.lookup_ion_buffer(fd)?;
         let paddr = buffer.dma_info.bus_addr.as_u64();

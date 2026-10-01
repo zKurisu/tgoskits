@@ -84,7 +84,11 @@ apps/starry/aka00-tennis-yolo/install/sg2002_riscv64_musl/akars_tennis/
 ```text
 akars_tennis/
 ├── akars-tennis-validator
+├── akars-tennis-live
+├── cvi-camera-bench
+├── cvi-vpss-smoke
 ├── run.sh
+├── run-live.sh
 ├── lib/
 ├── model/
 │   └── yolov8n_tennis_v2.cvimodel
@@ -96,9 +100,15 @@ akars_tennis/
     └── tennis-ball-plant.jpg
 ```
 
+`cvi-camera-bench` 是 `/dev/cvi-usb-camera0` 异步采集 ABI 的板端验收工具；
+它不参与固定图片正确性测试。
+
 其中：
 
 - `akars-tennis-validator` 是交叉编译出的 RISC-V Linux 用户态程序。
+- `akars-tennis-live` 从异步摄像头读取帧，支持 `mjpeg` 软件解码基线、
+  `jpu-yuv` 硬件解码 + CPU 预处理基线，以及默认的 `vpss-rgb` 全硬件预处理路径，
+  并串联 TPU 前向与 INT8 优先后处理。
 - `run.sh` 是板端运行入口。
 - `lib/` 包含 CVI runtime 以及程序运行需要的动态库。
 - `model/` 包含 `.cvimodel`。
@@ -204,6 +214,185 @@ AKARS_TENNIS_VALIDATE_FAIL reason=...
 ```
 
 常见失败原因包括模型文件缺失、图片缺失、runtime 动态库缺失、TPU 驱动节点不可用、推理结果与 expected 不匹配。
+
+## 实时整链路基线
+
+固定图片验证通过后，先运行10帧 JPU 实时短测：
+
+```sh
+cd /akars_tennis
+./run-live.sh 10
+```
+
+工具只在结束时输出三行汇总，不逐帧写盘：
+
+```text
+AKARS_LIVE_SUMMARY input=jpu_yuv frames=10 wall_us=... fps_x100=... request_avg_us=... capture_avg_us=... preprocess_avg_us=... forward_avg_us=... postprocess_avg_us=... total_avg_us=... total_max_us=...
+AKARS_LIVE_RESULT first_sequence=... last_sequence=... skipped_sequences=... frames_with_detections=... detections_total=...
+AKARS_LIVE_CAMERA calls=... success=... failed=... retries=... invalid=... usb_errors=... published=... overwritten=... avg_call_us=... max_frame_us=...
+```
+
+`run-live.sh` 的第二个参数选择输入路径，默认是 `jpu-yuv`：内核 JPU 把 MJPEG
+解码为 planar YUV，用户态直接转换到 TPU 的 RGB planar 输入缓冲，不再执行
+`zune_jpeg` 软件解码，也不再分配整张中间 RGB 图。原始软件基线仍可复现：
+
+```sh
+./run-live.sh 10 mjpeg
+```
+
+两种模式必须分别用端到端汇总比较，不能把独立 camera/VPSS smoke 数字相加冒充收益。
+`request_avg_us` 在 `jpu-yuv` 模式下包含等待最新帧、JPU 解码和 YUV 用户态复制；
+`preprocess_avg_us` 是 YUV 到 RGB planar、letterbox 和必要缩放的用户态耗时。
+
+## 异步摄像头采集与统计
+
+SG2002 摄像头设备保留原来的同步 ioctl 1–5，并增加了显式启停的后台采集：
+
+- `START_ASYNC(6)` / `STOP_ASYNC(7)`：启停独立采集任务；
+- `GET_LATEST_FRAME(8)`：只取比 `last_sequence` 更新的 MJPEG 帧；
+- `GET_CAPTURE_STATS(9)` / `RESET_CAPTURE_STATS(10)`：读取或清零采集、重试、坏帧和覆盖计数；
+- `GET_LATEST_YUV_FRAME(11)`：取最新 MJPEG 后使用 JPU 解码为 planar YUV；实际
+  采样格式跟随 JPEG SOF，驱动通过 `format` 区分 YUV420/422/440/444/400。当前
+  实机摄像头是 YUV422 planar，640×480 对应 614400 字节。
+- `GET_LATEST_NV12_FRAME(12)`：仅接受 4:2:0 MJPEG，使用 JPU 的 CbCr interleave
+  直接输出 NV12；4:2:2 MJPEG 在相同寄存器配置下会得到 NV16，因此驱动会拒绝，
+  不会把 NV16 错标为 NV12。
+
+用户态 ABI 定义见 `include/cvi_usb_camera.h`。驱动内部使用两块可复用 JPEG 缓冲，
+但生产者最多只预取一帧；消费者取走后才开始下一次采集。这样既不排队积累多帧，
+也不会在单核 C906 上为注定覆盖的帧持续执行 UVC 忙轮询。`overwritten_frames`
+保留为竞态/多消费者诊断计数，正常单消费者链路应为 0。
+
+这里的“异步”是 StarryOS 任务级解耦，不代表 UVC 底层已经变成多 transfer completion
+ring。当前 `sg200x-bsp` 仍提供同步轮询采集，而且采集任务与应用共享 C906；实际能与
+TPU 硬件等待重叠多少必须以板端吞吐量为准。
+
+板端采集基准：
+
+```sh
+cd /akars_tennis
+./cvi-camera-bench /dev/cvi-usb-camera0 300
+```
+
+验证异步 latest-frame 与 JPU 实时解码组合时使用：
+
+```sh
+./cvi-camera-bench /dev/cvi-usb-camera0 300 yuv
+```
+
+验证 JPU 直接输出 NV12（摄像头 MJPEG 必须为 4:2:0）时使用：
+
+```sh
+./cvi-camera-bench /dev/cvi-usb-camera0 300 nv12
+```
+
+长测可在末尾增加 `quiet`，避免逐帧终端输出和 `tee` 写盘扰动消费速度：
+
+```sh
+./cvi-camera-bench /dev/cvi-usb-camera0 300 mjpeg quiet
+./cvi-camera-bench /dev/cvi-usb-camera0 300 yuv quiet
+./cvi-camera-bench /dev/cvi-usb-camera0 300 nv12 quiet
+```
+
+最终的 `CVI_CAMERA_STATS` 会报告平均采集调用耗时、最大耗时、USB 错误、重试、
+无效 JPEG 比例和 latest-frame 覆盖率。当前 `sg200x-bsp` 的
+`uvc_capture_one_frame()` 没有导出“首包等待/USB 传输/JPEG 拼帧”分段数据，因此
+这些字段使用 `UINT64_MAX`，且 `CVI_CAMERA_PROFILE_UVC_STAGES` capability 位为 0；
+后续 BSP 增加分段结果时，只需实现内核中的 `uvc_capture_one_frame_profiled()`，
+用户态 ABI 不变。
+
+## 硬件预处理直通接口
+
+`akars-validator/src/tpu.rs` 已绑定固定 SG2002 SDK 中真实存在的：
+
+- `CVI_NN_SetTensorPhysicalAddr()`：更新 device tensor 物理地址；
+- `CVI_NN_SetTensorWithAlignedFrames()`：导入 VPSS 物理帧。官方 runtime 对普通
+  `aligned=false` 模型使用 TDMA 紧凑搬运，对可直绑的 aligned 模型才更新基地址。
+
+`infer_aligned_physical_timed()` 是严格的 aligned 模型接口；当前实时路径使用
+`infer_vpss_rgb_timed()`，允许普通模型走 runtime 官方的 TDMA compact 路径。
+仓库当前只有 `.cvimodel`，缺少原始 ONNX、校准集和匹配版本的模型编译器，因此没有
+替换现有模型；在这些输入补齐并完成固定图片精度回归前，物理帧接口只作为已编译、
+有安全前置条件的接入点。
+
+StarryOS 现已提供 `/dev/cvi-vpss0`：它从 FDT 获取 `cvitek,vpss` MMIO 与
+`sc` IRQ，接收两块 ION coherent buffer，在硬件上执行单通道裁剪/缩放。输入支持
+NV12 和 JPU 所用的三平面 YUV422P，输出支持 NV12 与 RGB Planar，并保留
+sequence/timestamp。RGB Planar 路径可使用 SC_V1 的 border 寄存器在硬件中生成
+letterbox 黑边。
+用户 ABI 见 `include/sg2002_vpss.h`。板端最小验证（默认 640×480 -> 320×240）：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 1
+```
+
+新增的官方格式路径使用独立 ioctl，离线验证命令为：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 300 yuv422p
+```
+
+JPU 与 VPSS 之间使用同一个 ION DMA buffer 的真实摄像头链路为：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 30 camera /dev/cvi-usb-camera0
+```
+
+`camera` 模式通过 camera ioctl 13 让 JPU 直接写入源 ION 的 Y/Cb/Cr 三个 plane，
+随后把同一个 ION fd 和 plane offset 交给 VPSS；不会再把 614400 字节 YUV 拷贝到
+用户缓冲后重新导入。输出中的 `VPSS_CAMERA request_avg_us` 包含等待最新 MJPEG 和
+JPU 解码，`VPSS_PASS hw_avg_us` 是 VPSS 硬件阶段。
+
+确定性验证 `YUV422P -> RGB Planar 640x640 + 上下各 80 行黑边`：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 30 rgb
+```
+
+真实摄像头端到端硬件预处理验证：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 30 camera-rgb /dev/cvi-usb-camera0
+```
+
+配套内核和用户态程序部署后，直接运行完整推理链路：
+
+```sh
+./run-live.sh 30
+```
+
+`run-live.sh` 默认选择 `vpss-rgb`，实际路径为：
+
+```text
+MJPEG -> JPU YUV422P/source ION -> VPSS RGB Planar/destination ION
+      -> CVI_NN_SetTensorWithAlignedFrames
+      -> TPU TDMA compact 到普通模型输入 -> TPU forward
+```
+
+这条路径不要求模型带 `aligned=true`。尽管 API 名称包含 `AlignedFrames`，官方
+cviruntime 对 `aligned=false` 输入明确实现了 TPU TDMA compact；当前 640 字节行宽
+本身满足其 64 字节 VPSS 对齐要求。destination ION 在阻塞调用期间保持存活，
+用户态不读取其 uncached 映射，也没有 CPU 的 640x640x3 字节最终复制。
+
+`AKARS_LIVE_SUMMARY` 将端到端请求拆成：`camera_ion_avg_us`（等待最新帧并由 JPU
+写入 source ION）、`vpss_wall_avg_us`（VPSS ioctl 的用户态墙钟时间）、
+`vpss_hw_avg_us`/`vpss_hw_max_us`（VPSS 驱动记录的硬件阶段）。在 `vpss-rgb`
+模式下 `preprocess_avg_us` 记录显式 TDMA compact 的耗时，不再包含 CPU 布局转换、
+缩放、letterbox 或大图复制。
+
+稳定性验收使用 `100000` 帧；工具检查确定性中性灰 NV12 输出、元数据、IRQ、
+program-late、超时和平均/最大硬件耗时：
+
+```sh
+./cvi-vpss-smoke /dev/cvi-vpss0 100000
+```
+
+当前摄像头已经可以通过调用方持有的 ION coherent buffer完成
+`JPU planar YUV422 -> VPSS RGB Planar` 零拷贝交接；原有返回用户态 YUV 和
+VPSS NV12 ioctl 均保留。VPSS 输出通过 `CVI_NN_SetTensorWithAlignedFrames()` 交给
+runtime；当前普通模型需要一次 TPU TDMA device-to-device compact。未来生成
+`--fuse_preprocess --aligned_input` 模型后，runtime 才能把单帧物理地址直接作为
+模型输入基地址，从而去掉这次 TDMA 搬运。
 
 ## 更新 expected
 
