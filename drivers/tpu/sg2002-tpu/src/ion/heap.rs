@@ -3,17 +3,25 @@
 use alloc::sync::Arc;
 use core::alloc::Layout;
 
-use dma_api::{CoherentArray, DeviceDma, DmaError};
+use ax_dma::{self, DMAInfo};
 
 use super::{
     error::{IonError, IonResult},
     types::{IonBuffer, IonHeapType},
 };
 
-/// Ion 堆管理器
-pub struct IonHeapManager {
-    dma: DeviceDma,
+fn dma_range_fits_tpu(start: u64, size: usize) -> bool {
+    let Some(last) = size
+        .checked_sub(1)
+        .and_then(|offset| start.checked_add(offset as u64))
+    else {
+        return false;
+    };
+    last <= u64::from(u32::MAX)
 }
+
+/// Ion 堆管理器
+pub struct IonHeapManager;
 
 impl Default for IonHeapManager {
     fn default() -> Self {
@@ -21,16 +29,31 @@ impl Default for IonHeapManager {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::dma_range_fits_tpu;
+
+    #[test]
+    fn rejects_dma_range_starting_above_4gib() {
+        assert!(!dma_range_fits_tpu(0x1_0000_0000, 4096));
+    }
+
+    #[test]
+    fn rejects_dma_range_crossing_4gib() {
+        assert!(!dma_range_fits_tpu(0xffff_f000, 8192));
+    }
+
+    #[test]
+    fn accepts_dma_range_below_4gib() {
+        assert!(dma_range_fits_tpu(0x1000, 4096));
+        assert!(dma_range_fits_tpu(0xffff_f000, 4096));
+    }
+}
+
 impl IonHeapManager {
     /// 创建新的堆管理器
-    pub fn new() -> Self {
-        Self {
-            dma: axklib::dma::device(dma_api::DmaDeviceInfo::new(
-                dma_api::DmaDomainId::Direct,
-                dma_api::DmaCoherency::NonCoherent,
-                dma_api::DmaConstraints::new(u64::MAX),
-            )),
-        }
+    pub const fn new() -> Self {
+        Self
     }
 
     /// 从指定堆分配缓冲区
@@ -49,7 +72,7 @@ impl IonHeapManager {
             return Err(IonError::InvalidArg);
         }
 
-        let dma = match heap_type {
+        let dma_info = match heap_type {
             IonHeapType::System => {
                 // 系统堆使用普通的 DMA 内存
                 self.alloc_dma_buffer(size, align)?
@@ -65,20 +88,30 @@ impl IonHeapManager {
             }
         };
 
-        let buffer = Arc::new(IonBuffer::new(dma, size));
+        let buffer = Arc::new(IonBuffer::new(dma_info, size));
         debug!("Allocated Ion buffer with handle: {:?}", buffer.handle);
 
         Ok(buffer)
     }
 
     /// 分配 DMA 内存
-    fn alloc_dma_buffer(&self, size: usize, align: usize) -> IonResult<CoherentArray<u8>> {
-        Layout::from_size_align(size, align).map_err(|_| IonError::InvalidArg)?;
-        self.dma
-            .coherent_array_zero_with_align(size, align)
-            .map_err(|err| match err {
-                DmaError::LayoutError(_) => IonError::InvalidArg,
-                _ => IonError::NoMemory,
-            })
+    fn alloc_dma_buffer(&self, size: usize, align: usize) -> IonResult<DMAInfo> {
+        let layout = Layout::from_size_align(size, align).map_err(|_| IonError::InvalidArg)?;
+        // SG2002 multimedia engines and TPU TDMA program raw 32-bit physical
+        // addresses without an IOMMU.  A generic coherent allocation may sit
+        // above 4 GiB and would then be silently truncated in the hardware
+        // array-base registers.
+        let dma =
+            unsafe { ax_dma::alloc_coherent_pages_dma32(layout).map_err(|_| IonError::NoMemory)? };
+        if !dma_range_fits_tpu(dma.bus_addr.as_u64(), size) {
+            error!(
+                "ION DMA32 allocator returned unreachable range: paddr=0x{:x}, size={}",
+                dma.bus_addr.as_u64(),
+                size
+            );
+            unsafe { ax_dma::dealloc_coherent_pages(dma, layout) };
+            return Err(IonError::NoMemory);
+        }
+        Ok(dma)
     }
 }

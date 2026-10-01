@@ -1,0 +1,12 @@
+[package]
+name = "sg2002-vpss"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Portable SG2002/CV181x VPSS scaler driver core"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["sg2002", "cv181x", "vpss", "scaler"]
+
+[dependencies]

@@ -12,5 +12,9 @@ libc = "0.2"
 zune-core = "0.5"
 zune-jpeg = "0.5"
 
+[[bin]]
+name = "akars-tennis-live"
+path = "src/live.rs"
+
 [profile.release]
 lto = "thin"

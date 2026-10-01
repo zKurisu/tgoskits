@@ -49,6 +49,7 @@ sg2002 = [
     "dep:sg2002-tpu",
     "dep:sg2002-cmdqu",
     "dep:rdif-ipc",
+    "dep:sg2002-vpss",
     "dep:some-serial",
     "dep:sg200x-bsp",
     "dep:tock-registers",
@@ -97,6 +98,7 @@ ax-std = { workspace = true, default-features = false, features = [
 rockchip-rga = { workspace = true, optional = true }
 sg2002-tpu = { workspace = true, optional = true }
 sg2002-cmdqu = { workspace = true, optional = true }
+sg2002-vpss = { workspace = true, optional = true }
 k230-kpu = { workspace = true, optional = true }
 crab-usb.workspace = true
 usb-serial.workspace = true

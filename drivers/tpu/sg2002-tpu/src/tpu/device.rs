@@ -68,6 +68,8 @@ pub struct Sg2002Tpu {
     irq_handler_hits: AtomicU64,
     /// MMIO 轮询兜底命中次数
     poll_fallback_hits: AtomicU64,
+    /// IRQ handler observed an error status for the current TDMA submission.
+    irq_error_status: AtomicU32,
     /// 是否已经提示过兜底路径
     fallback_warned: AtomicBool,
     /// 注入的阻塞等待函数指针（0 表示未注入，退化为忙等自旋）。
@@ -117,6 +119,7 @@ impl Sg2002Tpu {
             irq_pending: AtomicBool::new(false),
             irq_handler_hits: AtomicU64::new(0),
             poll_fallback_hits: AtomicU64::new(0),
+            irq_error_status: AtomicU32::new(0),
             fallback_warned: AtomicBool::new(false),
             wait_fn: AtomicUsize::new(0),
         }
@@ -206,6 +209,9 @@ impl Sg2002Tpu {
         }
         let has_error =
             int_status != super::tdma::TDMA_INT_EOD && int_status != super::tdma::TDMA_INT_EOPMU;
+        if has_error {
+            self.irq_error_status.store(int_status, Ordering::Release);
+        }
         tdma.clear_interrupt();
         self.irq_handler_hits.fetch_add(1, Ordering::AcqRel);
         self.irq_pending.store(true, Ordering::Release);
@@ -271,6 +277,7 @@ impl Sg2002Tpu {
         let timeout_counter = Cell::new(0u64);
         let timeout_limit = 10_000_000_000u64; // 大约 10 秒
         self.irq_pending.store(false, Ordering::Release);
+        self.irq_error_status.store(0, Ordering::Release);
         let tdma_irq_poll = unsafe { TdmaRegs::new(self.tdma_vaddr) };
 
         let wait_irq = || -> Result<(), TpuError> {
@@ -279,15 +286,22 @@ impl Sg2002Tpu {
             let mut steps = 0u64;
             while steps < WAIT_TOTAL_STEPS {
                 if self.irq_pending.swap(false, Ordering::AcqRel) {
+                    let error_status = self.irq_error_status.swap(0, Ordering::AcqRel);
+                    if error_status != 0 {
+                        return Err(TpuError::TdmaError(error_status));
+                    }
                     return Ok(());
                 }
 
                 // 兜底：若外部 IRQ 未投递到内核，直接读取 TDMA 中断状态寄存器。
                 let int_status = tdma_irq_poll.get_int_status();
-                if int_status == super::tdma::TDMA_INT_EOD
-                    || int_status == super::tdma::TDMA_INT_EOPMU
-                {
+                if int_status != 0 {
                     tdma_irq_poll.clear_interrupt();
+                    if int_status != super::tdma::TDMA_INT_EOD
+                        && int_status != super::tdma::TDMA_INT_EOPMU
+                    {
+                        return Err(TpuError::TdmaError(int_status));
+                    }
                     self.poll_fallback_hits.fetch_add(1, Ordering::AcqRel);
                     if self
                         .fallback_warned
