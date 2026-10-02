@@ -84,6 +84,41 @@ const VPSS_RGB_INPUT_SHAPE: [i32; 4] = [1, 3, 640, 640];
 const CVI_FMT_UINT8_VALUE: i32 = 7;
 const CVI_PIXEL_FORMAT_RGB_PLANAR_VALUE: i32 = 2;
 
+fn logical_input_dimensions(contract: InputTensorContract) -> Result<(i32, i32), TpuError> {
+    if contract.dim_size == 4
+        && contract.shape[0] == 1
+        && contract.shape[1] == 3
+        && contract.shape[2] > 0
+        && contract.shape[3] > 0
+    {
+        return Ok((contract.shape[3], contract.shape[2]));
+    }
+
+    if contract.aligned
+        && contract.pixel_format == CVI_PIXEL_FORMAT_RGB_PLANAR_VALUE
+        && contract.count % 3 == 0
+        && contract.mem_size >= contract.count
+    {
+        // Some CVI runtime builds expose aligned RGB-planar input storage as
+        // a flat tensor. Recover a square logical image without hard-coding
+        // 640 so reduced-resolution aligned models share the same path.
+        let pixels = contract.count / 3;
+        if let Some(side) = (32usize..=2048)
+            .step_by(32)
+            .find(|side| side.saturating_mul(*side) == pixels)
+        {
+            let side = i32::try_from(side)
+                .map_err(|_| TpuError::new("logical input dimension exceeds i32"))?;
+            return Ok((side, side));
+        }
+    }
+
+    Err(TpuError::new(format!(
+        "cannot recover logical model input dimensions: {}",
+        contract.summary()
+    )))
+}
+
 fn validate_vpss_rgb_contract(contract: InputTensorContract) -> Result<(), TpuError> {
     let floats_match = |actual: f32, expected: f32| (actual - expected).abs() <= 1.0e-6;
     let means_match = contract.mean.iter().all(|value| floats_match(*value, 0.0));
@@ -172,7 +207,8 @@ mod imp {
 
     use super::{
         AlignedPhysicalFrames, CameraFrame, Detection, InferTiming, InferenceConfig,
-        InputTensorContract, PlanarYuvFrame, TpuError, validate_vpss_rgb_contract,
+        InputTensorContract, PlanarYuvFrame, TpuError, logical_input_dimensions,
+        validate_vpss_rgb_contract,
     };
     use crate::{
         detector::{
@@ -315,9 +351,36 @@ mod imp {
                 return Err(TpuError::new("default input tensor buffer is null"));
             }
 
-            let input_shape = unsafe { CVI_NN_TensorShape(input) };
-            let input_h = input_shape.dim[2];
-            let input_w = input_shape.dim[3];
+            let input_tensor = unsafe { &*input };
+            let input_contract = InputTensorContract {
+                shape: [
+                    input_tensor.shape.dim[0],
+                    input_tensor.shape.dim[1],
+                    input_tensor.shape.dim[2],
+                    input_tensor.shape.dim[3],
+                ],
+                dim_size: input_tensor.shape.dim_size,
+                format: input_tensor.fmt,
+                count: input_tensor.count,
+                mem_size: input_tensor.mem_size,
+                physical_address: input_tensor.paddr,
+                mem_type: input_tensor.mem_type,
+                qscale: input_tensor.qscale,
+                zero_point: input_tensor.zero_point,
+                pixel_format: input_tensor.pixel_format,
+                aligned: input_tensor.aligned,
+                mean: input_tensor.mean,
+                scale: input_tensor.scale,
+            };
+            let (input_w, input_h) = match logical_input_dimensions(input_contract) {
+                Ok(dimensions) => dimensions,
+                Err(error) => {
+                    unsafe {
+                        CVI_NN_CleanupModel(model);
+                    }
+                    return Err(error);
+                }
+            };
             let outputs_slice = unsafe { slice::from_raw_parts_mut(outputs, output_num as usize) };
             let output_shapes = outputs_slice
                 .iter_mut()
@@ -361,6 +424,10 @@ mod imp {
                 mean: tensor.mean,
                 scale: tensor.scale,
             }
+        }
+
+        pub const fn input_dimensions(&self) -> (i32, i32) {
+            (self.input_w, self.input_h)
         }
 
         pub fn infer(
@@ -1072,6 +1139,10 @@ mod imp {
             unreachable!("host TPU stub cannot own a model")
         }
 
+        pub fn input_dimensions(&self) -> (i32, i32) {
+            unreachable!("host TPU stub cannot own a model")
+        }
+
         pub fn infer(
             &mut self,
             _frame: &CameraFrame,
@@ -1252,5 +1323,28 @@ mod tests {
         let mut contract = expected_contract();
         contract.shape = [1, 3, 320, 320];
         assert!(validate_vpss_rgb_contract(contract).is_err());
+    }
+
+    #[test]
+    fn recovers_flat_aligned_rgb_planar_dimensions() {
+        let mut contract = expected_contract();
+        contract.shape = [1, 1, 1, 3 * 640 * 640];
+        contract.aligned = true;
+        assert_eq!(logical_input_dimensions(contract).unwrap(), (640, 640));
+
+        contract.shape = [1, 1, 1, 3 * 384 * 384];
+        contract.count = 3 * 384 * 384;
+        contract.mem_size = contract.count;
+        assert_eq!(logical_input_dimensions(contract).unwrap(), (384, 384));
+    }
+
+    #[test]
+    fn rejects_unknown_flat_aligned_dimensions() {
+        let mut contract = expected_contract();
+        contract.shape = [1, 1, 1, 3 * 320 * 352];
+        contract.count = 3 * 320 * 352;
+        contract.mem_size = contract.count;
+        contract.aligned = true;
+        assert!(logical_input_dimensions(contract).is_err());
     }
 }

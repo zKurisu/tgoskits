@@ -7,11 +7,16 @@ mod live_camera;
 mod tpu;
 mod vpss_pipeline;
 
-use std::{env, error::Error, path::PathBuf, time::Instant};
+use std::{
+    env,
+    error::Error,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use camera::{CameraFrame, PlanarYuvFrame};
 use live_camera::{CameraCaptureStats, LiveCamera};
-use tpu::{InferTiming, InferenceConfig, open_model};
+use tpu::{AlignedPhysicalFrames, InferTiming, InferenceConfig, PhysicalPixelFormat, open_model};
 use vpss_pipeline::VpssRgbPipeline;
 
 const DEFAULT_DEVICE: &str = "/dev/cvi-usb-camera0";
@@ -23,6 +28,9 @@ struct Cli {
     device: PathBuf,
     vpss_device: PathBuf,
     frames: u32,
+    duration_seconds: Option<u64>,
+    report_frames: bool,
+    timing_percentiles: bool,
     input: InputMode,
     verify_input: bool,
     config: InferenceConfig,
@@ -69,6 +77,20 @@ struct TimingTotals {
     vpss_hardware_max_us: u64,
 }
 
+#[derive(Clone, Copy)]
+struct FrameTiming {
+    request_us: u64,
+    camera_ion_us: u64,
+    capture_us: u64,
+    preprocess_us: u64,
+    forward_us: u64,
+    postprocess_us: u64,
+    vpss_wall_us: u64,
+    vpss_hardware_us: u64,
+    total_us: u64,
+    top_score_q10000: u32,
+}
+
 fn main() {
     if let Err(error) = run() {
         eprintln!(
@@ -82,14 +104,25 @@ fn main() {
 fn run() -> Result<(), Box<dyn Error>> {
     let cli = parse_cli(env::args().skip(1))?;
     let mut model = open_model(&cli.model)?;
-    println!("{}", model.input_contract().summary());
+    let input_contract = model.input_contract();
+    println!("{}", input_contract.summary());
+    let aligned_input = input_contract.aligned;
+    let (model_input_width, model_input_height) = model.input_dimensions();
+    if cli.verify_input && (model_input_width != 640 || model_input_height != 640) {
+        return Err("--verify-input currently requires a 640x640 model".into());
+    }
     let mut camera = if matches!(cli.input, InputMode::VpssRgb) {
         None
     } else {
         Some(LiveCamera::open(&cli.device)?)
     };
     let mut vpss = if matches!(cli.input, InputMode::VpssRgb) {
-        Some(VpssRgbPipeline::open(&cli.device, &cli.vpss_device)?)
+        Some(VpssRgbPipeline::open(
+            &cli.device,
+            &cli.vpss_device,
+            u32::try_from(model_input_width)?,
+            u32::try_from(model_input_height)?,
+        )?)
     } else {
         None
     };
@@ -102,8 +135,21 @@ fn run() -> Result<(), Box<dyn Error>> {
     let mut frames_with_detections = 0u64;
     let mut detections_total = 0u64;
     let wall_start = Instant::now();
+    let duration_limit = cli.duration_seconds.map(Duration::from_secs);
+    let mut frames_processed = 0u32;
+    let mut timing_samples = cli.timing_percentiles.then(Vec::new);
 
-    for index in 0..cli.frames {
+    loop {
+        if frames_processed > 0 {
+            if let Some(limit) = duration_limit {
+                if wall_start.elapsed() >= limit {
+                    break;
+                }
+            } else if frames_processed >= cli.frames {
+                break;
+            }
+        }
+        let index = frames_processed;
         let total_start = Instant::now();
         let mut timing = InferTiming::default();
         let (meta, detections, request_us, camera_ion_us, vpss_wall_us, vpss_hardware_us) =
@@ -141,9 +187,22 @@ fn run() -> Result<(), Box<dyn Error>> {
                     // SAFETY: the pipeline owns the destination ION allocation for
                     // the complete blocking runtime call. VPSS produced a 640x640
                     // RGB-planar frame with the 64-byte row alignment required by
-                    // the runtime's explicit frame-import TDMA path.
+                    // the runtime. An aligned model binds this frame directly;
+                    // an ordinary model imports it through the runtime's TDMA path.
                     let detections = unsafe {
-                        if cli.verify_input && index == 0 {
+                        if aligned_input {
+                            let frame_paddrs = [frame.physical_address];
+                            model.infer_aligned_physical_timed(
+                                AlignedPhysicalFrames {
+                                    frame_paddrs: &frame_paddrs,
+                                    pixel_format: PhysicalPixelFormat::RgbPlanar,
+                                    source_width: 640,
+                                    source_height: 480,
+                                },
+                                cli.config,
+                                Some(&mut timing),
+                            )?
+                        } else if cli.verify_input && index == 0 {
                             model.infer_vpss_rgb_verified_timed(
                                 frame.physical_address,
                                 frame.rgb,
@@ -251,6 +310,53 @@ fn run() -> Result<(), Box<dyn Error>> {
         totals.vpss_wall_us = totals.vpss_wall_us.saturating_add(vpss_wall_us);
         totals.vpss_hardware_us = totals.vpss_hardware_us.saturating_add(vpss_hardware_us);
         totals.vpss_hardware_max_us = totals.vpss_hardware_max_us.max(vpss_hardware_us);
+
+        let top_score_q10000 = if cli.report_frames || cli.timing_percentiles {
+            detections
+                .iter()
+                .map(|detection| (detection.score * 10_000.0).round().max(0.0) as u32)
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        if cli.report_frames {
+            println!(
+                "AKARS_LIVE_FRAME index={} sequence={} detections={} top_score_q10000={} \
+                 request_us={} camera_ion_us={} capture_us={} preprocess_us={} forward_us={} \
+                 postprocess_us={} vpss_wall_us={} vpss_hw_us={} total_us={}",
+                index + 1,
+                meta.sequence,
+                detections.len(),
+                top_score_q10000,
+                request_us,
+                camera_ion_us,
+                meta.profile.frame_total_us,
+                nonnegative_us(timing.preprocess_us),
+                nonnegative_us(timing.forward_us),
+                nonnegative_us(timing.postprocess_us),
+                vpss_wall_us,
+                vpss_hardware_us,
+                total_us,
+            );
+        }
+        if let Some(samples) = timing_samples.as_mut() {
+            samples.push(FrameTiming {
+                request_us,
+                camera_ion_us,
+                capture_us: meta.profile.frame_total_us,
+                preprocess_us: nonnegative_us(timing.preprocess_us),
+                forward_us: nonnegative_us(timing.forward_us),
+                postprocess_us: nonnegative_us(timing.postprocess_us),
+                vpss_wall_us,
+                vpss_hardware_us,
+                total_us,
+                top_score_q10000,
+            });
+        }
+        frames_processed = frames_processed
+            .checked_add(1)
+            .ok_or("processed frame count overflow")?;
     }
 
     let wall_us = wall_start.elapsed().as_micros() as u64;
@@ -263,7 +369,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         vpss.stats()?
     };
     print_summary(
-        cli.frames,
+        frames_processed,
         cli.input,
         wall_us,
         &totals,
@@ -273,6 +379,23 @@ fn run() -> Result<(), Box<dyn Error>> {
         frames_with_detections,
         detections_total,
         stats,
+    );
+    if let Some(samples) = timing_samples.as_deref() {
+        print_timing_percentiles(samples);
+        print_confidence_summary(samples);
+    }
+    println!(
+        "AKARS_LIVE_TEST stop={} requested_seconds={} actual_us={} report_frames={} \
+         timing_percentiles={}",
+        if cli.duration_seconds.is_some() {
+            "duration"
+        } else {
+            "frames"
+        },
+        cli.duration_seconds.unwrap_or(0),
+        wall_us,
+        u8::from(cli.report_frames),
+        u8::from(cli.timing_percentiles),
     );
     Ok(())
 }
@@ -342,6 +465,9 @@ fn parse_cli(args: impl Iterator<Item = String>) -> Result<Cli, Box<dyn Error>> 
     let mut device = PathBuf::from(DEFAULT_DEVICE);
     let mut vpss_device = PathBuf::from(DEFAULT_VPSS_DEVICE);
     let mut frames = DEFAULT_FRAMES;
+    let mut duration_seconds = None;
+    let mut report_frames = false;
+    let mut timing_percentiles = false;
     let mut input = InputMode::VpssRgb;
     let mut verify_input = false;
     let mut config = InferenceConfig::default();
@@ -355,6 +481,11 @@ fn parse_cli(args: impl Iterator<Item = String>) -> Result<Cli, Box<dyn Error>> 
             "--device" => device = PathBuf::from(take_value(&mut args, "--device")?),
             "--vpss-device" => vpss_device = PathBuf::from(take_value(&mut args, "--vpss-device")?),
             "--frames" => frames = take_value(&mut args, "--frames")?.parse()?,
+            "--duration-seconds" => {
+                duration_seconds = Some(take_value(&mut args, "--duration-seconds")?.parse()?);
+            }
+            "--report-frames" => report_frames = true,
+            "--timing-percentiles" => timing_percentiles = true,
             "--input" => input = InputMode::parse(&take_value(&mut args, "--input")?)?,
             "--verify-input" => verify_input = true,
             "--classes" => config.classes_num = take_value(&mut args, "--classes")?.parse()?,
@@ -372,6 +503,9 @@ fn parse_cli(args: impl Iterator<Item = String>) -> Result<Cli, Box<dyn Error>> 
     if frames == 0 {
         return Err("--frames must be positive".into());
     }
+    if duration_seconds == Some(0) {
+        return Err("--duration-seconds must be positive".into());
+    }
     if config.classes_num <= 0 {
         return Err("--classes must be positive".into());
     }
@@ -380,6 +514,9 @@ fn parse_cli(args: impl Iterator<Item = String>) -> Result<Cli, Box<dyn Error>> 
         device,
         vpss_device,
         frames,
+        duration_seconds,
+        report_frames,
+        timing_percentiles,
         input,
         verify_input,
         config,
@@ -402,9 +539,105 @@ fn nonnegative_us(value: i64) -> u64 {
     u64::try_from(value).unwrap_or(0)
 }
 
+fn print_timing_percentiles(samples: &[FrameTiming]) {
+    let stages: [(&str, fn(&FrameTiming) -> u64); 9] = [
+        ("request", |sample| sample.request_us),
+        ("camera_ion", |sample| sample.camera_ion_us),
+        ("capture", |sample| sample.capture_us),
+        ("vpss_wall", |sample| sample.vpss_wall_us),
+        ("vpss_hw", |sample| sample.vpss_hardware_us),
+        ("preprocess", |sample| sample.preprocess_us),
+        ("forward", |sample| sample.forward_us),
+        ("postprocess", |sample| sample.postprocess_us),
+        ("total", |sample| sample.total_us),
+    ];
+    for (stage, value) in stages {
+        let mut values: Vec<u64> = samples.iter().map(value).collect();
+        values.sort_unstable();
+        let sum: u128 = values.iter().map(|value| u128::from(*value)).sum();
+        let average = sum.checked_div(values.len() as u128).unwrap_or(0);
+        println!(
+            "AKARS_LIVE_TIMING stage={} avg_us={} p50_us={} p95_us={} p99_us={} max_us={}",
+            stage,
+            average,
+            nearest_rank(&values, 50),
+            nearest_rank(&values, 95),
+            nearest_rank(&values, 99),
+            values.last().copied().unwrap_or(0),
+        );
+    }
+}
+
+fn nearest_rank(sorted: &[u64], percentile: usize) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    let rank = sorted.len().saturating_mul(percentile).saturating_add(99) / 100;
+    sorted[rank.saturating_sub(1).min(sorted.len() - 1)]
+}
+
+fn print_confidence_summary(samples: &[FrameTiming]) {
+    let scores: Vec<u32> = samples
+        .iter()
+        .map(|sample| sample.top_score_q10000)
+        .filter(|score| *score > 0)
+        .collect();
+    let sum: u64 = scores.iter().map(|score| u64::from(*score)).sum();
+    let mean = sum.checked_div(scores.len() as u64).unwrap_or(0);
+    println!(
+        "AKARS_LIVE_CONFIDENCE detected_frames={} mean_q10000={} min_q10000={} max_q10000={}",
+        scores.len(),
+        mean,
+        scores.iter().min().copied().unwrap_or(0),
+        scores.iter().max().copied().unwrap_or(0),
+    );
+}
+
 fn print_usage() {
     eprintln!(
         "Usage: akars-tennis-live <model.cvimodel> [--device PATH] [--vpss-device PATH] [--frames \
-         N] [--input vpss-rgb|jpu-yuv|mjpeg] [--verify-input] [--classes N] [--conf X] [--iou X]"
+         N | --duration-seconds N] [--report-frames] [--timing-percentiles] [--input \
+         vpss-rgb|jpu-yuv|mjpeg] [--verify-input] [--classes N] [--conf X] [--iou X]"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn strings<'a>(values: &'a [&'a str]) -> impl Iterator<Item = String> + 'a {
+        values.iter().map(|value| (*value).to_owned())
+    }
+
+    #[test]
+    fn parses_duration_and_per_frame_reporting() {
+        let cli = parse_cli(strings(&[
+            "model.cvimodel",
+            "--duration-seconds",
+            "60",
+            "--report-frames",
+            "--timing-percentiles",
+        ]))
+        .unwrap();
+        assert_eq!(cli.duration_seconds, Some(60));
+        assert!(cli.report_frames);
+        assert!(cli.timing_percentiles);
+    }
+
+    #[test]
+    fn rejects_zero_duration() {
+        let error = parse_cli(strings(&["model.cvimodel", "--duration-seconds", "0"]))
+            .err()
+            .expect("zero duration must fail");
+        assert!(error.to_string().contains("must be positive"));
+    }
+
+    #[test]
+    fn nearest_rank_uses_ceiling_rank() {
+        let values: Vec<u64> = (1..=100).collect();
+        assert_eq!(nearest_rank(&values, 50), 50);
+        assert_eq!(nearest_rank(&values, 95), 95);
+        assert_eq!(nearest_rank(&values, 99), 99);
+        assert_eq!(nearest_rank(&[7], 99), 7);
+    }
 }

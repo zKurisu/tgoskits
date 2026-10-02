@@ -2,3 +2,4 @@
 /install/
 /thirdparty/tpu-sdk-sg200x/
 /toolchains/
+/model-conversion/work*/

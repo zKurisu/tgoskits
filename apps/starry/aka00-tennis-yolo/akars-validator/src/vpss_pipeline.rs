@@ -30,12 +30,9 @@ const PROT_WRITE: c_int = 2;
 const MAP_SHARED: c_int = 1;
 
 const SOURCE_CAPACITY: usize = 2 * 1024 * 1024;
-const OUTPUT_WIDTH: u32 = 640;
-const OUTPUT_HEIGHT: u32 = 640;
-const CONTENT_Y: u32 = 80;
-const CONTENT_HEIGHT: u32 = 480;
-const OUTPUT_PLANE_SIZE: usize = OUTPUT_WIDTH as usize * OUTPUT_HEIGHT as usize;
-const OUTPUT_SIZE: usize = OUTPUT_PLANE_SIZE * 3;
+const CAMERA_WIDTH: u32 = 640;
+const CAMERA_HEIGHT: u32 = 480;
+const VPSS_STRIDE_ALIGNMENT: u32 = 64;
 
 const fn ioctl_read_write(kind: u8, number: u8, size: usize) -> c_ulong {
     ((3_u64 << 30) | ((size as u64) << 16) | ((kind as u64) << 8) | number as u64) as c_ulong
@@ -224,15 +221,59 @@ pub struct VpssRgbPipeline {
     _ion: File,
     source: IonAllocation,
     destination: IonAllocation,
+    output_width: u32,
+    output_height: u32,
+    output_plane_size: usize,
+    output_size: usize,
+    content_y: u32,
+    content_height: u32,
     sequence: u64,
     started: bool,
 }
 
 impl VpssRgbPipeline {
-    pub fn open(camera_path: impl AsRef<Path>, vpss_path: impl AsRef<Path>) -> io::Result<Self> {
+    pub fn open(
+        camera_path: impl AsRef<Path>,
+        vpss_path: impl AsRef<Path>,
+        output_width: u32,
+        output_height: u32,
+    ) -> io::Result<Self> {
+        if output_width == 0
+            || output_width != output_height
+            || !output_width.is_multiple_of(VPSS_STRIDE_ALIGNMENT)
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "VPSS RGB output must be a non-zero square with {}-byte aligned rows, got \
+                     {}x{}",
+                    VPSS_STRIDE_ALIGNMENT, output_width, output_height
+                ),
+            ));
+        }
+        let content_height = output_height
+            .checked_mul(CAMERA_HEIGHT)
+            .and_then(|value| value.checked_div(CAMERA_WIDTH))
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "VPSS content size overflow")
+            })?;
+        let content_y = (output_height - content_height) / 2;
+        let output_plane_size = usize::try_from(output_width)
+            .ok()
+            .and_then(|width| {
+                usize::try_from(output_height)
+                    .ok()
+                    .and_then(|height| width.checked_mul(height))
+            })
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "VPSS output size overflow")
+            })?;
+        let output_size = output_plane_size
+            .checked_mul(3)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "VPSS RGB size overflow"))?;
         let ion = OpenOptions::new().read(true).write(true).open("/dev/ion")?;
         let source = IonAllocation::allocate(&ion, SOURCE_CAPACITY, "akars-jpu")?;
-        let destination = IonAllocation::allocate(&ion, OUTPUT_SIZE, "akars-vpss-rgb")?;
+        let destination = IonAllocation::allocate(&ion, output_size, "akars-vpss-rgb")?;
         let camera = OpenOptions::new().read(true).open(camera_path)?;
         let vpss = OpenOptions::new().read(true).write(true).open(vpss_path)?;
         ioctl_no_arg(&camera, CAMERA_IOCTL_INIT)?;
@@ -240,8 +281,17 @@ impl VpssRgbPipeline {
         ioctl_no_arg(&camera, CAMERA_IOCTL_START_ASYNC)?;
         println!(
             "AKARS_VPSS_BUFFERS source_paddr=0x{:x} source_size={} destination_paddr=0x{:x} \
-             destination_size={} layout=rgb_planar_3x640x640 stride=640",
-            source.physical_address, source.size, destination.physical_address, destination.size,
+             destination_size={} layout=rgb_planar_3x{}x{} stride={} content_y={} \
+             content_height={}",
+            source.physical_address,
+            source.size,
+            destination.physical_address,
+            destination.size,
+            output_width,
+            output_height,
+            output_width,
+            content_y,
+            content_height,
         );
         Ok(Self {
             camera,
@@ -249,6 +299,12 @@ impl VpssRgbPipeline {
             _ion: ion,
             source,
             destination,
+            output_width,
+            output_height,
+            output_plane_size,
+            output_size,
+            content_y,
+            content_height,
             sequence: 0,
             started: true,
         })
@@ -272,7 +328,7 @@ impl VpssRgbPipeline {
                 format!("JPU returned format {}, expected YUV422P", camera.format),
             ));
         }
-        if u32::from(camera.width) != OUTPUT_WIDTH || u32::from(camera.height) != CONTENT_HEIGHT {
+        if u32::from(camera.width) != CAMERA_WIDTH || u32::from(camera.height) != CAMERA_HEIGHT {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
@@ -305,8 +361,8 @@ impl VpssRgbPipeline {
             source_cb_offset: camera.cb_offset,
             source_cr_offset: camera.cr_offset,
             destination_r_offset: 0,
-            destination_g_offset: OUTPUT_PLANE_SIZE as u64,
-            destination_b_offset: (2 * OUTPUT_PLANE_SIZE) as u64,
+            destination_g_offset: self.output_plane_size as u64,
+            destination_b_offset: (2 * self.output_plane_size) as u64,
             sequence: camera.sequence,
             timestamp_ns: camera.timestamp_ns,
             source_width: u32::from(camera.width),
@@ -315,13 +371,13 @@ impl VpssRgbPipeline {
             source_c_stride: camera.stride_c,
             crop_width: u32::from(camera.width),
             crop_height: u32::from(camera.height),
-            content_y: CONTENT_Y,
-            content_width: OUTPUT_WIDTH,
-            content_height: CONTENT_HEIGHT,
-            destination_width: OUTPUT_WIDTH,
-            destination_height: OUTPUT_HEIGHT,
-            destination_r_stride: OUTPUT_WIDTH,
-            destination_gb_stride: OUTPUT_WIDTH,
+            content_y: self.content_y,
+            content_width: self.output_width,
+            content_height: self.content_height,
+            destination_width: self.output_width,
+            destination_height: self.output_height,
+            destination_r_stride: self.output_width,
+            destination_gb_stride: self.output_width,
             timeout_ms: 100,
             ..VpssRunYuv422pRgb::default()
         };
@@ -342,7 +398,7 @@ impl VpssRgbPipeline {
         self.sequence = camera.sequence;
         Ok(VpssRgbFrame {
             physical_address: self.destination.physical_address,
-            rgb: self.destination.as_slice(),
+            rgb: &self.destination.as_slice()[..self.output_size],
             yuv: &self.source.as_slice()[yuv_start..yuv_end],
             yuv_width: u32::from(camera.width),
             yuv_height: u32::from(camera.height),

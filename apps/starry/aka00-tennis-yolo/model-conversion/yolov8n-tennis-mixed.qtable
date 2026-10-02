@@ -1,0 +1,37 @@
+# YOLOv8n-P2 mixed-precision table for CV181x.
+#
+# The detection-head entries are the BF16 pattern selected by TPU-MLIR 1.30.2.
+# The early model.2 cv1 convolution is also BF16 because its pure-INT8 output
+# misses the strict all-tensor comparison threshold on the representative image.
+/model.2/cv1/conv/Conv_output_0_Conv BF16
+/model.22/cv2.0/cv2.0.2/Conv_output_0_Conv BF16
+/model.22/Concat_output_0_Concat BF16
+/model.22/Reshape_output_0_Reshape BF16
+/model.22/Concat_6_output_0_Concat BF16
+/model.22/Split_1_output_0_Split BF16
+/model.22/Split_1_output_1_Split BF16
+/model.22/dfl/Reshape_output_0_Reshape BF16
+/model.22/Sigmoid_output_0_Sigmoid BF16
+/model.22/dfl/Transpose_output_0_Transpose_r_reordered BF16
+output0_Concat BF16
+/model.22/dfl/Transpose_1_output_0_Transpose BF16
+/model.22/dfl/conv/Conv_output_0_Conv BF16
+/model.22/dfl/Reshape_1_output_0_Reshape BF16
+/model.22/Slice_output_0_Slice BF16
+/model.22/Slice_1_output_0_Slice BF16
+/model.22/Sub_output_0_Sub BF16
+/model.22/Add_10_output_0_Add BF16
+/model.22/Add_11_output_0_Add BF16
+/model.22/Sub_1_output_0_Sub BF16
+/model.22/Div_1_output_0_Div BF16
+/model.22/Concat_24_output_0_Concat BF16
+/model.22/Mul_5_output_0_Mul BF16
+/model.22/cv3.0/cv3.0.2/Conv_output_0_Conv BF16
+/model.22/cv2.1/cv2.1.2/Conv_output_0_Conv BF16
+/model.22/Concat_1_output_0_Concat BF16
+/model.22/Reshape_1_output_0_Reshape BF16
+/model.22/cv3.1/cv3.1.2/Conv_output_0_Conv BF16
+/model.22/cv2.2/cv2.2.2/Conv_output_0_Conv BF16
+/model.22/Concat_2_output_0_Concat BF16
+/model.22/Reshape_2_output_0_Reshape BF16
+/model.22/cv3.2/cv3.2.2/Conv_output_0_Conv BF16

@@ -86,6 +86,7 @@ akars_tennis/
 ├── akars-tennis-validator
 ├── akars-tennis-live
 ├── cvi-camera-bench
+├── cvi-camera-dataset
 ├── cvi-vpss-smoke
 ├── run.sh
 ├── run-live.sh
@@ -102,6 +103,8 @@ akars_tennis/
 
 `cvi-camera-bench` 是 `/dev/cvi-usb-camera0` 异步采集 ABI 的板端验收工具；
 它不参与固定图片正确性测试。
+`cvi-camera-dataset` 是数据集采集辅助程序，由笔记本侧脚本临时上传到板端 `/tmp`；
+正常采集不要求长期安装它。
 
 其中：
 
@@ -342,6 +345,82 @@ cd /akars_tennis
 后续 BSP 增加分段结果时，只需实现内核中的 `uvc_capture_one_frame_profiled()`，
 用户态 ABI 不变。
 
+## 从摄像头采集校准图片
+
+先运行 `build-validator.sh`，确保构建目录中存在 RISC-V 辅助程序，然后在**笔记本**
+执行：
+
+```sh
+cd /home/jiqingjie/workspace/new_kernel/tgoskits
+./apps/starry/aka00-tennis-yolo/scripts/collect-camera-images.sh \
+  192.168.86.53 300 500 /home/jiqingjie/pic
+```
+
+脚本建立一条 SSH master 连接，只会询问一次机器人 root 密码。它把
+`cvi-camera-dataset` 临时上传到机器人 `/tmp`，保持摄像头异步采集任务运行，每
+500 ms 选择一张最新的完整 MJPEG。板端任意时刻最多只有一个固定名称的临时 JPEG；
+笔记本通过 SCP 拉取并检查 SOI/EOI 后，先把本地 `.part` 原子改名为 `.jpg`，再删除
+板端临时文件并允许采集下一张。正常完成、传输失败或收到退出信号时都会清理板端
+PID、辅助程序和临时 JPEG，不会在板端累积采集图片。
+
+本地文件名形如 `tennis_20261001_183000_0001.jpg`，已有文件不会被覆盖。300 张、
+500 ms 间隔的理论最短时间约为 150 秒，实际还包括首次初始化和 SCP 开销。中途失败
+时，已经成功传到笔记本的图片会保留，并显示完成张数；重新运行会使用新的时间戳，
+不会覆盖上次结果。
+
+## TPU-MLIR 校准和 aligned 模型
+
+模型转换环境固定为 `tpu_mlir==1.30.2`，基础镜像也固定到 digest，避免 `latest`
+漂移。首次构建：
+
+```sh
+cd /home/jiqingjie/workspace/new_kernel/tgoskits/apps/starry/aka00-tennis-yolo
+docker build \
+  -t akars/tpu-mlir:1.30.2 \
+  model-conversion
+```
+
+转换脚本只接受本次正式采集的 300 张
+`tennis_20261001_183102_*.jpg`，会完成 ONNX 固定输入、全量校准、INT8/BF16
+混合精度部署、全部中间张量比较、CModel 比较和 SHA-256 记录：
+
+```sh
+./model-conversion/convert-aligned-model.sh
+```
+
+关键参数为 `--fuse_preprocess --customization_format RGB_PLANAR --aligned_input`。
+纯 INT8 会使该 P2 模型的分类 Sigmoid 输出全零，不能使用；
+`yolov8n-tennis-mixed.qtable` 保留检测头和一个未达到逐层比较阈值的早期卷积为
+BF16。生成模型作为候选文件安装为
+`model/yolov8n_tennis_p2_aligned_int8.cvimodel`，不会覆盖默认稳定模型。
+
+需要在板端试验候选模型时：
+
+```sh
+cd /akars_tennis
+AKARS_MODEL=model/yolov8n_tennis_p2_aligned_int8.cvimodel \
+  ./run-live.sh 30 vpss-rgb
+```
+
+实时程序读取模型的 `aligned` 元数据。默认模型仍走 runtime TDMA 导入；候选模型
+自动使用 `CVI_NN_SetTensorWithAlignedFrames()` 直绑 VPSS RGB-planar 物理帧。
+
+注意：现用 `yolov8n_tennis_v2.cvimodel` 输出为 `1x5x8400`，而当前可取得的原始
+`tennis.onnx` 是 YOLOv8n-P2，输出为 `1x5x27600`。因此候选模型不仅改变输入对齐，
+还增加了 P2 检测头，必须以板端正确性和 forward 耗时为准，不能在未测试时替换
+默认模型。
+
+当端到端时延优先于精度时，可生成 384x384 的 P2 aligned 模型：
+
+```sh
+INPUT_SIZE=384 ./model-conversion/convert-aligned-model.sh
+```
+
+产物为 `model-conversion/work-384/yolov8n_tennis_p2_384_aligned_int8.cvimodel`，
+输入为 `1x3x384x384`，输出为 `1x5x9936`，FLOPs 为 3.338G。384 同时满足
+网络 32 倍数和 VPSS/TPU 64 字节行对齐，用户态会从模型输入合同自动配置 VPSS
+输出为 RGB planar 384x384，并生成 384x288 的居中 letterbox 内容区。
+
 ## 硬件预处理直通接口
 
 `akars-validator/src/tpu.rs` 已绑定固定 SG2002 SDK 中真实存在的：
@@ -420,6 +499,49 @@ cviruntime 对 `aligned=false` 输入明确实现了 TPU TDMA compact；当前 6
 `vpss_hw_avg_us`/`vpss_hw_max_us`（VPSS 驱动记录的硬件阶段）。在 `vpss-rgb`
 模式下 `preprocess_avg_us` 记录显式 TDMA compact 的耗时，不再包含 CPU 布局转换、
 缩放、letterbox 或大图复制。
+
+## 实时识别率与逐帧时延测试
+
+`test-live-accuracy.sh` 默认连续运行 60 秒，使用当前 384x384 aligned 模型和
+`vpss-rgb` 链路：
+
+```sh
+cd /akars_tennis
+./test-live-accuracy.sh
+```
+
+也可以指定测试时长和日志路径：
+
+```sh
+./test-live-accuracy.sh 120 /root/akars-live-accuracy-120s.log
+```
+
+脚本统计含球帧检出率、检测置信度、FPS、相机健康状态，并对 `request`、
+`camera_ion`、`capture`、`vpss_wall`、`vpss_hw`、`preprocess`、`forward`、
+`postprocess` 和端到端 `total` 输出平均值、P50、P95、P99 与最大值。实时程序在
+内存中累计分位数样本，只在结束时写入汇总，避免逐帧文件 I/O 干扰测试；不保存
+任何相机图片。需要逐帧调试时可单独给 `akars-tennis-live` 传 `--report-frames`。
+
+实时测试没有人工真值框和无球负样本，因此 `positive_detection_rate_percent` 是
+“已知画面中有球时的逐帧检出率”，不能替代 Precision、Recall 或 mAP。各阶段时间
+存在包含关系，例如 `request` 包含等待相机/JPU及 VPSS 的墙钟过程，不能把所有阶段
+简单相加。
+
+采集结束后脚本还会直接打印中文的“单帧平均性能汇总”，无需再人工换算字段：
+
+```text
+摄像头/JPU等待 + VPSS       ... ms
+TPU输入TDMA搬运             ... ms
+TPU推理                     ... ms
+后处理                      ... ms
+其他绑定/统计开销           ... ms
+----------------------------------------
+总时延                      ... ms
+单帧平均置信度              ... %
+含球帧检出率                ... %
+```
+
+其中“其他绑定/统计开销”等于单帧平均总时延扣除前四个已列阶段，输出同时写入测试日志。
 
 稳定性验收使用 `100000` 帧；工具检查确定性中性灰 NV12 输出、元数据、IRQ、
 program-late、超时和平均/最大硬件耗时：
