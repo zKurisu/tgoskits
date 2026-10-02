@@ -48,9 +48,18 @@ install -m 0755 \
 "$AKARS_TENNIS_CC" \
   -std=c11 -O2 -Wall -Wextra -Werror \
   -I"$case_dir/include" \
+  "$case_dir/tools/cvi-camera-dataset.c" \
+  -o "$install_dir/cvi-camera-dataset"
+"$AKARS_TENNIS_CC" \
+  -std=c11 -O2 -Wall -Wextra -Werror \
+  -I"$case_dir/include" \
   "$case_dir/tools/cvi-vpss-smoke.c" \
   -o "$install_dir/cvi-vpss-smoke"
-install -m 0644 "$case_dir/model/yolov8n_tennis_v2.cvimodel" "$install_dir/model/"
+install -m 0644 \
+  "$case_dir/model/yolov8n_tennis_v2.cvimodel" \
+  "$case_dir/model/yolov8n_tennis_p2_aligned_int8.cvimodel" \
+  "$case_dir/model/yolov8n_tennis_p2_384_aligned_int8.cvimodel" \
+  "$install_dir/model/"
 install -m 0644 "$case_dir/validation/"*.jpg "$case_dir/validation/images.txt" "$case_dir/validation/expected.txt" "$install_dir/validation/"
 install -m 0644 "$AKARS_TPU_SDK_DIR/lib/"*.so* "$install_dir/lib/"
 
@@ -108,6 +117,7 @@ load_tpu_drivers() {
 
 frames="${1:-100}"
 input="${2:-vpss-rgb}"
+model="${AKARS_MODEL:-model/yolov8n_tennis_v2.cvimodel}"
 verify_arg=""
 if [ "${3:-}" = "verify" ]; then
   verify_arg="--verify-input"
@@ -118,7 +128,7 @@ cd /akars_tennis
 export LD_LIBRARY_PATH=/akars_tennis/lib:${LD_LIBRARY_PATH:-}
 
 exec ./akars-tennis-live \
-  model/yolov8n_tennis_v2.cvimodel \
+  "$model" \
   --device /dev/cvi-usb-camera0 \
   --vpss-device /dev/cvi-vpss0 \
   --frames "$frames" \
@@ -129,5 +139,9 @@ exec ./akars-tennis-live \
   --iou 0.5
 RUN_LIVE_SH
 chmod 0755 "$install_dir/run-live.sh"
+
+install -m 0755 \
+  "$case_dir/scripts/test-live-accuracy.sh" \
+  "$install_dir/test-live-accuracy.sh"
 
 echo "installed: $install_dir"
