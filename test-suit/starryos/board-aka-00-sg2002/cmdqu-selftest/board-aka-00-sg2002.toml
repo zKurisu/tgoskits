@@ -39,89 +39,96 @@ timeout = 600
 shell_prefix = "root@starry:"
 shell_cmd = '''
 marker=STARRY_CMQU_SELFTEST
+ready=1
 if [ ! -x /root/cmdqu_test ]; then
     echo "${marker}_SKIPPED cmdqu_test missing in /root"
-    exit 0
-fi
-out=/tmp/cmqu-selftest.out
-fail=0
-
-# ① 共享区：头部布局 + 两侧独立算出的 CRC 一致（period=100 的 CRC 是定值）
-/root/cmdqu_test shm >"$out" 2>&1
-if grep -q 'version=3 size=1048576 header=192' "$out" && grep -q 'crc=0x9500bf48' "$out"; then
-    echo "${marker}_SHM_OK"
-else
-    echo "${marker}_SHM_FAIL"
-    cat "$out"
-    fail=1
+    ready=0
 fi
 
-# ② 小核在跑：PC 全 0 说明它还在复位态
-/root/cmdqu_test diag >"$out" 2>&1
-if grep -q 'PC = 0x00000000 / 0x00000000' "$out"; then
-    echo "${marker}_CORE_FAIL"
-    cat "$out"
-    fail=1
-else
-    echo "${marker}_CORE_OK"
-fi
+# 注意：本段是**整段文本发给交互式登录 shell**（ostool 的 ShellCheckStep 就是这么执行的），
+# 所以里面不能出现 exit / return —— 那会把 shell 关掉，让运行器等不到提示符。跳过分支用
+# ready 标志表达。手工在串口里粘贴同一段也是安全的。
+if [ "$ready" = 1 ]; then
+    out=/tmp/cmqu-selftest.out
+    fail=0
 
-# ③ 上报环：等到确实有条目被消费，且消费到的条目全部 CRC 通过
-n=0
-while [ "$n" -lt 10 ]; do
-    /root/cmdqu_test ring >"$out" 2>&1
-    if grep -qE '本次消费 [1-9][0-9]* 条' "$out"; then
-        break
+    # ① 共享区：头部布局 + 两侧独立算出的 CRC 一致（period=100 的 CRC 是定值）
+    /root/cmdqu_test shm >"$out" 2>&1
+    if grep -q 'version=3 size=1048576 header=192' "$out" && grep -q 'crc=0x9500bf48' "$out"; then
+        echo "${marker}_SHM_OK"
+    else
+        echo "${marker}_SHM_FAIL"
+        cat "$out"
+        fail=1
     fi
-    n=$((n + 1))
-    sleep 1
-done
-if grep -qE '本次消费 [1-9][0-9]* 条' "$out" && grep -q '0 条异常' "$out"; then
-    echo "${marker}_RING_OK"
-else
-    echo "${marker}_RING_FAIL"
-    cat "$out"
-    fail=1
-fi
 
-# ④ 控制周期分布：小核按 100 ms 跑控制循环，应全部落在 20 tick
-/root/cmdqu_test uart 0 >/dev/null 2>&1
-/root/cmdqu_test ctrl-period 100 >/dev/null 2>&1
-/root/cmdqu_test target 20 --secs 5 >/dev/null 2>&1
-/root/cmdqu_test uart-stats >"$out" 2>&1
-if grep -qE '期望 [0-9]+（100\.0%）' "$out"; then
-    echo "${marker}_CTRL_OK"
-else
-    echo "${marker}_CTRL_FAIL"
-    cat "$out"
-    fail=1
-fi
+    # ② 小核在跑：PC 全 0 说明它还在复位态
+    /root/cmdqu_test diag >"$out" 2>&1
+    if grep -q 'PC = 0x00000000 / 0x00000000' "$out"; then
+        echo "${marker}_CORE_FAIL"
+        cat "$out"
+        fail=1
+    else
+        echo "${marker}_CORE_OK"
+    fi
 
-# ⑤ 跨核中断队列没有丢消息
-/root/cmdqu_test stats >"$out" 2>&1
-if grep -q 'dropped=0' "$out"; then
-    echo "${marker}_QUEUE_OK"
-else
-    echo "${marker}_QUEUE_FAIL"
-    cat "$out"
-    fail=1
-fi
+    # ③ 上报环：等到确实有条目被消费，且消费到的条目全部 CRC 通过
+    n=0
+    while [ "$n" -lt 10 ]; do
+        /root/cmdqu_test ring >"$out" 2>&1
+        if grep -qE '本次消费 [1-9][0-9]* 条' "$out"; then
+            break
+        fi
+        n=$((n + 1))
+        sleep 1
+    done
+    if grep -qE '本次消费 [1-9][0-9]* 条' "$out" && grep -q '0 条异常' "$out"; then
+        echo "${marker}_RING_OK"
+    else
+        echo "${marker}_RING_FAIL"
+        cat "$out"
+        fail=1
+    fi
 
-# ⑥ 超时口径：等待不到应答时必须以 errno=ETIME 返回（M2 收尾把 status 里的重复口径去掉了）
-/root/cmdqu_test timeout >"$out" 2>&1
-if grep -q '超时以 ETIME 返回' "$out"; then
-    echo "${marker}_TIMEOUT_OK"
-else
-    echo "${marker}_TIMEOUT_FAIL"
-    cat "$out"
-    fail=1
-fi
+    # ④ 控制周期分布：小核按 100 ms 跑控制循环，应全部落在 20 tick
+    /root/cmdqu_test uart 0 >/dev/null 2>&1
+    /root/cmdqu_test ctrl-period 100 >/dev/null 2>&1
+    /root/cmdqu_test target 20 --secs 5 >/dev/null 2>&1
+    /root/cmdqu_test uart-stats >"$out" 2>&1
+    if grep -qE '期望 [0-9]+（100\.0%）' "$out"; then
+        echo "${marker}_CTRL_OK"
+    else
+        echo "${marker}_CTRL_FAIL"
+        cat "$out"
+        fail=1
+    fi
 
-/root/cmdqu_test uart 0 >/dev/null 2>&1
-if [ "$fail" = 0 ]; then
-    echo "${marker}_OK"
-else
-    echo "${marker}_FAILED"
+    # ⑤ 跨核中断队列没有丢消息
+    /root/cmdqu_test stats >"$out" 2>&1
+    if grep -q 'dropped=0' "$out"; then
+        echo "${marker}_QUEUE_OK"
+    else
+        echo "${marker}_QUEUE_FAIL"
+        cat "$out"
+        fail=1
+    fi
+
+    # ⑥ 超时口径：等待不到应答时必须以 errno=ETIME 返回（M2 收尾把 status 里的重复口径去掉了）
+    /root/cmdqu_test timeout >"$out" 2>&1
+    if grep -q '超时以 ETIME 返回' "$out"; then
+        echo "${marker}_TIMEOUT_OK"
+    else
+        echo "${marker}_TIMEOUT_FAIL"
+        cat "$out"
+        fail=1
+    fi
+
+    /root/cmdqu_test uart 0 >/dev/null 2>&1
+    if [ "$fail" = 0 ]; then
+        echo "${marker}_OK"
+    else
+        echo "${marker}_FAILED"
+    fi
 fi
 '''
 success_regex = ["(?m)^STARRY_CMQU_SELFTEST_(?:OK|SKIPPED).*$"]
