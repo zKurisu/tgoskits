@@ -1,0 +1,115 @@
+# 跨核命令队列的协议级自检（板卡用例，AKA-00-SG2002）。
+#
+# 与同族的 cmdqu-ipc（board-licheerv-nano-sg2002）分工：
+#   - cmdqu-ipc 只证明"驱动 probe 成功、设备节点存在"，守设备树/iomap/中断注册那类回归；
+#   - 本用例要求客户机里能跑 tools/cmdqu_test，验证驱动与固件两侧的五类行为：
+#       ① 共享区头部布局与 mmap 读写自检——设备树少了 cvitek,cmdqu-shm 节点时，
+#          驱动会打印"跳过共享缓冲映射"，这里会直接露出来；
+#       ② 小核在跑：diag 采到的 PC 不是 0x00000000。"小核没被释放 / 开机卡死"
+#          是我们实板踩过两次的故障，判据只看 PC 是否为 0（非 0 但两次相同仍算在跑）；
+#       ③ 上报环每条消息 CRC 通过（守共享区布局与两侧 CRC 口径）；
+#       ④ 小核控制循环的周期分布全部落在期望刻度（守控制周期与心跳回路）；
+#       ⑤ 跨核中断队列 dropped=0（守 IRQ 收信路径）。
+#
+# 本用例**不需要底盘**：第 ④ 步只依赖小核自己的控制循环，往空链路发帧照样成立；
+# RPM 回读才是需要底盘的证据，那部分留在实车测量里（见 docs/13 的裸板/上车两栏清单）。
+#
+# 工具从哪来：本板没有网络驱动，会话文件下载不可用，所以按仓库对无网络板卡的既有做法
+# 预置在根文件系统里——`1_genimage/install-to-sd.sh` 会把 cmdqu_test / uart_probe 放进
+# 卡上 /root。工具缺失时输出明确的 skip 标记：那是环境没准备好，不是产品缺陷。
+board_type = "AKA-00-SG2002"
+dtb_file = "os/StarryOS/configs/board/aka-00-sg2002.dtb"
+kernel_load_addr = "0x80200000"
+fit_load_addr = "0x82200000"
+bootm_addr = "0x82200000"
+fail_regex = [
+  "(?i)\\bpanic(?:ked)?\\b",
+  "(?i)segmentation fault",
+  "(?i)SIGSEGV",
+  "exit with code: 139",
+  "failed to determine root device",
+  "(?m)^STARRY_CMQU_SELFTEST_FAILED\\s*$",
+  "(?m)^STARRY_CMQU_SELFTEST_(?:SHM|CORE|RING|CTRL|QUEUE)_FAIL\\s*$",
+]
+timeout = 600
+
+[[shell_check_steps]]
+shell_prefix = "root@starry:"
+shell_cmd = '''
+marker=STARRY_CMQU_SELFTEST
+if [ ! -x /root/cmdqu_test ]; then
+    echo "${marker}_SKIPPED cmdqu_test missing in /root"
+    exit 0
+fi
+out=/tmp/cmqu-selftest.out
+fail=0
+
+# ① 共享区：头部布局 + 两侧独立算出的 CRC 一致（period=100 的 CRC 是定值）
+/root/cmdqu_test shm >"$out" 2>&1
+if grep -q 'version=3 size=1048576 header=192' "$out" && grep -q 'crc=0x9500bf48' "$out"; then
+    echo "${marker}_SHM_OK"
+else
+    echo "${marker}_SHM_FAIL"
+    cat "$out"
+    fail=1
+fi
+
+# ② 小核在跑：PC 全 0 说明它还在复位态
+/root/cmdqu_test diag >"$out" 2>&1
+if grep -q 'PC = 0x00000000 / 0x00000000' "$out"; then
+    echo "${marker}_CORE_FAIL"
+    cat "$out"
+    fail=1
+else
+    echo "${marker}_CORE_OK"
+fi
+
+# ③ 上报环：等到确实有条目被消费，且消费到的条目全部 CRC 通过
+n=0
+while [ "$n" -lt 10 ]; do
+    /root/cmdqu_test ring >"$out" 2>&1
+    if grep -qE '本次消费 [1-9][0-9]* 条' "$out"; then
+        break
+    fi
+    n=$((n + 1))
+    sleep 1
+done
+if grep -qE '本次消费 [1-9][0-9]* 条' "$out" && grep -q '0 条异常' "$out"; then
+    echo "${marker}_RING_OK"
+else
+    echo "${marker}_RING_FAIL"
+    cat "$out"
+    fail=1
+fi
+
+# ④ 控制周期分布：小核按 100 ms 跑控制循环，应全部落在 20 tick
+/root/cmdqu_test uart 0 >/dev/null 2>&1
+/root/cmdqu_test ctrl-period 100 >/dev/null 2>&1
+/root/cmdqu_test target 20 --secs 5 >/dev/null 2>&1
+/root/cmdqu_test uart-stats >"$out" 2>&1
+if grep -qE '期望 [0-9]+（100\.0%）' "$out"; then
+    echo "${marker}_CTRL_OK"
+else
+    echo "${marker}_CTRL_FAIL"
+    cat "$out"
+    fail=1
+fi
+
+# ⑤ 跨核中断队列没有丢消息
+/root/cmdqu_test stats >"$out" 2>&1
+if grep -q 'dropped=0' "$out"; then
+    echo "${marker}_QUEUE_OK"
+else
+    echo "${marker}_QUEUE_FAIL"
+    cat "$out"
+    fail=1
+fi
+
+/root/cmdqu_test uart 0 >/dev/null 2>&1
+if [ "$fail" = 0 ]; then
+    echo "${marker}_OK"
+else
+    echo "${marker}_FAILED"
+fi
+'''
+success_regex = ["(?m)^STARRY_CMQU_SELFTEST_(?:OK|SKIPPED).*$"]
