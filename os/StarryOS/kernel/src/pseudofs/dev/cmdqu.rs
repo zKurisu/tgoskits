@@ -37,7 +37,8 @@ use ax_std::os::arceos::{
 };
 use bytemuck::NoUninit;
 use sg2002_cmdqu::{
-    Envelope, Mailbox, Sg2002Ipc,
+    C906L_RUN_ADDR, CoreCtl, Envelope, Mailbox, Sg2002Ipc,
+    core_ctl::{AXI_SRAM_BASE, RSTC_BASE, SEC_SYS_BASE},
     shm::{SYNC_HOST_OFFSET, SYNC_RTOS_OFFSET, ShmHeader, SyncHostBlock, SyncRtosBlock},
 };
 use rdif_ipc::{Interface as IpcInterface, SharedWindow};
@@ -90,7 +91,8 @@ struct ServiceWaiter {
 /// `ioctl` 命令编号，编码规则与 Linux 的 `_IOW('r', nr, unsigned long)` 一致。
 /// 前四个沿用厂商设备节点的编号，方便复用既有用户态程序。
 ///
-/// `0x10` 起的四个是**本驱动自加的调试接口**（收信、发送并等待、累计计数、现场体检），
+/// `0x10` 起的几个是**本驱动自加的调试接口**（收信、发送并等待、累计计数、现场体检、
+/// 对端核控制），
 /// 不属于厂商节点那套稳定 ABI，也不承诺跨版本兼容：厂商只定义 `1..=5`
 /// （SEND / REQUEST / REQUEST_FREE / SEND_WAIT / SEND_WAKEUP），`0x10` 以上在协议里是空的，
 /// 因此不会与厂商程序冲突。
@@ -102,7 +104,7 @@ struct ServiceWaiter {
 ///    `cmdqu-selftest` 也都直接依赖它们。
 /// 2. 它们不占厂商编号段，也不会让厂商程序误用。
 ///
-/// 若将来把驱动上游化、需要收敛公共接口，再把这四条挪到 `/sys/kernel/debug` 下，
+/// 若将来把驱动上游化、需要收敛公共接口，再把这几条挪到 `/sys/kernel/debug` 下，
 /// 只把 `RECV` / `EXCHANGE` 留在设备节点上。
 pub const CMDQU_SEND: u32 = iow(1);
 pub const CMDQU_REQUEST: u32 = iow(2);
@@ -116,6 +118,21 @@ pub const CMDQU_RECV: u32 = iow(0x10);
 pub const CMDQU_STATS: u32 = iow(0x12);
 /// 新增：现场体检（小核是否在跑、槽位与中断状态）。
 pub const CMDQU_DIAG: u32 = iow(0x13);
+/// 新增：对端核（C906L）控制——读控制寄存器、按住/放开复位。
+///
+/// 这条与上面几条的分工不同：它们**只读**，而这条会写寄存器。用途只有一个：
+/// 冷启动偶发"小核没被释放"（`diag` 看到 PC 恒为 0）时的现场急救，见
+/// `docs/11` 第 8.1 节。写的是 FSBL `reset_c906l()` 用的同一组寄存器、同一顺序。
+pub const CMDQU_PEER: u32 = iow(0x14);
+
+/// `CmdquPeer::op`：只读状态，不写任何寄存器。
+pub const CMDQU_PEER_STATUS: u32 = 0;
+/// `CmdquPeer::op`：按住对端核复位（PC 应当立刻读成 0）。
+pub const CMDQU_PEER_HOLD: u32 = 1;
+/// `CmdquPeer::op`：放开复位，让对端核从 `entry` 取指。
+pub const CMDQU_PEER_RELEASE: u32 = 2;
+/// `CmdquPeer::op`：先按住再放开——等价于 FSBL 释放小核的那一下。
+pub const CMDQU_PEER_KICK: u32 = 3;
 
 /// 诊断时需要覆盖 PC 监视寄存器（0x1070），所以映射窗口取 8 KiB。
 const MAPPED_WINDOW: usize = 0x2000;
@@ -225,6 +242,36 @@ pub struct CmdquDiag {
     pub shm_header: u32,
 }
 
+/// 对端核控制的请求与回填，供 `CMDQU_PEER` 使用。
+///
+/// 结构里同时带"请求"和"回填"两半：调用一次就能看到动作前后的寄存器现场，
+/// 排查时不必再补一次读。`op = CMDQU_PEER_STATUS` 时只读，其余三个会写寄存器。
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, NoUninit)]
+pub struct CmdquPeer {
+    /// 请求：见 `CMDQU_PEER_*`。
+    pub op: u32,
+    /// 请求（`RELEASE` / `KICK`）：入口地址；0 表示用固件的运行地址
+    /// [`C906L_RUN_ADDR`]。
+    pub entry: u32,
+    /// 回填：进入 ioctl 时读到的 PC 监视寄存器。
+    pub pc_before: u32,
+    /// 回填：动作之后读到的 PC。`KICK` / `RELEASE` 会在这里做有界轮询，
+    /// 所以非 0 就说明小核确实开始取指了。
+    pub pc_after: u32,
+    /// 回填：`SOFT_CPU_RSTN`（bit6 = 小核复位释放位，1 = 已放开）。
+    pub rstn: u32,
+    /// 回填：`SEC_SYS_CTRL`（bit13 = 协处理器使能）。
+    pub sec_ctrl: u32,
+    /// 回填：入口地址寄存器低位。
+    pub boot_addr_lo: u32,
+    /// 回填：入口地址寄存器高位。
+    pub boot_addr_hi: u32,
+    /// 回填：AXI SRAM 里的握手字。等于入口地址说明 FSBL 上次只做了"暖启动握手"
+    /// （没写复位），等于 `0x0abc0def` 说明小核自己报过到。
+    pub sram_handshake: u32,
+}
+
 /// 已映射的跨核共享缓冲区。
 struct SharedBuffer {
     paddr: usize,
@@ -272,6 +319,8 @@ impl State {
 pub struct CmdquDevice {
     mailbox: Mailbox,
     state: IrqMutex<State>,
+    /// 对端核控制寄存器；映射失败时为 `None`（设备其余功能不受影响）。
+    core: Option<CoreCtl>,
     /// 设备树声明了共享区才存在；没有声明就不映射，避免与分析器争内存。
     shared: Option<SharedBuffer>,
     /// 共享区头部状态（见 `SharedBuffer::init_header` 的返回值）。
@@ -296,9 +345,11 @@ impl CmdquDevice {
 
         let shared = probe_shared_buffer();
         let shm_header = shared.as_ref().map(SharedBuffer::init_header).unwrap_or(0);
+        let core = probe_peer_core();
         let device = Arc::new(Self {
             // SAFETY: vaddr 来自 iomap_uncached，是一段可读写的非缓存 MMIO 映射。
             mailbox: unsafe { Mailbox::new(vaddr) },
+            core,
             state: IrqMutex::new(State {
                 ipc: match shared.as_ref() {
                     Some(shared) => Sg2002Ipc::new(unsafe { Mailbox::new(vaddr) }).with_shared_window(
@@ -449,9 +500,7 @@ impl CmdquDevice {
     /// 现场体检：PC 采样、中断与使能位、八个槽位内容。
     fn handle_diag(&self, current: &UserTaskRef, arg: usize) -> VfsResult<usize> {
         let pc_a = self.mailbox.pc_monitor();
-        for _ in 0..200_000 {
-            core::hint::spin_loop();
-        }
+        settle(SETTLE_SPINS);
         let mut slots = [0u32; 16];
         for slot in 0..8 {
             let (w0, w1) = self.mailbox.slot_words(slot);
@@ -496,6 +545,85 @@ impl CmdquDevice {
             diag.slots[0], diag.ion_nonzero_pages, ION_SAMPLE_PAGES, diag.ion_checksum
         );
         Ok(0)
+    }
+
+    /// 对端核控制：读控制寄存器现场、按住/放开复位。
+    ///
+    /// 唯一的用途是**现场急救**：冷启动偶发"小核没被释放"时（`diag` 看到小核 PC
+    /// 恒为 0、所有要它应答的命令都卡在 1 s 超时），`op = CMDQU_PEER_KICK` 会按
+    /// FSBL 的同一序列把它重新放开，不必断电重来。反过来 `op = CMDQU_PEER_HOLD`
+    /// 把核按在复位里，用来验证"PC 全 0 = 没在跑"这个判据本身。
+    ///
+    /// 这条接口会写硬件寄存器，所以只在调试场景用；它对链路状态不做任何保护——
+    /// 小核被按住期间共享环会停在那，重新放开后由固件自己清理残留。
+    fn handle_peer(&self, current: &UserTaskRef, arg: usize) -> VfsResult<usize> {
+        if arg == 0 {
+            return Err(VfsError::BadAddress);
+        }
+        let Some(core) = self.core.as_ref() else {
+            return Err(VfsError::Unsupported);
+        };
+        // SAFETY: 调用方保证 arg 指向一段可写的用户态 CmdquPeer（由 vm_read_uninit 校验）。
+        let mut req = unsafe {
+            (arg as *const CmdquPeer)
+                .vm_read_uninit(current)
+                .map_err(|_| VfsError::BadAddress)?
+                .assume_init()
+        };
+        let entry = if req.entry == 0 { C906L_RUN_ADDR } else { req.entry };
+        req.pc_before = self.mailbox.pc_monitor();
+
+        match req.op {
+            CMDQU_PEER_STATUS => settle(SETTLE_SPINS),
+            CMDQU_PEER_HOLD => {
+                core.hold();
+                settle(SETTLE_SPINS);
+            }
+            CMDQU_PEER_RELEASE => {
+                core.release(entry);
+                self.wait_peer_pc();
+            }
+            CMDQU_PEER_KICK => {
+                core.hold();
+                // 按住与放开之间留一点时间：复位断言要真的被该核采样到。
+                settle(SETTLE_SPINS);
+                core.release(entry);
+                self.wait_peer_pc();
+            }
+            _ => return Err(VfsError::InvalidInput),
+        }
+
+        req.pc_after = self.mailbox.pc_monitor();
+        let snap = core.snapshot();
+        req.rstn = snap.rstn;
+        req.sec_ctrl = snap.sec_ctrl;
+        req.boot_addr_lo = snap.boot_addr_lo;
+        req.boot_addr_hi = snap.boot_addr_hi;
+        req.sram_handshake = snap.handshake;
+        self.write_struct(current, arg, req)?;
+        info!(
+            "[cmdqu] peer: op={} entry=0x{:08x} pc=0x{:08x}->0x{:08x} rstn=0x{:08x} sec_ctrl=0x{:08x} boot=0x{:08x}/0x{:08x} 握手字=0x{:08x}",
+            req.op,
+            entry,
+            req.pc_before,
+            req.pc_after,
+            req.rstn,
+            req.sec_ctrl,
+            req.boot_addr_lo,
+            req.boot_addr_hi,
+            req.sram_handshake
+        );
+        Ok(0)
+    }
+
+    /// 放开复位后有界等待小核跳出 0。读到非 0 或轮询次数用尽就返回。
+    fn wait_peer_pc(&self) {
+        for _ in 0..PEER_PC_POLLS {
+            if self.mailbox.pc_monitor() != 0 {
+                return;
+            }
+            settle(PEER_PC_SPINS);
+        }
     }
 
     fn handle_recv(&self, current: &UserTaskRef, arg: usize) -> VfsResult<usize> {
@@ -554,6 +682,39 @@ impl CmdquDevice {
             }
         }
     }
+}
+
+/// 对端核控制寄存器各占一页，映射长度按页取。
+const PEER_WINDOW: usize = 0x1000;
+/// `KICK`/`RELEASE` 之后等小核跳出 0 的轮询次数与每次之间的自旋量。
+const PEER_PC_POLLS: usize = 200;
+const PEER_PC_SPINS: usize = 1_000;
+/// 一次"短暂沉降"的自旋量，与 `diag` 两次 PC 采样之间的间隔同量级。
+/// `HOLD` 之后再走一遍它，是为了让复位断言真的被小核采样到；`STATUS` 用它保持
+/// 与 `diag` 相同的采样口径。
+const SETTLE_SPINS: usize = 200_000;
+
+/// 映射对端核的 RSTC / SEC_SYS / AXI SRAM 三段寄存器。
+///
+/// 这三段是 SoC 固定地址，设备树里没有节点，所以直接按常量映射；任一段映射失败
+/// 就整体放弃——`CMDQU_PEER` 会以 `Unsupported` 报错，设备的其它功能不受影响。
+fn probe_peer_core() -> Option<CoreCtl> {
+    let map = |paddr: usize, what: &str| match ax_mm::iomap_uncached(
+        PhysAddr::from_usize(paddr),
+        PEER_WINDOW,
+    ) {
+        Ok(vaddr) => Some(vaddr.as_usize()),
+        Err(err) => {
+            warn!("[cmdqu] 对端核 {what} 寄存器 0x{paddr:08x} 映射失败: {err:?}");
+            None
+        }
+    };
+    let rstc = map(RSTC_BASE, "RSTC")?;
+    let sec_sys = map(SEC_SYS_BASE, "SEC_SYS")?;
+    let sram = map(AXI_SRAM_BASE, "AXI SRAM 握手字")?;
+    // SAFETY: 三个地址都来自 iomap_uncached，各自是长度一页的非缓存 MMIO 映射，
+    // 且覆盖 CoreCtl::new 文档里要求的最小范围。
+    Some(unsafe { CoreCtl::new(rstc, sec_sys, sram) })
 }
 
 /// 从设备树的 `reserved-memory` 子节点里找共享缓冲区并建立非缓存映射。
@@ -643,6 +804,14 @@ impl SharedBuffer {
 ///
 /// 该窗口属于 RAM，内核的直接映射已经覆盖，不需要再 iomap；只读不写，
 /// 因此即使小核正在使用它也不会被破坏。
+/// 纯自旋一小会儿，给硬件状态一点沉降时间。用于诊断与复位序列，
+/// 不进调度器、不睡眠——这条路径要能在"系统刚起来、什么都不能假设"时用。
+fn settle(spins: usize) {
+    for _ in 0..spins {
+        core::hint::spin_loop();
+    }
+}
+
 fn sample_ion_window() -> (u32, u32, u32) {
     let stride = ION_WINDOW / ION_SAMPLE_PAGES;
     let mut nonzero_pages = 0u32;
@@ -801,6 +970,7 @@ impl DeviceOps for CmdquDevice {
                 Ok(0)
             }
             CMDQU_DIAG => self.handle_diag(current, arg),
+            CMDQU_PEER => self.handle_peer(current, arg),
             // 厂商节点用这两个命令注册接收回调；本驱动用 read()/recv 语义替代。
             CMDQU_REQUEST | CMDQU_REQUEST_FREE => Err(VfsError::Unsupported),
             _ => Err(VfsError::Unsupported),
