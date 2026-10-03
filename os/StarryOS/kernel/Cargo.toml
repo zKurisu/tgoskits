@@ -48,6 +48,7 @@ sg2002 = [
     "dep:rdif-pwm",
     "dep:sg2002-tpu",
     "dep:sg2002-cmdqu",
+    "dep:rdif-ipc",
     "dep:some-serial",
     "dep:sg200x-bsp",
     "dep:tock-registers",
@@ -105,6 +106,7 @@ axbacktrace = { workspace = true }
 ax-cgroup = { workspace = true }
 axfs-ng-vfs = { workspace = true }
 rdif-block = { workspace = true }
+rdif-ipc = { workspace = true, optional = true }
 rdif-pinctrl = { workspace = true, optional = true }
 rdif-pwm = { workspace = true, optional = true }
 ax-io = { workspace = true }

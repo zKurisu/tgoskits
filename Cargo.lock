@@ -7502,6 +7502,9 @@ dependencies = [
 [[package]]
 name = "sg2002-cmdqu"
 version = "0.1.0"
+dependencies = [
+ "rdif-ipc",
+]
 
 [[package]]
 name = "sg2002-tpu"
@@ -7899,6 +7902,7 @@ dependencies = [
  "rand 0.10.2",
  "rbpf",
  "rdif-block",
+ "rdif-ipc",
  "rdif-pinctrl",
  "rdif-pwm",
  "rdrive",

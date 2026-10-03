@@ -1,8 +1,13 @@
 //! SG2002 跨核命令队列（cmdqu）设备。
 //!
 //! 这一层负责把 [`sg2002_cmdqu`] 提供的硬件抽象接进 StarryOS：从设备树探测寄存器
-//! 与中断、建立非缓存映射、在中断里把消息取进队列，并通过 `/dev/cvi-rtos-cmdqu`
+//! 与中断、建立非缓存映射、在中断里叫后端把消息取进队列，并通过 `/dev/cvi-rtos-cmdqu`
 //! 暴露给用户态。
+//!
+//! **收信队列与"从硬件搬消息"的逻辑在 `sg2002-cmdqu` 的 `Sg2002Ipc` 后端里**
+//! （`rdif_ipc::Interface` 的一种实现）；本层只保留操作系统语义：FDT 探测、非缓存映射、
+//! 中断注册、等待/唤醒、设备节点与 ioctl/poll。用户态 ABI 需要协议头部的全部位，
+//! 所以收发这两条路径用后端的信封级访问器（`*_envelope`），通用能力走接口方法。
 //!
 //! 与厂商驱动的两点差异值得注意：一是"等待哪条应答"由调用方显式指定（厂商实现
 //! 把等待命令号写死成发送命令号，导致 0x51 只能等来静默超时）；二是所有等待都在
@@ -32,9 +37,10 @@ use ax_std::os::arceos::{
 };
 use bytemuck::NoUninit;
 use sg2002_cmdqu::{
-    Envelope, Mailbox,
+    Envelope, Mailbox, Sg2002Ipc,
     shm::{SYNC_HOST_OFFSET, SYNC_RTOS_OFFSET, ShmHeader, SyncHostBlock, SyncRtosBlock},
 };
+use rdif_ipc::{Interface as IpcInterface, SharedWindow};
 
 use super::{IrqRegistration, irq_service::complete_irq_service_cycle, request_shared_disabled};
 use crate::{
@@ -52,8 +58,8 @@ const IRQ_NAME: &str = "mailbox";
 /// 该节点同时起到两个作用：告诉内核不要把这些页交给分配器，以及告诉本驱动
 /// 共享区的物理地址与大小。
 const SHM_COMPATIBLE: &[&str] = &["cvitek,cmdqu-shm"];
-/// 接收队列上限，超出时丢弃最旧消息并计数。
-const MAX_RX_QUEUE: usize = 64;
+// 接收队列的深度与丢弃策略在 `sg2002-cmdqu` 的 `Sg2002Ipc` 里（`RX_QUEUE_DEPTH`）：
+// 那是硬件层的事——"硬件随时可能塞消息、消费者可能一时跟不上"。
 
 /// 硬中断只能通过这个单元唤醒"一个固定服务线程"：`WaitQueue` 的唤醒 API
 /// 在硬中断上下文会 panic，源码注释与 `pseudofs/dev/kpu.rs` 都明确要求这种两段式。
@@ -241,94 +247,9 @@ const ION_SAMPLE_WORDS: usize = 256; // 每页抽样 1 KiB
 ///
 /// 中断处理程序在持有 IRQ-save 自旋锁期间不允许调用分配器，所以这里不用
 /// `VecDeque`，改用固定容量数组；满了就覆盖最旧的一条并计数。
-struct EnvelopeQueue<const N: usize> {
-    slots: [Option<Envelope>; N],
-    head: usize,
-    len: usize,
-    dropped: u64,
-}
-
-impl<const N: usize> EnvelopeQueue<N> {
-    const fn new() -> Self {
-        Self {
-            slots: [None; N],
-            head: 0,
-            len: 0,
-            dropped: 0,
-        }
-    }
-
-    fn push(&mut self, envelope: Envelope) {
-        if self.len == N {
-            self.slots[self.head] = Some(envelope);
-            self.head = (self.head + 1) % N;
-            self.dropped += 1;
-            return;
-        }
-        let index = (self.head + self.len) % N;
-        self.slots[index] = Some(envelope);
-        self.len += 1;
-    }
-
-    fn pop(&mut self) -> Option<Envelope> {
-        if self.len == 0 {
-            return None;
-        }
-        let envelope = self.slots[self.head].take();
-        self.head = (self.head + 1) % N;
-        self.len -= 1;
-        envelope
-    }
-
-    const fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    /// 取出第一条 `(ip_id, cmd_id)` 匹配的消息，其余保持顺序。
-    fn remove_matching(&mut self, ip_id: u8, cmd_id: u8) -> Option<Envelope> {
-        for offset in 0..self.len {
-            let index = (self.head + offset) % N;
-            let Some(envelope) = self.slots[index] else {
-                continue;
-            };
-            if envelope.ip_id != ip_id || envelope.cmd_id != cmd_id {
-                continue;
-            }
-            // 后面的元素依次前移，保持 FIFO 顺序
-            for shift in offset..self.len - 1 {
-                let from = (self.head + shift + 1) % N;
-                let to = (self.head + shift) % N;
-                self.slots[to] = self.slots[from].take();
-            }
-            let last = (self.head + self.len - 1) % N;
-            self.slots[last] = None;
-            self.len -= 1;
-            return Some(envelope);
-        }
-        None
-    }
-
-    /// 队列里是否存在匹配的消息（不移除）。
-    fn contains_matching(&self, ip_id: u8, cmd_id: u8) -> bool {
-        (0..self.len).any(|offset| {
-            let index = (self.head + offset) % N;
-            matches!(self.slots[index], Some(envelope)
-                if envelope.ip_id == ip_id && envelope.cmd_id == cmd_id)
-        })
-    }
-}
-
-impl<const N: usize> Default for EnvelopeQueue<N> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Default)]
 struct State {
-    rx: EnvelopeQueue<MAX_RX_QUEUE>,
-    tx: u64,
-    rx_total: u64,
+    /// 跨核消息通道后端：收信队列、投递计数、对端状态都在它里面（`sg2002-cmdqu`）。
+    ipc: Sg2002Ipc,
     irq: u64,
     /// 中断注册句柄，随设备存活；`None` 表示未接中断、只能用轮询。
     _irq: Option<IrqRegistration>,
@@ -337,10 +258,10 @@ struct State {
 impl State {
     fn stats(&self) -> CmdquStats {
         CmdquStats {
-            tx: self.tx,
-            rx: self.rx_total,
+            tx: self.ipc.sent(),
+            rx: self.ipc.received(),
             irq: self.irq,
-            dropped: self.rx.dropped,
+            dropped: self.ipc.dropped(),
             poll_registrations: POLL_REGISTRATIONS.load(Ordering::Acquire),
             poll_wakes: POLL_WAKES.load(Ordering::Acquire),
         }
@@ -378,7 +299,19 @@ impl CmdquDevice {
         let device = Arc::new(Self {
             // SAFETY: vaddr 来自 iomap_uncached，是一段可读写的非缓存 MMIO 映射。
             mailbox: unsafe { Mailbox::new(vaddr) },
-            state: IrqMutex::new(State::default()),
+            state: IrqMutex::new(State {
+                ipc: match shared.as_ref() {
+                    Some(shared) => Sg2002Ipc::new(unsafe { Mailbox::new(vaddr) }).with_shared_window(
+                        SharedWindow {
+                            paddr: shared.paddr as u64,
+                            size: shared.size,
+                        },
+                    ),
+                    None => Sg2002Ipc::new(unsafe { Mailbox::new(vaddr) }),
+                },
+                irq: 0,
+                _irq: None,
+            }),
             shared,
             shm_header,
         });
@@ -419,10 +352,8 @@ impl CmdquDevice {
     fn handle_irq(&self) -> ax_runtime::hal::irq::IrqReturn {
         let mut state = self.state.lock();
         state.irq += 1;
-        while let Some((_slot, envelope)) = self.mailbox.take_pending() {
-            state.rx.push(envelope);
-            state.rx_total += 1;
-        }
+        // 中断上下文只做"叫后端把硬件里的消息搬进队列"，队列本身不分配内存。
+        state.ipc.pump();
         drop(state);
         // 硬中断只唤醒固定服务线程，由后者在任务上下文里做等待队列扇出。
         let _ = IRQ_NOTIFY.notify();
@@ -434,22 +365,22 @@ impl CmdquDevice {
         // 子系统号与命令号的取值范围由协议硬性规定，越界的消息对端会直接丢弃，
         // 在本地拦下比让它到对端再被拒绝更容易定位。
         envelope.validate().map_err(|_| VfsError::InvalidInput)?;
-        let slot = self
-            .mailbox
-            .send(envelope)
-            .map_err(|_| VfsError::ResourceBusy)?;
-        self.state.lock().tx += 1;
-        Ok(slot)
+        // 走信封级入口：用户态自造的头部字要逐位保真，通用路径会按方向重编码。
+        self.state
+            .lock()
+            .ipc
+            .send_envelope(envelope)
+            .map_err(|_| VfsError::ResourceBusy)
     }
 
     /// 从队列里取一条匹配 `(ip_id, cmd_id)` 的应答。
     fn take_matching(&self, ip_id: u8, cmd_id: u8) -> Option<Envelope> {
-        self.state.lock().rx.remove_matching(ip_id, cmd_id)
+        self.state.lock().ipc.take_matching_envelope(ip_id, cmd_id)
     }
 
     /// 队列里是否已有匹配的应答（不移除）。
     fn has_matching(&self, ip_id: u8, cmd_id: u8) -> bool {
-        self.state.lock().rx.contains_matching(ip_id, cmd_id)
+        self.state.lock().ipc.has_matching(ip_id, cmd_id)
     }
 
     /// 是否完全没有待处理消息：软件队列为空**且**硬件槽位里也没有待搬的报文。
@@ -458,19 +389,13 @@ impl CmdquDevice {
     /// 到达的），此时报文躺在 mailbox 槽位里，若只判队列就会出现"数据已到却报
     /// 不可读、`read` 返回 EAGAIN、`poll` 睡到超时"的假阴性。
     fn rx_is_empty(&self) -> bool {
-        if !self.state.lock().rx.is_empty() {
-            return false;
-        }
-        self.mailbox.pending_mask() == 0
+        let state = self.state.lock();
+        !state.ipc.is_ready() && !state.ipc.hardware_pending()
     }
 
     /// 没有中断（或中断没来得及跑）时，把硬件里躺着的消息搬进队列。
     fn drain_hardware(&self) {
-        while let Some((_slot, envelope)) = self.mailbox.take_pending() {
-            let mut state = self.state.lock();
-            state.rx.push(envelope);
-            state.rx_total += 1;
-        }
+        self.state.lock().ipc.pump();
     }
 
     /// 阻塞等待指定应答：先看队列，再睡在 `RX_READY` 上等中断唤醒。
@@ -577,7 +502,7 @@ impl CmdquDevice {
         // 先把硬件里可能还没被中断搬走的报文收进来，再判断队列是否为空。
         self.drain_hardware();
         let mut state = self.state.lock();
-        let Some(envelope) = state.rx.pop() else {
+        let Some(envelope) = state.ipc.pop_envelope() else {
             return Err(VfsError::WouldBlock);
         };
         let raw = RawEnvelope {
@@ -844,7 +769,7 @@ impl DeviceOps for CmdquDevice {
         // 与 RECV 一致：先搬硬件队列，避免"数据已到却报 EOF/EAGAIN"。
         self.drain_hardware();
         let mut state = self.state.lock();
-        let Some(envelope) = state.rx.pop() else {
+        let Some(envelope) = state.ipc.pop_envelope() else {
             return Err(VfsError::WouldBlock);
         };
         drop(state);

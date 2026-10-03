@@ -8,3 +8,6 @@ repository.workspace = true
 description = "SG2002 (Cvitek) cross-core command queue (cmdqu) mailbox driver layer"
 categories = ["embedded", "hardware-support", "no-std"]
 keywords = ["sg2002", "cvitek", "mailbox", "ipc", "cmdqu"]
+
+[dependencies]
+rdif-ipc.workspace = true
