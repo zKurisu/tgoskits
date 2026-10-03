@@ -522,30 +522,45 @@ impl CmdquDevice {
 
     /// 现场体检：PC 采样、中断与使能位、八个槽位内容。
     fn handle_diag(&self, current: &UserTaskRef, arg: usize) -> VfsResult<usize> {
-        let mut diag = CmdquDiag::default();
-        diag.pc_a = self.mailbox.pc_monitor();
+        let pc_a = self.mailbox.pc_monitor();
         for _ in 0..200_000 {
             core::hint::spin_loop();
         }
-        diag.pc_b = self.mailbox.pc_monitor();
-        diag.pending = self.mailbox.pending_mask();
-        diag.peer_enable = self.mailbox.peer_enable_mask();
-        diag.own_enable = self.mailbox.own_enable_mask();
+        let mut slots = [0u32; 16];
         for slot in 0..8 {
             let (w0, w1) = self.mailbox.slot_words(slot);
-            diag.slots[slot * 2] = w0;
-            diag.slots[slot * 2 + 1] = w1;
+            slots[slot * 2] = w0;
+            slots[slot * 2 + 1] = w1;
         }
         let (ion_nonzero_pages, ion_first_word, ion_checksum) = sample_ion_window();
-        diag.ion_nonzero_pages = ion_nonzero_pages;
-        diag.ion_first_word = ion_first_word;
-        diag.ion_checksum = ion_checksum;
-        if let Some(shared) = self.shared.as_ref() {
-            diag.shm_paddr = shared.paddr as u32;
-            diag.shm_size = shared.size as u32;
-            diag.shm_selftest = shared.selftest();
-            diag.shm_header = self.shm_header;
-        }
+        // 共享缓冲几个字段只在映射成功时有意义；未映射时保持 0（即默认值的语义）。
+        let (shm_paddr, shm_size, shm_selftest, shm_header) = match self.shared.as_ref() {
+            Some(shared) => (
+                shared.paddr as u32,
+                shared.size as u32,
+                shared.selftest(),
+                self.shm_header,
+            ),
+            None => (0, 0, 0, 0),
+        };
+        // 一次性构造，避免 `Default::default()` 之后逐字段赋值
+        // （clippy 的 `field_reassign_with_default`）。
+        let diag = CmdquDiag {
+            pc_a,
+            pc_b: self.mailbox.pc_monitor(),
+            pending: self.mailbox.pending_mask(),
+            own_enable: self.mailbox.own_enable_mask(),
+            peer_enable: self.mailbox.peer_enable_mask(),
+            reserved: 0,
+            slots,
+            ion_nonzero_pages,
+            ion_first_word,
+            ion_checksum,
+            shm_paddr,
+            shm_size,
+            shm_selftest,
+            shm_header,
+        };
         // 顺带把硬件里已经躺着的消息收进队列，避免诊断本身"吃掉"消息
         self.drain_hardware();
         self.write_struct(current, arg, diag)?;
