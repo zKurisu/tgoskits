@@ -797,6 +797,19 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             ),
         );
         // 与小核通信的命令队列（cmdqu）。设备树里必须有 cvitek,rtos_cmdqu 节点。
+        //
+        // 主设备号 10（misc）在本树里的分配，2026-10-03 定稿、**不再挪动**：
+        //   10:56        ion             —— 与 cmdqu 同属"大核/小核共享内存"这一族
+        //   10:57        （本族预留，当前未用）
+        //   10:58        cvi-rtos-cmdqu  —— 本驱动
+        //   10:59~10:63  （本族预留，给后续跨核节点用，免得以后再往这个区段插编号）
+        //   10:202/203   cvi-usb-camera0 / cvi_vc_dec0 —— 沿用厂商编号
+        //   10:240~256   axivc 管理器与 publisher；10:257+ subscriber
+        //   10:1024      cpu_dma_latency（沿用 Linux 惯例）
+        //
+        // 编号一旦发出就会被用户态程序、板测用例和文档引用（`cmdqu-ipc` 用例里就写死了
+        // `10, 58`），所以这里选择"保留 58、把 57 与 59~63 划给同族"，
+        // 而不是为了凑一个"紧凑的编号段"去重排。需要新增同族节点时从预留段里取。
         if let Some(cmdqu) = cmdqu::CmdquDevice::probe() {
             root.add(
                 cmdqu::CmdquDevice::DEVICE_NAME,

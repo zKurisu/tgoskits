@@ -83,6 +83,21 @@ struct ServiceWaiter {
 
 /// `ioctl` 命令编号，编码规则与 Linux 的 `_IOW('r', nr, unsigned long)` 一致。
 /// 前四个沿用厂商设备节点的编号，方便复用既有用户态程序。
+///
+/// `0x10` 起的四个是**本驱动自加的调试接口**（收信、发送并等待、累计计数、现场体检），
+/// 不属于厂商节点那套稳定 ABI，也不承诺跨版本兼容：厂商只定义 `1..=5`
+/// （SEND / REQUEST / REQUEST_FREE / SEND_WAIT / SEND_WAKEUP），`0x10` 以上在协议里是空的，
+/// 因此不会与厂商程序冲突。
+///
+/// 2026-10-03 的决定是**保留为 ioctl，不挪进 debugfs**，理由是这两条：
+/// 1. 现场排查真正需要的正是"一次系统调用拿到小核在不在跑、队列有没有丢包"，
+///    而 `debugfs` 要先挂载、要多依赖一层文件系统语义，偏偏这些接口的使用场景是
+///    "系统刚起来、什么都不能假设"的时候；`tools/cmdqu_test` 与板测用例
+///    `cmdqu-selftest` 也都直接依赖它们。
+/// 2. 它们不占厂商编号段，也不会让厂商程序误用。
+///
+/// 若将来把驱动上游化、需要收敛公共接口，再把这四条挪到 `/sys/kernel/debug` 下，
+/// 只把 `RECV` / `EXCHANGE` 留在设备节点上。
 pub const CMDQU_SEND: u32 = iow(1);
 pub const CMDQU_REQUEST: u32 = iow(2);
 pub const CMDQU_REQUEST_FREE: u32 = iow(3);
