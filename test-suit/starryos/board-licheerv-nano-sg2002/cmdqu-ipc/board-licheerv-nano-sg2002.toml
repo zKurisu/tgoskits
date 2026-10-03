@@ -1,0 +1,33 @@
+# 跨核命令队列驱动的板级冒烟用例。
+#
+# 覆盖范围：内核在 SG2002 上探测到 `cvitek,rtos_cmdqu` 节点后注册出设备节点，
+# 且该节点确实是字符设备。它守的是"驱动探测失败"这一类回归——例如设备树里
+# 丢掉了 rtos_cmdqu 节点、iomap 失败、中断注册失败导致 probe 提前返回。
+#
+# 更完整的自检（发 0x51 等 0x52、读写共享环、校验 CRC）需要把 tools/cmdqu_test
+# 装进根文件系统，属于下一步；本用例只依赖 shell 与 devfs，因此现在就能进回归。
+board_type = "LicheeRV-Nano-SG2002"
+dtb_file = "os/StarryOS/configs/board/licheerv-nano-sg2002.dtb"
+kernel_load_addr = "0x80200000"
+fit_load_addr = "0x82200000"
+bootm_addr = "0x82200000"
+fail_regex = [
+  "(?i)\\bpanic(?:ked)?\\b",
+  "(?i)segmentation fault",
+  "(?i)SIGSEGV",
+  "exit with code: 139",
+  "failed to determine root device",
+]
+timeout = 600
+
+[[shell_check_steps]]
+shell_prefix = "root@starry:"
+# ① 设备节点存在：字符设备 10:58，权限 crw-------
+shell_cmd = "ls -l /dev/cvi-rtos-cmdqu"
+success_regex = ["(?m)^crw[-rwx]{6}\\s+1\\s+root\\s+root\\s+10,\\s*58\\s"]
+
+[[shell_check_steps]]
+shell_prefix = "root@starry:"
+# ② 确实是字符设备（若驱动 probe 失败会退化成不存在）
+shell_cmd = "test -c /dev/cvi-rtos-cmdqu && echo CMDQU_NODE_OK"
+success_regex = ["(?m)^CMDQU_NODE_OK\\s*$"]
