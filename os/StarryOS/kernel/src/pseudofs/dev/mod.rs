@@ -2,6 +2,8 @@
 
 mod axivc;
 mod card0;
+#[cfg(feature = "sg2002")]
+pub(crate) mod cmdqu;
 #[cfg(feature = "rknpu")]
 pub(crate) mod card1;
 // The real contiguous coherent dma-heap is shared by every accelerator that
@@ -14,7 +16,7 @@ pub mod event;
 mod fb;
 #[cfg(feature = "sg2002")]
 pub mod ion;
-#[cfg(any(feature = "input", feature = "k230-kpu"))]
+#[cfg(any(feature = "input", feature = "k230-kpu", feature = "sg2002"))]
 mod irq_service;
 mod kmsg;
 #[cfg(feature = "k230-kpu")]
@@ -794,6 +796,18 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
                 ion_device,
             ),
         );
+        // 与小核通信的命令队列（cmdqu）。设备树里必须有 cvitek,rtos_cmdqu 节点。
+        if let Some(cmdqu) = cmdqu::CmdquDevice::probe() {
+            root.add(
+                cmdqu::CmdquDevice::DEVICE_NAME,
+                Device::new(
+                    fs.clone(),
+                    NodeType::CharacterDevice,
+                    DeviceId::new(10, 58),
+                    cmdqu,
+                ),
+            );
+        }
         root.add(
             "pinmux",
             Device::new(
