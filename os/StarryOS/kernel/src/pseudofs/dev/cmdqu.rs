@@ -37,8 +37,8 @@ use ax_std::os::arceos::{
 };
 use bytemuck::NoUninit;
 use sg2002_cmdqu::{
-    C906L_RUN_ADDR, CoreCtl, Envelope, Mailbox, Sg2002Ipc,
-    core_ctl::{AXI_SRAM_BASE, RSTC_BASE, SEC_SYS_BASE},
+    C906L_RUN_ADDR, ChipReset, CoreCtl, Envelope, Mailbox, Sg2002Ipc,
+    core_ctl::{AXI_SRAM_BASE, RSTC_BASE, RTC_CTRL_BASE, RTC_REQ_BASE, SEC_SYS_BASE},
     shm::{SYNC_HOST_OFFSET, SYNC_RTOS_OFFSET, ShmHeader, SyncHostBlock, SyncRtosBlock},
 };
 use rdif_ipc::{Interface as IpcInterface, SharedWindow};
@@ -124,6 +124,18 @@ pub const CMDQU_DIAG: u32 = iow(0x13);
 /// 冷启动偶发"小核没被释放"（`diag` 看到 PC 恒为 0）时的现场急救，见
 /// `docs/11` 第 8.1 节。写的是 FSBL `reset_c906l()` 用的同一组寄存器、同一顺序。
 pub const CMDQU_PEER: u32 = iow(0x14);
+/// 新增：整芯片软复位（调试用）。`arg` 直接是动作码，**不是指针**——这条接口
+/// 正常不会返回（复位会重跑启动链），没有回填字段可写。
+///
+/// 存在的理由：本板的迭代要在 U-Boot 里 `ums 0 mmc 0` 刷 SD 卡，而 StarryOS 的
+/// `reboot` 只是用户态软重启（不碰硬件），过去只能去按板上的 reset 键。
+pub const CMDQU_BOARD_RESET: u32 = iow(0x15);
+
+/// `CMDQU_BOARD_RESET` 的动作码：整芯片软复位（等价于按一下 reset，重跑启动链）。
+///
+/// 序列与 U-Boot 的 `cv_system_reset()` 一致。同族的"关机"（`RTC_CTRL0` bit0）刻意
+/// 不在这里提供：那会把板子留在断电状态，只能靠人重新上电。
+pub const CMDQU_RESET_WARM: usize = 0;
 
 /// `CmdquPeer::op`：只读状态，不写任何寄存器。
 pub const CMDQU_PEER_STATUS: u32 = 0;
@@ -321,6 +333,8 @@ pub struct CmdquDevice {
     state: IrqMutex<State>,
     /// 对端核控制寄存器；映射失败时为 `None`（设备其余功能不受影响）。
     core: Option<CoreCtl>,
+    /// 整芯片软复位寄存器；映射失败时为 `None`（设备其余功能不受影响）。
+    chip_reset: Option<ChipReset>,
     /// 设备树声明了共享区才存在；没有声明就不映射，避免与分析器争内存。
     shared: Option<SharedBuffer>,
     /// 共享区头部状态（见 `SharedBuffer::init_header` 的返回值）。
@@ -346,10 +360,12 @@ impl CmdquDevice {
         let shared = probe_shared_buffer();
         let shm_header = shared.as_ref().map(SharedBuffer::init_header).unwrap_or(0);
         let core = probe_peer_core();
+        let chip_reset = probe_chip_reset();
         let device = Arc::new(Self {
             // SAFETY: vaddr 来自 iomap_uncached，是一段可读写的非缓存 MMIO 映射。
             mailbox: unsafe { Mailbox::new(vaddr) },
             core,
+            chip_reset,
             state: IrqMutex::new(State {
                 ipc: match shared.as_ref() {
                     Some(shared) => Sg2002Ipc::new(unsafe { Mailbox::new(vaddr) }).with_shared_window(
@@ -626,6 +642,26 @@ impl CmdquDevice {
         }
     }
 
+    /// 整芯片软复位。`arg` 是动作码（不是指针，见 [`CMDQU_BOARD_RESET`]）。
+    ///
+    /// 正常路径**不会返回**：RTC 域置位后 SoC 在几毫秒内重跑启动链。这里在写入之后再
+    /// 等一下再返回 `Ok`，是为了让"没生效"也能被用户态看见——如果 `ioctl` 正常返回，
+    /// 说明复位没发生（寄存器没映射、或者这块芯片的 RTC 约定与预期不同）。
+    fn handle_board_reset(&self, arg: usize) -> VfsResult<usize> {
+        let Some(reset) = self.chip_reset.as_ref() else {
+            return Err(VfsError::Unsupported);
+        };
+        if arg != CMDQU_RESET_WARM {
+            return Err(VfsError::InvalidInput);
+        }
+        info!("[cmdqu] board: 请求整芯片软复位；串口应当马上重新打印启动链（本板停在 U-Boot 提示符）");
+        reset.request_warm_reset();
+        // 复位通常在这之前就发生了；给 RTC 域留一拍再返回，好让"没生效"有回音。
+        settle(SETTLE_SPINS * 5);
+        warn!("[cmdqu] board: 软复位请求已写入，但 ioctl 还是返回了——大概率没生效");
+        Ok(0)
+    }
+
     fn handle_recv(&self, current: &UserTaskRef, arg: usize) -> VfsResult<usize> {
         // 先把硬件里可能还没被中断搬走的报文收进来，再判断队列是否为空。
         self.drain_hardware();
@@ -715,6 +751,28 @@ fn probe_peer_core() -> Option<CoreCtl> {
     // SAFETY: 三个地址都来自 iomap_uncached，各自是长度一页的非缓存 MMIO 映射，
     // 且覆盖 CoreCtl::new 文档里要求的最小范围。
     Some(unsafe { CoreCtl::new(rstc, sec_sys, sram) })
+}
+
+/// 映射整芯片软复位用的两段 RTC 寄存器（RTC_CTRL 与 RTC 请求组）。
+///
+/// 同样按固定地址映射、失败就放弃：`CMDQU_BOARD_RESET` 会返回 `Unsupported`，
+/// 不影响设备其它功能。
+fn probe_chip_reset() -> Option<ChipReset> {
+    let map = |paddr: usize, what: &str| match ax_mm::iomap_uncached(
+        PhysAddr::from_usize(paddr),
+        PEER_WINDOW,
+    ) {
+        Ok(vaddr) => Some(vaddr.as_usize()),
+        Err(err) => {
+            warn!("[cmdqu] 整芯片复位 {what} 寄存器 0x{paddr:08x} 映射失败: {err:?}");
+            None
+        }
+    };
+    let rtc_ctrl = map(RTC_CTRL_BASE, "RTC_CTRL")?;
+    let rtc = map(RTC_REQ_BASE, "RTC 请求")?;
+    // SAFETY: 两个地址都来自 iomap_uncached，各自是长度一页的非缓存 MMIO 映射，
+    // 且覆盖 ChipReset::new 文档里要求的最小范围。
+    Some(unsafe { ChipReset::new(rtc_ctrl, rtc) })
 }
 
 /// 从设备树的 `reserved-memory` 子节点里找共享缓冲区并建立非缓存映射。
@@ -971,6 +1029,7 @@ impl DeviceOps for CmdquDevice {
             }
             CMDQU_DIAG => self.handle_diag(current, arg),
             CMDQU_PEER => self.handle_peer(current, arg),
+            CMDQU_BOARD_RESET => self.handle_board_reset(arg),
             // 厂商节点用这两个命令注册接收回调；本驱动用 read()/recv 语义替代。
             CMDQU_REQUEST | CMDQU_REQUEST_FREE => Err(VfsError::Unsupported),
             _ => Err(VfsError::Unsupported),

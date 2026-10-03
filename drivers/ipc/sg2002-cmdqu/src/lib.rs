@@ -23,7 +23,7 @@ pub mod protocol;
 pub mod queue;
 pub mod shm;
 
-pub use core_ctl::{C906L_RUN_ADDR, CoreCtl, CoreCtlSnapshot, RTOS_MAGIC_CODE};
+pub use core_ctl::{C906L_RUN_ADDR, ChipReset, CoreCtl, CoreCtlSnapshot, RTOS_MAGIC_CODE};
 pub use ipc::{FLAG_BLOCK, RX_QUEUE_DEPTH, Sg2002Ipc};
 pub use mailbox::{Mailbox, MailboxError};
 pub use protocol::{EncodeError, Envelope, IpId, SysCmdId};
