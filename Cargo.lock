@@ -6559,6 +6559,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdif-ipc"
+version = "0.1.0"
+dependencies = [
+ "rdif-base",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "rdif-msi"
 version = "0.3.1"
 dependencies = [
