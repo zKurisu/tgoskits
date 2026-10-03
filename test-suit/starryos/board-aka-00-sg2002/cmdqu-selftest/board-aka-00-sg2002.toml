@@ -10,7 +10,7 @@
 #       ③ 上报环每条消息 CRC 通过（守共享区布局与两侧 CRC 口径）；
 #       ④ 小核控制循环的周期分布全部落在期望刻度（守控制周期与心跳回路）；
 #       ⑤ 跨核中断队列 dropped=0（守 IRQ 收信路径）。
-#       ⑥ 等待超时必须返回 errno=ETIME（守 M2 收尾定下的"超时只走 errno"口径，
+#       ⑥ 等待超时必须返回 errno=ETIMEDOUT（110）（守 M2 收尾定下的"超时只走 errno"口径，
 #          防止有人把它退回成"只写 status 字段"）。
 #
 # 本用例**不需要底盘**：第 ④ 步只依赖小核自己的控制循环，往空链路发帧照样成立；
@@ -113,9 +113,10 @@ if [ "$ready" = 1 ]; then
         fail=1
     fi
 
-    # ⑥ 超时口径：等待不到应答时必须以 errno=ETIME 返回（M2 收尾把 status 里的重复口径去掉了）
+    # ⑥ 超时口径：等待不到应答时必须以 errno=ETIMEDOUT(110) 返回
+    # （M2 收尾把 status 里的重复口径去掉了；注意不是 ETIME(62)，是 ETIMEDOUT）
     /root/cmdqu_test timeout >"$out" 2>&1
-    if grep -q '超时以 ETIME 返回' "$out"; then
+    if grep -q '超时以 ETIMEDOUT 返回' "$out"; then
         echo "${marker}_TIMEOUT_OK"
     else
         echo "${marker}_TIMEOUT_FAIL"
