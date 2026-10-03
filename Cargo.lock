@@ -7492,6 +7492,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "sg2002-cmdqu"
+version = "0.1.0"
+
+[[package]]
 name = "sg2002-tpu"
 version = "0.4.1"
 dependencies = [
@@ -7894,6 +7898,7 @@ dependencies = [
  "riscv",
  "rockchip-rga",
  "scope-local",
+ "sg2002-cmdqu",
  "sg2002-tpu",
  "sg200x-bsp",
  "sg200x-jpu",

@@ -68,6 +68,7 @@ members = [
     "drivers/firmware/*",
     "drivers/gpu/*",
     "drivers/intc/*",
+    "drivers/ipc/*",
     "drivers/interface/*",
     "drivers/net/*",
     "drivers/npu/*",
@@ -241,6 +242,7 @@ realtek-rtl8125 = { version = "0.3", path = "drivers/net/realtek-rtl8125" }
 rockchip-pm = { version = "0.4", path = "drivers/soc/rockchip/rockchip-pm" }
 rockchip-soc = { version = "0.4", path = "drivers/soc/rockchip/rockchip-soc" }
 sg2002-tpu = { version = "0.4", path = "drivers/tpu/sg2002-tpu" }
+sg2002-cmdqu = { version = "0.1", path = "drivers/ipc/sg2002-cmdqu" }
 rdrive = { version = "0.25", path = "drivers/rdrive" }
 rdrive-macros = { version = "0.4", path = "drivers/rdrive-macros" }
 rsext4 = { version = "0.9", path = "fs/rsext4" }
