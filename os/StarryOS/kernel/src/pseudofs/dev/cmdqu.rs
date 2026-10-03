@@ -145,7 +145,12 @@ pub struct CmdquExchange {
     pub timeout_ms: u32,
     /// 输出：应答的 param_ptr。
     pub reply_param_ptr: u32,
-    /// 输出：0 = 拿到应答，1 = 超时。
+    /// 输出：0 = 拿到应答，2 = 按调用方要求没有等待（`timeout_ms == 0`）。
+    ///
+    /// **超时不在这里表达**：等待超时时 ioctl 直接返回 `-ETIME`，并且不回填本结构体
+    /// （出错时输出字段无定义，这是 Linux 的惯用约定）。曾经在超时同时写回
+    /// `status = 1`，于是同一个事实有 errno 与字段两条口径，用户态还得先读回结构体
+    /// 才知道发生了什么——2026-10-03 收窄成单一口径。
     pub status: u32,
 }
 
@@ -583,11 +588,11 @@ impl CmdquDevice {
                 Ok(0)
             }
             None => {
-                // 超时既写入状态字段（便于用户态区分"未等待"），也返回错误码，
-                // 让调用方可以直接用 errno 判断，不必先读回结构体。
-                request.reply_param_ptr = 0;
-                request.status = 1;
-                self.write_struct(current, arg, request)?;
+                // 超时只走错误码：调用方看 errno == ETIME 即可，不必先读回结构体。
+                // 出错时不给输出字段任何保证，所以这里**不**回填结构体——曾经同时写回
+                // `status = 1`，让"超时"有 errno 与字段两条口径（一条错一条对时很难查），
+                // 2026-10-03 收窄成单一口径。注意 `timeout_ms == 0`（不等待）是成功路径，
+                // 仍然回填 `status = 2`，见上面那个分支。
                 Err(VfsError::TimedOut)
             }
         }
