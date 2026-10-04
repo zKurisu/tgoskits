@@ -25,6 +25,12 @@ pub fn init(args: &[String], envs: &[String]) {
     // Install task-context diagnostics and contention backoff before userspace.
     crate::rdrive_osal::init();
 
+    // 这台板子从 U-Boot 起飞，设备树里没有 `/chosen/rng-seed`，平台侧给不出启动熵；
+    // 而安全 Wi-Fi 连接需要一份真实熵（拒绝可重放状态），所以这里用芯片自带的 TRNG
+    // 补上。详见 `sg2002_trng.rs`。
+    #[cfg(feature = "sg2002")]
+    crate::sg2002_trng::provide_boot_entropy();
+
     crate::stop_machine::init();
     crate::trap::init_handlers();
     static_keys::global_init();
