@@ -388,7 +388,7 @@ pub fn sys_mmap(
             let buffer_len = checked_align_up(range.size(), page_size)?;
             let map_length = checked_align_up(length, page_size)?;
             let reported_mapping_flags = reported_mapping_flags_from_prot(permission_flags);
-            info!(
+            debug!(
                 "Ion buffer mmap: phys_addr=0x{:x}, buffer_size={}, requested_length={}, \
                  map_length={}",
                 range.start.as_usize(),
@@ -438,7 +438,7 @@ pub fn sys_mmap(
                 MappingPublication::mmap(replace_existing, lock_mode, mapping_memlock_limit),
             )?;
             drop(aspace);
-            info!(
+            debug!(
                 "Ion buffer mmap success: vaddr=0x{:x}, length={}",
                 start.as_usize(),
                 map_length

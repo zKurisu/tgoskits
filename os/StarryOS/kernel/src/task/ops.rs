@@ -536,7 +536,7 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
         return;
     }
 
-    info!("{} exit with code: {}", curr.id_name(), exit_code);
+    debug!("{} exit with code: {}", curr.id_name(), exit_code);
     emit_sched_process_exit(thr.tid(), exit_code);
 
     // Free any per-task perf HW counters attached to this thread before the fd

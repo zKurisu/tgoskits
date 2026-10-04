@@ -152,7 +152,10 @@ pub fn handle_syscall(current: &UserTaskRef, uctx: &mut UserContext) -> SyscallR
     trace_sys_enter(uctx, raw_sysno as i64);
 
     let Some(sysno) = Sysno::new(raw_sysno) else {
-        warn!("Invalid syscall number: {raw_sysno}");
+        // Linux returns ENOSYS silently here; logging on a user-controllable
+        // path costs ~250 us per call (measured with syscost2 on SG2002) and
+        // floods a serial console.
+        debug!("Invalid syscall number: {raw_sysno}");
         uctx.set_retval(-Errno::ENOSYS.into_raw() as _);
         return SyscallRestart::Allowed;
     };

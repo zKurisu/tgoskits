@@ -79,7 +79,7 @@ pub fn new_user_task(
             tid.vm_write(&curr, child_tid.get()).ok();
         }
 
-        info!("Enter user space: ip={:#x}, sp={:#x}", uctx.ip(), uctx.sp());
+        debug!("Enter user space: ip={:#x}, sp={:#x}", uctx.ip(), uctx.sp());
 
         let thr = curr.as_thread();
         let resumed_from_initial_ptrace_stop =
