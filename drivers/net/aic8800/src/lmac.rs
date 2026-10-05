@@ -329,10 +329,12 @@ pub(crate) fn channel_config_payload() -> [u8; 254] {
     const CHANNELS_2G4: [u16; 14] = [
         2412, 2417, 2422, 2427, 2432, 2437, 2442, 2447, 2452, 2457, 2462, 2467, 2472, 2484,
     ];
-    /// 厂商 `rwnx_5ghz_channels[]` 里非扩展的那一组（信道 36~165）。
-    const CHANNELS_5G: [u16; 25] = [
+    /// 厂商 `rwnx_5ghz_channels[]` 里非扩展的那一组（信道 36~177，共 28 个）。
+    /// 数量必须与 `CHANNEL_CONFIG_PAYLOAD_LEN` 的 `28 * 6` 一致：少填会静默把
+    /// 尾部信道留 0，多填会越界。
+    const CHANNELS_5G: [u16; 28] = [
         5180, 5200, 5220, 5240, 5260, 5280, 5300, 5320, 5500, 5520, 5540, 5560, 5580, 5600, 5620,
-        5640, 5660, 5680, 5700, 5720, 5745, 5765, 5785, 5805, 5825,
+        5640, 5660, 5680, 5700, 5720, 5745, 5765, 5785, 5805, 5825, 5845, 5865, 5885,
     ];
     debug_assert_eq!(
         CHANNELS_2G4.len() * 6 + CHANNELS_5G.len() * 6 + 2,
@@ -622,14 +624,14 @@ mod tests {
         assert_eq!(&payload[base_5g..base_5g + 2], &5180u16.to_le_bytes());
         assert_eq!(payload[base_5g + 2], 1);
         assert_eq!(payload[base_5g + 4], 30);
-        let has_149 = (0..25).any(|index| {
+        let has_149 = (0..28).any(|index| {
             let entry = base_5g + index * 6;
             u16::from_le_bytes([payload[entry], payload[entry + 1]]) == 5745
         });
         assert!(has_149, "5 GHz 段必须包含 5745 MHz（信道 149）");
         // 两个计数
         assert_eq!(payload[252], 14);
-        assert_eq!(payload[253], 25);
+        assert_eq!(payload[253], 28);
     }
 
     #[test]

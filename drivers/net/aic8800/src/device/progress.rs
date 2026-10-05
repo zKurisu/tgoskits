@@ -22,10 +22,27 @@ impl AicDevice {
         if let Err(error) = self.observe_time(input.now) {
             return self.fail(error);
         }
-        if let Some(event) = input.event
-            && let Err(error) = self.consume_input(event, input.now)
-        {
-            return self.fail(error);
+        if let Some(event) = input.event {
+            match self.consume_input(event, input.now) {
+                Ok(()) => {}
+                // A control request that arrives before the asynchronous
+                // startup (SDIO enumeration + firmware download) has finished
+                // reports `Busy`.  That is transient, not a device failure:
+                // `fail()` would mark the device `Failed` for the rest of the
+                // boot, after which every later control request also returns
+                // `Busy` and Wi-Fi stays dead until the next power cycle.
+                // Surface the retryable condition to the control owner while
+                // leaving the running startup untouched.
+                Err(error @ AicError::Busy) => {
+                    let _ = self.data.push_event(AicEvent::ControlFailed(error));
+                    return AicAction::Event(
+                        self.data
+                            .pop_event()
+                            .expect("busy control always publishes a control-failed event"),
+                    );
+                }
+                Err(error) => return self.fail(error),
+            }
         }
         if let Some(event) = self.data.pop_event() {
             return AicAction::Event(event);
@@ -100,8 +117,19 @@ impl AicDevice {
     ) -> Result<(), AicError> {
         match request {
             ControlRequest::Cancel => {
-                if self.lifecycle.control.is_none() && self.lifecycle.state != AicState::Starting {
-                    return Err(AicError::InvalidControlRequest);
+                // A device-level `Cancel` targets the Wi-Fi *control*
+                // transaction; the startup owner cancels its own SDIO work
+                // through `owner.shutdown()`, not through this request.  When
+                // no control transaction is active the request is therefore a
+                // no-op.
+                //
+                // This matters because the runtime sends `Cancel` after *any*
+                // failed transaction: an early `Connect` is refused with
+                // `Busy` while the asynchronous startup runs, the runtime then
+                // cancels, and the old code aborted that startup (and failed
+                // the device), leaving Wi-Fi dead until the next power cycle.
+                if self.lifecycle.control.is_none() {
+                    return Ok(());
                 }
                 self.lifecycle.cancel_pending = true;
                 if self.io.pending.is_none() {
@@ -425,7 +453,11 @@ mod tests {
     }
 
     #[test]
-    fn cancellation_requests_abort_for_the_exact_active_transaction() {
+    fn cancel_during_startup_does_not_abort_the_startup() {
+        // A device-level `Cancel` only targets a Wi-Fi control transaction.
+        // The runtime emits one after *any* failed transaction, so an early
+        // `Connect` refused with `Busy` used to cancel — and thereby abort —
+        // the asynchronous startup, leaving Wi-Fi dead until the next boot.
         let mut device = AicDevice::new(ChipVariant::Aic8800D80).unwrap();
         device.start(time(0)).unwrap();
         let AicAction::SubmitSdio(request) = device.advance(AicInput::tick(time(0))) else {
@@ -437,38 +469,88 @@ mod tests {
         });
         assert_eq!(
             action,
-            AicAction::AbortSdio {
-                request_id: request.id
-            }
+            AicAction::WaitForInterrupt,
+            "cancelling without a control transaction must not abort the startup"
+        );
+        assert_eq!(device.lifecycle.state, AicState::Starting);
+        assert_eq!(
+            device.io.pending.as_ref().map(|pending| pending.id),
+            Some(request.id),
+            "the startup transfer must still be in flight"
         );
     }
 
     #[test]
-    fn aborted_completion_finishes_cancellation_without_failing_device() {
+    fn busy_control_does_not_fail_the_running_startup() {
+        // Regression: starting a Wi-Fi connection before the asynchronous AIC
+        // startup finished used to hit `consume_control`'s `Busy` arm, which
+        // ran `fail()` and left the device `Failed` for the rest of the boot.
+        // Every later control request then returned `Busy` and Wi-Fi stayed
+        // dead until a power cycle (which is why the board scripts had to wait
+        // 90 s before touching `wlan0`).
         let mut device = AicDevice::new(ChipVariant::Aic8800D80).unwrap();
         device.start(time(0)).unwrap();
-        let AicAction::SubmitSdio(request) = device.advance(AicInput::tick(time(0))) else {
-            panic!("expected request")
-        };
-        assert!(matches!(
-            device.advance(AicInput {
-                now: time(1),
-                event: Some(AicInputEvent::Control(ControlRequest::Cancel)),
-            }),
-            AicAction::AbortSdio { .. }
-        ));
+        assert_eq!(device.lifecycle.state, AicState::Starting);
 
-        assert_eq!(
-            device.advance(AicInput {
-                now: time(1),
-                event: Some(AicInputEvent::Sdio(SdioCompletion {
-                    request_id: request.id,
-                    result: Err(SdioFailure::Aborted),
-                })),
-            }),
-            AicAction::Event(AicEvent::ControlCancelled)
+        let action = device.advance(AicInput {
+            now: time(1),
+            event: Some(AicInputEvent::Control(ControlRequest::Disconnect)),
+        });
+
+        assert!(
+            matches!(
+                action,
+                AicAction::Event(AicEvent::ControlFailed(AicError::Busy))
+            ),
+            "a busy control request must be reported as retryable, got {action:?}"
         );
-        assert_eq!(device.state(), AicState::Stopped);
+        assert_eq!(
+            device.lifecycle.state,
+            AicState::Starting,
+            "a busy control request must not abort the in-progress startup"
+        );
+    }
+
+    #[test]
+    fn cancel_without_an_active_transaction_is_a_no_op() {
+        // The runtime sends `Cancel` after *any* failed transaction.  Treating
+        // a cancel-with-nothing-to-cancel as a fatal error ran `fail()` and
+        // marked the device `Failed`, so one rejected association bricked
+        // Wi-Fi until the next power cycle.
+        let mut device = AicDevice::new(ChipVariant::Aic8800D80).unwrap();
+        device.start(time(0)).unwrap();
+        // Simulate the state right after a finished startup with no control
+        // transaction in flight.
+        device.lifecycle.state = AicState::Ready;
+        device.lifecycle.startup = None;
+        device.lifecycle.control = None;
+
+        assert!(device.consume_control(ControlRequest::Cancel, time(1)).is_ok());
+        assert_eq!(device.lifecycle.state, AicState::Ready);
+        assert!(!device.lifecycle.cancel_pending);
+    }
+
+    #[test]
+    fn cancel_finishes_an_active_control_transaction_without_failing_the_device() {
+        let mut device = AicDevice::new(ChipVariant::Aic8800D80).unwrap();
+        device.start(time(0)).unwrap();
+        device.lifecycle.state = AicState::Ready;
+        device.lifecycle.startup = None;
+        device.lifecycle.control = Some(
+            super::control::build(ControlRequest::Disconnect, [0; 6], Some(0))
+                .expect("disconnect request builds"),
+        );
+
+        assert!(device.consume_control(ControlRequest::Cancel, time(1)).is_ok());
+        assert!(
+            device.lifecycle.control.is_none(),
+            "the active control transaction is cancelled"
+        );
+        assert_eq!(
+            device.lifecycle.state,
+            AicState::Ready,
+            "cancelling a control transaction must not fail the device"
+        );
     }
 
     #[test]
