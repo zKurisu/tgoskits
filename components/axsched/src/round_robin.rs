@@ -6,7 +6,7 @@ use core::{
 
 use ax_linked_list_r4l::{GetLinks, Links, List};
 
-use crate::BaseScheduler;
+use crate::{BaseScheduler, WakeupPlacement};
 
 /// A task wrapper for the [`RRScheduler`].
 ///
@@ -135,6 +135,14 @@ impl<T, const S: usize> BaseScheduler for RRScheduler<T, S> {
         } else {
             prev.reset_time_slice();
             self.ready_queue.push_back(prev)
+        }
+    }
+
+    fn put_woken_task(&mut self, task: Self::SchedItem, placement: WakeupPlacement) {
+        task.reset_time_slice();
+        match placement {
+            WakeupPlacement::Normal => self.ready_queue.push_back(task),
+            WakeupPlacement::Front => self.ready_queue.push_front(task),
         }
     }
 

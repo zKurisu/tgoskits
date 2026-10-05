@@ -120,6 +120,17 @@ struct TpuTimingAggregate {
     tdma_irq_count: u64,
 }
 
+#[derive(Clone, Copy)]
+struct TpuTimingSample {
+    submit_to_run_ns: u64,
+    fire_to_irq_ns: u64,
+    irq_to_run_resume_ns: u64,
+    run_done_to_user_ns: u64,
+    other_kernel_ns: u64,
+    kernel_total_ns: u64,
+    tdma_irq_count: u64,
+}
+
 impl TpuTimingAggregate {
     const ZERO: Self = Self {
         samples: 0,
@@ -132,28 +143,21 @@ impl TpuTimingAggregate {
         tdma_irq_count: 0,
     };
 
-    fn add(
-        &mut self,
-        submit_to_worker: u64,
-        fire_to_irq: u64,
-        irq_to_worker_resume: u64,
-        worker_done_to_user: u64,
-        other_kernel: u64,
-        kernel_total: u64,
-        tdma_irq_count: u64,
-    ) {
+    fn add(&mut self, sample: TpuTimingSample) {
         self.samples = self.samples.saturating_add(1);
-        self.submit_to_worker_ns = self.submit_to_worker_ns.saturating_add(submit_to_worker);
-        self.fire_to_irq_ns = self.fire_to_irq_ns.saturating_add(fire_to_irq);
+        self.submit_to_worker_ns = self
+            .submit_to_worker_ns
+            .saturating_add(sample.submit_to_run_ns);
+        self.fire_to_irq_ns = self.fire_to_irq_ns.saturating_add(sample.fire_to_irq_ns);
         self.irq_to_worker_resume_ns = self
             .irq_to_worker_resume_ns
-            .saturating_add(irq_to_worker_resume);
+            .saturating_add(sample.irq_to_run_resume_ns);
         self.worker_done_to_user_ns = self
             .worker_done_to_user_ns
-            .saturating_add(worker_done_to_user);
-        self.other_kernel_ns = self.other_kernel_ns.saturating_add(other_kernel);
-        self.kernel_total_ns = self.kernel_total_ns.saturating_add(kernel_total);
-        self.tdma_irq_count = self.tdma_irq_count.saturating_add(tdma_irq_count);
+            .saturating_add(sample.run_done_to_user_ns);
+        self.other_kernel_ns = self.other_kernel_ns.saturating_add(sample.other_kernel_ns);
+        self.kernel_total_ns = self.kernel_total_ns.saturating_add(sample.kernel_total_ns);
+        self.tdma_irq_count = self.tdma_irq_count.saturating_add(sample.tdma_irq_count);
     }
 }
 
@@ -189,6 +193,9 @@ static LAST_TDMA_IRQ_NS: AtomicU64 = AtomicU64::new(0);
 static ACTIVE_FIRE_TO_IRQ_NS: AtomicU64 = AtomicU64::new(0);
 static ACTIVE_IRQ_TO_RESUME_NS: AtomicU64 = AtomicU64::new(0);
 static ACTIVE_TDMA_IRQ_COUNT: AtomicU64 = AtomicU64::new(0);
+/// The run lock permits only one active command buffer. Its GDMA-only
+/// completion can use a one-shot front-of-queue wakeup.
+static ACTIVE_TDMA_ONLY: AtomicBool = AtomicBool::new(false);
 static TIMING_AGGREGATE: SpinNoIrq<TpuTimingAggregate> = SpinNoIrq::new(TpuTimingAggregate::ZERO);
 static KIND_TIMING_AGGREGATES: SpinNoIrq<[TpuTimingAggregate; TpuTaskKind::COUNT]> =
     SpinNoIrq::new([TpuTimingAggregate::ZERO; TpuTaskKind::COUNT]);
@@ -304,19 +311,21 @@ fn record_tpu_timing(task: &TpuTask, user_return_ns: u64) {
         .saturating_add(worker_done_to_user);
     let other_kernel = kernel_total.saturating_sub(accounted);
 
+    let sample = TpuTimingSample {
+        submit_to_run_ns: submit_to_worker,
+        fire_to_irq_ns: task.fire_to_irq_ns,
+        irq_to_run_resume_ns: task.irq_to_worker_resume_ns,
+        run_done_to_user_ns: worker_done_to_user,
+        other_kernel_ns: other_kernel,
+        kernel_total_ns: kernel_total,
+        tdma_irq_count: task.tdma_irq_count,
+    };
+
     let report_total = {
         let mut aggregate = TIMING_AGGREGATE.lock();
-        aggregate.add(
-            submit_to_worker,
-            task.fire_to_irq_ns,
-            task.irq_to_worker_resume_ns,
-            worker_done_to_user,
-            other_kernel,
-            kernel_total,
-            task.tdma_irq_count,
-        );
+        aggregate.add(sample);
 
-        if aggregate.samples % TPU_TIMING_REPORT_INTERVAL == 0 {
+        if aggregate.samples.is_multiple_of(TPU_TIMING_REPORT_INTERVAL) {
             Some(*aggregate)
         } else {
             None
@@ -325,15 +334,7 @@ fn record_tpu_timing(task: &TpuTask, user_return_ns: u64) {
 
     let report_kinds = {
         let mut aggregates = KIND_TIMING_AGGREGATES.lock();
-        aggregates[task.kind.index()].add(
-            submit_to_worker,
-            task.fire_to_irq_ns,
-            task.irq_to_worker_resume_ns,
-            worker_done_to_user,
-            other_kernel,
-            kernel_total,
-            task.tdma_irq_count,
-        );
+        aggregates[task.kind.index()].add(sample);
         report_total.map(|_| *aggregates)
     };
 
@@ -466,7 +467,11 @@ fn register_tpu_irq(
         // therefore add almost a full time slice to every TPU submission.
         // Use the IRQ-safe wake helper so the worker can finish the request as
         // soon as the interrupt returns.
-        IRQ_WQ.notify_all_force_from_irq();
+        if fire_ns != 0 && ACTIVE_TDMA_ONLY.load(Ordering::Acquire) {
+            IRQ_WQ.notify_one_front_force_from_irq();
+        } else {
+            IRQ_WQ.notify_all_force_from_irq();
+        }
         ax_runtime::hal::irq::IrqReturn::Handled
     }) {
         Ok(registration) => registration,
@@ -503,9 +508,11 @@ fn tpu_wait_irq(timeout_us: u64) -> bool {
 fn run_tpu_task(hw: &Sg2002Tpu, task: &mut TpuTask) {
     task.worker_start_ns = timing_now_ns();
     reset_active_tdma_timing();
+    ACTIVE_TDMA_ONLY.store(task.kind == TpuTaskKind::TdmaOnly, Ordering::Release);
     task.ret = hw
         .run_one(task.seq_no, task.vaddr, task.paddr)
         .map_or_else(|error| error.as_errno(), |_| 0);
+    ACTIVE_TDMA_ONLY.store(false, Ordering::Release);
     task.worker_done_ns = timing_now_ns();
     task.fire_to_irq_ns = ACTIVE_FIRE_TO_IRQ_NS.load(Ordering::Acquire);
     task.irq_to_worker_resume_ns = ACTIVE_IRQ_TO_RESUME_NS.load(Ordering::Acquire);

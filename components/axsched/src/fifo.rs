@@ -2,7 +2,7 @@ use alloc::sync::Arc;
 
 use ax_linked_list_r4l::{List, def_node};
 
-use crate::BaseScheduler;
+use crate::{BaseScheduler, WakeupPlacement};
 
 def_node! {
     /// A task wrapper for the [`FifoScheduler`].
@@ -83,6 +83,13 @@ impl<T> BaseScheduler for FifoScheduler<T> {
 
     fn put_prev_task(&mut self, prev: Self::SchedItem, _preempt: bool) {
         self.ready_queue.push_back(prev);
+    }
+
+    fn put_woken_task(&mut self, task: Self::SchedItem, placement: WakeupPlacement) {
+        match placement {
+            WakeupPlacement::Normal => self.ready_queue.push_back(task),
+            WakeupPlacement::Front => self.ready_queue.push_front(task),
+        }
     }
 
     fn task_tick(&mut self, _current: &Self::SchedItem) -> bool {
