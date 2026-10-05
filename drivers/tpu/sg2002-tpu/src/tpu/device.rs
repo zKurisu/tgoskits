@@ -81,9 +81,11 @@ pub struct Sg2002Tpu {
 
 /// 等待 TDMA 完成时每轮睡眠让出的时长（微秒）。
 ///
-/// `run_one` 每隔该间隔被唤醒检查一次中断标志/硬件状态；注入了阻塞等待
-/// 函数后这段时间睡眠让出 CPU，而非空转自旋。
-const WAIT_POLL_INTERVAL_US: u64 = 100;
+/// SG2002 实测 TDMA fire-to-IRQ 约 0.8 ms。等待窗口必须长于正常 IRQ
+/// 延迟，否则 100 us 定时器会先把 worker 从 IRQ wait queue 移走，IRQ
+/// 到来时就无法使用 latency-sensitive front wake，最终额外等待一个 RR
+/// 时间片。2 ms 仍保留丢失 IRQ 时的快速 MMIO 轮询兜底。
+const WAIT_POLL_INTERVAL_US: u64 = 2_000;
 
 /// 等待 TDMA 完成的总超时（约 10 秒），以轮询间隔为步长。
 const WAIT_TOTAL_STEPS: u64 = 10_000_000 / WAIT_POLL_INTERVAL_US;
@@ -468,3 +470,20 @@ impl Sg2002Tpu {
 // 实现 Send 和 Sync
 unsafe impl Send for Sg2002Tpu {}
 unsafe impl Sync for Sg2002Tpu {}
+
+#[cfg(test)]
+mod tests {
+    use super::{WAIT_POLL_INTERVAL_US, WAIT_TOTAL_STEPS};
+
+    #[test]
+    fn irq_wait_window_outlives_normal_sg2002_tdma_irq_latency() {
+        // Hardware profiling on SG2002 shows fire-to-IRQ around 0.8 ms.  A
+        // shorter timeout races the timer wake against the real IRQ and puts
+        // the worker back on the ordinary ready-queue path before IRQ wakeup
+        // can give it latency-sensitive placement.
+        let wait_us = core::hint::black_box(WAIT_POLL_INTERVAL_US);
+        let steps = core::hint::black_box(WAIT_TOTAL_STEPS);
+        assert!(wait_us >= 1_000);
+        assert_eq!(wait_us * steps, 10_000_000);
+    }
+}
