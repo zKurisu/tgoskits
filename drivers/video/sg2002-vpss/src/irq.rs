@@ -45,6 +45,9 @@ pub struct CompletionState {
     state: AtomicU8,
     sequence: AtomicU64,
     irq_status: AtomicU32,
+    /// Monotonic timestamp captured by the OS IRQ glue as soon as the
+    /// terminal scaler interrupt has been acknowledged.
+    finished_at_ns: AtomicU64,
     irq_count: AtomicU64,
     completed_jobs: AtomicU64,
     program_late_errors: AtomicU64,
@@ -65,6 +68,7 @@ impl CompletionState {
             state: AtomicU8::new(RunState::Idle as u8),
             sequence: AtomicU64::new(0),
             irq_status: AtomicU32::new(0),
+            finished_at_ns: AtomicU64::new(0),
             irq_count: AtomicU64::new(0),
             completed_jobs: AtomicU64::new(0),
             program_late_errors: AtomicU64::new(0),
@@ -85,6 +89,7 @@ impl CompletionState {
             .map_err(|_| Error::Busy)?;
         self.sequence.store(sequence, Ordering::Release);
         self.irq_status.store(0, Ordering::Relaxed);
+        self.finished_at_ns.store(0, Ordering::Release);
         Ok(())
     }
 
@@ -98,6 +103,18 @@ impl CompletionState {
 
     pub fn irq_status(&self) -> u32 {
         self.irq_status.load(Ordering::Acquire)
+    }
+
+    /// Records the completion instant supplied by the OS IRQ adapter.
+    ///
+    /// The core driver deliberately has no dependency on a platform clock.
+    /// The IRQ adapter must call this before waking the task-side waiter.
+    pub fn record_finished_at_ns(&self, timestamp_ns: u64) {
+        self.finished_at_ns.store(timestamp_ns, Ordering::Release);
+    }
+
+    pub fn finished_at_ns(&self) -> u64 {
+        self.finished_at_ns.load(Ordering::Acquire)
     }
 
     pub fn is_finished(&self) -> bool {

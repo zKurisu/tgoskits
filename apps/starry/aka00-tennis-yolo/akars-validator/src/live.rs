@@ -15,6 +15,7 @@ use std::{
 };
 
 use camera::{CameraFrame, PlanarYuvFrame};
+use image_bridge::ImagePreprocessor;
 use live_camera::{CameraCaptureStats, LiveCamera};
 use tpu::{AlignedPhysicalFrames, InferTiming, InferenceConfig, PhysicalPixelFormat, open_model};
 use vpss_pipeline::VpssRgbPipeline;
@@ -66,6 +67,7 @@ impl InputMode {
 struct TimingTotals {
     request_us: u64,
     camera_ion_us: u64,
+    jpu_decode_us: u64,
     capture_us: u64,
     preprocess_us: u64,
     forward_us: u64,
@@ -81,6 +83,7 @@ struct TimingTotals {
 struct FrameTiming {
     request_us: u64,
     camera_ion_us: u64,
+    jpu_decode_us: u64,
     capture_us: u64,
     preprocess_us: u64,
     forward_us: u64,
@@ -108,9 +111,6 @@ fn run() -> Result<(), Box<dyn Error>> {
     println!("{}", input_contract.summary());
     let aligned_input = input_contract.aligned;
     let (model_input_width, model_input_height) = model.input_dimensions();
-    if cli.verify_input && (model_input_width != 640 || model_input_height != 640) {
-        return Err("--verify-input currently requires a 640x640 model".into());
-    }
     let mut camera = if matches!(cli.input, InputMode::VpssRgb) {
         None
     } else {
@@ -152,127 +152,121 @@ fn run() -> Result<(), Box<dyn Error>> {
         let index = frames_processed;
         let total_start = Instant::now();
         let mut timing = InferTiming::default();
-        let (meta, detections, request_us, camera_ion_us, vpss_wall_us, vpss_hardware_us) =
-            match cli.input {
-                InputMode::Mjpeg => {
-                    let request_start = Instant::now();
-                    let meta = camera
-                        .as_mut()
-                        .expect("camera exists for MJPEG")
-                        .next_mjpeg(&mut mjpeg_frame, 2_000)?;
-                    let request_us = request_start.elapsed().as_micros() as u64;
-                    let detections =
-                        model.infer_timed(&mjpeg_frame, cli.config, Some(&mut timing))?;
-                    (meta, detections, request_us, 0, 0, 0)
-                }
-                InputMode::JpuYuv => {
-                    let request_start = Instant::now();
-                    let meta = camera
-                        .as_mut()
-                        .expect("camera exists for JPU YUV")
-                        .next_yuv(&mut yuv_frame, 2_000)?;
-                    let request_us = request_start.elapsed().as_micros() as u64;
-                    let detections =
-                        model.infer_yuv_timed(&yuv_frame, cli.config, Some(&mut timing))?;
-                    (meta, detections, request_us, 0, 0, 0)
-                }
-                InputMode::VpssRgb => {
-                    let request_start = Instant::now();
-                    let frame = vpss.as_mut().expect("VPSS pipeline exists").next(2_000)?;
-                    let request_us = request_start.elapsed().as_micros() as u64;
-                    let meta = frame.meta;
-                    let camera_ion_us = frame.camera_request_us;
-                    let vpss_wall_us = frame.vpss_wall_us;
-                    let vpss_hardware_us = frame.vpss_hardware_us;
-                    // SAFETY: the pipeline owns the destination ION allocation for
-                    // the complete blocking runtime call. VPSS produced a 640x640
-                    // RGB-planar frame with the 64-byte row alignment required by
-                    // the runtime. An aligned model binds this frame directly;
-                    // an ordinary model imports it through the runtime's TDMA path.
-                    let detections = unsafe {
-                        if aligned_input {
-                            let frame_paddrs = [frame.physical_address];
-                            model.infer_aligned_physical_timed(
-                                AlignedPhysicalFrames {
-                                    frame_paddrs: &frame_paddrs,
-                                    pixel_format: PhysicalPixelFormat::RgbPlanar,
-                                    source_width: 640,
-                                    source_height: 480,
-                                },
-                                cli.config,
-                                Some(&mut timing),
-                            )?
-                        } else if cli.verify_input && index == 0 {
-                            model.infer_vpss_rgb_verified_timed(
-                                frame.physical_address,
-                                frame.rgb,
-                                640,
-                                480,
-                                cli.config,
-                                Some(&mut timing),
-                            )?
-                        } else {
-                            model.infer_vpss_rgb_timed(
-                                frame.physical_address,
-                                640,
-                                480,
-                                cli.config,
-                                Some(&mut timing),
-                            )?
-                        }
-                    };
-                    if cli.verify_input && index == 0 {
-                        let mut cpu_timing = InferTiming::default();
-                        let cpu_detections = model.infer_rgb_planar_timed(
+        let (
+            meta,
+            detections,
+            request_us,
+            camera_ion_us,
+            jpu_decode_us,
+            vpss_wall_us,
+            vpss_hardware_us,
+        ) = match cli.input {
+            InputMode::Mjpeg => {
+                let request_start = Instant::now();
+                let meta = camera
+                    .as_mut()
+                    .expect("camera exists for MJPEG")
+                    .next_mjpeg(&mut mjpeg_frame, 2_000)?;
+                let request_us = request_start.elapsed().as_micros() as u64;
+                let detections = model.infer_timed(&mjpeg_frame, cli.config, Some(&mut timing))?;
+                (meta, detections, request_us, 0, 0, 0, 0)
+            }
+            InputMode::JpuYuv => {
+                let request_start = Instant::now();
+                let meta = camera
+                    .as_mut()
+                    .expect("camera exists for JPU YUV")
+                    .next_yuv(&mut yuv_frame, 2_000)?;
+                let request_us = request_start.elapsed().as_micros() as u64;
+                let detections =
+                    model.infer_yuv_timed(&yuv_frame, cli.config, Some(&mut timing))?;
+                (meta, detections, request_us, 0, 0, 0, 0)
+            }
+            InputMode::VpssRgb => {
+                let request_start = Instant::now();
+                let frame = vpss.as_mut().expect("VPSS pipeline exists").next(2_000)?;
+                let request_us = request_start.elapsed().as_micros() as u64;
+                let meta = frame.meta;
+                let camera_ion_us = frame.camera_request_us;
+                let jpu_decode_us = frame.jpu_decode_us;
+                let vpss_wall_us = frame.vpss_wall_us;
+                let vpss_hardware_us = frame.vpss_hardware_us;
+                // SAFETY: the pipeline owns the destination ION allocation for
+                // the complete blocking runtime call. VPSS produced a 640x640
+                // RGB-planar frame with the 64-byte row alignment required by
+                // the runtime. An aligned model binds this frame directly;
+                // an ordinary model imports it through the runtime's TDMA path.
+                let detections = unsafe {
+                    if aligned_input {
+                        let frame_paddrs = [frame.physical_address];
+                        model.infer_aligned_physical_timed(
+                            AlignedPhysicalFrames {
+                                frame_paddrs: &frame_paddrs,
+                                pixel_format: PhysicalPixelFormat::RgbPlanar,
+                                source_width: 640,
+                                source_height: 480,
+                            },
+                            cli.config,
+                            Some(&mut timing),
+                        )?
+                    } else if cli.verify_input && index == 0 {
+                        model.infer_vpss_rgb_verified_timed(
+                            frame.physical_address,
                             frame.rgb,
                             640,
                             480,
                             cli.config,
-                            Some(&mut cpu_timing),
-                        )?;
-                        println!(
-                            "AKARS_TPU_INPUT_AB direct_detections={} cpu_detections={} \
-                             cpu_copy_us={} cpu_forward_us={} cpu_postprocess_us={}",
-                            detections.len(),
-                            cpu_detections.len(),
-                            cpu_timing.preprocess_us,
-                            cpu_timing.forward_us,
-                            cpu_timing.postprocess_us,
-                        );
-                        let software_yuv = PlanarYuvFrame {
-                            data: frame.yuv.to_vec(),
-                            width: frame.yuv_width,
-                            height: frame.yuv_height,
-                            format: frame.yuv_format,
-                        };
-                        let mut software_yuv_timing = InferTiming::default();
-                        let software_yuv_detections = model.infer_yuv_timed(
-                            &software_yuv,
+                            Some(&mut timing),
+                        )?
+                    } else {
+                        model.infer_vpss_rgb_timed(
+                            frame.physical_address,
+                            640,
+                            480,
                             cli.config,
-                            Some(&mut software_yuv_timing),
-                        )?;
-                        model.compare_current_input_with_vpss(frame.rgb)?;
-                        println!(
-                            "AKARS_VPSS_CPU_AB vpss_detections={} software_yuv_detections={} \
-                             software_preprocess_us={} software_forward_us={} \
-                             software_postprocess_us={}",
-                            detections.len(),
-                            software_yuv_detections.len(),
-                            software_yuv_timing.preprocess_us,
-                            software_yuv_timing.forward_us,
-                            software_yuv_timing.postprocess_us,
-                        );
+                            Some(&mut timing),
+                        )?
                     }
-                    (
-                        meta,
-                        detections,
-                        request_us,
-                        camera_ion_us,
-                        vpss_wall_us,
-                        vpss_hardware_us,
-                    )
+                };
+                if cli.verify_input && index == 0 {
+                    let rgb_len = usize::try_from(model_input_width)?
+                        .checked_mul(usize::try_from(model_input_height)?)
+                        .and_then(|pixels| pixels.checked_mul(3))
+                        .ok_or("verification RGB size overflow")?;
+                    let mut software_rgb = vec![0_u8; rgb_len];
+                    let mut preprocessor = ImagePreprocessor::new();
+                    let software_timing = preprocessor.yuv_to_rgb_planar(
+                        frame.yuv,
+                        frame.yuv_width,
+                        frame.yuv_height,
+                        frame.yuv_format,
+                        &mut software_rgb,
+                        model_input_width,
+                        model_input_height,
+                    )?;
+                    println!(
+                        "AKARS_VPSS_CPU_AB vpss_detections={} software_preprocess_us={}",
+                        detections.len(),
+                        software_timing.resize_us,
+                    );
+                    print_rgb_comparison(
+                        frame.rgb,
+                        &software_rgb,
+                        model_input_width,
+                        model_input_height,
+                    )?;
                 }
-            };
+                (
+                    meta,
+                    detections,
+                    request_us,
+                    camera_ion_us,
+                    jpu_decode_us,
+                    vpss_wall_us,
+                    vpss_hardware_us,
+                )
+            }
+        };
 
         if index == 0 {
             first_sequence = meta.sequence;
@@ -293,6 +287,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
         totals.request_us = totals.request_us.saturating_add(request_us);
         totals.camera_ion_us = totals.camera_ion_us.saturating_add(camera_ion_us);
+        totals.jpu_decode_us = totals.jpu_decode_us.saturating_add(jpu_decode_us);
         totals.capture_us = totals
             .capture_us
             .saturating_add(meta.profile.frame_total_us);
@@ -323,14 +318,15 @@ fn run() -> Result<(), Box<dyn Error>> {
         if cli.report_frames {
             println!(
                 "AKARS_LIVE_FRAME index={} sequence={} detections={} top_score_q10000={} \
-                 request_us={} camera_ion_us={} capture_us={} preprocess_us={} forward_us={} \
-                 postprocess_us={} vpss_wall_us={} vpss_hw_us={} total_us={}",
+                 request_us={} camera_ion_us={} jpu_decode_us={} capture_us={} preprocess_us={} \
+                 forward_us={} postprocess_us={} vpss_wall_us={} vpss_hw_us={} total_us={}",
                 index + 1,
                 meta.sequence,
                 detections.len(),
                 top_score_q10000,
                 request_us,
                 camera_ion_us,
+                jpu_decode_us,
                 meta.profile.frame_total_us,
                 nonnegative_us(timing.preprocess_us),
                 nonnegative_us(timing.forward_us),
@@ -344,6 +340,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             samples.push(FrameTiming {
                 request_us,
                 camera_ion_us,
+                jpu_decode_us,
                 capture_us: meta.profile.frame_total_us,
                 preprocess_us: nonnegative_us(timing.preprocess_us),
                 forward_us: nonnegative_us(timing.forward_us),
@@ -420,15 +417,16 @@ fn print_summary(
         .unwrap_or(0);
     println!(
         "AKARS_LIVE_SUMMARY input={} frames={} wall_us={} fps_x100={} request_avg_us={} \
-         camera_ion_avg_us={} capture_avg_us={} preprocess_avg_us={} forward_avg_us={} \
-         postprocess_avg_us={} vpss_wall_avg_us={} vpss_hw_avg_us={} vpss_hw_max_us={} \
-         total_avg_us={} total_max_us={}",
+         camera_ion_avg_us={} jpu_decode_avg_us={} capture_avg_us={} preprocess_avg_us={} \
+         forward_avg_us={} postprocess_avg_us={} vpss_wall_avg_us={} vpss_hw_avg_us={} \
+         vpss_hw_max_us={} total_avg_us={} total_max_us={}",
         input.name(),
         frames,
         wall_us,
         fps_x100,
         average(totals.request_us, count),
         average(totals.camera_ion_us, count),
+        average(totals.jpu_decode_us, count),
         average(totals.capture_us, count),
         average(totals.preprocess_us, count),
         average(totals.forward_us, count),
@@ -539,10 +537,91 @@ fn nonnegative_us(value: i64) -> u64 {
     u64::try_from(value).unwrap_or(0)
 }
 
+fn print_rgb_comparison(
+    vpss: &[u8],
+    software: &[u8],
+    width: i32,
+    height: i32,
+) -> Result<(), Box<dyn Error>> {
+    let plane_size = usize::try_from(width)?
+        .checked_mul(usize::try_from(height)?)
+        .ok_or("comparison plane size overflow")?;
+    let required = plane_size
+        .checked_mul(3)
+        .ok_or("comparison RGB size overflow")?;
+    if vpss.len() < required || software.len() < required {
+        return Err("comparison RGB buffer is too small".into());
+    }
+    let mut abs_sum = [0_u64; 3];
+    let mut max_error = [0_u8; 3];
+    let mut exact = [0_usize; 3];
+    let mut vpss_min = [u8::MAX; 3];
+    let mut vpss_max = [u8::MIN; 3];
+    let mut vpss_sum = [0_u64; 3];
+    let mut software_min = [u8::MAX; 3];
+    let mut software_max = [u8::MIN; 3];
+    let mut software_sum = [0_u64; 3];
+    for channel in 0..3 {
+        let start = channel * plane_size;
+        for (&hardware, &cpu) in vpss[start..start + plane_size]
+            .iter()
+            .zip(&software[start..start + plane_size])
+        {
+            let error = hardware.abs_diff(cpu);
+            abs_sum[channel] += u64::from(error);
+            max_error[channel] = max_error[channel].max(error);
+            exact[channel] += usize::from(error == 0);
+            vpss_min[channel] = vpss_min[channel].min(hardware);
+            vpss_max[channel] = vpss_max[channel].max(hardware);
+            vpss_sum[channel] += u64::from(hardware);
+            software_min[channel] = software_min[channel].min(cpu);
+            software_max[channel] = software_max[channel].max(cpu);
+            software_sum[channel] += u64::from(cpu);
+        }
+    }
+    let mean_x1000 = |sum: u64| sum.saturating_mul(1_000) / plane_size as u64;
+    let mae_x1000 = |sum: u64| sum.saturating_mul(1_000) / plane_size as u64;
+    println!(
+        "AKARS_VPSS_CPU_COMPARE bytes={} mae_x1000={},{},{} max_error={},{},{} exact={},{},{} \
+         vpss_minmax={}-{},{}-{},{}-{} vpss_mean_x1000={},{},{} cpu_minmax={}-{},{}-{},{}-{} \
+         cpu_mean_x1000={},{},{}",
+        required,
+        mae_x1000(abs_sum[0]),
+        mae_x1000(abs_sum[1]),
+        mae_x1000(abs_sum[2]),
+        max_error[0],
+        max_error[1],
+        max_error[2],
+        exact[0],
+        exact[1],
+        exact[2],
+        vpss_min[0],
+        vpss_max[0],
+        vpss_min[1],
+        vpss_max[1],
+        vpss_min[2],
+        vpss_max[2],
+        mean_x1000(vpss_sum[0]),
+        mean_x1000(vpss_sum[1]),
+        mean_x1000(vpss_sum[2]),
+        software_min[0],
+        software_max[0],
+        software_min[1],
+        software_max[1],
+        software_min[2],
+        software_max[2],
+        mean_x1000(software_sum[0]),
+        mean_x1000(software_sum[1]),
+        mean_x1000(software_sum[2]),
+    );
+    Ok(())
+}
+
 fn print_timing_percentiles(samples: &[FrameTiming]) {
-    let stages: [(&str, fn(&FrameTiming) -> u64); 9] = [
+    let stages: [(&str, fn(&FrameTiming) -> u64); 10] = [
         ("request", |sample| sample.request_us),
         ("camera_ion", |sample| sample.camera_ion_us),
+        ("jpu_decode", |sample| sample.jpu_decode_us),
         ("capture", |sample| sample.capture_us),
         ("vpss_wall", |sample| sample.vpss_wall_us),
         ("vpss_hw", |sample| sample.vpss_hardware_us),

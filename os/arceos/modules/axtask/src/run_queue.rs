@@ -760,13 +760,13 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
         }
     }
 
-    #[cfg(all(
-        feature = "smp",
-        feature = "ipi",
-        feature = "preempt",
-        not(feature = "host-test")
-    ))]
-    fn force_resched_from_irq() {
+    /// Rotate the current task to the back of the run queue from IRQ context.
+    ///
+    /// Unlike ordinary preemption, this does not put the interrupted RR task
+    /// back at the front.  Device completion paths use it when the task just
+    /// made runnable must run before the interrupted task continues.
+    #[cfg(all(feature = "preempt", not(feature = "host-test")))]
+    pub(crate) fn force_resched_from_irq() {
         let mut rq = current_run_queue::<ax_kernel_guard::NoOp>();
         rq.force_resched_with_preempt_count(0);
     }

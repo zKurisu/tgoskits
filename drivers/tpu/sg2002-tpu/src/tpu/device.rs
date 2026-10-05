@@ -13,7 +13,7 @@ use ax_kspin::SpinNoPreempt as Mutex;
 use super::{
     TDMA_PHYS_BASE, TIU_PHYS_BASE,
     error::TpuError,
-    platform::{TiuIrqCallback, TpuRuntimeState, WaitIrqFn},
+    platform::{TdmaTimingCallback, TiuIrqCallback, TpuRuntimeState, WaitIrqFn},
     tdma::TdmaRegs,
     tiu::TiuRegs,
 };
@@ -74,6 +74,9 @@ pub struct Sg2002Tpu {
     fallback_warned: AtomicBool,
     /// 注入的阻塞等待函数指针（0 表示未注入，退化为忙等自旋）。
     wait_fn: AtomicUsize,
+    /// OS monotonic-clock callbacks used only to profile TDMA latency.
+    tdma_fire_fn: AtomicUsize,
+    irq_resume_fn: AtomicUsize,
 }
 
 /// 等待 TDMA 完成时每轮睡眠让出的时长（微秒）。
@@ -122,6 +125,8 @@ impl Sg2002Tpu {
             irq_error_status: AtomicU32::new(0),
             fallback_warned: AtomicBool::new(false),
             wait_fn: AtomicUsize::new(0),
+            tdma_fire_fn: AtomicUsize::new(0),
+            irq_resume_fn: AtomicUsize::new(0),
         }
     }
 
@@ -145,6 +150,27 @@ impl Sg2002Tpu {
     /// 未注入时退化为 `spin_loop`。
     pub fn set_wait_irq_fn(&self, wait_fn: WaitIrqFn) {
         self.wait_fn.store(wait_fn as usize, Ordering::Release);
+    }
+
+    /// Register lightweight OS timing callbacks around each TDMA IRQ wait.
+    pub fn set_tdma_timing_callbacks(
+        &self,
+        fire_fn: TdmaTimingCallback,
+        resume_fn: TdmaTimingCallback,
+    ) {
+        self.tdma_fire_fn.store(fire_fn as usize, Ordering::Release);
+        self.irq_resume_fn
+            .store(resume_fn as usize, Ordering::Release);
+    }
+
+    fn call_timing_callback(callback: &AtomicUsize) {
+        let raw = callback.load(Ordering::Acquire);
+        if raw != 0 {
+            // SAFETY: only `TdmaTimingCallback` function pointers are stored.
+            let callback: TdmaTimingCallback =
+                unsafe { core::mem::transmute::<usize, TdmaTimingCallback>(raw) };
+            callback();
+        }
     }
 
     /// 阻塞等待 TDMA 中断到达，最多等待 `timeout_us` 微秒。
@@ -336,6 +362,8 @@ impl Sg2002Tpu {
                 &mut runtime,
                 wait_irq,
                 timeout_checker,
+                || Self::call_timing_callback(&self.tdma_fire_fn),
+                || Self::call_timing_callback(&self.irq_resume_fn),
             )
         };
 

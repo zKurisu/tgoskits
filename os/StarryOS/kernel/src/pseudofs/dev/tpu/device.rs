@@ -3,13 +3,14 @@
 //! 将 ioctl 命令翻译为 `Sg2002Tpu` 调用，并通过 fd 解析 Ion buffer
 //! 物理/虚拟地址。
 //!
-//! 异步模型（复刻原 Linux 驱动 `cvi_tpu_interface.c`）：`submit` 只把任务
-//! 入队并唤醒常驻 worker 线程后立即返回；worker 线程串行调用
-//! [`Sg2002Tpu::run_one`] 跑硬件，等待 TDMA 完成时通过 `IRQ_WQ` 睡眠让出
-//! CPU；`wait` 按 `(tid, seq_no)` 睡 `DONE_WQ`，被 worker 完成时唤醒。
+//! 默认使用同步直通模型：`submit` 在调用线程中串行调用
+//! [`Sg2002Tpu::run_one`]，等待 TDMA 完成时通过 `IRQ_WQ` 睡眠让出 CPU，
+//! 完成结果仍放入 `DONE_LIST`，随后 `wait` 按 `(tid, seq_no)` 取回。这保持
+//! cviruntime 的 submit/wait ABI，同时消除 submit→worker→waiter 两次调度交接。
+//! 文件中保留异步 worker 路径，供 `TPU_DIRECT_EXECUTION` A/B 回退。
 //!
-//! SG2002 默认单核，worker 等硬件时必须真正睡眠让出 CPU，相机前处理才能
-//! 与 TPU 推理重叠。
+//! SG2002 默认单核，执行任务的线程等待硬件时必须真正睡眠让出 CPU，相机
+//! 前处理才能与 TPU 推理重叠。
 //!
 //! # 接口约定（重要）
 //!
@@ -27,12 +28,14 @@
 
 use alloc::{collections::VecDeque, string::String, sync::Arc};
 use core::{
-    sync::atomic::{AtomicBool, AtomicPtr, Ordering},
+    sync::atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering},
     time::Duration,
 };
 
 use ax_kspin::SpinNoIrq;
 use ax_memory_addr::PhysAddr;
+use ax_runtime::hal::time::monotonic_time_nanos;
+use ax_sync::Mutex;
 use ax_task::WaitQueue;
 use sg2002_tpu::{
     ion::IonBuffer,
@@ -43,7 +46,7 @@ use sg2002_tpu::{
             CVITPU_DMABUF_FLUSH, CVITPU_DMABUF_FLUSH_FD, CVITPU_DMABUF_INVLD,
             CVITPU_DMABUF_INVLD_FD, CVITPU_LOAD_TEE, CVITPU_PIO_MODE, CVITPU_SUBMIT_DMABUF,
             CVITPU_SUBMIT_TEE, CVITPU_UNLOAD_TEE, CVITPU_WAIT_DMABUF, CviCacheOpArg,
-            CviSubmitDmaArg, CviWaitDmaArg,
+            CviSubmitDmaArg, CviWaitDmaArg, DmaHeader,
         },
     },
 };
@@ -73,6 +76,85 @@ struct TpuTask {
     _buffer: Arc<IonBuffer>,
     /// 执行结果（0 成功，-1 失败），由 worker 回填。
     ret: i32,
+    /// Kernel-side latency timestamps and accumulated IRQ segments.
+    submit_ns: u64,
+    worker_start_ns: u64,
+    worker_done_ns: u64,
+    fire_to_irq_ns: u64,
+    irq_to_worker_resume_ns: u64,
+    tdma_irq_count: u64,
+    /// Command-buffer class used to keep tensor import separate from model
+    /// execution in latency reports.
+    kind: TpuTaskKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TpuTaskKind {
+    /// A command buffer containing GDMA only.  cviruntime uses this path to
+    /// import the prepared input tensor into TPU memory.
+    TdmaOnly = 0,
+    /// A command buffer containing at least one TIU/BD descriptor.  This is
+    /// the actual network forward path (and may also contain GDMA commands).
+    Compute  = 1,
+    /// Malformed or otherwise unrecognised command-buffer header.
+    Unknown  = 2,
+}
+
+impl TpuTaskKind {
+    const COUNT: usize = 3;
+
+    const fn index(self) -> usize {
+        self as usize
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+struct TpuTimingAggregate {
+    samples: u64,
+    submit_to_worker_ns: u64,
+    fire_to_irq_ns: u64,
+    irq_to_worker_resume_ns: u64,
+    worker_done_to_user_ns: u64,
+    kernel_total_ns: u64,
+    other_kernel_ns: u64,
+    tdma_irq_count: u64,
+}
+
+impl TpuTimingAggregate {
+    const ZERO: Self = Self {
+        samples: 0,
+        submit_to_worker_ns: 0,
+        fire_to_irq_ns: 0,
+        irq_to_worker_resume_ns: 0,
+        worker_done_to_user_ns: 0,
+        kernel_total_ns: 0,
+        other_kernel_ns: 0,
+        tdma_irq_count: 0,
+    };
+
+    fn add(
+        &mut self,
+        submit_to_worker: u64,
+        fire_to_irq: u64,
+        irq_to_worker_resume: u64,
+        worker_done_to_user: u64,
+        other_kernel: u64,
+        kernel_total: u64,
+        tdma_irq_count: u64,
+    ) {
+        self.samples = self.samples.saturating_add(1);
+        self.submit_to_worker_ns = self.submit_to_worker_ns.saturating_add(submit_to_worker);
+        self.fire_to_irq_ns = self.fire_to_irq_ns.saturating_add(fire_to_irq);
+        self.irq_to_worker_resume_ns = self
+            .irq_to_worker_resume_ns
+            .saturating_add(irq_to_worker_resume);
+        self.worker_done_to_user_ns = self
+            .worker_done_to_user_ns
+            .saturating_add(worker_done_to_user);
+        self.other_kernel_ns = self.other_kernel_ns.saturating_add(other_kernel);
+        self.kernel_total_ns = self.kernel_total_ns.saturating_add(kernel_total);
+        self.tdma_irq_count = self.tdma_irq_count.saturating_add(tdma_irq_count);
+    }
 }
 
 /// 待执行任务队列（对应 Linux `task_list`）。
@@ -89,6 +171,9 @@ static TASK_WQ: WaitQueue = WaitQueue::new();
 static DONE_WQ: WaitQueue = WaitQueue::new();
 /// TDMA 硬件中断到达时唤醒在此睡眠的 worker。
 static IRQ_WQ: WaitQueue = WaitQueue::new();
+/// Serialises direct callers while allowing the owner to sleep on TDMA IRQs.
+/// Unlike a spin lock, this mutex is deliberately held across `run_one`.
+static TPU_RUN_LOCK: Mutex<()> = Mutex::new(());
 /// worker 线程是否已启动（保证只 spawn 一次）。
 static WORKER_SPAWNED: AtomicBool = AtomicBool::new(false);
 /// 指向唯一 TPU 硬件实例，供注入的 [`tpu_wait_irq`] 读取中断标志。
@@ -96,6 +181,22 @@ static WORKER_SPAWNED: AtomicBool = AtomicBool::new(false);
 /// SG2002 只有一个 TPU；`Sg2002Tpu` 由 worker 持有的 `Arc` 保活，实际生命
 /// 周期与内核同长，这里的裸指针始终有效。
 static HW_PTR: AtomicPtr<Sg2002Tpu> = AtomicPtr::new(core::ptr::null_mut());
+
+/// Per-request TDMA timing scratch.  There is exactly one TPU worker, so only
+/// one hardware submission can update these counters at a time.
+static LAST_TDMA_FIRE_NS: AtomicU64 = AtomicU64::new(0);
+static LAST_TDMA_IRQ_NS: AtomicU64 = AtomicU64::new(0);
+static ACTIVE_FIRE_TO_IRQ_NS: AtomicU64 = AtomicU64::new(0);
+static ACTIVE_IRQ_TO_RESUME_NS: AtomicU64 = AtomicU64::new(0);
+static ACTIVE_TDMA_IRQ_COUNT: AtomicU64 = AtomicU64::new(0);
+static TIMING_AGGREGATE: SpinNoIrq<TpuTimingAggregate> = SpinNoIrq::new(TpuTimingAggregate::ZERO);
+static KIND_TIMING_AGGREGATES: SpinNoIrq<[TpuTimingAggregate; TpuTaskKind::COUNT]> =
+    SpinNoIrq::new([TpuTimingAggregate::ZERO; TpuTaskKind::COUNT]);
+const TPU_TIMING_REPORT_INTERVAL: u64 = 100;
+/// A/B switch: execute in the submitting task instead of bouncing through the
+/// worker and DONE wait queues.  The submit/wait ioctl ABI and DONE_LIST result
+/// matching remain unchanged; only submit becomes completion-synchronous.
+const TPU_DIRECT_EXECUTION: bool = true;
 
 /// TPU 字符设备
 pub struct TpuDevice {
@@ -120,6 +221,139 @@ struct TpuResource {
     tiu_paddr: usize,
     tiu_size: usize,
     irq: Option<ax_runtime::hal::irq::IrqId>,
+}
+
+#[inline]
+fn timing_now_ns() -> u64 {
+    monotonic_time_nanos() as u64
+}
+
+fn reset_active_tdma_timing() {
+    LAST_TDMA_FIRE_NS.store(0, Ordering::Release);
+    LAST_TDMA_IRQ_NS.store(0, Ordering::Release);
+    ACTIVE_FIRE_TO_IRQ_NS.store(0, Ordering::Release);
+    ACTIVE_IRQ_TO_RESUME_NS.store(0, Ordering::Release);
+    ACTIVE_TDMA_IRQ_COUNT.store(0, Ordering::Release);
+}
+
+/// Called by the hardware core immediately before each TDMA descriptor or PMU
+/// completion is fired.
+fn mark_tdma_fire() {
+    LAST_TDMA_IRQ_NS.store(0, Ordering::Release);
+    LAST_TDMA_FIRE_NS.store(timing_now_ns(), Ordering::Release);
+}
+
+/// Called in worker context immediately after the IRQ wait returns.
+fn mark_tdma_worker_resume() {
+    let now = timing_now_ns();
+    let irq = LAST_TDMA_IRQ_NS.swap(0, Ordering::AcqRel);
+    if irq != 0 {
+        ACTIVE_IRQ_TO_RESUME_NS.fetch_add(now.saturating_sub(irq), Ordering::AcqRel);
+    }
+}
+
+fn classify_tpu_task(buffer: &IonBuffer) -> TpuTaskKind {
+    if buffer.size < core::mem::size_of::<DmaHeader>() {
+        return TpuTaskKind::Unknown;
+    }
+    let header = unsafe { &*(buffer.dma_info.cpu_addr.as_ptr() as *const DmaHeader) };
+    if !header.is_valid() {
+        TpuTaskKind::Unknown
+    } else if header.bd_desc_count == 0 && header.tdma_desc_count > 0 {
+        TpuTaskKind::TdmaOnly
+    } else if header.bd_desc_count > 0 {
+        TpuTaskKind::Compute
+    } else {
+        TpuTaskKind::Unknown
+    }
+}
+
+fn log_timing_aggregate(prefix: &str, aggregate: TpuTimingAggregate) {
+    if aggregate.samples == 0 {
+        return;
+    }
+    let samples = aggregate.samples;
+    info!(
+        "[TPU] {} samples={} submit_to_run_avg_us={} fire_to_irq_avg_us={} \
+         irq_to_run_resume_avg_us={} run_done_to_user_avg_us={} other_kernel_avg_us={} \
+         kernel_total_avg_us={} irq_per_task_x100={} path={}",
+        prefix,
+        samples,
+        aggregate.submit_to_worker_ns / samples / 1_000,
+        aggregate.fire_to_irq_ns / samples / 1_000,
+        aggregate.irq_to_worker_resume_ns / samples / 1_000,
+        aggregate.worker_done_to_user_ns / samples / 1_000,
+        aggregate.other_kernel_ns / samples / 1_000,
+        aggregate.kernel_total_ns / samples / 1_000,
+        aggregate.tdma_irq_count.saturating_mul(100) / samples,
+        if TPU_DIRECT_EXECUTION {
+            "direct"
+        } else {
+            "worker"
+        },
+    );
+}
+
+fn record_tpu_timing(task: &TpuTask, user_return_ns: u64) {
+    let submit_to_worker = task.worker_start_ns.saturating_sub(task.submit_ns);
+    let worker_done_to_user = user_return_ns.saturating_sub(task.worker_done_ns);
+    let kernel_total = user_return_ns.saturating_sub(task.submit_ns);
+    let accounted = submit_to_worker
+        .saturating_add(task.fire_to_irq_ns)
+        .saturating_add(task.irq_to_worker_resume_ns)
+        .saturating_add(worker_done_to_user);
+    let other_kernel = kernel_total.saturating_sub(accounted);
+
+    let report_total = {
+        let mut aggregate = TIMING_AGGREGATE.lock();
+        aggregate.add(
+            submit_to_worker,
+            task.fire_to_irq_ns,
+            task.irq_to_worker_resume_ns,
+            worker_done_to_user,
+            other_kernel,
+            kernel_total,
+            task.tdma_irq_count,
+        );
+
+        if aggregate.samples % TPU_TIMING_REPORT_INTERVAL == 0 {
+            Some(*aggregate)
+        } else {
+            None
+        }
+    };
+
+    let report_kinds = {
+        let mut aggregates = KIND_TIMING_AGGREGATES.lock();
+        aggregates[task.kind.index()].add(
+            submit_to_worker,
+            task.fire_to_irq_ns,
+            task.irq_to_worker_resume_ns,
+            worker_done_to_user,
+            other_kernel,
+            kernel_total,
+            task.tdma_irq_count,
+        );
+        report_total.map(|_| *aggregates)
+    };
+
+    if let (Some(total), Some(kinds)) = (report_total, report_kinds) {
+        log_timing_aggregate("TASK_TIMING kind=all", total);
+        for kind in [
+            TpuTaskKind::TdmaOnly,
+            TpuTaskKind::Compute,
+            TpuTaskKind::Unknown,
+        ] {
+            log_timing_aggregate(
+                match kind {
+                    TpuTaskKind::TdmaOnly => "TASK_TIMING kind=tdma_only",
+                    TpuTaskKind::Compute => "TASK_TIMING kind=compute",
+                    TpuTaskKind::Unknown => "TASK_TIMING kind=unknown",
+                },
+                kinds[kind.index()],
+            );
+        }
+    }
 }
 
 impl TpuResource {
@@ -215,12 +449,24 @@ fn register_tpu_irq(
     };
     let hw = Arc::clone(hw);
     let registration = match request_shared_disabled(irq, move |_| {
+        let irq_ns = timing_now_ns();
         if hw.handle_irq() {
             warn!("[TPU] TDMA IRQ {irq:?} reports error status");
         }
-        // 唤醒在 IRQ_WQ 上睡眠的 worker。中断上下文不重调度（resched=false），
-        // 对齐 kpu.rs 的做法；WaitQueue 由 SpinNoIrq 守护，IRQ 内 notify 安全。
-        IRQ_WQ.notify_all(false);
+        // `LAST_TDMA_FIRE_NS` is consumed exactly once for each real TDMA
+        // completion. Spurious/shared IRQs see zero and are not profiled.
+        let fire_ns = LAST_TDMA_FIRE_NS.swap(0, Ordering::AcqRel);
+        if fire_ns != 0 {
+            ACTIVE_FIRE_TO_IRQ_NS.fetch_add(irq_ns.saturating_sub(fire_ns), Ordering::AcqRel);
+            ACTIVE_TDMA_IRQ_COUNT.fetch_add(1, Ordering::AcqRel);
+            LAST_TDMA_IRQ_NS.store(irq_ns, Ordering::Release);
+        }
+        // TDMA normally finishes far inside the 50 ms RR time slice.  Merely
+        // unblocking the worker without requesting an IRQ-exit reschedule can
+        // therefore add almost a full time slice to every TPU submission.
+        // Use the IRQ-safe wake helper so the worker can finish the request as
+        // soon as the interrupt returns.
+        IRQ_WQ.notify_all_force_from_irq();
         ax_runtime::hal::irq::IrqReturn::Handled
     }) {
         Ok(registration) => registration,
@@ -254,6 +500,35 @@ fn tpu_wait_irq(timeout_us: u64) -> bool {
     !IRQ_WQ.wait_timeout_until(Duration::from_micros(timeout_us), || hw.irq_pending())
 }
 
+fn run_tpu_task(hw: &Sg2002Tpu, task: &mut TpuTask) {
+    task.worker_start_ns = timing_now_ns();
+    reset_active_tdma_timing();
+    task.ret = hw
+        .run_one(task.seq_no, task.vaddr, task.paddr)
+        .map_or_else(|error| error.as_errno(), |_| 0);
+    task.worker_done_ns = timing_now_ns();
+    task.fire_to_irq_ns = ACTIVE_FIRE_TO_IRQ_NS.load(Ordering::Acquire);
+    task.irq_to_worker_resume_ns = ACTIVE_IRQ_TO_RESUME_NS.load(Ordering::Acquire);
+    task.tdma_irq_count = ACTIVE_TDMA_IRQ_COUNT.load(Ordering::Acquire);
+}
+
+fn publish_completed_task(task: TpuTask) {
+    {
+        let mut done = DONE_LIST.lock();
+        done.push_back(task);
+        while done.len() > DONE_LIST_MAX {
+            let dropped = done.pop_front();
+            if let Some(t) = dropped {
+                warn!(
+                    "[TPU] done list full, dropping orphaned result (tid={}, seq_no={})",
+                    t.tid, t.seq_no
+                );
+            }
+        }
+    }
+    DONE_WQ.notify_all(true);
+}
+
 /// 常驻 worker 线程主循环（对应 Linux `work_thread_main`）。
 ///
 /// 串行取任务、调用 `run_one` 跑硬件、回填结果到 `DONE_LIST` 并唤醒等待者。
@@ -271,28 +546,13 @@ fn tpu_worker(hw: Arc<Sg2002Tpu>) {
         };
 
         // 跑硬件：内部等待 TDMA 完成时经注入的 tpu_wait_irq 睡眠让出 CPU。
-        task.ret = hw
-            .run_one(task.seq_no, task.vaddr, task.paddr)
-            .map_or_else(|error| error.as_errno(), |_| 0);
+        run_tpu_task(&hw, &mut task);
 
         // 入队完成结果并唤醒等待者。若提交线程从不 wait（或 wait 前退出），其
         // 完成项会滞留并攥住 `Arc<IonBuffer>` 永不释放——故对 DONE_LIST 设上限，
         // 超限时丢弃最旧项（连带释放其 buffer 强引用），对应原 Linux 驱动的
         // `cvi_tpu_cleanup_done_list`。
-        {
-            let mut done = DONE_LIST.lock();
-            done.push_back(task);
-            while done.len() > DONE_LIST_MAX {
-                let dropped = done.pop_front();
-                if let Some(t) = dropped {
-                    warn!(
-                        "[TPU] done list full, dropping orphaned result (tid={}, seq_no={})",
-                        t.tid, t.seq_no
-                    );
-                }
-            }
-        }
-        DONE_WQ.notify_all(false);
+        publish_completed_task(task);
     }
 }
 
@@ -309,6 +569,7 @@ impl TpuDevice {
     /// 公共初始化：注入等待函数、注册中断、启动 worker 线程。
     fn setup(hw: Arc<Sg2002Tpu>, resource: TpuResource) -> Self {
         hw.set_wait_irq_fn(tpu_wait_irq);
+        hw.set_tdma_timing_callbacks(mark_tdma_fire, mark_tdma_worker_resume);
         if let Err(err) = hw.init() {
             warn!("[TPU] init failed: {:?}", err);
         }
@@ -324,15 +585,25 @@ impl TpuDevice {
             irq_registration.is_some(),
         );
 
-        // 发布硬件指针供 tpu_wait_irq 读取中断标志，并启动唯一 worker 线程。
-        if WORKER_SPAWNED
-            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-            .is_ok()
+        // 发布硬件指针供 tpu_wait_irq 读取中断标志。异步 A/B 模式才需要
+        // 常驻 worker；直接模式由提交线程执行 run_one。
+        HW_PTR.store(Arc::as_ptr(&hw) as *mut Sg2002Tpu, Ordering::Release);
+        if !TPU_DIRECT_EXECUTION
+            && WORKER_SPAWNED
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
         {
-            HW_PTR.store(Arc::as_ptr(&hw) as *mut Sg2002Tpu, Ordering::Release);
             let worker_hw = hw.clone();
             ax_task::spawn_with_name(move || tpu_worker(worker_hw), String::from("tpu-worker"));
         }
+        info!(
+            "[TPU] execution path={}",
+            if TPU_DIRECT_EXECUTION {
+                "direct"
+            } else {
+                "worker"
+            }
+        );
 
         Self {
             hw,
@@ -382,18 +653,36 @@ impl TpuDevice {
             buffer.dma_info.bus_addr.as_u64()
         );
 
-        let task = TpuTask {
+        let kind = classify_tpu_task(&buffer);
+        let mut task = TpuTask {
             tid: ax_task::current().id().as_u64(),
             seq_no: submit_arg.seq_no,
             vaddr: buffer.dma_info.cpu_addr.as_ptr() as usize,
             paddr: buffer.dma_info.bus_addr.as_u64(),
             _buffer: buffer,
             ret: 0,
+            submit_ns: timing_now_ns(),
+            worker_start_ns: 0,
+            worker_done_ns: 0,
+            fire_to_irq_ns: 0,
+            irq_to_worker_resume_ns: 0,
+            tdma_irq_count: 0,
+            kind,
         };
 
-        // 入队并唤醒 worker，随后立即返回（submit 不等推理）。
-        TASK_LIST.lock().push_back(task);
-        TASK_WQ.notify_one(true);
+        if TPU_DIRECT_EXECUTION {
+            // Keep the vendor submit/wait ABI, but remove both scheduler
+            // hand-offs for the common single-stream cviruntime path.  This
+            // blocking mutex preserves the old worker's hardware
+            // serialisation and may sleep while another caller owns the TPU.
+            let _run_guard = TPU_RUN_LOCK.lock();
+            run_tpu_task(&self.hw, &mut task);
+            publish_completed_task(task);
+        } else {
+            // Asynchronous compatibility path used for A/B measurements.
+            TASK_LIST.lock().push_back(task);
+            TASK_WQ.notify_one(true);
+        }
 
         Ok(0)
     }
@@ -435,6 +724,7 @@ impl TpuDevice {
                 user_pointer
                     .vm_write(wait_arg)
                     .map_err(|_| TpuError::InvalidDmabuf)?;
+                record_tpu_timing(&task, timing_now_ns());
                 // Match the vendor ABI: ioctl itself succeeds once a result
                 // was found; hardware failure is returned in `wait_arg.ret`.
                 // Returning an ioctl error here makes cviruntime retry forever.

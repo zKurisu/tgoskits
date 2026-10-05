@@ -257,6 +257,25 @@ impl WaitQueue {
         }
     }
 
+    /// Wakes all waiters and force-rotates the interrupted RR task.
+    ///
+    /// This is intentionally stronger than [`Self::notify_all_from_irq`].  It
+    /// is for short-latency device completion paths where ordinary preemption
+    /// would put the interrupted task back at the front of the RR queue and
+    /// delay the newly runnable worker by nearly a full time slice.
+    pub fn notify_all_force_from_irq(&self) {
+        let mut woke_any = false;
+        while self.notify_one(false) {
+            woke_any = true;
+        }
+        if woke_any {
+            #[cfg(all(feature = "preempt", not(feature = "host-test")))]
+            crate::run_queue::CurrentRunQueueRef::<ax_kernel_guard::NoOp>::force_resched_from_irq();
+            #[cfg(any(not(feature = "preempt"), feature = "host-test"))]
+            crate::current().set_preempt_pending(true);
+        }
+    }
+
     fn pop_front(&self) -> Option<AxTaskRef> {
         let mut wq = self.queue.lock();
         let task = wq.pop_front()?;
