@@ -110,6 +110,9 @@ pub struct TaskInner {
     /// `Arc::into_raw` (null = empty). See `run_queue::put_task_with_state`.
     #[cfg(feature = "smp")]
     wake_handoff: AtomicPtr<AxTask>,
+    /// Preserves front-of-run-queue placement across a deferred SMP wake.
+    #[cfg(feature = "smp")]
+    wake_handoff_front: AtomicBool,
 
     /// A ticket ID used to identify the timer event.
     /// Set by `set_timer_ticket()` when creating a timer event in `set_alarm_wakeup()`,
@@ -377,6 +380,8 @@ impl TaskInner {
             on_cpu: AtomicBool::new(false),
             #[cfg(feature = "smp")]
             wake_handoff: AtomicPtr::new(core::ptr::null_mut()),
+            #[cfg(feature = "smp")]
+            wake_handoff_front: AtomicBool::new(false),
             #[cfg(feature = "preempt")]
             need_resched: AtomicBool::new(false),
             #[cfg(feature = "preempt")]
@@ -653,6 +658,20 @@ impl TaskInner {
         let ptr = Arc::into_raw(task) as *mut AxTask;
         // SeqCst: ordered with the `on_cpu` handshake (see `on_cpu`).
         self.wake_handoff.store(ptr, Ordering::SeqCst);
+    }
+
+    /// Records whether a deferred SMP wake must enter at the ready-queue front.
+    #[cfg(feature = "smp")]
+    #[inline]
+    pub(crate) fn set_wake_handoff_front(&self, front: bool) {
+        self.wake_handoff_front.store(front, Ordering::Release);
+    }
+
+    /// Consumes the ready-queue placement attached to a deferred SMP wake.
+    #[cfg(feature = "smp")]
+    #[inline]
+    pub(crate) fn take_wake_handoff_front(&self) -> bool {
+        self.wake_handoff_front.swap(false, Ordering::AcqRel)
     }
 
     /// Atomically consume a stashed deferred-wake reference, if any. Returns the

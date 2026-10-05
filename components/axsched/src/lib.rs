@@ -14,6 +14,15 @@ pub use cfs::{CFSTask, CFScheduler};
 pub use fifo::{FifoScheduler, FifoTask};
 pub use round_robin::{RRScheduler, RRTask};
 
+/// Placement policy for a task becoming runnable after a blocking wait.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WakeupPlacement {
+    /// Preserve the scheduler's normal fairness policy.
+    Normal,
+    /// Run the waiter before already queued ordinary work.
+    Front,
+}
+
 /// The base scheduler trait that all schedulers should implement.
 ///
 /// All tasks in the scheduler are considered runnable. If a task is go to
@@ -49,6 +58,16 @@ pub trait BaseScheduler {
     /// task. In this case, the previous task may be placed at the front of the
     /// ready queue.
     fn put_prev_task(&mut self, prev: Self::SchedItem, preempt: bool);
+
+    /// Puts a task that has just become runnable back into the scheduler.
+    ///
+    /// The default keeps existing scheduler semantics. Schedulers with an
+    /// ordered ready queue may override `Front` for bounded-latency device
+    /// completion wakeups.
+    fn put_woken_task(&mut self, task: Self::SchedItem, placement: WakeupPlacement) {
+        let _ = placement;
+        self.put_prev_task(task, false);
+    }
 
     /// Advances the scheduler state at each timer tick. Returns `true` if
     /// re-scheduling is required.

@@ -269,10 +269,22 @@ impl WaitQueue {
             woke_any = true;
         }
         if woke_any {
-            #[cfg(all(feature = "preempt", not(feature = "host-test")))]
-            crate::run_queue::CurrentRunQueueRef::<ax_kernel_guard::NoOp>::force_resched_from_irq();
-            #[cfg(any(not(feature = "preempt"), feature = "host-test"))]
-            crate::current().set_preempt_pending(true);
+            request_force_resched_from_irq();
+        }
+    }
+
+    /// Wakes one latency-sensitive device waiter at the front of its ready
+    /// queue, then requests an IRQ-exit reschedule on the local CPU.
+    ///
+    /// The placement applies to this wake only. Subsequent scheduling of the
+    /// task follows the ordinary policy. A racing timer wake may have already
+    /// made the task ready, in which case no extra reschedule is requested.
+    pub fn notify_one_front_force_from_irq(&self) {
+        let Some(task) = self.pop_front() else {
+            return;
+        };
+        if unblock_one_task_front(task) {
+            request_force_resched_from_irq();
         }
     }
 
@@ -287,4 +299,15 @@ impl WaitQueue {
 fn unblock_one_task(task: AxTaskRef, resched: bool) {
     // Select run queue by the CPU set of the task.
     select_wake_run_queue::<NoPreemptIrqSave>(&task).unblock_task(task, resched)
+}
+
+fn unblock_one_task_front(task: AxTaskRef) -> bool {
+    select_wake_run_queue::<NoPreemptIrqSave>(&task).unblock_task_front(task)
+}
+
+fn request_force_resched_from_irq() {
+    #[cfg(all(feature = "preempt", not(feature = "host-test")))]
+    crate::run_queue::CurrentRunQueueRef::<ax_kernel_guard::NoOp>::force_resched_from_irq();
+    #[cfg(all(feature = "preempt", feature = "host-test"))]
+    crate::current().set_preempt_pending(true);
 }

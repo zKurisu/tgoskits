@@ -10,7 +10,7 @@ use ax_kernel_guard::BaseGuard;
 use ax_kspin::{SpinNoIrqGuard, SpinRaw};
 use ax_lazyinit::LazyInit;
 use ax_memory_addr::VirtAddr;
-use ax_sched::BaseScheduler;
+use ax_sched::{BaseScheduler, WakeupPlacement};
 
 use crate::{
     AxCpuMask, AxTaskRef, Scheduler, TaskInner, WaitQueue,
@@ -57,6 +57,19 @@ static mut RUN_QUEUES: [MaybeUninit<&'static mut AxRunQueue>; crate::build_info:
     [ARRAY_REPEAT_VALUE; crate::build_info::CPU_CAPACITY];
 #[allow(clippy::declare_interior_mutable_const)] // It's ok because it's used only for initialization `RUN_QUEUES`.
 const ARRAY_REPEAT_VALUE: MaybeUninit<&'static mut AxRunQueue> = MaybeUninit::uninit();
+
+#[derive(Clone, Copy)]
+enum TaskEnqueue {
+    Previous { preempt: bool },
+    Wake(WakeupPlacement),
+}
+
+#[cfg(feature = "smp")]
+impl TaskEnqueue {
+    const fn wake_front(self) -> bool {
+        matches!(self, Self::Wake(WakeupPlacement::Front))
+    }
+}
 
 #[cfg(not(feature = "host-test"))]
 fn main_task_stack() -> TaskStack {
@@ -421,6 +434,42 @@ mod rr_tests {
              tasks",
         );
     }
+
+    #[test]
+    fn urgent_irq_wakeup_runs_before_queued_rr_tasks() {
+        let mut run_queue = AxRunQueue {
+            cpu_id: 1,
+            scheduler: SpinRaw::new(Scheduler::new()),
+        };
+        let queued = new_test_task("queued", TaskState::Ready);
+        let urgent = new_test_task("urgent", TaskState::Blocked);
+
+        run_queue.scheduler.lock().add_task(queued.clone());
+        {
+            let mut run_queue_ref = AxRunQueueRef::<ax_kernel_guard::NoOp> {
+                inner: &mut run_queue,
+                state: (),
+                _phantom: PhantomData,
+            };
+            run_queue_ref.unblock_task_front(urgent.clone());
+            assert!(
+                !run_queue_ref.unblock_task_front(urgent.clone()),
+                "a racing second wake must not enqueue the same task twice",
+            );
+        }
+
+        let next = run_queue.scheduler.lock().pick_next_task().unwrap();
+        assert!(
+            Arc::ptr_eq(&next, &urgent),
+            "an urgent device-completion waiter must run before ordinary queued RR tasks",
+        );
+        run_queue.scheduler.lock().put_prev_task(next, false);
+        let next = run_queue.scheduler.lock().pick_next_task().unwrap();
+        assert!(
+            Arc::ptr_eq(&next, &queued),
+            "front placement must apply only to the immediate wake",
+        );
+    }
 }
 
 /// Selects the appropriate run queue for the provided task.
@@ -587,11 +636,11 @@ impl<G: BaseGuard> AxRunQueueRef<'_, G> {
         // otherwise, the task is already unblocked by other cores.
         // Note:
         // target task can not be insert into the run queue until it finishes its scheduling process.
-        if self
-            .inner
-            // A wakeup is not a time-slice preemption of the woken task.
-            .put_task_with_state(task, TaskState::Blocked, false)
-        {
+        if self.inner.put_task_with_state(
+            task,
+            TaskState::Blocked,
+            TaskEnqueue::Wake(WakeupPlacement::Normal),
+        ) {
             // Since now, the task to be unblocked is in the `Ready` state.
             let cpu_id = self.inner.cpu_id;
             if let Some(task_id_name) = task_id_name {
@@ -605,6 +654,22 @@ impl<G: BaseGuard> AxRunQueueRef<'_, G> {
             }
             #[cfg(all(feature = "smp", feature = "ipi"))]
             kick_remote_cpu(cpu_id);
+        }
+    }
+
+    /// Unblocks a latency-sensitive IRQ waiter ahead of ordinary ready tasks.
+    pub(crate) fn unblock_task_front(&mut self, task: AxTaskRef) -> bool {
+        if self.inner.put_task_with_state(
+            task,
+            TaskState::Blocked,
+            TaskEnqueue::Wake(WakeupPlacement::Front),
+        ) {
+            let local = self.inner.cpu_id == this_cpu_id();
+            #[cfg(all(feature = "smp", feature = "ipi"))]
+            kick_remote_cpu(self.inner.cpu_id);
+            local
+        } else {
+            false
         }
     }
 }
@@ -621,11 +686,11 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
         } else {
             None
         };
-        if self
-            .inner
-            // A wakeup is not a time-slice preemption of the woken task.
-            .put_task_with_state(task, TaskState::Blocked, false)
-        {
+        if self.inner.put_task_with_state(
+            task,
+            TaskState::Blocked,
+            TaskEnqueue::Wake(WakeupPlacement::Normal),
+        ) {
             let cpu_id = self.inner.cpu_id;
             if let Some(task_id_name) = task_id_name {
                 debug!("task unblock: {task_id_name} on run_queue {cpu_id}");
@@ -660,8 +725,11 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
             return;
         }
 
-        self.inner
-            .put_task_with_state(curr.clone(), TaskState::Running, false);
+        self.inner.put_task_with_state(
+            curr.clone(),
+            TaskState::Running,
+            TaskEnqueue::Previous { preempt: false },
+        );
 
         self.inner.resched();
     }
@@ -721,8 +789,11 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
                 return;
             }
 
-            self.inner
-                .put_task_with_state(curr.clone(), TaskState::Running, true);
+            self.inner.put_task_with_state(
+                curr.clone(),
+                TaskState::Running,
+                TaskEnqueue::Previous { preempt: true },
+            );
             self.inner.resched();
         } else {
             curr.set_preempt_pending(true);
@@ -752,8 +823,11 @@ impl<G: BaseGuard> CurrentRunQueueRef<'_, G> {
                 return;
             }
 
-            self.inner
-                .put_task_with_state(curr.clone(), TaskState::Running, false);
+            self.inner.put_task_with_state(
+                curr.clone(),
+                TaskState::Running,
+                TaskEnqueue::Previous { preempt: false },
+            );
             self.inner.resched();
         } else {
             curr.set_force_resched_pending(true);
@@ -925,7 +999,8 @@ impl AxRunQueue {
     /// Puts target task into current run queue with `Ready` state
     /// if its state matches `current_state` (except idle task).
     ///
-    /// If `preempt`, keep current task's time slice, otherwise reset it.
+    /// `enqueue` distinguishes a previous running task from a newly woken task
+    /// and optionally requests front placement for latency-sensitive IRQ work.
     ///
     /// Returns `true` if the target task is put into this run queue successfully,
     /// otherwise `false`.
@@ -933,7 +1008,7 @@ impl AxRunQueue {
         &mut self,
         task: AxTaskRef,
         current_state: TaskState,
-        preempt: bool,
+        enqueue: TaskEnqueue,
     ) -> bool {
         // If the task's state matches `current_state`, set its state to `Ready` and
         // put it back to the run queue (except idle task).
@@ -961,6 +1036,7 @@ impl AxRunQueue {
                 // Record where the task must land, then stash a reference for the
                 // owning CPU to enqueue from `clear_prev_task_on_cpu()`.
                 task.set_cpu_id(self.cpu_id as _);
+                task.set_wake_handoff_front(enqueue.wake_front());
                 task.stash_wake(task.clone());
                 // Re-check under the SeqCst handshake. If still on its owning CPU,
                 // that CPU drains the stash after its switch completes — done.
@@ -976,11 +1052,15 @@ impl AxRunQueue {
                 }
                 // We won: the reclaimed reference is dropped here; fall through
                 // and enqueue our own `task` (its context is now saved).
+                task.take_wake_handoff_front();
             }
-            // TODO: priority
             #[cfg(feature = "smp")]
             task.set_cpu_id(self.cpu_id as _);
-            self.scheduler.lock().put_prev_task(task, preempt);
+            let mut scheduler = self.scheduler.lock();
+            match enqueue {
+                TaskEnqueue::Previous { preempt } => scheduler.put_prev_task(task, preempt),
+                TaskEnqueue::Wake(placement) => scheduler.put_woken_task(task, placement),
+            }
             true
         } else {
             false
@@ -1161,12 +1241,17 @@ pub(crate) unsafe fn clear_prev_task_on_cpu() {
     // owned reference and enqueue it now that the context is saved.
     if let Some(task) = prev.take_wake() {
         let target = task.cpu_id() as usize;
+        let placement = if prev.take_wake_handoff_front() {
+            WakeupPlacement::Front
+        } else {
+            WakeupPlacement::Normal
+        };
         // Leaf lock: `resched()` already dropped this CPU's scheduler lock before
         // `switch_to`, so this takes only the target run queue's lock.
         get_run_queue(target)
             .scheduler
             .lock()
-            .put_prev_task(task, false);
+            .put_woken_task(task, placement);
         if target != this_cpu_id() {
             // Remote target: ask that CPU to reschedule so it picks the task up
             // (and wakes if it is idle in `wait_for_irqs`).
