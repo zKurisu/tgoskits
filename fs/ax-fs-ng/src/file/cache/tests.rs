@@ -596,6 +596,37 @@ fn writeback_does_not_materialize_an_unbounded_contiguous_run() {
 }
 
 #[test]
+fn sequential_write_past_page_cache_capacity_flushes_dirty_pages() {
+    // A disk-backed cache is bounded by `DISK_PAGE_CACHE_CAP`.  Once every slot
+    // holds a dirty page, the next insertion has to evict one.  Draining the
+    // dirty pages through the normal writeback tracking is what lets the LRU
+    // evict a now-clean victim; without it the write fails with
+    // `ResourceBusy`, which is the 2 MiB wall observed on SG2002.
+    with_test_page_provider(true, |_| {
+        const CHUNK: usize = 64 * 1024;
+        let total = (DISK_PAGE_CACHE_CAP + 32) * PAGE_SIZE;
+        let backing = Arc::new(CacheTestFile::new(Vec::new()));
+        let cached = reopen_cached_file(backing.clone());
+        let data: Vec<u8> = (0..total).map(|index| (index % 251) as u8).collect();
+
+        let mut offset = 0;
+        while offset < total {
+            let end = (offset + CHUNK).min(total);
+            assert_eq!(
+                cached.write_at(&data[offset..end], offset as u64),
+                Ok(end - offset),
+                "write at offset {offset} must not stop at the page-cache capacity"
+            );
+            offset = end;
+        }
+
+        assert_eq!(cached.len(), total as u64);
+        cached.writeback().unwrap();
+        assert_eq!(backing.state.lock().unwrap().physical_data, data);
+    });
+}
+
+#[test]
 fn pageout_writes_back_dirty_page_before_reclaiming_cache_owner() {
     with_test_page_provider(true, |_| {
         let backing = Arc::new(CacheTestFile::new(vec![0; PAGE_SIZE]));

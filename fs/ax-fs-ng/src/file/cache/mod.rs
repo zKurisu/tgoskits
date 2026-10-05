@@ -29,6 +29,14 @@ use crate::os::{
 
 const DISK_PAGE_CACHE_CAP: usize = 512;
 
+/// How many times one cache insertion may drain dirty pages before giving up.
+///
+/// A single drain makes every resident dirty page clean, so a following
+/// insertion can evict the LRU victim.  More than one round is only needed when
+/// new pages were dirtied between the drain and the retry; the bound keeps a
+/// pathological workload from spinning inside the insertion path.
+const MAX_EVICTION_DRAIN_ATTEMPTS: usize = 4;
+
 type CachedFileKey = (usize, u64);
 type InodeCacheIndex = BTreeMap<CachedFileKey, Weak<CachedFileShared>>;
 
@@ -828,35 +836,46 @@ impl CachedFile {
 
         let mut prepared = self.prepare_cache_page(file, pn, read_backing)?;
         let has_mapping_endpoint = self.shared.has_mapping_endpoint();
-        let (result, retired) = {
+        let mut drained = 0;
+        let (result, retired) = loop {
             let mut cache = self.shared.page_cache.lock();
             if cache.contains(&pn) {
                 let page = cache.get_mut(&pn).ok_or(VfsError::BadState)?;
                 let result = update.take().ok_or(VfsError::BadState)?(page, false);
-                (result, Some(prepared))
-            } else {
-                if cache.len() >= cache.cap().get() {
-                    if has_mapping_endpoint {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::ResourceBusy);
-                    }
-                    let Some((_, victim)) = cache.peek_lru() else {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::BadState);
-                    };
-                    if victim.dirty || victim.pins != 0 {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::ResourceBusy);
-                    }
-                }
-
-                let result = update.take().ok_or(VfsError::BadState)?(&mut prepared, true);
-                let retired = cache.push(pn, prepared).map(|(_, page)| page);
-                (result, retired)
+                break (result, Some(prepared));
             }
+
+            if cache.len() >= cache.cap().get() {
+                if has_mapping_endpoint {
+                    drop(cache);
+                    drop(prepared);
+                    return Err(VfsError::ResourceBusy);
+                }
+                let Some((_, victim)) = cache.peek_lru() else {
+                    drop(cache);
+                    drop(prepared);
+                    return Err(VfsError::BadState);
+                };
+                if victim.dirty || victim.pins != 0 {
+                    drop(cache);
+                    // A dirty or pinned LRU victim would block eviction.  Dirty
+                    // pages become evictable once they are written back through
+                    // the normal tracking; the caller holds `io_lock`, so use
+                    // the lock-holding drain instead of reacquiring it.
+                    if drained >= MAX_EVICTION_DRAIN_ATTEMPTS
+                        || self.shared.drain_dirty_pages_locked()? == 0
+                    {
+                        drop(prepared);
+                        return Err(VfsError::ResourceBusy);
+                    }
+                    drained += 1;
+                    continue;
+                }
+            }
+
+            let result = update.take().ok_or(VfsError::BadState)?(&mut prepared, true);
+            let retired = cache.push(pn, prepared).map(|(_, page)| page);
+            break (result, retired);
         };
         drop(retired);
         Ok(result)

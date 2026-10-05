@@ -76,6 +76,30 @@ impl CachedFileShared {
         self.page_cache.lock().iter().any(|(_, page)| page.dirty)
     }
 
+    /// Writes back every dirty page while the caller already holds `io_lock`.
+    ///
+    /// Page-cache insertion runs under `io_lock`; when the bounded disk cache
+    /// is full of dirty pages it must make capacity by writing them back.  The
+    /// regular [`Self::writeback`] path reacquires `io_lock`, so it would
+    /// self-deadlock in that context.  This variant reuses the exact same dirty
+    /// tracking, snapshotting, and generation-checked clearing, only assuming
+    /// the lock is already held and skipping the whole-filesystem sync.
+    ///
+    /// Precondition: the caller holds `io_lock` and no live mapping endpoint is
+    /// installed, so mapping protection cannot run while the lock is held.
+    pub(super) fn drain_dirty_pages_locked(&self) -> VfsResult<usize> {
+        let dirty_keys = self.begin_writeback_locked(None)?;
+        if dirty_keys.is_empty() {
+            return Ok(0);
+        }
+        self.protect_dirty_pages_before_writeback(&dirty_keys)
+            .inspect_err(|_| self.finish_writeback_tracking(&dirty_keys))?;
+        let result = self.writeback_page_runs(self.len(), &dirty_keys);
+        self.finish_writeback_tracking(&dirty_keys);
+        result?;
+        Ok(dirty_keys.len())
+    }
+
     pub(super) fn protect_dirty_pages_before_writeback(&self, pns: &[u32]) -> VfsResult<()> {
         for pn in pns {
             let Some(paddr) = ({
@@ -108,6 +132,11 @@ impl CachedFileShared {
 
     fn begin_writeback(&self, requested: Option<&[u32]>) -> VfsResult<Vec<u32>> {
         let _io = self.io_lock.lock();
+        self.begin_writeback_locked(requested)
+    }
+
+    /// Selects the dirty pages to write back.  The caller must hold `io_lock`.
+    fn begin_writeback_locked(&self, requested: Option<&[u32]>) -> VfsResult<Vec<u32>> {
         let file_len = self.len();
         let mut requested_pns = if let Some(requested) = requested {
             let mut copy = Vec::new();
