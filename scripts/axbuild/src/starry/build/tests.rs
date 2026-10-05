@@ -478,7 +478,7 @@ fn render_uimage_its_template_replaces_build_placeholders() {
     let kernel_bin = root.path().join("target/kernel.bin");
     fs::write(
         &template,
-        "bin=${kernel_bin}\nelf=${kernel_elf}\narch=${arch}\ntarget=${target}\n",
+        "bin=${kernel_bin}\nelf=${kernel_elf}\nits=${its_dir}\narch=${arch}\ntarget=${target}\n",
     )
     .unwrap();
 
@@ -495,6 +495,7 @@ fn render_uimage_its_template_replaces_build_placeholders() {
     let output = fs::read_to_string(rendered).unwrap();
     assert!(output.contains(&format!("bin={}", kernel_bin.display())));
     assert!(output.contains(&format!("elf={}", kernel_elf.display())));
+    assert!(output.contains(&format!("its={}", template.parent().unwrap().display())));
     assert!(output.contains("arch=riscv64"));
     assert!(output.contains("target=riscv64gc-unknown-none-elf"));
     assert!(!output.contains("${"));

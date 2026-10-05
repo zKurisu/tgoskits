@@ -1,12 +1,11 @@
 /dts-v1/;
 
 / {
-    description = "StarryOS Wi-Fi for LicheeRV Nano SG2002";
+    description = "StarryOS SG2002";
     #address-cells = <1>;
 
     images {
-        kernel {
-            description = "StarryOS Wi-Fi kernel";
+        kernel-1 {
             data = /incbin/("${kernel_bin}");
             type = "kernel";
             arch = "riscv";
@@ -15,18 +14,29 @@
             load = <0x80200000>;
             entry = <0x80200000>;
 
-            hash {
+            hash-1 {
+                algo = "sha256";
+            };
+        };
+
+        fdt-1 {
+            data = /incbin/("${its_dir}/licheerv-nano-sg2002.dtb");
+            type = "flat_dt";
+            arch = "riscv";
+            compression = "none";
+
+            hash-1 {
                 algo = "sha256";
             };
         };
     };
 
     configurations {
-        default = "config";
+        default = "config-sg2002_licheervnano_sd";
 
-        config {
-            description = "StarryOS SG2002 Wi-Fi";
-            kernel = "kernel";
+        config-sg2002_licheervnano_sd {
+            kernel = "kernel-1";
+            fdt = "fdt-1";
         };
     };
 };

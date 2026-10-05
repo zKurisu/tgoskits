@@ -417,9 +417,12 @@ fn render_uimage_its_template(
 ) -> anyhow::Result<()> {
     let content = fs::read_to_string(template)
         .with_context(|| format!("failed to read {}", template.display()))?;
+    let its_dir = fs::canonicalize(template.parent().unwrap_or_else(|| Path::new(".")))
+        .with_context(|| format!("failed to resolve ITS directory for {}", template.display()))?;
     let rendered_content = content
         .replace("${kernel_bin}", &kernel_bin.display().to_string())
         .replace("${kernel_elf}", &kernel_elf.display().to_string())
+        .replace("${its_dir}", &its_dir.display().to_string())
         .replace("${arch}", arch)
         .replace("${target}", target);
     fs::write(rendered, rendered_content)
