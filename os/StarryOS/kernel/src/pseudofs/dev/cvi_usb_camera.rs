@@ -115,7 +115,7 @@ pub const CVI_CAMERA_IOCTL_GET_LATEST_NV12_FRAME: u32 = 12;
 /// the decoded frame through userspace.
 pub const CVI_CAMERA_IOCTL_GET_LATEST_YUV_ION: u32 = 13;
 
-pub const CVI_CAMERA_ION_ABI_VERSION: u32 = 1;
+pub const CVI_CAMERA_ION_ABI_VERSION: u32 = 2;
 
 pub const CVI_CAMERA_FRAME_NONBLOCK: u32 = 1;
 pub const CVI_CAMERA_PROFILE_UVC_TOTAL: u32 = 1 << 0;
@@ -232,10 +232,12 @@ pub struct CameraIonFrameRequest {
     pub height: u16,
     pub format: u8,
     pub reserved: [u8; 3],
+    /// JPU decode duration for this returned frame; excludes frame wait and UVC capture.
+    pub jpu_decode_us: u64,
     pub profile: CameraCaptureProfile,
 }
 
-const _: () = assert!(core::mem::size_of::<CameraIonFrameRequest>() == 160);
+const _: () = assert!(core::mem::size_of::<CameraIonFrameRequest>() == 168);
 
 struct UsbCameraSession {
     cam: UvcEnumerated,
@@ -279,6 +281,7 @@ struct DecodedIonYuv {
     frame_size: usize,
     luma_size: usize,
     chroma_size: usize,
+    decode_us: u64,
 }
 
 /// Return the planar format produced by the SG2002 JPU for this JPEG.
@@ -934,6 +937,7 @@ impl UsbCameraState {
             frame_size: result.frame_size,
             luma_size: result.luma_size,
             chroma_size: result.chroma_size,
+            decode_us,
         })
     }
 
@@ -1191,6 +1195,7 @@ impl CviCamera {
         request.width = decoded.width;
         request.height = decoded.height;
         request.format = decoded.format;
+        request.jpu_decode_us = decoded.decode_us;
         request.profile = profile;
         (arg as *mut CameraIonFrameRequest).vm_write(request)?;
         self.async_capture.mark_consumed(sequence);

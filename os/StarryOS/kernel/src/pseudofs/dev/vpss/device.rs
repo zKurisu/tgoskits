@@ -42,6 +42,13 @@ const VPSS_COMPATIBLES: &[&str] = &["cvitek,vpss"];
 const VPSS_IRQ_NAME: &str = "sc";
 const VPSS_DEFAULT_TIMEOUT_MS: u32 = 100;
 const VPSS_MAX_TIMEOUT_MS: u32 = 5_000;
+/// SC_V1 normally completes a 640x480 -> 384x384 job in about 1.5 ms.  A
+/// sleeping waiter can otherwise miss the immediate IRQ reschedule and wait
+/// for the remainder of the 50 ms RR time slice.  Poll only the IRQ-owned
+/// atomic completion state for a short, bounded interval, then fall back to
+/// the wait queue for slow or abnormal jobs.  The task side must not read or
+/// clear the W1C interrupt status register.
+const VPSS_COMPLETION_SPIN_NS: u64 = 3_000_000;
 const CLKGEN_MMIO_SIZE: usize = 0x1000;
 const CLK_ENABLE_2: usize = 0x008;
 const CLK_ENABLE_3: usize = 0x00c;
@@ -179,10 +186,15 @@ impl VpssDevice {
         let mut control = VpssControl::new(mmio, Arc::clone(&completion));
         control.initialize();
         let handler = control.irq_handler();
+        let irq_completion = Arc::clone(&completion);
         let irq = resource.irq;
         let registration = request_shared_disabled(irq, move |_| match handler.handle() {
             Some(event) => {
                 if event.wake_waiter {
+                    // Capture completion in IRQ context before waking the
+                    // waiter. Task wake-up latency must not be charged to
+                    // VPSS hardware execution.
+                    irq_completion.record_finished_at_ns(now_ns());
                     DONE_WAIT_QUEUE.notify_all_from_irq();
                 }
                 ax_runtime::hal::irq::IrqReturn::Handled
@@ -454,21 +466,46 @@ impl VpssDevice {
         // The IRQ endpoint owns no part of it, so waiting here cannot deadlock
         // interrupt completion.
         let mut control = self.control.lock();
-        let hardware_start_ns = now_ns();
-        control.start(job).map_err(map_driver_error)?;
+        let mut hardware_start_ns = 0;
+        control
+            .start_with_hook(job, || hardware_start_ns = now_ns())
+            .map_err(map_driver_error)?;
         let timeout_ms = match timeout_ms {
             0 => VPSS_DEFAULT_TIMEOUT_MS,
             value => value.min(VPSS_MAX_TIMEOUT_MS),
         };
-        let timed_out = DONE_WAIT_QUEUE
-            .wait_timeout_until(Duration::from_millis(u64::from(timeout_ms)), || {
-                self.completion.is_finished()
-            });
-        let hardware_done_ns = now_ns();
+        let absolute_deadline_ns = hardware_start_ns
+            .saturating_add(u64::from(timeout_ms).saturating_mul(1_000_000));
+        let spin_deadline_ns = hardware_start_ns
+            .saturating_add(VPSS_COMPLETION_SPIN_NS)
+            .min(absolute_deadline_ns);
+        while !self.completion.is_finished() && now_ns() < spin_deadline_ns {
+            core::hint::spin_loop();
+        }
+        let timed_out = if self.completion.is_finished() {
+            false
+        } else {
+            let remaining_ns = absolute_deadline_ns.saturating_sub(now_ns());
+            if remaining_ns == 0 {
+                true
+            } else {
+                DONE_WAIT_QUEUE.wait_timeout_until(Duration::from_nanos(remaining_ns), || {
+                    self.completion.is_finished()
+                })
+            }
+        };
         let completion = if timed_out && !self.completion.is_finished() {
             control.recover_timeout().map_err(map_driver_error)?
         } else {
             control.finish().map_err(map_driver_error)?
+        };
+        // The IRQ handler records the terminal event before waking us. Keep a
+        // fallback for timeout/recovery paths where no terminal IRQ exists.
+        let irq_done_ns = self.completion.finished_at_ns();
+        let hardware_done_ns = if irq_done_ns != 0 {
+            irq_done_ns
+        } else {
+            now_ns()
         };
 
         let elapsed_ns = hardware_done_ns.saturating_sub(hardware_start_ns);

@@ -25,6 +25,12 @@ pub type TiuIrqCallback = fn(seq_no: u32, bd_cmd_id: u32);
 /// 必须在等待硬件期间真正睡眠让出 CPU，否则相机前处理与 TPU 推理无法重叠。
 pub type WaitIrqFn = fn(timeout_us: u64) -> bool;
 
+/// Optional OS timing callback invoked immediately before a TDMA command is
+/// fired, or immediately after the corresponding IRQ wait returns.  The
+/// hardware layer deliberately does not own a clock; the OS glue supplies a
+/// callback backed by its monotonic clock when latency profiling is enabled.
+pub type TdmaTimingCallback = fn();
+
 /// TPU 寄存器备份信息 (用于挂起/恢复)
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TpuRegBackup {
@@ -209,6 +215,8 @@ pub unsafe fn run_dmabuf(
     state: &mut TpuRuntimeState,
     wait_irq: impl Fn() -> Result<(), TpuError>,
     timeout_checker: impl Fn() -> bool,
+    tdma_fire: impl Fn(),
+    irq_resume: impl Fn(),
 ) -> Result<(), TpuError> {
     // 解析 header
     let header = unsafe { &*(dmabuf_vaddr as *const DmaHeader) };
@@ -270,12 +278,14 @@ pub unsafe fn run_dmabuf(
 
         // 启动 TDMA
         if tdma_num > 0 {
+            tdma_fire();
             tdma.fire_descriptor(tdma_offset as u64, tdma_num);
         }
 
         // 等待 TDMA 完成
         if tdma_num > 0 {
             wait_irq()?;
+            irq_resume();
         }
 
         // 检查完成状态
@@ -285,8 +295,10 @@ pub unsafe fn run_dmabuf(
     // 禁用 PMU
     if pmu_enabled {
         state.irq_received = false;
+        tdma_fire();
         pmu_disable(tdma);
         wait_irq()?;
+        irq_resume();
     }
 
     Ok(())

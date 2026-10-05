@@ -18,7 +18,7 @@ const CAMERA_IOCTL_STOP_ASYNC: c_ulong = 7;
 const CAMERA_IOCTL_GET_CAPTURE_STATS: c_ulong = 9;
 const CAMERA_IOCTL_RESET_CAPTURE_STATS: c_ulong = 10;
 const CAMERA_IOCTL_GET_LATEST_YUV_ION: c_ulong = 13;
-const CAMERA_ION_ABI_VERSION: u32 = 1;
+const CAMERA_ION_ABI_VERSION: u32 = 2;
 const CAMERA_FORMAT_YUV422_PLANAR: u8 = 3;
 
 const VPSS_ABI_VERSION: u32 = 1;
@@ -85,6 +85,7 @@ struct CameraIonFrameRequest {
     height: u16,
     format: u8,
     reserved: [u8; 3],
+    jpu_decode_us: u64,
     profile: CameraCaptureProfile,
 }
 
@@ -138,7 +139,7 @@ struct VpssRunYuv422pRgb {
 }
 
 const _: [(); 64] = [(); size_of::<IonAllocData>()];
-const _: [(); 160] = [(); size_of::<CameraIonFrameRequest>()];
+const _: [(); 168] = [(); size_of::<CameraIonFrameRequest>()];
 const _: [(); 248] = [(); size_of::<VpssRunYuv422pRgb>()];
 
 struct IonAllocation {
@@ -211,6 +212,7 @@ pub struct VpssRgbFrame<'a> {
     pub yuv_format: u8,
     pub meta: CameraFrameMeta,
     pub camera_request_us: u64,
+    pub jpu_decode_us: u64,
     pub vpss_wall_us: u64,
     pub vpss_hardware_us: u64,
 }
@@ -409,6 +411,7 @@ impl VpssRgbPipeline {
                 profile: camera.profile,
             },
             camera_request_us,
+            jpu_decode_us: camera.jpu_decode_us,
             vpss_wall_us,
             vpss_hardware_us: run.elapsed_ns / 1_000,
         })

@@ -107,6 +107,17 @@ impl<I: RegisterIo> VpssControl<I> {
     }
 
     pub fn start(&mut self, job: Job) -> Result<(), Error> {
+        self.start_with_hook(job, || {})
+    }
+
+    /// Programs and starts one scaler job, invoking `before_trigger`
+    /// immediately before the MMIO write that starts IMG_V. OS glue uses the
+    /// hook to capture a hardware-start timestamp without making this driver
+    /// depend on a particular clock implementation.
+    pub fn start_with_hook<F>(&mut self, job: Job, before_trigger: F) -> Result<(), Error>
+    where
+        F: FnOnce(),
+    {
         if !self.initialized {
             return Err(Error::NotInitialized);
         }
@@ -138,6 +149,7 @@ impl<I: RegisterIo> VpssControl<I> {
         fence(Ordering::SeqCst);
         self.io.update32(IMG_DBG, IMG_RESET_W1T, IMG_RESET_W1T);
         // IMG_V start is bit 1 after the vendor driver's instance inversion.
+        before_trigger();
         self.io.update32(TOP_IMG_CTRL, 0x3, 1 << 1);
         Ok(())
     }
@@ -650,6 +662,31 @@ mod tests {
 
         assert!(event.wake_waiter);
         assert_eq!(state.state(), RunState::ProgramLate);
+    }
+
+    #[test]
+    fn completion_timestamp_is_reset_for_each_job() {
+        let state = CompletionState::new();
+        state.begin(1).unwrap();
+        state.record_finished_at_ns(123_456);
+        assert_eq!(state.finished_at_ns(), 123_456);
+
+        state.reset_idle();
+        state.begin(2).unwrap();
+        assert_eq!(state.finished_at_ns(), 0);
+    }
+
+    #[test]
+    fn start_hook_runs_when_hardware_is_triggered() {
+        let io = FakeIo::new();
+        let state = Arc::new(CompletionState::new());
+        let mut control = VpssControl::new(io, state);
+        control.initialize();
+        let mut hook_calls = 0;
+
+        control.start_with_hook(job(), || hook_calls += 1).unwrap();
+
+        assert_eq!(hook_calls, 1);
     }
 
     #[test]
