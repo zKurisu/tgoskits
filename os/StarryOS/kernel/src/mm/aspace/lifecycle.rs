@@ -909,26 +909,45 @@ impl MmPin {
         vaddr: VirtAddr,
         access_flags: PageFaultFlags,
     ) -> FaultResult {
+        use crate::mm::fault_attrib::{
+            STAGE_APPLY, STAGE_MMU_CACHE, STAGE_PLAN, STAGE_PREPARE, STAGE_TLB, add, note_fault,
+            stage_now,
+        };
+        let t_plan = stage_now();
         let plan = {
             let aspace = self.0.aspace.lock();
             let mode = self.0.transparent_huge_page_mode();
             match aspace.plan_page_fault(vaddr, access_flags, mode) {
                 Ok(plan) => plan,
-                Err(result) => return result,
+                Err(result) => {
+                    add(STAGE_PLAN, stage_now().saturating_sub(t_plan));
+                    note_fault();
+                    return result;
+                }
             }
         };
+        let t_prepare = stage_now();
+        add(STAGE_PLAN, t_prepare.saturating_sub(t_plan));
         // Allocation, file I/O and page-cache reservation happen with no
         // address-space metadata lock held. The apply phase below rechecks the
         // exact VMA epoch and PTE preimage before publishing anything.
         let prepared = match AddrSpace::prepare_page_fault(plan) {
             Ok(prepared) => prepared,
-            Err(result) => return result,
+            Err(result) => {
+                add(STAGE_PREPARE, stage_now().saturating_sub(t_prepare));
+                note_fault();
+                return result;
+            }
         };
+        let t_apply = stage_now();
+        add(STAGE_PREPARE, t_apply.saturating_sub(t_prepare));
         let mut attempt = prepared.into_apply_attempt();
         let outcome = {
             let mut aspace = self.0.aspace.lock();
             aspace.apply_prepared_page_fault(&mut attempt)
         };
+        let t_tlb = stage_now();
+        add(STAGE_APPLY, t_tlb.saturating_sub(t_apply));
         let result = match outcome {
             PageFaultApplyOutcome::Complete(result) => result,
             PageFaultApplyOutcome::Cancel(result) => {
@@ -973,9 +992,13 @@ impl MmPin {
                 }
             }
         };
+        let t_cache = stage_now();
+        add(STAGE_TLB, t_cache.saturating_sub(t_tlb));
         if matches!(result, FaultResult::Handled) {
             ax_cpu::mmu::update_mmu_cache(vaddr);
         }
+        add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_cache));
+        note_fault();
         result
     }
 

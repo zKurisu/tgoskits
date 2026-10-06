@@ -2,6 +2,7 @@
 
 mod access;
 mod aspace;
+pub mod fault_attrib;
 mod io;
 mod layout;
 mod loader;

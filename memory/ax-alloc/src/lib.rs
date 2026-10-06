@@ -16,7 +16,7 @@ use core::{
     alloc::Layout,
     fmt,
     ptr::NonNull,
-    sync::atomic::{AtomicBool, Ordering},
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
 use strum::{IntoStaticStr, VariantArray};
@@ -71,8 +71,34 @@ pub fn try_page_reclaim(num_pages: usize) -> usize {
     let Some(_lease) = PageReclaimLease::try_acquire() else {
         return 0;
     };
+    RECLAIM_CALLS.fetch_add(1, Ordering::Relaxed);
+    let started = diag_now_ns();
     let reclaim_fn = { *PAGE_RECLAIM_FN.lock_irqsave() };
-    reclaim_fn.map_or(0, |f| f(num_pages))
+    let freed = reclaim_fn.map_or(0, |f| f(num_pages));
+    RECLAIM_NS.fetch_add(diag_now_ns().saturating_sub(started), Ordering::Relaxed);
+    freed
+}
+
+static RECLAIM_CALLS: AtomicU64 = AtomicU64::new(0);
+static RECLAIM_NS: AtomicU64 = AtomicU64::new(0);
+
+#[cfg(feature = "buddy-slab")]
+fn diag_now_ns() -> u64 {
+    ax_plat::time::monotonic_time_nanos()
+}
+
+#[cfg(not(feature = "buddy-slab"))]
+fn diag_now_ns() -> u64 {
+    0
+}
+
+/// Diagnostic counters for the allocator's reclaim path: how often it ran and
+/// how long it took in total.
+pub fn reclaim_stats() -> (u64, u64) {
+    (
+        RECLAIM_CALLS.load(Ordering::Relaxed),
+        RECLAIM_NS.load(Ordering::Relaxed),
+    )
 }
 
 #[cfg(any(tlsf, buddy_slab, test))]

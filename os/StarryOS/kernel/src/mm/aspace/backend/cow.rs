@@ -161,6 +161,15 @@ impl CowPageIndex {
     /// observes metadata; the caller must allocate the returned reservation
     /// after releasing the index lock and revalidate during apply.
     fn insert_reservation_capacity(&self) -> Result<usize, StarryError> {
+        // Fast path: with spare capacity the insert cannot allocate, so no
+        // rebuild is needed and there is no reason to walk the index counting
+        // live entries.  That walk is O(n) *per insert* and each entry costs an
+        // atomic strong_count read (usually a cache miss); it dominated the
+        // first-touch fault cost on SG2002.  Dead entries are pruned on the
+        // growth path below instead of on every insert.
+        if self.pages.len() < self.pages.capacity() {
+            return Ok(0);
+        }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
         cow_page_index_reservation_capacity(live, self.pages.len(), self.pages.capacity())
     }
@@ -186,6 +195,11 @@ impl CowPageIndex {
         &mut self,
         reservation: &mut CowPageIndexReservation,
     ) -> Result<(), CowPageIndexInsertError> {
+        // Spare capacity means `Vec::insert` below cannot allocate; skip the
+        // live-entry scan (and the compaction it would drive).
+        if self.pages.len() < self.pages.capacity() {
+            return Ok(());
+        }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
         let required = live
             .checked_add(1)
@@ -233,16 +247,19 @@ impl CowPageIndex {
         let position = self
             .pages
             .partition_point(|entry| entry.paddr.as_usize() < start);
-        let predecessor_overlaps = if position == 0 {
-            false
-        } else {
-            self.pages[position - 1]
-                .end()
-                .is_none_or(|existing_end| start < existing_end)
-        };
+        // Only *live* entries still own a frame.  Dead entries (published
+        // owners whose page object was dropped) are pruned lazily on the growth
+        // path, so they must not participate in the overlap check here —
+        // otherwise a reused physical frame would be rejected as a conflict.
+        let predecessor_overlaps = self.pages[..position]
+            .iter()
+            .rev()
+            .find(|entry| entry.is_live())
+            .is_some_and(|entry| entry.end().is_none_or(|existing_end| start < existing_end));
         let successor_overlaps = self
             .pages
-            .get(position)
+            .get(position..)
+            .and_then(|rest| rest.iter().find(|entry| entry.is_live()))
             .is_some_and(|entry| entry.paddr.as_usize() < end);
         if predecessor_overlaps || successor_overlaps {
             return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
@@ -744,6 +761,8 @@ impl CowBackend {
             return Err(StarryError::InvalidInput);
         }
         let frame = alloc_frame(zeroed, size)?;
+        use crate::mm::fault_attrib::{STAGE_PAGE_OBJECT, STAGE_PENDING_INSERT, add, stage_now};
+        let t_page_object = stage_now();
         let page = PageObject::new_present_with_resident_kind(
             PageId::allocate(),
             // SAFETY: alloc_frame just returned this unique allocation with
@@ -751,11 +770,14 @@ impl CowBackend {
             unsafe { FrameLease::owned(frame, size) },
             Some(resident_kind),
         );
+        let t_insert = stage_now();
+        add(STAGE_PAGE_OBJECT, t_insert.saturating_sub(t_page_object));
         // The source-local index owns this page only while the PTE/slot pair
         // is prepared. The returned typed materialization publishes the slot
         // before downgrading this entry to Weak, so there is no second mapping
         // owner.
         self.insert_pending_page(&page)?;
+        add(STAGE_PENDING_INSERT, stage_now().saturating_sub(t_insert));
         Ok(page)
     }
 

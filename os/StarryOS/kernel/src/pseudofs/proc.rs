@@ -1962,6 +1962,10 @@ fn builder(fs: Arc<SimpleFs>, view: PidView) -> DirMaker {
     );
     root.add("stat", SimpleFile::new_regular(fs.clone(), render_stat));
     root.add(
+        "fault_attrib",
+        SimpleFile::new_regular(fs.clone(), || Ok(crate::mm::fault_attrib::render())),
+    );
+    root.add(
         "diskstats",
         SimpleFile::new_regular(fs.clone(), || Ok(render_diskstats())),
     );

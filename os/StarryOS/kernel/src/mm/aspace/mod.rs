@@ -5891,7 +5891,10 @@ impl AddrSpace {
     }
 
     fn prepare_page_fault(mut plan: PageFaultPlan) -> Result<PreparedPageFault, FaultResult> {
+        use crate::mm::fault_attrib::{STAGE_DEPOSIT_PREP, STAGE_MATERIALIZE, add, stage_now};
+        let t_materialize = stage_now();
         let mut materialization = Self::prepare_fault_materialization(&plan, plan.request)?;
+        add(STAGE_MATERIALIZE, stage_now().saturating_sub(t_materialize));
         let installed_owner = materialization.owner().and_then(|owner| {
             (owner.transition == PteOwnerTransition::Installed).then_some((
                 owner.va,
@@ -5944,8 +5947,12 @@ impl AddrSpace {
                     }
                 }
             } else {
+                let t_deposit = stage_now();
                 match preferred.prepare(owner_paddr, flags) {
-                    Ok(deposit) => Some(deposit),
+                    Ok(deposit) => {
+                        add(STAGE_DEPOSIT_PREP, stage_now().saturating_sub(t_deposit));
+                        Some(deposit)
+                    }
                     Err(PagingError::NoMemory) if fallback.is_some() => {
                         // Releasing the huge PageObject first can make enough
                         // memory available for the base page plus its deeper

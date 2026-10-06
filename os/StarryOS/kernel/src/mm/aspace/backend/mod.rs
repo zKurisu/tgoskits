@@ -87,15 +87,20 @@ fn divide_page(size: usize, page_size: usize) -> usize {
 }
 
 pub(crate) fn alloc_frame(zeroed: bool, size: usize) -> StarryResult<PhysAddr> {
+    use crate::mm::fault_attrib::{STAGE_FRAME_ALLOC, STAGE_FRAME_ZERO, add, stage_now};
     let num_pages = size / PAGE_SIZE_4K;
+    let t_alloc = stage_now();
     let vaddr = VirtAddr::from(
         global_allocator()
             .alloc_pages(num_pages, size, UsageKind::VirtMem)
             .map_err(|_| StarryError::NoMemory)?,
     );
+    let t_zero = stage_now();
+    add(STAGE_FRAME_ALLOC, t_zero.saturating_sub(t_alloc));
     if zeroed {
         unsafe { core::ptr::write_bytes(vaddr.as_mut_ptr(), 0, size) };
     }
+    add(STAGE_FRAME_ZERO, stage_now().saturating_sub(t_zero));
     let paddr = virt_to_phys(vaddr);
 
     Ok(paddr)
