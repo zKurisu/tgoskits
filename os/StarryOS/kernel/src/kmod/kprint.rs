@@ -52,9 +52,32 @@ pub unsafe extern "C" fn memset(
 ) -> *mut core::ffi::c_void {
     let xs = s as *mut u8;
     let byte = c as u8;
-    for i in 0..n {
+    // Word-at-a-time fill. The byte loop this replaced was the symbol the
+    // whole kernel links for `core::ptr::write_bytes`, so zeroing one fresh
+    // 4 KiB page cost ~31 µs (~130 MB/s) on SG2002.  Align first, then use
+    // aligned u64 stores; no misaligned word access is emitted.
+    let mut i = 0usize;
+    loop {
+        // SAFETY: reading the address only; `i < n` keeps it inside the
+        // caller's valid range.
+        let addr = unsafe { xs.add(i) } as usize;
+        if i >= n || addr & 7 == 0 {
+            break;
+        }
         // SAFETY: caller-guaranteed validity of `s` for `n` bytes (C contract).
         unsafe { *xs.add(i) = byte };
+        i += 1;
+    }
+    let word = u64::from_ne_bytes([byte; 8]);
+    while i + 8 <= n {
+        // SAFETY: as above, and the head loop left `xs + i` 8-byte aligned.
+        unsafe { (xs.add(i) as *mut u64).write(word) };
+        i += 8;
+    }
+    while i < n {
+        // SAFETY: caller-guaranteed validity of `s` for `n` bytes (C contract).
+        unsafe { *xs.add(i) = byte };
+        i += 1;
     }
     s
 }
