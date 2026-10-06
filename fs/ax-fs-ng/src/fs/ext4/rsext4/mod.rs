@@ -23,14 +23,6 @@ pub(crate) struct Ext4Disk {
 pub(crate) type MountedExt4 =
     rsext4::Ext4<Ext4Disk, MountedServices<Ext4Entropy, Ext4Observer, Ext4Delay>>;
 
-/// Diagnostic-only budget for the temporary block-I/O failure logs below.
-///
-/// The failure is intermittent and the block layer may retry in a hot loop;
-/// printing every failure over a 115200-baud console is slower than the kernel
-/// can generate them, so the log buffer would grow without bound.  Hard-cap the
-/// number of emitted lines so a diagnostic build can never wedge the board.
-static DIAG_IO_BUDGET: core::sync::atomic::AtomicU16 = core::sync::atomic::AtomicU16::new(16);
-
 /// How many times a block request that reports `WouldBlock` is retried before
 /// it is surfaced as an I/O error.
 ///
@@ -55,12 +47,7 @@ fn block_io_retry_wait() {
 }
 
 /// Runs one block operation, retrying the transient `WouldBlock` condition.
-fn run_block_io(
-    mut op: impl FnMut() -> BlockResult,
-    what: &str,
-    sector: u64,
-    count: u32,
-) -> Ext4Result<()> {
+fn run_block_io(mut op: impl FnMut() -> BlockResult) -> Ext4Result<()> {
     let mut attempt = 0;
     loop {
         match op() {
@@ -69,25 +56,8 @@ fn run_block_io(
                 attempt += 1;
                 block_io_retry_wait();
             }
-            Err(error) => {
-                diag_io_line(format_args!(
-                    "diag ext4 {what}: sector={sector} count={count} err={error:?}"
-                ));
-                return Err(Ext4Error::io());
-            }
+            Err(_error) => return Err(Ext4Error::io()),
         }
-    }
-}
-
-fn diag_io_line(args: core::fmt::Arguments<'_>) {
-    use core::sync::atomic::Ordering;
-    if DIAG_IO_BUDGET
-        .try_update(Ordering::Relaxed, Ordering::Relaxed, |remaining| {
-            remaining.checked_sub(1)
-        })
-        .is_ok()
-    {
-        log::warn!("{}", args);
     }
 }
 
@@ -159,12 +129,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        run_block_io(
-            || self.device.write_block(sector.raw(), &buffer[..required_size]),
-            "write",
-            sector.raw(),
-            count,
-        )
+        run_block_io(|| self.device.write_block(sector.raw(), &buffer[..required_size]))
     }
 
     fn read(&mut self, buffer: &mut [u8], sector: SectorId, count: u32) -> Ext4Result<()> {
@@ -175,12 +140,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        run_block_io(
-            || self.device.read_block(sector.raw(), &mut buffer[..required_size]),
-            "read",
-            sector.raw(),
-            count,
-        )
+        run_block_io(|| self.device.read_block(sector.raw(), &mut buffer[..required_size]))
     }
 
     fn write_with_flags(
@@ -206,12 +166,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        run_block_io(
-            || self.device.write_block_fua(sector.raw(), &buffer[..required_size]),
-            "write-fua",
-            sector.raw(),
-            count,
-        )
+        run_block_io(|| self.device.write_block_fua(sector.raw(), &buffer[..required_size]))
     }
 
     fn geometry(&self) -> DeviceGeometry {
@@ -233,7 +188,7 @@ impl BlockIo for Ext4Disk {
         if !self.device.supports_flush() {
             return Err(Ext4Error::unsupported_capability("block_io:flush"));
         }
-        run_block_io(|| self.device.flush(), "flush", 0, 0)
+        run_block_io(|| self.device.flush())
     }
 
     fn barrier(&mut self) -> Ext4Result<()> {
