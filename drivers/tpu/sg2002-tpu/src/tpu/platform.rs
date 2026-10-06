@@ -278,8 +278,7 @@ pub unsafe fn run_dmabuf(
 
         // 启动 TDMA
         if tdma_num > 0 {
-            tdma_fire();
-            tdma.fire_descriptor(tdma_offset as u64, tdma_num);
+            tdma.fire_descriptor_profiled(tdma_offset as u64, tdma_num, &tdma_fire);
         }
 
         // 等待 TDMA 完成

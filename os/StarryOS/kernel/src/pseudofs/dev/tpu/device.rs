@@ -37,6 +37,7 @@ use ax_memory_addr::PhysAddr;
 use ax_runtime::hal::time::monotonic_time_nanos;
 use ax_sync::Mutex;
 use ax_task::WaitQueue;
+use sg200x_bsp::soc::{CLKGEN_BASE, RSTC_BASE};
 use sg2002_tpu::{
     ion::IonBuffer,
     tpu::{
@@ -217,6 +218,8 @@ pub struct TpuDevice {
 const TPU_COMPATIBLES: &[&str] = &["cvitek,tpu"];
 const TPU_TDMA_IRQ_NAME: &str = "tdma_irq";
 const TPU_DEFAULT_MMIO_SIZE: usize = 0x1000;
+const TPU_CLKGEN_MMIO_SIZE: usize = 0x1000;
+const TPU_RSTC_MMIO_SIZE: usize = 0x1000;
 
 /// 等待 TDMA 完成的总超时（约 10 秒）。
 const TPU_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -416,7 +419,7 @@ fn resolve_named_fdt_irq(
     ax_runtime::irq::resolve_binding_irq(irq).map(Some)
 }
 
-fn map_tpu_mmio(resource: TpuResource) -> Option<(*mut u8, *mut u8)> {
+fn map_tpu_mmio(resource: TpuResource) -> Option<(*mut u8, *mut u8, *mut u8, *mut u8)> {
     let tdma = match axklib::mem::iomap(PhysAddr::from(resource.tdma_paddr), resource.tdma_size) {
         Ok(vaddr) => vaddr.as_mut_ptr(),
         Err(err) => {
@@ -437,7 +440,21 @@ fn map_tpu_mmio(resource: TpuResource) -> Option<(*mut u8, *mut u8)> {
             return None;
         }
     };
-    Some((tdma, tiu))
+    let clkgen = match axklib::mem::iomap(PhysAddr::from(CLKGEN_BASE), TPU_CLKGEN_MMIO_SIZE) {
+        Ok(vaddr) => vaddr.as_mut_ptr(),
+        Err(err) => {
+            warn!("[TPU] failed to map CV181x CLKGEN at {CLKGEN_BASE:#x}: {err:?}");
+            return None;
+        }
+    };
+    let reset = match axklib::mem::iomap(PhysAddr::from(RSTC_BASE), TPU_RSTC_MMIO_SIZE) {
+        Ok(vaddr) => vaddr.as_mut_ptr(),
+        Err(err) => {
+            warn!("[TPU] failed to map CV181x RSTC at {RSTC_BASE:#x}: {err:?}");
+            return None;
+        }
+    };
+    Some((tdma, tiu, clkgen, reset))
 }
 
 fn register_tpu_irq(
@@ -567,8 +584,8 @@ impl TpuDevice {
     pub fn probe() -> Option<Self> {
         let resource = TpuResource::probe()?;
         let hw = {
-            let (tdma, tiu) = map_tpu_mmio(resource)?;
-            Arc::new(unsafe { Sg2002Tpu::from_vaddr(tdma, tiu) })
+            let (tdma, tiu, clkgen, reset) = map_tpu_mmio(resource)?;
+            Arc::new(unsafe { Sg2002Tpu::from_vaddr_with_soc(tdma, tiu, clkgen, reset) })
         };
         Some(Self::setup(hw, resource))
     }
@@ -582,12 +599,14 @@ impl TpuDevice {
         }
         let irq_registration = register_tpu_irq(resource.irq, &hw);
         info!(
-            "[TPU] resource tdma=[{:#x}, +{:#x}) tiu=[{:#x}, +{:#x}) irq={:?} irq_wait={} \
-             source=fdt",
+            "[TPU] resource tdma=[{:#x}, +{:#x}) tiu=[{:#x}, +{:#x}) clkgen={:#x} rstc={:#x} \
+             irq={:?} irq_wait={} source=fdt+cv181x-official",
             resource.tdma_paddr,
             resource.tdma_size,
             resource.tiu_paddr,
             resource.tiu_size,
+            CLKGEN_BASE,
+            RSTC_BASE,
             resource.irq,
             irq_registration.is_some(),
         );
@@ -610,6 +629,10 @@ impl TpuDevice {
             } else {
                 "worker"
             }
+        );
+        info!(
+            "[TPU] DMA policy=coherent-uncached mapping=uncached zero_copy=ion \
+             cache_ioctl=fence-only"
         );
 
         Self {
