@@ -56,7 +56,18 @@ pub const STAGE_CLOSE_DROP: usize = 33;
 pub const STAGE_CLOSE_WAKE: usize = 34;
 /// H5d：把 `drop(fd)` 拆成"只减引用"与"真正析构文件对象"两段。
 pub const STAGE_CLOSE_DROP_INNER: usize = 35;
-const STAGES: usize = 36;
+/// H1b：execve 分段（定位 36 ms 的 exec 成本）。
+pub const STAGE_EXEC_TOTAL: usize = 36;
+pub const STAGE_EXEC_LOAD: usize = 37;
+pub const STAGE_EXEC_ELF: usize = 38;
+pub const STAGE_EXEC_STACK: usize = 39;
+pub const STAGE_EXEC_INSTALL: usize = 40;
+/// H1c：`exec_elf` 内部的细分（解析 / 段映射 / PIE populate / 重定位）。
+pub const STAGE_EXEC_PARSE: usize = 41;
+pub const STAGE_EXEC_MAP: usize = 42;
+pub const STAGE_EXEC_POPULATE: usize = 43;
+pub const STAGE_EXEC_RELOC: usize = 44;
+const STAGES: usize = 45;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -202,6 +213,15 @@ pub fn render() -> String {
         ("close_drop", STAGE_CLOSE_DROP),
         ("close_wake", STAGE_CLOSE_WAKE),
         ("close_drop_inner", STAGE_CLOSE_DROP_INNER),
+        ("exec_total", STAGE_EXEC_TOTAL),
+        ("exec_load", STAGE_EXEC_LOAD),
+        ("exec_elf", STAGE_EXEC_ELF),
+        ("exec_stack", STAGE_EXEC_STACK),
+        ("exec_install", STAGE_EXEC_INSTALL),
+        ("exec_parse", STAGE_EXEC_PARSE),
+        ("exec_map", STAGE_EXEC_MAP),
+        ("exec_populate", STAGE_EXEC_POPULATE),
+        ("exec_reloc", STAGE_EXEC_RELOC),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;

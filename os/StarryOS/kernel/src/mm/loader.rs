@@ -350,6 +350,10 @@ fn map_elf<'a>(
         if is_pie {
             #[cfg(target_arch = "riscv64")]
             {
+                // H1c：把 PT_LOAD 段整段物化（static-PIE 为了后面写重定位必须先有页）。
+                let _t = crate::mm::fault_attrib::scope(
+                    crate::mm::fault_attrib::STAGE_EXEC_POPULATE,
+                );
                 // Populate PT_LOAD segments so relocation writes can access pages
                 for seg in elf_parser
                     .headers()
@@ -365,7 +369,12 @@ fn map_elf<'a>(
                     uspace.populate_area(seg_start, seg_size, mapping_flags(seg.flags))?;
                 }
             }
-            apply_relocations(uspace, base, entry.borrow_cache(), &elf_parser.headers().ph)?;
+            {
+                let _t = crate::mm::fault_attrib::scope(
+                    crate::mm::fault_attrib::STAGE_EXEC_RELOC,
+                );
+                apply_relocations(uspace, base, entry.borrow_cache(), &elf_parser.headers().ph)?;
+            }
         }
     }
 
@@ -442,6 +451,15 @@ fn apply_relocations(
     cache: &CachedFile,
     ph: &[xmas_elf::program::ProgramHeader64],
 ) -> StarryResult {
+    /// H1b：一次从文件里批量读多少条 24 字节重定位项。
+    ///
+    /// 原来是**每条重定位**都 `vec![0u8; 24]` + 一次 `cache.read_at`（进页缓存锁、
+    /// 拷一次），static-PIE 的 busybox 有上千条 R_RISCV_RELATIVE，光这一项就占掉
+    /// `/root/probes/sp2` 实测 32 ms exec 的大头。按批读把"每条约一次取页"降到
+    /// "每 256 条约一次取页"，而且不再每条分配。
+    const RELOC_BATCH_ENTRIES: usize = 256;
+    const RELA_ENTRY_SIZE: usize = 24;
+
     // Find PT_DYNAMIC segment
     let dynamic_ph = ph
         .iter()
@@ -497,20 +515,29 @@ fn apply_relocations(
     // Process .rela.dyn (R_RISCV_RELATIVE)
     if rela_addr != 0 && rela_size != 0 {
         let rela_offset = vaddr_to_file_offset(rela_addr, ph).ok_or(StarryError::InvalidData)?;
-        let rela_entry_size = 24; // sizeof(Rela<u64>) = 24 bytes
-        let rela_count = rela_size as usize / rela_entry_size;
+        let rela_count = rela_size as usize / RELA_ENTRY_SIZE;
         let mut copy_count: usize = 0;
+        let file_len = cache.location().len().unwrap_or(0) as usize;
 
         debug!("Processing {} RELATIVE relocations", rela_count);
 
-        for i in 0..rela_count {
-            let entry_offset = rela_offset + i * rela_entry_size;
-            if entry_offset + rela_entry_size > (cache.location().len().unwrap_or(0) as usize) {
+        let mut batch = Vec::new();
+        let mut processed = 0usize;
+        while processed < rela_count {
+            let count = (rela_count - processed).min(RELOC_BATCH_ENTRIES);
+            let batch_offset = rela_offset + processed * RELA_ENTRY_SIZE;
+            let batch_bytes = count * RELA_ENTRY_SIZE;
+            if batch_offset + batch_bytes > file_len {
                 break;
             }
+            batch.clear();
+            batch
+                .try_reserve_exact(batch_bytes)
+                .map_err(|_| StarryError::NoMemory)?;
+            batch.resize(batch_bytes, 0);
+            cache.read_at(&mut batch, batch_offset as u64)?;
 
-            let mut entry_data = vec![0u8; rela_entry_size];
-            cache.read_at(&mut entry_data, entry_offset as u64)?;
+            for entry_data in batch.chunks_exact(RELA_ENTRY_SIZE) {
 
             // Rela entry: offset (8 bytes) + info (8 bytes) + addend (8 bytes)
             let offset = u64::from_le_bytes(entry_data[0..8].try_into().unwrap()) as usize;
@@ -542,8 +569,8 @@ fn apply_relocations(
                     if sym_entry_offset + 24 > file_len {
                         continue;
                     }
-                    let mut sym_data = vec![0u8; 24];
-                    cache.read_at(&mut sym_data, sym_entry_offset as u64)?;
+                    let mut sym_data = [0u8; 24];
+                    cache.read_at(&mut sym_data[..], sym_entry_offset as u64)?;
                     let st_value = u64::from_le_bytes(sym_data[8..16].try_into().unwrap());
                     if st_value == 0 {
                         continue;
@@ -559,6 +586,8 @@ fn apply_relocations(
                     debug!("[apply_relocations] unknown .rela.dyn type={}", reloc_type);
                 }
             }
+            }
+            processed += count;
         }
         if copy_count > 0 {
             debug!(
@@ -572,19 +601,28 @@ fn apply_relocations(
     if jmprel_addr != 0 && jmprel_size != 0 {
         let jmprel_offset =
             vaddr_to_file_offset(jmprel_addr, ph).ok_or(StarryError::InvalidData)?;
-        let rela_entry_size = 24; // sizeof(Rela<u64>) = 24 bytes
-        let jmprel_count = jmprel_size as usize / rela_entry_size;
+        let jmprel_count = jmprel_size as usize / RELA_ENTRY_SIZE;
+        let file_len = cache.location().len().unwrap_or(0) as usize;
 
         debug!("Processing {} JUMP_SLOT relocations", jmprel_count);
 
-        for i in 0..jmprel_count {
-            let entry_offset = jmprel_offset + i * rela_entry_size;
-            if entry_offset + rela_entry_size > (cache.location().len().unwrap_or(0) as usize) {
+        let mut batch = Vec::new();
+        let mut processed = 0usize;
+        while processed < jmprel_count {
+            let count = (jmprel_count - processed).min(RELOC_BATCH_ENTRIES);
+            let batch_offset = jmprel_offset + processed * RELA_ENTRY_SIZE;
+            let batch_bytes = count * RELA_ENTRY_SIZE;
+            if batch_offset + batch_bytes > file_len {
                 break;
             }
+            batch.clear();
+            batch
+                .try_reserve_exact(batch_bytes)
+                .map_err(|_| StarryError::NoMemory)?;
+            batch.resize(batch_bytes, 0);
+            cache.read_at(&mut batch, batch_offset as u64)?;
 
-            let mut entry_data = vec![0u8; rela_entry_size];
-            cache.read_at(&mut entry_data, entry_offset as u64)?;
+            for entry_data in batch.chunks_exact(RELA_ENTRY_SIZE) {
 
             // Rela entry: offset (8 bytes) + info (8 bytes) + addend (8 bytes)
             let offset = u64::from_le_bytes(entry_data[0..8].try_into().unwrap()) as usize;
@@ -607,12 +645,11 @@ fn apply_relocations(
                     let sym_file_offset =
                         vaddr_to_file_offset(symtab_addr, ph).ok_or(StarryError::InvalidData)?;
                     let sym_entry_offset = sym_file_offset + sym_idx * 24;
-                    let file_len = cache.location().len().unwrap_or(0) as usize;
                     if sym_entry_offset + 24 > file_len {
                         continue;
                     }
-                    let mut sym_data = vec![0u8; 24];
-                    cache.read_at(&mut sym_data, sym_entry_offset as u64)?;
+                    let mut sym_data = [0u8; 24];
+                    cache.read_at(&mut sym_data[..], sym_entry_offset as u64)?;
                     let st_value = u64::from_le_bytes(sym_data[8..16].try_into().unwrap());
 
                     if st_value == 0 {
@@ -626,6 +663,8 @@ fn apply_relocations(
                     debug!("Unsupported relocation type: {}", reloc_type);
                 }
             }
+            }
+            processed += count;
         }
     }
 
@@ -698,6 +737,8 @@ impl ElfLoader {
         cred: &Cred,
     ) -> StarryResult<LoadResult> {
         if !self.0.touch(|e| e.borrow_cache().location().ptr_eq(&loc)) {
+            // H1c：只在 LRU 未命中时才真正读文件 + 解析 ELF 头。
+            let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_PARSE);
             match ElfCacheEntry::load(loc)? {
                 Ok(e) => {
                     self.0.insert(e);
@@ -760,7 +801,10 @@ impl ElfLoader {
             (entry, None)
         };
 
-        let elf = map_elf(uspace, uspace.base().as_usize(), elf)?;
+        let elf = {
+            let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_MAP);
+            map_elf(uspace, uspace.base().as_usize(), elf)?
+        };
         let (start_data, end_data) = executable_data_layout(&elf)?;
         uspace.set_executable_data_layout(start_data, end_data)?;
         let ldso = if ldso.is_some() {
@@ -851,6 +895,8 @@ pub fn load_user_app(
     cred: &Cred,
 ) -> StarryResult<LoadedUserImage> {
     let result = validate_exec_arg_size(args, envs).and_then(|()| {
+        // H1b：整个"镜像构建"（ELF 解析 + 映射 + 栈）段。
+        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_LOAD);
         load_user_app_with_depth(&mut builder.aspace, loc, path, args, envs, cred, 0)
     });
     match result {
@@ -915,7 +961,12 @@ fn load_user_app_with_depth(
 ) -> StarryResult<(VirtAddr, VirtAddr, Vec<AuxEntry>)> {
     check_executable_access(&loc, cred)?;
 
-    let (entry, auxv) = match { ELF_LOADER.lock().load(uspace, loc, cred)? } {
+    // H1b：ELF 解析/映射/重定位这一段单独计时（interpreter 递归不计入）。
+    let load_result = {
+        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_ELF);
+        ELF_LOADER.lock().load(uspace, loc, cred)?
+    };
+    let (entry, auxv) = match load_result {
         Ok((entry, auxv)) => (entry, auxv),
         Err(data) => {
             if data.starts_with(b"#!") {
@@ -953,6 +1004,9 @@ fn load_user_app_with_depth(
         }
     };
 
+    // H1b：栈/堆/argv 拷贝这一段。
+    let _t_stack =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_STACK);
     let ustack_top = uspace.stack_top();
     let ustack_size = crate::config::USER_STACK_SIZE;
     let ustack_start = ustack_top - ustack_size;
