@@ -378,11 +378,16 @@ pub fn set_timer_state(task: &TaskInner, state: TimerState) {
         // reentrant borrow, likely IRQ
         return;
     };
-    let emitter = |signo| {
-        send_signal_thread_inner(task, thr, SignalInfo::new_kernel(signo));
-    };
-    time.poll(emitter);
-    time.set_state(state);
+    if time.itimer_armed() {
+        let emitter = |signo| {
+            send_signal_thread_inner(task, thr, SignalInfo::new_kernel(signo));
+        };
+        time.poll(emitter);
+        time.set_state(state);
+    } else {
+        // Fast path: no itimer armed, skip the three update_itimer checks.
+        time.poll_state(state);
+    }
 }
 
 #[repr(C)]

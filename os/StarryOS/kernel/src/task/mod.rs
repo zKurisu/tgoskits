@@ -173,6 +173,11 @@ pub struct Thread {
     /// seccomp syscall filtering state.
     seccomp: SpinNoIrq<SeccompState>,
 
+    /// Lock-free mirror of `seccomp`'s mode: true when seccomp is disabled.
+    /// Lets `handle_syscall` skip the `seccomp.lock().clone()` snapshot on the
+    /// syscall hot path when no seccomp policy is installed.
+    seccomp_disabled: AtomicBool,
+
     /// Process credentials (uid, gid, etc.).
     cred: SpinNoIrq<Arc<Cred>>,
 
@@ -241,6 +246,7 @@ impl Thread {
             pdeathsig: AtomicU32::new(0),
             no_new_privs: AtomicBool::new(false),
             seccomp: SpinNoIrq::new(SeccompState::default()),
+            seccomp_disabled: AtomicBool::new(true),
             cred: SpinNoIrq::new(cred),
 
             signalfd_waker: PollSet::new(),
@@ -364,6 +370,12 @@ impl Thread {
         self.no_new_privs.store(true, Ordering::Relaxed);
     }
 
+    /// Returns true when seccomp filtering is disabled. Lock-free fast path for
+    /// `handle_syscall` to skip the `seccomp.lock().clone()` snapshot.
+    pub fn seccomp_disabled(&self) -> bool {
+        self.seccomp_disabled.load(Ordering::Relaxed)
+    }
+
     /// Get a snapshot of the current seccomp state.
     pub fn seccomp_state(&self) -> SeccompState {
         self.seccomp.lock().clone()
@@ -371,17 +383,23 @@ impl Thread {
 
     /// Replace seccomp state. Used by clone inheritance.
     pub fn set_seccomp_state(&self, state: SeccompState) {
+        self.seccomp_disabled
+            .store(state.is_disabled(), Ordering::Relaxed);
         *self.seccomp.lock() = state;
     }
 
     /// Enable strict seccomp mode.
     pub fn install_seccomp_strict(&self) -> AxResult<()> {
-        self.seccomp.lock().install_strict()
+        self.seccomp.lock().install_strict()?;
+        self.seccomp_disabled.store(false, Ordering::Relaxed);
+        Ok(())
     }
 
     /// Append a seccomp filter. Filters are inherited and evaluated in order.
     pub fn append_seccomp_filter(&self, insns: Vec<SockFilter>) -> AxResult<()> {
-        self.seccomp.lock().append_filter(insns)
+        self.seccomp.lock().append_filter(insns)?;
+        self.seccomp_disabled.store(false, Ordering::Relaxed);
+        Ok(())
     }
 
     /// Get a snapshot of the current credentials (clones the `Arc`).

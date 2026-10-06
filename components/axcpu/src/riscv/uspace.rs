@@ -89,9 +89,6 @@ impl UserContext {
             fn enter_user(uctx: &mut UserContext);
         }
 
-        // Refresh all instruction caches before entering the user program space to resolve user program errors
-        riscv::asm::fence_i();
-
         crate::asm::disable_irqs();
         unsafe { enter_user(self) };
 
