@@ -1071,7 +1071,15 @@ impl MappingExecution for FileBackend {
             if (pn as u64) >= eof_page {
                 continue;
             }
-            match pt.query(addr) {
+            // H1d：每页细分（file_pop_*）。先量准再决定改哪儿。
+            let query = {
+                use crate::mm::fault_attrib::{STAGE_FILE_POP_QUERY, add, stage_now};
+                let t = stage_now();
+                let q = pt.query(addr);
+                add(STAGE_FILE_POP_QUERY, stage_now().saturating_sub(t));
+                q
+            };
+            match query {
                 Ok((paddr, page_flags, page_size)) => {
                     if page_size != PAGE_SIZE_4K {
                         return Err(StarryError::BadState);
@@ -1110,14 +1118,34 @@ impl MappingExecution for FileBackend {
                     } else {
                         flags - MappingFlags::WRITE
                     };
-                    let page_pin = self.0.cache.pin_page_or_insert(pn)?;
+                    use crate::mm::fault_attrib::{
+                        STAGE_FILE_POP_MAP, STAGE_FILE_POP_PIN, STAGE_FILE_POP_POBJ,
+                        STAGE_FILE_POP_PREP, add, stage_now,
+                    };
+                    let page_pin = {
+                        let t = stage_now();
+                        let pin = self.0.cache.pin_page_or_insert(pn)?;
+                        add(STAGE_FILE_POP_PIN, stage_now().saturating_sub(t));
+                        pin
+                    };
                     let paddr = PhysAddr::from(page_pin.paddr());
-                    let page_object = self.0.get_or_create_page_object(pn, page_pin)?;
-                    page_object.prepare_executable_mapping(paddr, PAGE_SIZE_4K, map_flags);
+                    let page_object = {
+                        let t = stage_now();
+                        let page = self.0.get_or_create_page_object(pn, page_pin)?;
+                        add(STAGE_FILE_POP_POBJ, stage_now().saturating_sub(t));
+                        page
+                    };
+                    {
+                        let t = stage_now();
+                        page_object.prepare_executable_mapping(paddr, PAGE_SIZE_4K, map_flags);
+                        add(STAGE_FILE_POP_PREP, stage_now().saturating_sub(t));
+                    }
+                    let t_map = stage_now();
                     if let Err(error) = pt.map_page(addr, paddr, PAGE_SIZE_4K, map_flags) {
                         self.0.cancel_page_publication(addr, &page_object)?;
                         return Err(error.into());
                     }
+                    add(STAGE_FILE_POP_MAP, stage_now().saturating_sub(t_map));
                     materialization.push(PreparedPteOwner::installed(
                         addr,
                         paddr,

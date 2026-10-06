@@ -67,7 +67,13 @@ pub const STAGE_EXEC_PARSE: usize = 41;
 pub const STAGE_EXEC_MAP: usize = 42;
 pub const STAGE_EXEC_POPULATE: usize = 43;
 pub const STAGE_EXEC_RELOC: usize = 44;
-const STAGES: usize = 45;
+/// H1d：file-backed `populate` 循环内部按页细分（定位 120 µs/页花在哪）。
+pub const STAGE_FILE_POP_QUERY: usize = 45;
+pub const STAGE_FILE_POP_PIN: usize = 46;
+pub const STAGE_FILE_POP_POBJ: usize = 47;
+pub const STAGE_FILE_POP_PREP: usize = 48;
+pub const STAGE_FILE_POP_MAP: usize = 49;
+const STAGES: usize = 50;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -222,6 +228,11 @@ pub fn render() -> String {
         ("exec_map", STAGE_EXEC_MAP),
         ("exec_populate", STAGE_EXEC_POPULATE),
         ("exec_reloc", STAGE_EXEC_RELOC),
+        ("file_pop_query", STAGE_FILE_POP_QUERY),
+        ("file_pop_pin", STAGE_FILE_POP_PIN),
+        ("file_pop_pobj", STAGE_FILE_POP_POBJ),
+        ("file_pop_prep", STAGE_FILE_POP_PREP),
+        ("file_pop_map", STAGE_FILE_POP_MAP),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;
