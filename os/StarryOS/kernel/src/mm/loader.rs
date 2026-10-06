@@ -3,7 +3,7 @@
 use alloc::{borrow::ToOwned, collections::VecDeque, string::String, vec, vec::Vec};
 use core::{ffi::CStr, iter, mem::size_of};
 
-use ax_fs_ng::vfs::{CachedFile, FileBackend};
+use ax_fs_ng::vfs::{CachedFile, FileBackend, FileFlags};
 use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};
 use ax_runtime::hal::{mem::virt_to_phys, paging::MappingFlags};
 use axfs_ng_vfs::{Location, NodeType};
@@ -325,14 +325,47 @@ fn map_elf<'a>(
         } else {
             ph.offset + ph.file_size
         };
-        let backend = MappingOperation::new_cow(
-            seg_start,
-            PAGE_SIZE_4K,
-            FileBackend::Cached(cache.clone()),
-            ph.offset,
-            Some(file_end),
-            false,
-        );
+        // H1e：**只读的 PT_LOAD 段直接映射页缓存帧**，不再做私有 COW 拷贝。
+        //
+        // 这些段的 VMA 没有 WRITE 权限（写会 SIGSEGV），所以 COW 的三件套
+        // ——每页一次新帧分配、三次 4 KiB 拷贝（页缓存→scratch→大缓冲→新帧）、
+        // COW 页索引插入——对这一段完全是白做的：实测 exec 的 32 ms 里 24 ms
+        // 就在 `alloc_file_run` 这条 COW 物化路径上（提交 a0d38214b 的定位）。
+        // `MappingOperation::new_file`（mmap(MAP_SHARED, PROT_READ) 走的同一条路）
+        // 直接把页缓存帧按只读映射进去，每页只剩「pin 页缓存页 + PageObject + PTE」。
+        //
+        // 保守条件：`p_memsz == p_filesz`。只要多出零填充尾部（BSS），这段就必须
+        // 有私有页，仍走 COW。段首按页对齐时文件偏移同步下取整——ELF 规定
+        // `vaddr % PAGE == offset % PAGE`，所以页内对齐关系天然成立。
+        let readonly_file_backed = !ph.flags.is_write()
+            && ph.file_size > 0
+            && ph.mem_size == ph.file_size;
+        let cow_backend = || {
+            MappingOperation::new_cow(
+                seg_start,
+                PAGE_SIZE_4K,
+                FileBackend::Cached(cache.clone()),
+                ph.offset,
+                Some(file_end),
+                false,
+            )
+        };
+        let backend = if readonly_file_backed {
+            let aligned_offset = ph.offset & !(PAGE_SIZE_4K as u64 - 1);
+            match MappingOperation::new_file(
+                seg_start.align_down_4k(),
+                cache.clone(),
+                FileFlags::READ,
+                aligned_offset as usize,
+                false,
+            ) {
+                Ok(backend) => backend,
+                // 构造函数拒绝（例如偏移不合法）时退回 COW，行为与改动前一致。
+                Err(_) => cow_backend(),
+            }
+        } else {
+            cow_backend()
+        };
         uspace.map(
             seg_start.align_down_4k(),
             seg_align_size,

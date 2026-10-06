@@ -990,6 +990,14 @@ impl MappingExecution for FileBackend {
                 if access_flags.contains(MappingFlags::WRITE)
                     && !page_flags.contains(MappingFlags::WRITE)
                 {
+                    // 私有（非 MAP_SHARED）文件映射在这里没有 COW 基础设施：
+                    // 直接把页缓存页标脏会把进程的写落到文件本体上（那是
+                    // MAP_SHARED 的语义）。execve 只读段就是私有映射，若被
+                    // mprotect 成可写后再写，宁可拒绝（SIGSEGV）也不能污染
+                    // 可执行文件。MAP_SHARED 路径不受影响。
+                    if !self.0.shared {
+                        return Err(StarryError::BadAddress);
+                    }
                     let page = self
                         .0
                         .page_object_for_va(range.start, paddr)
