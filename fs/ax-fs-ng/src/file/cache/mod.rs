@@ -54,6 +54,20 @@ type InodeCacheIndex = BTreeMap<CachedFileKey, Weak<CachedFileShared>>;
 static CACHED_FILE_BY_INODE: ax_lazyinit::LazyLock<Mutex<InodeCacheIndex>> =
     ax_lazyinit::LazyLock::new(|| Mutex::new(BTreeMap::new()));
 
+/// 诊断：`CachedFile::get_or_create` 三条路径各走了多少次（零行为改变）。
+///
+/// 判定"重复 open 同一个文件时页缓存有没有被复用"：
+/// * `from_location`：命中 `Location.user_data()`（同一个 VFS 节点对象被复用）；
+/// * `from_inode`：命中 `CACHED_FILE_BY_INODE` 的 Weak 升级（跨 close 复用）；
+/// * `created`：两者都没命中，**新建**了缓存身份 —— 这个比例高就说明每次 open
+///   都在重建身份，页缓存不可能复用（H5 空转的原因）。
+pub static IDENTITY_FROM_LOCATION: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
+pub static IDENTITY_FROM_INODE: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
+pub static IDENTITY_CREATED: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
+
 /// Stable identity of one page-cache ownership domain.
 ///
 /// Clones and independently opened handles that resolve to the same
@@ -513,6 +527,7 @@ impl CachedFile {
                 .map(FileUserData::get)
         };
         if let Some(shared) = existing {
+            IDENTITY_FROM_LOCATION.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
             #[cfg(feature = "vfs")]
             if shared.retired.swap(false, Ordering::AcqRel) {
                 reclaim::register_cached_file(&shared);
@@ -539,6 +554,11 @@ impl CachedFile {
         } else {
             (candidate, true)
         };
+        if owner_created {
+            IDENTITY_CREATED.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        } else {
+            IDENTITY_FROM_INODE.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        }
         let user_data = FileUserData::Strong(created.clone());
 
         let shared = {

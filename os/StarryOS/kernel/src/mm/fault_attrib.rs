@@ -199,5 +199,13 @@ pub fn render() -> String {
             u8::from(retry_pending)
         ));
     }
+    {
+        // 页缓存身份复用情况（H5 诊断）：created 高 = 每次 open 都重建身份。
+        let (by_location, by_inode, created) = ax_fs_ng::cached_file_identity_stats();
+        out.push_str(&format!(
+            "cache_identity_from_location={by_location} cache_identity_from_inode={by_inode} \
+             cache_identity_created={created}\n"
+        ));
+    }
     out
 }

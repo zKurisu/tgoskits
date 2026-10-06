@@ -54,6 +54,7 @@ pub use block::{
 };
 #[cfg(feature = "vfs")]
 pub use highlevel::*;
+pub use file::cached_file_identity_stats;
 #[cfg(feature = "vfs")]
 pub mod vfs {
     /// Create an ext4 filesystem from an owned file source and its open lease.
