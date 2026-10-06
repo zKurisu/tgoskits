@@ -6030,6 +6030,7 @@ impl AddrSpace {
         &mut self,
         attempt: &mut PageFaultApplyAttempt,
     ) -> PageFaultApplyOutcome {
+        let t_apply_entry = crate::mm::fault_attrib::stage_now();
         if !self.page_fault_plan_is_current(&attempt.prepared().plan) {
             return PageFaultApplyOutcome::Cancel(FaultResult::Retry);
         }
@@ -6143,6 +6144,11 @@ impl AddrSpace {
         } else {
             None
         };
+        use crate::mm::fault_attrib::{
+            STAGE_APPLY_MAP, STAGE_APPLY_PREP, STAGE_APPLY_PUBLISH, add, stage_now,
+        };
+        let t_map = stage_now();
+        add(STAGE_APPLY_PREP, t_map.saturating_sub(t_apply_entry));
         let apply_result = {
             let _structure = (owner_transition == PteOwnerTransition::Installed)
                 .then(|| self.pte_domain.lock_structure());
@@ -6210,6 +6216,8 @@ impl AddrSpace {
             mapped: u32::try_from(pages).unwrap_or(u32::MAX),
             ..PteDelta::default()
         });
+        let t_publish = stage_now();
+        add(STAGE_APPLY_MAP, t_publish.saturating_sub(t_map));
         let publication = match self.publish_prepared_fault_owner(
             &attempt.prepared().plan.operation,
             range,
@@ -6250,6 +6258,7 @@ impl AddrSpace {
         if let Some(owners) = retired_owners {
             self.park_retired_mapping_owners(retire_epoch, owners);
         }
+        add(STAGE_APPLY_PUBLISH, stage_now().saturating_sub(t_publish));
         match self.publish_mutation_classified(mutation) {
             Ok(MutationPublication::Complete) => {
                 self.release_retired_mapping_owners(retire_epoch);

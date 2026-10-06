@@ -24,7 +24,10 @@ pub const STAGE_MATERIALIZE: usize = 7;
 pub const STAGE_DEPOSIT_PREP: usize = 8;
 pub const STAGE_PAGE_OBJECT: usize = 9;
 pub const STAGE_PENDING_INSERT: usize = 10;
-const STAGES: usize = 11;
+pub const STAGE_APPLY_PREP: usize = 11;
+pub const STAGE_APPLY_MAP: usize = 12;
+pub const STAGE_APPLY_PUBLISH: usize = 13;
+const STAGES: usize = 14;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -61,6 +64,9 @@ pub fn render() -> String {
         ("deposit_prep", STAGE_DEPOSIT_PREP),
         ("page_object", STAGE_PAGE_OBJECT),
         ("pending_insert", STAGE_PENDING_INSERT),
+        ("apply_prep", STAGE_APPLY_PREP),
+        ("apply_map", STAGE_APPLY_MAP),
+        ("apply_publish", STAGE_APPLY_PUBLISH),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;
