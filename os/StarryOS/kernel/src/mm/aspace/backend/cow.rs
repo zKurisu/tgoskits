@@ -231,6 +231,10 @@ impl CowPageIndex {
         page: &Arc<PageObject>,
         reservation: &mut CowPageIndexReservation,
     ) -> Result<(), CowPageIndexInsertError> {
+        use crate::mm::fault_attrib::{
+            STAGE_PEND_OVERLAP, STAGE_PEND_SEARCH, STAGE_PEND_STORE, add, note_insert_position,
+            stage_now,
+        };
         if page.mapping_refs() != 0 {
             return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
         }
@@ -243,10 +247,13 @@ impl CowPageIndex {
             .checked_add(page.frame().size())
             .ok_or_else(|| CowPageIndexInsertError::Invalid(StarryError::BadState))?;
 
+        let t_search = stage_now();
         self.rebuild_for_insert(reservation)?;
         let position = self
             .pages
             .partition_point(|entry| entry.paddr.as_usize() < start);
+        add(STAGE_PEND_SEARCH, stage_now().saturating_sub(t_search));
+        let t_overlap = stage_now();
         // Only *live* entries still own a frame.  Dead entries (published
         // owners whose page object was dropped) are pruned lazily on the growth
         // path, so they must not participate in the overlap check here —
@@ -264,11 +271,15 @@ impl CowPageIndex {
         if predecessor_overlaps || successor_overlaps {
             return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
         }
+        add(STAGE_PEND_OVERLAP, stage_now().saturating_sub(t_overlap));
 
+        note_insert_position(position, self.pages.len());
+        let t_store = stage_now();
         // `rebuild_for_insert` proved spare capacity, so this shifts entries
         // but cannot allocate while the IRQ-saving guard is held.
         self.pages
             .insert(position, CowPageIndexEntry::pending(page));
+        add(STAGE_PEND_STORE, stage_now().saturating_sub(t_store));
         Ok(())
     }
 
@@ -721,12 +732,16 @@ impl CowBackend {
     }
 
     fn insert_pending_page(&self, page: &Arc<PageObject>) -> StarryResult {
+        use crate::mm::fault_attrib::{STAGE_PEND_LOCK, add, stage_now};
         // 快路径：有富余容量时插入不会分配，整段只需要一次 IRQ 关-开。原来的
         // 写法无论是否需要重建，都先加一次锁问容量、再加一次锁插入；而缺页
         // 预取一次要连插 16 页，这笔固定开销直接乘 16。
         {
+            let t_lock = stage_now();
             let mut pages = self.pages.lock();
-            if pages.insert_reservation_capacity()? == 0 {
+            let capacity = pages.insert_reservation_capacity()?;
+            add(STAGE_PEND_LOCK, stage_now().saturating_sub(t_lock));
+            if capacity == 0 {
                 let mut reservation = CowPageIndexReservation::try_with_capacity(0)?;
                 match pages.insert_pending_reserved(page, &mut reservation) {
                     Ok(()) => return Ok(()),
@@ -775,16 +790,19 @@ impl CowBackend {
             return Err(StarryError::InvalidInput);
         }
         let frame = alloc_frame(zeroed, size)?;
-        use crate::mm::fault_attrib::{STAGE_PAGE_OBJECT, STAGE_PENDING_INSERT, add, stage_now};
+        use crate::mm::fault_attrib::{
+            STAGE_PAGE_OBJECT, STAGE_PENDING_INSERT, STAGE_PO_LEASE, STAGE_PO_NEW, add, stage_now,
+        };
         let t_page_object = stage_now();
-        let page = PageObject::new_present_with_resident_kind(
-            PageId::allocate(),
-            // SAFETY: alloc_frame just returned this unique allocation with
-            // the same size, and the lease takes over its only release duty.
-            unsafe { FrameLease::owned(frame, size) },
-            Some(resident_kind),
-        );
+        // SAFETY: alloc_frame just returned this unique allocation with the
+        // same size, and the lease takes over its only release duty.
+        let lease = unsafe { FrameLease::owned(frame, size) };
+        let t_new = stage_now();
+        add(STAGE_PO_LEASE, t_new.saturating_sub(t_page_object));
+        let page =
+            PageObject::new_present_with_resident_kind(PageId::allocate(), lease, Some(resident_kind));
         let t_insert = stage_now();
+        add(STAGE_PO_NEW, t_insert.saturating_sub(t_new));
         add(STAGE_PAGE_OBJECT, t_insert.saturating_sub(t_page_object));
         // The source-local index owns this page only while the PTE/slot pair
         // is prepared. The returned typed materialization publishes the slot
