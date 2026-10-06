@@ -134,6 +134,19 @@ pub fn page_cache_reclaim(num_pages: usize) -> usize {
             "page_cache_reclaim: evicted {} clean pages across {} files",
             reclaimed, visited_files
         );
+    } else if num_pages > 0 {
+        // 诊断：分配器已经来求救了，我们却一页都没腾出来 —— 这正是板子上
+        // "内存慢慢被吃光最后 OOM panic" 的前兆。打一条有上限的 warn，把
+        // 现场信息（注册表里有多少文件、目标页数、回收是否重入）留下来，
+        // 免得事故只能靠事后猜。
+        static STARVED_REPORTS: core::sync::atomic::AtomicU64 =
+            core::sync::atomic::AtomicU64::new(0);
+        if STARVED_REPORTS.fetch_add(1, Ordering::Relaxed) < 8 {
+            warn!(
+                "page_cache_reclaim: freed 0 of {num_pages} requested pages \
+                 (registered_files={scan_len}, reentrant_or_empty)",
+            );
+        }
     }
     reclaimed
 }

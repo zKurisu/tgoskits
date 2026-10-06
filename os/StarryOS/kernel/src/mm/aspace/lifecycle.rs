@@ -1317,6 +1317,19 @@ static REPAIR_QUEUE: IrqMutex<MmWorkQueue> = IrqMutex::new(MmWorkQueue::new());
 static RECLAIMER_STARTED: AtomicBool = AtomicBool::new(false);
 static REPAIR_RETRY_REQUESTED: AtomicBool = AtomicBool::new(false);
 
+/// Diagnostic snapshot of the MM lifecycle queues.
+///
+/// `retire` is the queue the background reclaimer drains (16 per 10 ms pass);
+/// `repair` holds address spaces whose reclaim *failed* — they keep every page
+/// they mapped until an explicit repair retry is requested, so a growing
+/// `repair` length is exactly "the kernel is leaking whole address spaces".
+/// Exposed through `/proc/fault_attrib` to make memory-leak reports one-liners.
+pub fn mm_queue_lengths() -> (usize, usize, bool) {
+    let retire = RETIRE_QUEUE.lock().len();
+    let repair = REPAIR_QUEUE.lock().len();
+    (retire, repair, REPAIR_RETRY_REQUESTED.load(Ordering::Relaxed))
+}
+
 struct CoalescedReclaimRequest {
     pending: AtomicBool,
 }

@@ -189,5 +189,15 @@ pub fn render() -> String {
             }
         }
     ));
+    {
+        // MM 生命周期队列：repair 一增长就代表"整片地址空间被挂住、内存只增不减"
+        // （回收失败会被塞进 REPAIR_QUEUE，只有显式请求才重试）。
+        let (retire, repair, retry_pending) = crate::mm::mm_queue_lengths();
+        out.push_str(&format!(
+            "mm_retire_queue={retire} mm_repair_queue={repair} \
+             mm_repair_retry_pending={}\n",
+            u8::from(retry_pending)
+        ));
+    }
     out
 }

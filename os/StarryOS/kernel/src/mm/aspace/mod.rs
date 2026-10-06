@@ -679,6 +679,21 @@ struct PageFaultMapPlans {
     fallback: Option<PageTableMapPlan>,
 }
 
+/// 诊断：PTE/槽位发布被拒时打出**出错位置**（有上限，避免日志风暴）。
+///
+/// 原来这条路径只留一句 `kernel object is in an invalid state`，既不知道是哪一层
+/// 校验、也不知道后果有多重：发布失败会让地址空间回收失败，而回收失败的 MM 会被
+/// 塞进 REPAIR_QUEUE 只增不减 —— 整片地址空间（连同它映射的所有页）就永久挂住。
+/// 板子上的内存泄漏/OOM 事故就是沿这条链发生的，所以先把位置精确定位出来。
+pub(crate) fn publication_bad_state(file: &'static str, line: u32) -> StarryError {
+    static BUDGET: AtomicUsize = AtomicUsize::new(12);
+    if BUDGET.load(Ordering::Relaxed) > 0 {
+        BUDGET.fetch_sub(1, Ordering::Relaxed);
+        warn!("page owner publication rejected at {file}:{line}");
+    }
+    StarryError::BadState
+}
+
 fn prepare_mapping_publication_mutation(
     gate: &MutationGate,
     space_id: AddressSpaceId,
@@ -2868,12 +2883,12 @@ impl AddrSpace {
         let transition = owner.transition;
         let provider_publication = owner.provider_publication;
         if page_size < PAGE_SIZE_4K || !page_size.is_power_of_two() || !va.is_aligned(page_size) {
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
         let leaf_range =
             VirtAddrRange::try_from_start_size(va, page_size).ok_or(StarryError::BadState)?;
         if !range.contains_range(leaf_range) {
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
         let frame_start = page.frame().paddr().as_usize();
         let frame_end = frame_start
@@ -2884,15 +2899,15 @@ impl AddrSpace {
             .checked_add(page_size)
             .ok_or(StarryError::BadState)?;
         if leaf_start < frame_start || leaf_end > frame_end {
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
         match self.pt.query(va) {
             Ok((installed, _, installed_size))
                 if installed == paddr && installed_size == page_size => {}
-            Ok(_) | Err(_) => return Err(StarryError::BadState),
+            Ok(_) | Err(_) => return Err(publication_bad_state(file!(), line!())),
         }
         if !matches!(page.state(), PageState::Present | PageState::LazyFree) {
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
 
         let key = MappingSlotKey {
@@ -2915,9 +2930,9 @@ impl AddrSpace {
                 && (order == PageOrder::BASE || slot.has_huge_split_deposit())
         });
         match transition {
-            PteOwnerTransition::Updated if !same_owner => return Err(StarryError::BadState),
+            PteOwnerTransition::Updated if !same_owner => return Err(publication_bad_state(file!(), line!())),
             PteOwnerTransition::Replaced if previous.is_none() || same_owner => {
-                return Err(StarryError::BadState);
+                return Err(publication_bad_state(file!(), line!()));
             }
             PteOwnerTransition::Installed
             | PteOwnerTransition::Replaced
@@ -3002,7 +3017,7 @@ impl AddrSpace {
                 .as_ref()
                 .is_none_or(|previous| !Arc::ptr_eq(previous, current))
             {
-                return Err(StarryError::BadState);
+                return Err(publication_bad_state(file!(), line!()));
             }
             current.set_resident_kind(resident_kind);
             current.page.set_resident_kind(resident_kind);
@@ -3014,14 +3029,14 @@ impl AddrSpace {
 
         if let Some(previous) = &previous {
             let Some(current) = self.mapping_slots.remove(&key) else {
-                return Err(StarryError::BadState);
+                return Err(publication_bad_state(file!(), line!()));
             };
             if !Arc::ptr_eq(previous, &current) || !current.detach() {
                 self.mapping_slots.insert(key, current);
-                return Err(StarryError::BadState);
+                return Err(publication_bad_state(file!(), line!()));
             }
         } else if self.mapping_slots.contains_key(&key) {
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
 
         if !replacement.publish() {
@@ -3030,7 +3045,7 @@ impl AddrSpace {
             {
                 self.mutation_gate.mark_needs_repair();
             }
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
         if provider_publication == ProviderPublication::Pending
             && let Err(error) = operation.finish_page_publication(key.va, &replacement.page)
@@ -3041,13 +3056,13 @@ impl AddrSpace {
             });
             if !replacement_detached || !previous_restored {
                 self.mutation_gate.mark_needs_repair();
-                return Err(StarryError::BadState);
+                return Err(publication_bad_state(file!(), line!()));
             }
             return Err(error);
         }
         if self.mapping_slots.insert(key, replacement).is_some() {
             self.mutation_gate.mark_needs_repair();
-            return Err(StarryError::BadState);
+            return Err(publication_bad_state(file!(), line!()));
         }
         Ok(())
     }
