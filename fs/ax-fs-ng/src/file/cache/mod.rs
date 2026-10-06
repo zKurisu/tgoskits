@@ -1091,12 +1091,29 @@ impl CachedFile {
                 let page_offset = (current - page_start) as usize;
                 let chunk_len =
                     (visible_end - page_start).min(PAGE_SIZE as u64) as usize - page_offset;
-                let _io = self.shared.io_lock.lock();
-                self.populate_page_window(file, pn, window_pages)?;
+                // 快路径：页已经在缓存里就只做一次取页拷贝。
+                //
+                // 原来每页都要**无条件**拿 `io_lock`（可睡眠互斥量）再调
+                // `populate_page_window`，即使这一页早就在缓存里 —— 反复读同一个
+                // 文件（exec、模型加载、cat、scp）时这就是白付两次锁 + 一次窗口
+                // 填充。实测缓存命中的读只有 ~60 MB/s（4 KiB 一页 ~64 µs），而
+                // 匿名内存 memcpy 是 ~1 GB/s；慢的正是这几笔每页固定开销。
                 let mut guard = self.shared.page_cache.lock();
-                let page = guard.get_mut(&pn).ok_or(VfsError::BadState)?;
-                scratch.data()[..chunk_len]
-                    .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
+                match guard.get_mut(&pn) {
+                    Some(page) => {
+                        scratch.data()[..chunk_len]
+                            .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
+                    }
+                    None => {
+                        drop(guard);
+                        let _io = self.shared.io_lock.lock();
+                        self.populate_page_window(file, pn, window_pages)?;
+                        let mut guard = self.shared.page_cache.lock();
+                        let page = guard.get_mut(&pn).ok_or(VfsError::BadState)?;
+                        scratch.data()[..chunk_len]
+                            .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
+                    }
+                }
                 chunk_len
             };
 
