@@ -27,7 +27,8 @@ pub const STAGE_PENDING_INSERT: usize = 10;
 pub const STAGE_APPLY_PREP: usize = 11;
 pub const STAGE_APPLY_MAP: usize = 12;
 pub const STAGE_APPLY_PUBLISH: usize = 13;
-const STAGES: usize = 14;
+pub const STAGE_FAULT_AROUND: usize = 14;
+const STAGES: usize = 15;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -45,6 +46,13 @@ pub fn add(stage: usize, ns: u64) {
 /// Counts one resolved (or attempted) fault.
 pub fn note_fault() {
     FAULTS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Counts `pages` resolved pages at once.  The sequential fault-around path
+/// publishes a whole window from one trap, so counting pages (not traps) keeps
+/// every `<stage>_avg` in the table a per-page figure.
+pub fn note_faults(pages: u64) {
+    FAULTS.fetch_add(pages, Ordering::Relaxed);
 }
 
 /// Renders the cumulative per-stage table (for `/proc/fault_attrib`).
@@ -67,6 +75,7 @@ pub fn render() -> String {
         ("apply_prep", STAGE_APPLY_PREP),
         ("apply_map", STAGE_APPLY_MAP),
         ("apply_publish", STAGE_APPLY_PUBLISH),
+        ("fault_around", STAGE_FAULT_AROUND),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;

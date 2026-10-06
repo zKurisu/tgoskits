@@ -582,12 +582,59 @@ struct PageFaultPlan {
     space_id: AddressSpaceId,
     vaddr: VirtAddr,
     range: VirtAddrRange,
+    /// 产生这次缺页的 VMA 当前范围。缺页预取窗口会被它裁剪，绝不会跨 VMA。
+    vma_range: VirtAddrRange,
+    /// VMA 策略给出的首选叶子大小。只有 4 KiB 策略才允许缺页预取：在
+    /// `MADV_HUGEPAGE` 的 VMA 上提前铺 4 KiB PTE 会让整个 2 MiB 单位的
+    /// 兄弟叶子变成「已占用」，从此再也无法提升为大页。
+    policy_leaf_size: usize,
     vma_flags: MappingFlags,
     access_flags: MappingFlags,
     operation: MappingOperation,
     request: PopulateRequest,
     preimage: FaultPteSnapshot,
     map_plans: Option<PageFaultMapPlans>,
+}
+
+/// 顺序缺页预取一次映射的 4 KiB 页数（Linux `fault_around` 的默认窗口同量级）。
+const FAULT_AROUND_PAGES: usize = 16;
+
+impl PageFaultPlan {
+    /// 判定这次缺页是否值得扩展成一整窗，返回窗口范围。
+    ///
+    /// 条件全部偏保守：
+    /// * 叶子就是 4 KiB——有 THP 策略的 VMA 走它们自己的路径；
+    /// * 预像是「未映射」——已经存在的 PTE（COW 写缺页、权限升级）不预取；
+    /// * 私有匿名——文件/共享后端提前物化会改变后续缺页语义；
+    /// * `cursor` 正好是这一页的上一页——只对**严格升序**的访问流预取，
+    ///   跨步/随机访问不会命中，因此不会为了预取而多占内存。
+    ///
+    /// 判定只读计划本身；真正的映射由调用方交给 `populate_area`，那里会
+    /// 重新校验 VMA 与区域，失败就退回普通单页缺页。
+    fn fault_around_window(&self, cursor: Option<VirtAddr>) -> Option<VirtAddrRange> {
+        if self.range.size() != PAGE_SIZE_4K
+            || self.policy_leaf_size != PAGE_SIZE_4K
+            || self.preimage != FaultPteSnapshot::NotMapped
+            || !self.operation.is_private_anonymous()
+        {
+            return None;
+        }
+        let start = self.range.start;
+        // 游标保存的是「上一个已处理窗口的末尾」，也就是顺序访问流下一个
+        // 期望的起始地址；只有它正好等于本次缺页页才构成升序序列。
+        if cursor.map(VirtAddr::as_usize) != Some(start.as_usize()) {
+            return None;
+        }
+        let want = PAGE_SIZE_4K.checked_mul(FAULT_AROUND_PAGES)?;
+        let end = start
+            .as_usize()
+            .checked_add(want)?
+            .min(self.vma_range.end.as_usize());
+        if end <= start.as_usize() {
+            return None;
+        }
+        VirtAddrRange::try_from_start_size(start, end - start.as_usize())
+    }
 }
 
 struct PageFaultMapPlans {
@@ -5816,6 +5863,8 @@ impl AddrSpace {
             space_id: self.id,
             vaddr,
             range,
+            vma_range: vma.range,
+            policy_leaf_size: policy_size,
             vma_flags: flags,
             access_flags,
             operation: backend,

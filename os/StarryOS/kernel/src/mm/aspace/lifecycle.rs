@@ -19,7 +19,7 @@ use core::{
     sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering},
 };
 
-use ax_memory_addr::{PhysAddr, VirtAddr};
+use ax_memory_addr::{PAGE_SIZE_4K, PhysAddr, VirtAddr};
 use ax_runtime::hal::trap::PageFaultFlags;
 
 use super::{AddrSpace, FaultResult, PageFaultApplyOutcome, TransparentHugePageMode};
@@ -346,6 +346,10 @@ struct MmInner {
     /// state without leaving stale active bits behind.
     active_per_cpu: [AtomicUsize; usize::BITS as usize],
     retire_queued: AtomicBool,
+    /// 顺序缺页预取的游标：上一次已处理缺页窗口末尾的虚址，`usize::MAX`
+    /// 表示还没有前驱。只有「这一页正好是游标那一页」才扩展成整窗，
+    /// 所以跨步与随机访问不会命中预取。
+    fault_around_cursor: AtomicUsize,
     /// Allocated with the MM, like Linux's mm_struct::async_put_work. Token
     /// destruction never needs to allocate a separate deferred-work node.
     work_link: IrqMutex<MmWorkLink>,
@@ -716,6 +720,7 @@ impl MmHandle {
                 active_mask,
                 active_per_cpu: core::array::from_fn(|_| AtomicUsize::new(0)),
                 retire_queued: AtomicBool::new(false),
+                fault_around_cursor: AtomicUsize::new(usize::MAX),
                 work_link: IrqMutex::new(MmWorkLink::default()),
             }),
             owner: AtomicBool::new(true),
@@ -910,8 +915,8 @@ impl MmPin {
         access_flags: PageFaultFlags,
     ) -> FaultResult {
         use crate::mm::fault_attrib::{
-            STAGE_APPLY, STAGE_MMU_CACHE, STAGE_PLAN, STAGE_PREPARE, STAGE_TLB, add, note_fault,
-            stage_now,
+            STAGE_APPLY, STAGE_FAULT_AROUND, STAGE_MMU_CACHE, STAGE_PLAN, STAGE_PREPARE, STAGE_TLB,
+            add, note_fault, note_faults, stage_now,
         };
         let t_plan = stage_now();
         let plan = {
@@ -928,6 +933,33 @@ impl MmPin {
         };
         let t_prepare = stage_now();
         add(STAGE_PLAN, t_prepare.saturating_sub(t_plan));
+
+        // 顺序缺页预取：严格升序的私有匿名缺页不再只看一页，而是把接下来一整窗
+        // （64 KiB）交给既有的批量 populate 事务。逐页的 plan/apply/事务发布开销
+        // 因此摊到整窗上；窗口的每一步都由 `populate_area` 重新校验，任何不成立
+        // 都退回下面的单页缺页路径，所以判定可以只读不可变的计划。
+        let plan_range = plan.range;
+        let raw_cursor = self.0.fault_around_cursor.load(Ordering::Relaxed);
+        let cursor = (raw_cursor != usize::MAX).then(|| VirtAddr::from_usize(raw_cursor));
+        if let Some(window) = plan.fault_around_window(cursor) {
+            let t_around = stage_now();
+            let populated = {
+                let mut aspace = self.0.aspace.lock();
+                aspace.populate_area(window.start, window.size(), plan.access_flags)
+            };
+            let t_around_done = stage_now();
+            add(STAGE_FAULT_AROUND, t_around_done.saturating_sub(t_around));
+            if populated.is_ok() {
+                self.0
+                    .fault_around_cursor
+                    .store(window.end.as_usize(), Ordering::Relaxed);
+                note_faults((window.size() / PAGE_SIZE_4K) as u64);
+                ax_cpu::mmu::update_mmu_cache(vaddr);
+                add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_around_done));
+                return FaultResult::Handled;
+            }
+        }
+
         // Allocation, file I/O and page-cache reservation happen with no
         // address-space metadata lock held. The apply phase below rechecks the
         // exact VMA epoch and PTE preimage before publishing anything.
@@ -995,6 +1027,11 @@ impl MmPin {
         let t_cache = stage_now();
         add(STAGE_TLB, t_cache.saturating_sub(t_tlb));
         if matches!(result, FaultResult::Handled) {
+            // 单页缺页也推进游标：顺序访问流的第二页因此就能命中预取，
+            // 而跨步访问永远不会让游标对上。
+            self.0
+                .fault_around_cursor
+                .store(plan_range.end.as_usize(), Ordering::Relaxed);
             ax_cpu::mmu::update_mmu_cache(vaddr);
         }
         add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_cache));
