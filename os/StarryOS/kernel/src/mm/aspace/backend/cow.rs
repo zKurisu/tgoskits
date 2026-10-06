@@ -721,6 +721,20 @@ impl CowBackend {
     }
 
     fn insert_pending_page(&self, page: &Arc<PageObject>) -> StarryResult {
+        // 快路径：有富余容量时插入不会分配，整段只需要一次 IRQ 关-开。原来的
+        // 写法无论是否需要重建，都先加一次锁问容量、再加一次锁插入；而缺页
+        // 预取一次要连插 16 页，这笔固定开销直接乘 16。
+        {
+            let mut pages = self.pages.lock();
+            if pages.insert_reservation_capacity()? == 0 {
+                let mut reservation = CowPageIndexReservation::try_with_capacity(0)?;
+                match pages.insert_pending_reserved(page, &mut reservation) {
+                    Ok(()) => return Ok(()),
+                    Err(CowPageIndexInsertError::StaleReservation) => {}
+                    Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                }
+            }
+        }
         loop {
             let capacity = {
                 let pages = self.pages.lock();

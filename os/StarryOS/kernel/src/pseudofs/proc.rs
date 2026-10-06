@@ -1933,6 +1933,42 @@ fn unsupported_limit_sysctl_file(fs: &Arc<SimpleFs>, value: &'static str) -> Arc
     )
 }
 
+/// `/proc/fault_around`：顺序缺页预取窗口（4 KiB 页，0 = 关闭）。
+///
+/// `SpecialFsFile` 直读直写：写进来的就是调用方写的那几个字节，不需要
+/// `SimpleFile` 那种「读出现有内容再整体写回」的往返。
+struct FaultAroundKnob;
+
+impl DirectRwFsFileOps for FaultAroundKnob {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> VfsResult<usize> {
+        let pages = crate::mm::fault_around_pages();
+        let text = format!(
+            "pages={pages}\nbytes_per_window={}\n(echo <pages> > /proc/fault_around; \
+             0 disables sequential fault-around)\n",
+            pages * 4096
+        );
+        let data = text.as_bytes();
+        let offset = offset as usize;
+        if offset >= data.len() {
+            return Ok(0);
+        }
+        let rest = &data[offset..];
+        let read = rest.len().min(buf.len());
+        buf[..read].copy_from_slice(&rest[..read]);
+        Ok(read)
+    }
+
+    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
+        let text = core::str::from_utf8(buf).map_err(|_| VfsError::InvalidInput)?;
+        let pages = text
+            .trim()
+            .parse::<usize>()
+            .map_err(|_| VfsError::InvalidInput)?;
+        crate::mm::set_fault_around_pages(pages);
+        Ok(buf.len())
+    }
+}
+
 fn builder(fs: Arc<SimpleFs>, view: PidView) -> DirMaker {
     let mut root = DirMapping::new();
     root.add(
@@ -1964,6 +2000,20 @@ fn builder(fs: Arc<SimpleFs>, view: PidView) -> DirMaker {
     root.add(
         "fault_attrib",
         SimpleFile::new_regular(fs.clone(), || Ok(crate::mm::fault_attrib::render())),
+    );
+    // /proc/fault_around — 顺序缺页预取的窗口大小（4 KiB 页；0 = 关闭）。
+    // 窗口大小是「每页固定开销 vs 预取深度」的直接权衡，先做成运行期旋钮，
+    // 在同一块板上量出曲线再定常数，而不是拍一个值。
+    //
+    // 用 `SpecialFsFile`（直读直写）而不是 `SimpleFile`：后者的 write 是
+    // 「读出现有内容 → 改 → 整体写回」，旋钮会收到被替换过的整段渲染文本。
+    root.add(
+        "fault_around",
+        SpecialFsFile::new_regular_with_perm(
+            fs.clone(),
+            FaultAroundKnob,
+            NodePermission::from_bits_truncate(0o644),
+        ),
     );
     root.add(
         "diskstats",

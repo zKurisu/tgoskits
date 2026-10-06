@@ -28,7 +28,15 @@ pub const STAGE_APPLY_PREP: usize = 11;
 pub const STAGE_APPLY_MAP: usize = 12;
 pub const STAGE_APPLY_PUBLISH: usize = 13;
 pub const STAGE_FAULT_AROUND: usize = 14;
-const STAGES: usize = 15;
+/// 顺序缺页预取窗口内部的阶段（`STAGE_FA_APPLY` 是 `FA_BACKEND`/`FA_PUBLISH`
+/// 的超集，和 `materialize` 与 `page_object` 的关系一样）。
+pub const STAGE_FA_CHECK: usize = 15;
+pub const STAGE_FA_PREIMAGE: usize = 16;
+pub const STAGE_FA_APPLY: usize = 17;
+pub const STAGE_FA_BACKEND: usize = 18;
+pub const STAGE_FA_PUBLISH: usize = 19;
+pub const STAGE_FA_COMMIT: usize = 20;
+const STAGES: usize = 21;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -76,6 +84,12 @@ pub fn render() -> String {
         ("apply_map", STAGE_APPLY_MAP),
         ("apply_publish", STAGE_APPLY_PUBLISH),
         ("fault_around", STAGE_FAULT_AROUND),
+        ("fa_check", STAGE_FA_CHECK),
+        ("fa_preimage", STAGE_FA_PREIMAGE),
+        ("fa_apply", STAGE_FA_APPLY),
+        ("fa_backend", STAGE_FA_BACKEND),
+        ("fa_publish", STAGE_FA_PUBLISH),
+        ("fa_commit", STAGE_FA_COMMIT),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;

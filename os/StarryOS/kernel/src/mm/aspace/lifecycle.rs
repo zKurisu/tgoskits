@@ -350,6 +350,9 @@ struct MmInner {
     /// 表示还没有前驱。只有「这一页正好是游标那一页」才扩展成整窗，
     /// 所以跨步与随机访问不会命中预取。
     fault_around_cursor: AtomicUsize,
+    /// 连续命中的窗口数。窗口大小按它爬坡（8/16/32/…/上限），这样「只顺序
+    /// 碰两页」的程序不会被一次预取掉整窗内存。任何不连续的一次缺页都清零。
+    fault_around_run: AtomicUsize,
     /// Allocated with the MM, like Linux's mm_struct::async_put_work. Token
     /// destruction never needs to allocate a separate deferred-work node.
     work_link: IrqMutex<MmWorkLink>,
@@ -721,6 +724,7 @@ impl MmHandle {
                 active_per_cpu: core::array::from_fn(|_| AtomicUsize::new(0)),
                 retire_queued: AtomicBool::new(false),
                 fault_around_cursor: AtomicUsize::new(usize::MAX),
+                fault_around_run: AtomicUsize::new(0),
                 work_link: IrqMutex::new(MmWorkLink::default()),
             }),
             owner: AtomicBool::new(true),
@@ -941,7 +945,8 @@ impl MmPin {
         let plan_range = plan.range;
         let raw_cursor = self.0.fault_around_cursor.load(Ordering::Relaxed);
         let cursor = (raw_cursor != usize::MAX).then(|| VirtAddr::from_usize(raw_cursor));
-        if let Some(window) = plan.fault_around_window(cursor) {
+        let run = self.0.fault_around_run.load(Ordering::Relaxed);
+        if let Some(window) = plan.fault_around_window(cursor, run) {
             let t_around = stage_now();
             let populated = {
                 let mut aspace = self.0.aspace.lock();
@@ -953,6 +958,9 @@ impl MmPin {
                 self.0
                     .fault_around_cursor
                     .store(window.end.as_usize(), Ordering::Relaxed);
+                self.0
+                    .fault_around_run
+                    .store(run.saturating_add(1), Ordering::Relaxed);
                 note_faults((window.size() / PAGE_SIZE_4K) as u64);
                 ax_cpu::mmu::update_mmu_cache(vaddr);
                 add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_around_done));
@@ -1032,6 +1040,9 @@ impl MmPin {
             self.0
                 .fault_around_cursor
                 .store(plan_range.end.as_usize(), Ordering::Relaxed);
+            // 走到了单页路径，说明这一步不是「接在上一窗口末尾」，顺序流断了，
+            // 窗口从 8 页重新爬坡。
+            self.0.fault_around_run.store(0, Ordering::Relaxed);
             ax_cpu::mmu::update_mmu_cache(vaddr);
         }
         add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_cache));

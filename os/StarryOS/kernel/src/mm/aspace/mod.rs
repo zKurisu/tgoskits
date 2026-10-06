@@ -3,7 +3,10 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
-use core::{fmt, sync::atomic::AtomicUsize};
+use core::{
+    fmt,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use ax_fs_ng::file::CachedPagePin;
 use ax_memory_addr::{
@@ -597,7 +600,37 @@ struct PageFaultPlan {
 }
 
 /// 顺序缺页预取一次映射的 4 KiB 页数（Linux `fault_around` 的默认窗口同量级）。
-const FAULT_AROUND_PAGES: usize = 16;
+///
+/// 运行期可调（`/proc/fault_around`，写页数；0 = 关闭预取）：窗口大小是
+/// 「每页固定开销」与「预取深度」的直接权衡，要在同一块板上把曲线量出来再定值，
+/// 而不是拍一个常数。上限 1024 页 = 4 MiB。
+/// 默认窗口 64 页（256 KiB）。冷启动扫描（`touch64`，每次冷启动只取第一次
+/// 大分配）为 8/16/32/64/128/256 页 → 141/65/65/**52**/59/58 µs/页：64 页
+/// 最好，再大只是把每页成本换成更大的最坏浪费，所以取 64，并用下面的爬坡
+/// 处理「短顺序流」。
+static FAULT_AROUND_PAGES: AtomicUsize = AtomicUsize::new(64);
+const FAULT_AROUND_PAGES_MAX: usize = 1024;
+
+/// 顺序流爬坡：连续命中第 `run` 次时用的窗口（页）。
+///
+/// 固定大窗口的问题是「只顺序碰两页」的程序也要为一次预取付整窗内存。
+/// 从 8 页起步、每命中一次翻倍（上限是配置值）把最坏浪费压到 7 页，而长
+/// 顺序流在第 4 个窗口就达到满窗，代价可以忽略。
+fn fault_around_ramp_pages(configured: usize, run: usize) -> usize {
+    configured.min(8usize << run.min(3))
+}
+
+/// 当前预取窗口大小（4 KiB 页数），0 表示关闭顺序缺页预取。
+pub fn fault_around_pages() -> usize {
+    FAULT_AROUND_PAGES.load(Ordering::Relaxed)
+}
+
+/// 设置预取窗口大小（4 KiB 页数），返回实际生效值（超上限按上限截断）。
+pub fn set_fault_around_pages(pages: usize) -> usize {
+    let clamped = pages.min(FAULT_AROUND_PAGES_MAX);
+    FAULT_AROUND_PAGES.store(clamped, Ordering::Relaxed);
+    clamped
+}
 
 impl PageFaultPlan {
     /// 判定这次缺页是否值得扩展成一整窗，返回窗口范围。
@@ -611,7 +644,7 @@ impl PageFaultPlan {
     ///
     /// 判定只读计划本身；真正的映射由调用方交给 `populate_area`，那里会
     /// 重新校验 VMA 与区域，失败就退回普通单页缺页。
-    fn fault_around_window(&self, cursor: Option<VirtAddr>) -> Option<VirtAddrRange> {
+    fn fault_around_window(&self, cursor: Option<VirtAddr>, run: usize) -> Option<VirtAddrRange> {
         if self.range.size() != PAGE_SIZE_4K
             || self.policy_leaf_size != PAGE_SIZE_4K
             || self.preimage != FaultPteSnapshot::NotMapped
@@ -625,7 +658,11 @@ impl PageFaultPlan {
         if cursor.map(VirtAddr::as_usize) != Some(start.as_usize()) {
             return None;
         }
-        let want = PAGE_SIZE_4K.checked_mul(FAULT_AROUND_PAGES)?;
+        let pages = fault_around_ramp_pages(FAULT_AROUND_PAGES.load(Ordering::Relaxed), run);
+        if pages == 0 {
+            return None;
+        }
+        let want = PAGE_SIZE_4K.checked_mul(pages)?;
         let end = start
             .as_usize()
             .checked_add(want)?
@@ -3952,6 +3989,7 @@ impl AddrSpace {
         size: usize,
         access_flags: MappingFlags,
     ) -> StarryResult<usize> {
+        use crate::mm::fault_attrib::{STAGE_FA_BACKEND, STAGE_FA_PUBLISH, add, stage_now};
         self.validate_region(start, size)?;
         let end = start.checked_add(size).ok_or(StarryError::InvalidInput)?;
         let mut populated = 0usize;
@@ -3966,10 +4004,14 @@ impl AddrSpace {
                 let flags = entry.rights();
                 let backend = entry.operation_clone();
                 let request = PopulateRequest::area(range, backend.page_size())?;
+                let t_backend = stage_now();
                 let materialization =
                     backend.populate(self.id, request, flags, access_flags, &mut self.pt)?;
+                let t_publish = stage_now();
+                add(STAGE_FA_BACKEND, t_publish.saturating_sub(t_backend));
                 let publication =
                     self.publish_prepared_pte_owners(&backend, range, &materialization)?;
+                add(STAGE_FA_PUBLISH, stage_now().saturating_sub(t_publish));
                 populated = populated
                     .checked_add(publication.satisfied_pages)
                     .ok_or(StarryError::NoMemory)?;
@@ -4031,14 +4073,21 @@ impl AddrSpace {
         size: usize,
         access_flags: MappingFlags,
     ) -> StarryResult {
+        use crate::mm::fault_attrib::{
+            STAGE_FA_APPLY, STAGE_FA_CHECK, STAGE_FA_COMMIT, STAGE_FA_PREIMAGE, add, stage_now,
+        };
+        let t_check = stage_now();
         let range =
             VirtAddrRange::try_from_start_size(start, size).ok_or(StarryError::InvalidInput)?;
         self.validate_region(start, size)?;
         if self.can_access_range(start, size, access_flags)
             && self.materialized_range_satisfies_access(range, access_flags)
         {
+            add(STAGE_FA_CHECK, stage_now().saturating_sub(t_check));
             return Ok(());
         }
+        let t_preimage = stage_now();
+        add(STAGE_FA_CHECK, t_preimage.saturating_sub(t_check));
         let preimage = self.capture_mapping_preimage(range)?;
         let graph_preimage = self.capture_mapping_graph_snapshot(&[range])?;
         let mut mutation = self.prepare_mutation_range(start, size);
@@ -4050,6 +4099,8 @@ impl AddrSpace {
         let retired_owners = (!graph_preimage.slots.is_empty())
             .then(|| self.prepare_retired_mapping_owners(range))
             .transpose()?;
+        let t_apply = stage_now();
+        add(STAGE_FA_PREIMAGE, t_apply.saturating_sub(t_preimage));
         let populated = match self.apply_populate_area(start, size, access_flags) {
             Ok(populated) => populated,
             Err(populate_error) => {
@@ -4059,6 +4110,8 @@ impl AddrSpace {
                 return Err(populate_error);
             }
         };
+        let t_commit = stage_now();
+        add(STAGE_FA_APPLY, t_commit.saturating_sub(t_apply));
 
         mutation.set_pte_delta(PteDelta {
             mapped: u32::try_from(populated).unwrap_or(u32::MAX),
@@ -4075,16 +4128,19 @@ impl AddrSpace {
         match self.commit_mutation_classified(mutation) {
             Ok(()) => {
                 self.release_retired_mapping_owners(retire_epoch);
+                add(STAGE_FA_COMMIT, stage_now().saturating_sub(t_commit));
                 Ok(())
             }
             Err(CommitMutationError::PublishedPendingTlb(error)) => Err(error),
-            Err(CommitMutationError::Unpublished(error)) => self
-                .abort_unpublished_parked_mapping_mutation(
+            Err(CommitMutationError::Unpublished(error)) => {
+                add(STAGE_FA_COMMIT, stage_now().saturating_sub(t_commit));
+                self.abort_unpublished_parked_mapping_mutation(
                     range,
                     preimage,
                     Some(retire_epoch),
                     error,
-                ),
+                )
+            }
         }
     }
 
