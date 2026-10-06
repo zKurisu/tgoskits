@@ -8,6 +8,21 @@ use super::{CachedFileShared, PageCache};
 
 const MAX_RECLAIM_BATCH: usize = 256;
 
+/// 关闭后仍然保留页缓存的"小文件"个数上限。
+///
+/// 这是 H5 的核心：原来的裁剪条件是"没有别人引用就摘掉"，而缓存身份的唯一强引用
+/// 来自打开的文件对象 —— 于是**每一次 close 都把整片页缓存丢掉**，下次 open 只能
+/// 回 SD 卡读。板上实测 ext4 上 `open+read(0 KB)+close` 中位 10.0 ms（procfs 0.4 ms），
+/// 而且每次都重复；exec 一个 busybox ≈36 ms、模型加载 ≈3 s、cat ~32 MB/s 全是这一个原因。
+///
+/// 保留是有代价的（内存随"被访问过的文件数"增长），所以这里用**可证明的上界**：
+/// 一个文件的缓存页数不可能超过它的长度，于是只要限制"保留几个文件"以及"文件多大"，
+/// 就能给出总上界，不需要新增任何页计数：
+///   4 个文件 × 4 MiB = 16 MiB（本板 236 MB 内存的 7%）。
+/// busybox（803 KB）、常用动态库、akars 模型（3.63 MB）都落在窗口内。
+const RETAIN_CLOSED_CACHE_FILES: usize = 4;
+const RETAIN_CLOSED_CACHE_MAX_BYTES: u64 = 4 * 1024 * 1024;
+
 struct ReclaimGuard;
 
 impl Drop for ReclaimGuard {
@@ -61,8 +76,22 @@ impl CachedFileRegistry {
         let mut doomed: AllocVec<Arc<CachedFileShared>> = AllocVec::new();
         {
             let mut registry = self.files.write();
+            // 注册表按插入顺序排列，保留"最近 N 个"才有意义（保留最旧的一批
+            // 等于保留一堆再也不会被访问的文件，而被反复访问的那个反而被裁掉）。
+            let tail_start = registry.len().saturating_sub(RETAIN_CLOSED_CACHE_FILES);
+            let mut position = 0usize;
             registry.retain(|cached| {
+                let index = position;
+                position += 1;
+                // 已经 unlink / 已被退休的注册必须消失（原来的语义：它们不得被恢复）。
+                if cached.unlinked.load(Ordering::Acquire) || cached.retired.load(Ordering::Acquire) {
+                    doomed.push(cached.clone());
+                    return false;
+                }
                 if Arc::strong_count(cached) > 1 || cached.has_dirty_pages() {
+                    true
+                } else if index >= tail_start && cached.len() <= RETAIN_CLOSED_CACHE_MAX_BYTES {
+                    // H5：关闭后按上界保留页缓存，见常量说明。
                     true
                 } else {
                     // 先计数、后 clone：判定看到的是"注册表自己那一个引用"之外
