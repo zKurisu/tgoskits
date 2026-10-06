@@ -470,6 +470,8 @@ impl CachedFileShared {
 
 impl Drop for CachedFileShared {
     fn drop(&mut self) {
+        // H5c 诊断：共享缓存对象析构（close 时若为最后一个强引用就会走到这里）。
+        let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_SHARED_DROP);
         if !self.unlinked.load(Ordering::Acquire) {
             return;
         }
@@ -1353,6 +1355,8 @@ impl Drop for CachedFile {
     fn drop(&mut self) {
         // Linux close(2) does not imply fsync(2). Disk-backed page cache is
         // retained by the inode user_data and written by explicit sync paths.
+        // H5c 诊断：close 时文件对象析构的耗时（`drop(fd)` 里 11 ms 的候选之一）。
+        let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_CACHED_FILE_DROP);
     }
 }
 

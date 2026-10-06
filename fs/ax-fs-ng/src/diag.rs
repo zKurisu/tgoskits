@@ -22,7 +22,13 @@ pub const STAGE_READ_POPULATE: usize = 2;
 pub const STAGE_READ_COPY: usize = 3;
 pub const STAGE_EXT4_INODE_NEW: usize = 4;
 pub const STAGE_EXT4_LOOKUP: usize = 5;
-const STAGES: usize = 6;
+/// H5c：close 时析构路径的分段（文件对象 / 共享缓存对象 / ext4 索引节点）。
+pub const STAGE_CLOSE_CACHED_FILE_DROP: usize = 6;
+pub const STAGE_CLOSE_SHARED_DROP: usize = 7;
+pub const STAGE_CLOSE_EXT4_INODE_DROP: usize = 8;
+pub const STAGE_CLOSE_EXT4_RELEASE_REF: usize = 9;
+pub const STAGE_CLOSE_EXT4_REAP: usize = 10;
+const STAGES: usize = 11;
 
 const NAMES: [&str; STAGES] = [
     "open_get_or_create",
@@ -31,6 +37,11 @@ const NAMES: [&str; STAGES] = [
     "read_copy",
     "ext4_inode_new",
     "ext4_lookup",
+    "close_cached_file_drop",
+    "close_shared_drop",
+    "close_ext4_inode_drop",
+    "close_ext4_release_ref",
+    "close_ext4_reap",
 ];
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
