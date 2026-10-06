@@ -1,8 +1,5 @@
 use alloc::{sync::Arc, vec::Vec as AllocVec};
-use core::{
-    mem,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use axfs_ng_vfs::VfsResult;
 use heapless::Vec as InlineVec;
@@ -47,25 +44,36 @@ impl CachedFileRegistry {
     }
 
     fn prune_with(&self, before_restore: impl FnOnce()) {
-        // Cached-file destruction can take a sleepable filesystem lock.
-        let mut files = {
+        // 一次加锁 + 线性扫描：把"没有别人引用且没有脏页"的缓存身份摘掉。
+        // 被摘掉的 Arc 收集到局部 Vec，**锁外**再析构（析构可能取可睡眠的
+        // 文件系统锁）。
+        //
+        // 原实现是 `mem::take` 出整个注册表 → `retain` → 再**逐个**加写锁 +
+        // `iter().any(ptr_eq)` 查重后放回：那是 O(n²)，而它在每次创建新的
+        // 缓存身份时都会跑（打开一个还没被缓存的文件）。板上实测：
+        // `open+read(64K)+close` 中位数 10.3 ms（其中读数据只 ~0.9 ms），
+        // `execve("/bin/true")` ≈36 ms —— 都是这 O(n²) 在付账；而且探针的
+        // max(44 ms) ≫ median(10 ms) 正说明注册表在增长。
+        //
+        // 换成原地 retain 之后不再存在"注册表被整体取出"的窗口，因此原来那种
+        // "unlink 先置位、恢复时在锁内复查"的补偿也就不需要了：unlink 与本
+        // 扫描在同一把写锁下互斥。
+        let mut doomed: AllocVec<Arc<CachedFileShared>> = AllocVec::new();
+        {
             let mut registry = self.files.write();
-            mem::take(&mut *registry)
-        };
-        files.retain(|cached| Arc::strong_count(cached) > 1 || cached.has_dirty_pages());
-        before_restore();
-        for file in files {
-            let mut registry = self.files.write();
-            // Unlink publishes this flag before taking the registry lock.
-            // Recheck under that same lock: either restoration observes it,
-            // or unlink subsequently removes the restored registration.
-            if file.unlinked.load(Ordering::Acquire) || file.retired.load(Ordering::Acquire) {
-                drop(registry);
-                drop(file);
-            } else if !registry.iter().any(|cached| Arc::ptr_eq(cached, &file)) {
-                registry.push(file);
-            }
+            registry.retain(|cached| {
+                if Arc::strong_count(cached) > 1 || cached.has_dirty_pages() {
+                    true
+                } else {
+                    // 先计数、后 clone：判定看到的是"注册表自己那一个引用"之外
+                    // 还有没有人持有。
+                    doomed.push(cached.clone());
+                    false
+                }
+            });
         }
+        before_restore();
+        drop(doomed);
     }
 }
 

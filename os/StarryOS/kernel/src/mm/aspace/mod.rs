@@ -4055,7 +4055,7 @@ impl AddrSpace {
     /// translation probe.  It deliberately requires `USER` even though
     /// `UserAccessIntent` only carries read/write intent.  A present supervisor
     /// mapping must never make a user-copy preparation succeed.
-    fn materialized_range_satisfies_access(
+    pub(crate) fn materialized_range_satisfies_access(
         &self,
         range: VirtAddrRange,
         access_flags: MappingFlags,

@@ -9,7 +9,7 @@ use core::{
 };
 
 use ax_io::prelude::*;
-use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};
+use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr, VirtAddrRange};
 use ax_runtime::hal::{
     cpu::{
         trap::PageFaultFlags,
@@ -169,6 +169,25 @@ impl UserAccess<Faultable> {
         }
 
         let span = self.range.page_span().ok_or(VmError::AccessDenied)?;
+        // 软件"整段已映射"快路径。
+        //
+        // riscv64 的 `user_access_ok_page` 是个恒返回 false 的桩（没有硬件探测
+        // 指令），所以上面那个锁外探测在这里**永远不成立**，于是每一次 uaccess
+        // 都要：取地址空间锁 + 逐页调用完整的缺页事务 —— 即使这一整段早就
+        // 映射好、权限也对。实测这就是"缓存命中的文件读只有 60–68 MB/s
+        // （4 KiB 一页 ~60 µs）"的来源，而它是 exec、模型加载、cat、scp 的
+        // 共同底座。这里补一次廉价的软件检查（一次地址空间锁 + 一次页表走查）：
+        // 整段都在页表里且权限满足就直接返回，省下逐页缺页事务。
+        //
+        // 与上面那个锁外探测一样，这只是"已存在页"的优化判断，不建立任何
+        // 引用；真正的拷贝仍然由异常表兜底。分段缺页（例如刚 mmap 的缓冲区）
+        // 会在这里判定失败，继续走原来的慢路径补齐页面。
+        if aspace_pin.lock().materialized_range_satisfies_access(
+            VirtAddrRange::new(VirtAddr::from(span.start), VirtAddr::from(span.end)),
+            self.intent.mapping_flags(),
+        ) {
+            return Ok(());
+        }
         if !aspace_pin.lock().can_access_range(
             self.range.start,
             self.range.len(),
