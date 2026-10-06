@@ -27,6 +27,48 @@ use crate::task::{
 
 struct RuntimeTimeProvider;
 
+/// Diagnostic-only rate limiter for `diag_cannot_block`.
+///
+/// Only the "a real task is running but the context forbids sleeping" case is
+/// interesting; the "no current thread yet" case happens throughout early boot
+/// and used to exhaust a plain line budget before the workload ever ran.  The
+/// interval keeps the serial console from being flooded if the condition
+/// persists, and the hard cap bounds a diagnostic build no matter what.
+static DIAG_LAST_NANOS: core::sync::atomic::AtomicU64 = core::sync::atomic::AtomicU64::new(0);
+static DIAG_CANNOT_BLOCK_BUDGET: core::sync::atomic::AtomicU8 =
+    core::sync::atomic::AtomicU8::new(64);
+const DIAG_MIN_INTERVAL_NANOS: u64 = 500_000_000;
+
+fn diag_cannot_block(has_thread: bool, atomic: bool) {
+    use core::sync::atomic::Ordering;
+    if !has_thread || !atomic {
+        return;
+    }
+    let now = ax_hal::time::monotonic_time_nanos();
+    if now.saturating_sub(DIAG_LAST_NANOS.load(Ordering::Relaxed)) < DIAG_MIN_INTERVAL_NANOS {
+        return;
+    }
+    if DIAG_CANNOT_BLOCK_BUDGET
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |remaining| {
+            remaining.checked_sub(1)
+        })
+        .is_err()
+    {
+        return;
+    }
+    DIAG_LAST_NANOS.store(now, Ordering::Relaxed);
+    let (irqs_off, in_irq, preempt_depth, irq_clear, preempt_clear) =
+        crate::guard::atomic_context_flags();
+    let thread = crate::task::thread::current::current_thread_id()
+        .map(|id| id.as_u64())
+        .unwrap_or(0);
+    ax_log::warn!(
+        "diag can_block=false: has_thread={has_thread} atomic={atomic} \
+         irqs_off={irqs_off} in_irq={in_irq} preempt_depth={preempt_depth} \
+         guard_irq_clear={irq_clear} guard_preempt_clear={preempt_clear} thread={thread}"
+    );
+}
+
 impl BlockTimeProvider for RuntimeTimeProvider {
     fn wall_time(&self) -> Duration {
         ax_hal::time::wall_time()
@@ -156,8 +198,12 @@ impl BlockRuntimeOps for RuntimeTaskOps {
     }
 
     fn can_block(&self) -> bool {
-        crate::task::thread::current::current_thread_id().is_ok()
-            && !crate::guard::in_atomic_context()
+        let has_thread = crate::task::thread::current::current_thread_id().is_ok();
+        let atomic = crate::guard::in_atomic_context();
+        if !has_thread || atomic {
+            diag_cannot_block(has_thread, atomic);
+        }
+        has_thread && !atomic
     }
 
     fn notification(&self) -> Arc<dyn BlockNotification> {

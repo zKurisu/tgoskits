@@ -183,6 +183,28 @@ pub(crate) fn in_atomic_context() -> bool {
     ax_cpu::interrupt::enable_irqs();
     guarded
 }
+
+/// Diagnostic-only breakdown of why the current context must not sleep.
+///
+/// Returns `(irqs_off, in_irq)`.  When both are `false` the exclusion comes
+/// from a context guard (a spinlock or preemption-disable region).  Does not
+/// toggle IRQs, so it is safe to call from an already-atomic context.
+#[cfg(feature = "fs")]
+pub(crate) fn atomic_context_flags() -> (bool, bool, u32, bool, bool) {
+    let irqs_off = !ax_cpu::interrupt::irqs_enabled();
+    let in_irq = ax_hal::irq::in_irq_context();
+    let (preempt_depth, irq_clear, preempt_clear) = if irqs_off {
+        let state = read_state();
+        (current_preempt_depth(), state.irq.is_clear(), state.preempt.is_clear())
+    } else {
+        ax_cpu::interrupt::disable_irqs();
+        let state = read_state();
+        let values = (current_preempt_depth(), state.irq.is_clear(), state.preempt.is_clear());
+        ax_cpu::interrupt::enable_irqs();
+        values
+    };
+    (irqs_off, in_irq, preempt_depth, irq_clear, preempt_clear)
+}
 #[cfg(not(any(test, feature = "host-test")))]
 pub(crate) fn enter_irq() {
     let outer_irqs_enabled = ax_cpu::interrupt::irqs_enabled();
