@@ -24,10 +24,26 @@ pub(super) struct DecodedJpuFrame {
 struct JpuState {
     decoder: Option<JpuDecoder>,
     vdec_owned: bool,
+    /// Successful decodes since the engine was last constructed.
+    decode_count: u32,
 }
+
+/// After this many successful decodes the JPU is transparently recycled (drop
+/// plus fresh construction) so its internal state — BBC/GBU pointers, FIFOs,
+/// error counters — is reinitialized by `hardware_init_at()`.
+///
+/// The C reference driver calls `JPU_SWReset()` between *every* frame; carrying
+/// the reset over this many frames keeps the amortized cost negligible while
+/// still bounding how much state can accumulate. Without it the engine wedges
+/// after a long run (`[JPU] Timeout!`) and decoding never recovers.
+const JPU_RECYCLE_INTERVAL: u32 = 100;
 
 impl JpuState {
     fn decoder(&mut self) -> StarryResult<&mut JpuDecoder> {
+        if self.decode_count >= JPU_RECYCLE_INTERVAL {
+            self.decoder = None;
+            self.decode_count = 0;
+        }
         if self.decoder.is_none() {
             self.decoder = Some(create_decoder()?);
         }
@@ -46,6 +62,7 @@ impl CviJpu {
             state: Mutex::new(JpuState {
                 decoder: None,
                 vdec_owned: false,
+                decode_count: 0,
             }),
         }
     }
@@ -74,6 +91,9 @@ impl CviJpu {
         if state.vdec_owned {
             return Err(crate::StarryError::ResourceBusy);
         }
+        // Count attempts (not just successes): a wedged engine must still be
+        // recycled after a bounded number of tries.
+        state.decode_count = state.decode_count.saturating_add(1);
         let result = state
             .decoder()?
             .decode(jpeg)
@@ -87,6 +107,7 @@ impl CviJpu {
         if !state.vdec_owned {
             return Err(StarryError::InvalidInput);
         }
+        state.decode_count = state.decode_count.saturating_add(1);
         let result = state
             .decoder()?
             .decode_scaled(jpeg, scale)

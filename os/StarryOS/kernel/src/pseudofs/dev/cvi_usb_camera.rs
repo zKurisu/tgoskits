@@ -61,6 +61,12 @@ pub const CVI_CAMERA_IOCTL_INIT: u32 = 1;
 pub const CVI_CAMERA_IOCTL_GET_INFO: u32 = 2;
 pub const CVI_CAMERA_IOCTL_GET_FRAME: u32 = 3;
 pub const CVI_CAMERA_IOCTL_GET_YUV_FRAME: u32 = 4;
+/// Power-cycle the camera VBUS and drop the session so the next
+/// [`CVI_CAMERA_IOCTL_INIT`] performs a full hardware re-initialization.
+///
+/// This is the strongest recovery step — use it when persistent EIO cannot be
+/// cleared by INIT alone (for example after the UVC endpoint stops streaming).
+pub const CVI_CAMERA_IOCTL_HARD_RESET: u32 = 5;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, bytemuck::Pod, bytemuck::Zeroable)]
@@ -155,9 +161,27 @@ fn pinmux_usb_vbus_det_gpio_output_prep() {
 }
 
 fn enable_usb_vbus_gpio() {
+    set_usb_vbus_gpio(true);
+}
+
+/// Drives the camera VBUS enable pin, honouring the board's active-low wiring.
+fn set_usb_vbus_gpio(enabled: bool) {
     let gpio = unsafe { GPIO::new(iomap_usize(GPIO1_BASE, REG_MMIO_SIZE)) };
     gpio.pin(VBUS_GPIO_PIN).set_direction(Direction::Output);
-    gpio.pin(VBUS_GPIO_PIN).set(VBUS_GPIO_ACTIVE_HIGH);
+    gpio.pin(VBUS_GPIO_PIN)
+        .set(if VBUS_GPIO_ACTIVE_HIGH { enabled } else { !enabled });
+}
+
+/// Power-cycles the camera over VBUS: off → 500 ms → on → 2 s settle.
+///
+/// The caller re-initializes the session afterwards.
+fn power_cycle_camera_vbus() {
+    info!("cvi-camera: power-cycling VBUS ...");
+    set_usb_vbus_gpio(false);
+    crate::task::sleep(Duration::from_millis(500));
+    set_usb_vbus_gpio(true);
+    crate::task::sleep(Duration::from_millis(2000));
+    info!("cvi-camera: VBUS power-cycle complete");
 }
 
 fn usb_init_failure_context(e: UsbError) -> &'static str {
@@ -304,6 +328,12 @@ fn capture_frame(session: &UsbCameraSession) -> StarryResult<&'static [u8]> {
 }
 
 impl UsbCameraState {
+    /// Drops the camera session so the next [`Self::ensure_initialized`] runs a
+    /// full hardware re-initialization (enumeration, stream setup, DMA blocks).
+    fn reset(&mut self) {
+        self.session = None;
+    }
+
     fn ensure_initialized(&mut self) -> StarryResult<()> {
         if self.session.is_none() {
             self.session = Some(init_usb_camera()?);
@@ -370,6 +400,14 @@ impl CviCamera {
                 Ok(frame.len())
             }
             CVI_CAMERA_IOCTL_GET_YUV_FRAME => self.write_yuv_frame(current, arg as *mut u8),
+            CVI_CAMERA_IOCTL_HARD_RESET => {
+                // Bring the camera back from a wedged stream: cycle its power
+                // and drop the session so the next INIT re-runs enumeration and
+                // stream setup from scratch.
+                power_cycle_camera_vbus();
+                self.state.lock().reset();
+                Ok(0)
+            }
             _ => Err(StarryError::NotATty),
         }
     }
