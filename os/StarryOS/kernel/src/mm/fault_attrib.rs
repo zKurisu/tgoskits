@@ -44,7 +44,17 @@ pub const STAGE_PEND_STORE: usize = 24;
 /// `PageObject` 创建的两半：帧租约 vs 对象本体。
 pub const STAGE_PO_LEASE: usize = 25;
 pub const STAGE_PO_NEW: usize = 26;
-const STAGES: usize = 27;
+/// H5b：把 open / read / close 三个系统调用分开计时（定位 ext4 open 路径的 ~10 ms）。
+pub const STAGE_SYSCALL_OPEN: usize = 27;
+pub const STAGE_SYSCALL_READ: usize = 28;
+pub const STAGE_SYSCALL_CLOSE: usize = 29;
+/// H5b：close 内部再拆五段（表摘除 / on_close / 锁清理 / 文件析构 / 唤醒）。
+pub const STAGE_CLOSE_TABLE: usize = 30;
+pub const STAGE_CLOSE_ONCLOSE: usize = 31;
+pub const STAGE_CLOSE_LOCKS: usize = 32;
+pub const STAGE_CLOSE_DROP: usize = 33;
+pub const STAGE_CLOSE_WAKE: usize = 34;
+const STAGES: usize = 35;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -103,6 +113,39 @@ pub fn add(stage: usize, ns: u64) {
     TOTALS[stage].fetch_add(ns, Ordering::Relaxed);
 }
 
+/// Timestamps the enclosing scope and attributes it to `stage` on drop.
+///
+/// H5b 的用法：在系统调用入口挂一个 `let _t = fault_attrib::scope(STAGE_X);`，
+/// 就能把 open / read / close 各自的总耗时拆出来（`_avg` 仍是"每次系统调用"）。
+#[must_use]
+pub struct Scope {
+    stage: usize,
+    start: u64,
+}
+
+impl Scope {
+    pub fn new(stage: usize) -> Self {
+        Self {
+            stage,
+            start: stage_now(),
+        }
+    }
+}
+
+impl Drop for Scope {
+    fn drop(&mut self) {
+        let end = stage_now();
+        if end > self.start {
+            add(self.stage, end - self.start);
+        }
+    }
+}
+
+/// Convenience constructor for [`Scope`].
+pub fn scope(stage: usize) -> Scope {
+    Scope::new(stage)
+}
+
 /// Counts one resolved (or attempted) fault.
 pub fn note_fault() {
     FAULTS.fetch_add(1, Ordering::Relaxed);
@@ -148,6 +191,14 @@ pub fn render() -> String {
         ("pend_store", STAGE_PEND_STORE),
         ("po_lease", STAGE_PO_LEASE),
         ("po_new", STAGE_PO_NEW),
+        ("syscall_open", STAGE_SYSCALL_OPEN),
+        ("syscall_read", STAGE_SYSCALL_READ),
+        ("syscall_close", STAGE_SYSCALL_CLOSE),
+        ("close_table", STAGE_CLOSE_TABLE),
+        ("close_onclose", STAGE_CLOSE_ONCLOSE),
+        ("close_locks", STAGE_CLOSE_LOCKS),
+        ("close_drop", STAGE_CLOSE_DROP),
+        ("close_wake", STAGE_CLOSE_WAKE),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;
@@ -207,5 +258,7 @@ pub fn render() -> String {
              cache_identity_created={created}\n"
         ));
     }
+    // FS 侧分段（ax-fs-ng 自己的计数器，见 fs/ax-fs-ng/src/diag.rs）。
+    out.push_str(&ax_fs_ng::diag::render());
     out
 }

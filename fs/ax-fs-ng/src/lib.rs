@@ -23,6 +23,7 @@ pub mod api;
 pub mod block;
 mod error;
 pub mod file;
+pub mod diag;
 pub mod fops;
 mod fs;
 mod fs_core;

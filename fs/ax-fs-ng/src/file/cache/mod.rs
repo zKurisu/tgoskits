@@ -517,6 +517,7 @@ fn filesystem_uses_unbounded_page_cache(name: &str) -> bool {
 impl CachedFile {
     /// Returns an existing cached file for `location`, or creates a new one.
     pub fn get_or_create(location: Location) -> VfsResult<Self> {
+        let _t = crate::diag::scope(crate::diag::STAGE_OPEN_GET_OR_CREATE);
         let in_memory = filesystem_uses_unbounded_page_cache(location.filesystem().name());
 
         let existing = {
@@ -550,6 +551,7 @@ impl CachedFile {
             Arc::new(CachedFileShared::new(len, backing))
         };
         let (created, owner_created) = if let Some(key) = inode_key {
+            let _t = crate::diag::scope(crate::diag::STAGE_OPEN_REGISTER);
             publish_inode_cached_file(key, candidate)
         } else {
             (candidate, true)
@@ -579,6 +581,7 @@ impl CachedFile {
         // lose data. Only register disk-backed files for reclaim.
         #[cfg(feature = "vfs")]
         if !in_memory && (owner_created || shared.retired.swap(false, Ordering::AcqRel)) {
+            let _t = crate::diag::scope(crate::diag::STAGE_OPEN_REGISTER);
             reclaim::register_cached_file(&shared);
         }
         #[cfg(not(feature = "vfs"))]
@@ -1121,17 +1124,24 @@ impl CachedFile {
                 let mut guard = self.shared.page_cache.lock();
                 match guard.get_mut(&pn) {
                     Some(page) => {
+                        let _t = crate::diag::scope(crate::diag::STAGE_READ_COPY);
                         scratch.data()[..chunk_len]
                             .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
                     }
                     None => {
                         drop(guard);
                         let _io = self.shared.io_lock.lock();
-                        self.populate_page_window(file, pn, window_pages)?;
+                        {
+                            let _t = crate::diag::scope(crate::diag::STAGE_READ_POPULATE);
+                            self.populate_page_window(file, pn, window_pages)?;
+                        }
                         let mut guard = self.shared.page_cache.lock();
                         let page = guard.get_mut(&pn).ok_or(VfsError::BadState)?;
-                        scratch.data()[..chunk_len]
-                            .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
+                        {
+                            let _t = crate::diag::scope(crate::diag::STAGE_READ_COPY);
+                            scratch.data()[..chunk_len]
+                                .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
+                        }
                     }
                 }
                 chunk_len
