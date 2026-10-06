@@ -57,6 +57,22 @@ static FAULTS: AtomicU64 = AtomicU64::new(0);
 static INSERT_POSITIONS: [AtomicU64; 6] = [const { AtomicU64::new(0) }; 6];
 static INSERT_SHIFTED_ENTRIES: AtomicU64 = AtomicU64::new(0);
 
+/// 匿名批量缺页的整块分配结果：成功了多少页、回退逐页了多少页、试了几次。
+static ANON_BLOCK_PAGES_OK: AtomicU64 = AtomicU64::new(0);
+static ANON_BLOCK_FALLBACK_PAGES: AtomicU64 = AtomicU64::new(0);
+static ANON_BLOCK_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
+
+/// Records one contiguous-block attempt's outcome.
+pub fn note_anon_block(pages: u64) {
+    ANON_BLOCK_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
+    ANON_BLOCK_PAGES_OK.fetch_add(pages, Ordering::Relaxed);
+}
+
+/// Records `pages` filled by the per-page fallback.
+pub fn note_anon_block_fallback(pages: u64) {
+    ANON_BLOCK_FALLBACK_PAGES.fetch_add(pages, Ordering::Relaxed);
+}
+
 /// Records one ordered-index insertion's shift distance.
 pub fn note_insert_position(position: usize, len: usize) {
     let shifted = len.saturating_sub(position);
@@ -156,6 +172,22 @@ pub fn render() -> String {
          insert_shifted_per_insert={}\n",
         positions[0], positions[1], positions[2], positions[3], positions[4], positions[5],
         if inserts == 0 { 0 } else { shifted / inserts }
+    ));
+    out.push_str(&format!(
+        "anon_block_attempts={} anon_block_pages_ok={} anon_block_fallback_pages={} \
+         anon_block_hit_ratio={}\n",
+        ANON_BLOCK_ATTEMPTS.load(Ordering::Relaxed),
+        ANON_BLOCK_PAGES_OK.load(Ordering::Relaxed),
+        ANON_BLOCK_FALLBACK_PAGES.load(Ordering::Relaxed),
+        {
+            let ok = ANON_BLOCK_PAGES_OK.load(Ordering::Relaxed);
+            let fallback = ANON_BLOCK_FALLBACK_PAGES.load(Ordering::Relaxed);
+            if ok + fallback == 0 {
+                0
+            } else {
+                ok * 100 / (ok + fallback)
+            }
+        }
     ));
     out
 }

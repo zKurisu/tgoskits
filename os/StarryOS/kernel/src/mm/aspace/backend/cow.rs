@@ -558,6 +558,15 @@ pub struct CowBackend {
     shared: bool,
 }
 
+/// 匿名批量缺页时一次尝试分配的**连续物理块**上限（4 KiB 页）。
+///
+/// 逐页分配要为每一页各做一次页帧分配、一次 `Arc<FrameAllocation>` 和一次
+/// 4 KiB 清零；顺序缺页预取的窗口一次就是 64 页，这三笔固定开销直接乘 64。
+/// 整块分配把它们并成一次，而且窗口内的 paddr 变成连续递增，COW 页索引的
+/// 插入也从「插到中间」变成「追加」。256 KiB 是这块板的页分配器容易满足的
+/// 档位；拿不到连续块时逐页退回，行为不变。
+const ANON_BLOCK_PAGES: usize = 64;
+
 impl Clone for CowBackend {
     fn clone(&self) -> Self {
         Self {
@@ -840,6 +849,135 @@ impl CowBackend {
             return Err(err.into());
         }
         Ok(page)
+    }
+
+    /// 一段连续的匿名 4 KiB 新页：优先**整块**分配物理帧再切成子租约。
+    ///
+    /// `addrs` 必须是一段连续且当前未映射的虚拟地址。整块分配失败就退回逐页
+    /// 分配（原来的行为）。整块路径下每个 PageObject 拿到的是同一块分配的
+    /// 4 KiB 子租约（`FrameLease::sublease`），最后一次子租约释放时才把整块
+    /// 还给页分配器 —— 与 THP 把 2 MiB 大页切成 4 KiB 子页用的是同一套机制。
+    fn alloc_new_anon_run(
+        &self,
+        addrs: &[VirtAddr],
+        flags: MappingFlags,
+        access_flags: MappingFlags,
+        pt: &mut PageTable,
+        materialization: &mut PteMaterialization,
+    ) -> StarryResult<()> {
+        let kind = self.rss_kind_for_fault(access_flags);
+        let pte_flags = self.pte_flags_for_fault_in(flags, access_flags);
+        let leaf_size = PAGE_SIZE_4K;
+
+        // 页分配器长时间运行后不一定给得出 64 页的连续块，所以按「块大小阶梯」
+        // 逐级退让：64 → 32 → 16 → 8 → 4 → 2 页，最后才是逐页。拿不到大块
+        // 也不影响正确性，只是退回原来的每页分配。
+        let mut start = 0;
+        while start < addrs.len() {
+            let remaining = addrs.len() - start;
+            let mut size = ANON_BLOCK_PAGES.min(remaining);
+            let mut block = None;
+            while size >= 2 {
+                let total = size
+                    .checked_mul(leaf_size)
+                    .ok_or(StarryError::BadState)?;
+                if let Ok(base) = alloc_frame(true, total) {
+                    // SAFETY: alloc_frame 刚返回这块唯一的分配，大小一致，租约
+                    // 接管它的唯一释放职责。
+                    block = Some((size, unsafe { FrameLease::owned(base, total) }));
+                    break;
+                }
+                size /= 2;
+            }
+            match block {
+                Some((size, block)) => {
+                    crate::mm::fault_attrib::note_anon_block(size as u64);
+                    self.install_anon_block(
+                        &addrs[start..start + size],
+                        &block,
+                        leaf_size,
+                        kind,
+                        pte_flags,
+                        pt,
+                        materialization,
+                    )?;
+                    start += size;
+                }
+                None => {
+                    crate::mm::fault_attrib::note_anon_block_fallback(1);
+                    let addr = addrs[start];
+                    let page = self.alloc_new_at_sized(addr, leaf_size, flags, access_flags, pt)?;
+                    materialization.push(PreparedPteOwner::installed(
+                        addr,
+                        page.frame().paddr(),
+                        leaf_size,
+                        page.clone(),
+                        page.resident_kind(),
+                        ProviderPublication::Pending,
+                    ));
+                    materialization.increment_satisfied(1)?;
+                    start += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 把一整块子租约装成 PageObject 并映到 PTE 上；失败则整段回滚。
+    #[allow(clippy::too_many_arguments)]
+    fn install_anon_block(
+        &self,
+        addrs: &[VirtAddr],
+        block: &FrameLease,
+        leaf_size: usize,
+        kind: RssKind,
+        pte_flags: MappingFlags,
+        pt: &mut PageTable,
+        materialization: &mut PteMaterialization,
+    ) -> StarryResult<()> {
+        let mut mapped: Vec<(VirtAddr, Arc<PageObject>)> = Vec::new();
+        mapped
+            .try_reserve(addrs.len())
+            .map_err(|_| StarryError::NoMemory)?;
+        // 逐页登记到 COW 页索引：子租约保证窗口内的 paddr 连续递增，插入位置
+        // 集中在尾部，搬移量远小于散列分配。
+        for (index, &addr) in addrs.iter().enumerate() {
+            let page = index
+                .checked_mul(leaf_size)
+                .and_then(|offset| block.sublease(offset, leaf_size))
+                .map(|lease| {
+                    PageObject::new_present_with_resident_kind(PageId::allocate(), lease, Some(kind))
+                })
+                .ok_or(StarryError::BadState)
+                .and_then(|page| self.insert_pending_page(&page).map(|()| page));
+            let page = match page {
+                Ok(page) => page,
+                Err(error) => {
+                    self.rollback_new_pages(&mut mapped, pt);
+                    return Err(error);
+                }
+            };
+            let frame = page.frame().paddr();
+            page.prepare_executable_mapping(frame, leaf_size, pte_flags);
+            if let Err(err) = pt.map_page(addr, frame, leaf_size, pte_flags) {
+                self.discard_pending_page(&page);
+                self.rollback_new_pages(&mut mapped, pt);
+                return Err(err.into());
+            }
+            mapped.push((addr, page));
+        }
+        for (addr, page) in mapped {
+            materialization.push(PreparedPteOwner::installed(
+                addr,
+                page.frame().paddr(),
+                leaf_size,
+                page.clone(),
+                page.resident_kind(),
+                ProviderPublication::Pending,
+            ));
+            materialization.increment_satisfied(1)?;
+        }
+        Ok(())
     }
 
     /// Allocates and fills one private fault page without publishing a PTE.
@@ -1597,10 +1735,10 @@ impl MappingExecution for CowBackend {
                             access_flags,
                             pt,
                         )?)?;
-                    } else {
-                        let (installed_addr, installed_size, page) = if transparent_huge_fault {
-                            let fault_address =
-                                request.fault_address().ok_or(StarryError::BadState)?;
+                    } else if transparent_huge_fault {
+                        let fault_address =
+                            request.fault_address().ok_or(StarryError::BadState)?;
+                        let (installed_addr, installed_size, page) =
                             allocate_transparent_fault_with(
                                 addr,
                                 fault_address,
@@ -1614,17 +1752,7 @@ impl MappingExecution for CowBackend {
                                         pt,
                                     )
                                 },
-                            )?
-                        } else {
-                            let page = self.alloc_new_at_sized(
-                                addr,
-                                preferred_leaf_size,
-                                flags,
-                                access_flags,
-                                pt,
                             )?;
-                            (addr, preferred_leaf_size, page)
-                        };
                         materialization.push(PreparedPteOwner::installed(
                             installed_addr,
                             page.frame().paddr(),
@@ -1635,6 +1763,24 @@ impl MappingExecution for CowBackend {
                         ));
                         materialization.increment_satisfied(1)?;
                         i += 1;
+                    } else {
+                        // 匿名 4 KiB：把「连续未映射」的一段（最多 ANON_BLOCK_PAGES
+                        // 页）交给整块分配，见 `alloc_new_anon_run`。剩下的页仍由
+                        // 外层循环继续处理。
+                        let run_start = i;
+                        while i < addrs.len()
+                            && i - run_start < ANON_BLOCK_PAGES
+                            && matches!(pt.query(addrs[i]), Err(PagingError::NotMapped))
+                        {
+                            i += 1;
+                        }
+                        self.alloc_new_anon_run(
+                            &addrs[run_start..i],
+                            flags,
+                            access_flags,
+                            pt,
+                            &mut materialization,
+                        )?;
                     }
                 }
                 Err(_) => return Err(StarryError::BadAddress),
