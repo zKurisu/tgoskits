@@ -27,7 +27,18 @@ use crate::os::{
     sync::{SleepMutex as Mutex, SleepMutexGuard},
 };
 
-const DISK_PAGE_CACHE_CAP: usize = 512;
+/// 每个文件页缓存的上限（4 KiB 页）。
+///
+/// 512 页 = 2 MiB 是原来拍的值：它让"超过 2 MiB 就写不进去"的缺陷暴露成
+/// `ResourceBusy`，修好插入路径后（先 drain 再插入）写入变正确，但**每次缓存
+/// 满都要把整片脏页写回一次**，8 MiB 连续写要 drain 4 轮，端到端吞吐掉到
+/// 1–2 MiB/s。4096 页 = 16 MiB 让 8 MiB 这种规模的写完全落在缓存里，一次
+/// drain 都不需要；代价是每个被打开写的大文件最多钉住 16 MiB 页缓存，本板
+/// 236 MB 内存下占 7%，可以接受。
+///
+/// 下一步（D2b）再把"整片 drain"改成"只 drain 够腾出位置的子集"，这样即使
+/// 文件大于缓存也不至于反复全量写回。
+const DISK_PAGE_CACHE_CAP: usize = 4096;
 
 /// How many times one cache insertion may drain dirty pages before giving up.
 ///
