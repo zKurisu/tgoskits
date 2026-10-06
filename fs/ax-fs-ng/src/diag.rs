@@ -47,6 +47,24 @@ const NAMES: [&str; STAGES] = [
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static CALLS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 
+/// H5f：close 时 atime 元数据写回的"提交 / 按策略跳过"次数。
+///
+/// 明细见 `file/handle.rs` 的 `should_persist_atime`：默认按 Linux `relatime`
+/// 语义处理，只有 atime 落后于 mtime/ctime 或超过 24 h 才需要落盘。没有这两个
+/// 计数就无法把"每次 close 的 ~10 ms 消失"归因到策略，而不是别处的偶然因素。
+pub static ATIME_PERSIST: AtomicU64 = AtomicU64::new(0);
+pub static ATIME_SKIP: AtomicU64 = AtomicU64::new(0);
+
+#[inline]
+pub fn note_atime_persist() {
+    ATIME_PERSIST.fetch_add(1, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn note_atime_skip() {
+    ATIME_SKIP.fetch_add(1, Ordering::Relaxed);
+}
+
 /// 单调时钟函数指针（0 = 未注册；宿主测试下就是 0）。
 static CLOCK: AtomicU64 = AtomicU64::new(0);
 
@@ -124,5 +142,10 @@ pub fn render() -> alloc::string::String {
             if calls == 0 { 0 } else { total / calls }
         ));
     }
+    out.push_str(&format!(
+        "fs_atime_persist={} fs_atime_skip={}\n",
+        ATIME_PERSIST.load(Ordering::Relaxed),
+        ATIME_SKIP.load(Ordering::Relaxed)
+    ));
     out
 }

@@ -322,6 +322,12 @@ struct CachedFileShared {
     unlinked: AtomicBool,
     #[cfg(feature = "vfs")]
     retired: AtomicBool,
+    /// H5f：上次把 atime 落盘的**单调**时刻（纳秒；0 = 本 boot 还没写过）。
+    ///
+    /// 挂在缓存身份上而不是全局表里：`CachedFileShared` 本来就跨 open 存活
+    /// （页缓存身份复用的就是它），于是"每个文件每 24 h 最多写一次 atime"
+    /// 不需要额外的锁，也不需要分配。判定细节见 `CachedFile::claim_atime_persist`。
+    atime_persist_nanos: AtomicU64,
 }
 
 impl CachedFileShared {
@@ -341,6 +347,7 @@ impl CachedFileShared {
             unlinked: AtomicBool::new(false),
             #[cfg(feature = "vfs")]
             retired: AtomicBool::new(false),
+            atime_persist_nanos: AtomicU64::new(0),
         }
     }
 
@@ -358,6 +365,7 @@ impl CachedFileShared {
             unlinked: AtomicBool::new(false),
             #[cfg(feature = "vfs")]
             retired: AtomicBool::new(false),
+            atime_persist_nanos: AtomicU64::new(0),
         }
     }
 
@@ -600,6 +608,34 @@ impl CachedFile {
     /// Returns `true` if both handles refer to the same shared state.
     pub fn ptr_eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.shared, &other.shared)
+    }
+
+    /// H5f：close 时是否要为"这次读过"补一次 atime 落盘；需要时顺手记下时刻。
+    ///
+    /// 返回 `false` 表示"这个文件的 atime 最近刚写过，可以跳过"。
+    ///
+    /// 时刻记在缓存身份（跨 open 存活）上、且用**单调时钟**度量：本板没有
+    /// RTC/NTP 时 `wall_time()` 停在 1970（板上实测 `date` =
+    /// `1970-01-01 00:03:50`），而镜像里文件的 mtime 是真实的 2025/2026
+    /// 时间戳 —— 拿墙上时钟去套 Linux 的 relatime 判据（atime 落后于 mtime 就
+    /// 写回）会永远判成"过期"，退化成每次 close 都写一遍。用单调时钟 + 页缓存
+    /// 身份既保住了 relatime 真正的保证（每文件每 24 h 至多一次写），又不依赖
+    /// 墙上时钟是否正确。
+    pub(crate) fn claim_atime_persist(
+        &self,
+        now: core::time::Duration,
+        window: core::time::Duration,
+    ) -> bool {
+        let now_nanos = u64::try_from(now.as_nanos()).unwrap_or(u64::MAX);
+        let window_nanos = u64::try_from(window.as_nanos()).unwrap_or(u64::MAX);
+        let last = self.shared.atime_persist_nanos.load(Ordering::Relaxed);
+        if last != 0 && now_nanos.saturating_sub(last) < window_nanos {
+            return false;
+        }
+        self.shared
+            .atime_persist_nanos
+            .store(now_nanos, Ordering::Relaxed);
+        true
     }
 
     /// Returns the stable identity of the shared page-cache owner.
