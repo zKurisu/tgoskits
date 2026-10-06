@@ -54,7 +54,9 @@ pub const STAGE_CLOSE_ONCLOSE: usize = 31;
 pub const STAGE_CLOSE_LOCKS: usize = 32;
 pub const STAGE_CLOSE_DROP: usize = 33;
 pub const STAGE_CLOSE_WAKE: usize = 34;
-const STAGES: usize = 35;
+/// H5d：把 `drop(fd)` 拆成"只减引用"与"真正析构文件对象"两段。
+pub const STAGE_CLOSE_DROP_INNER: usize = 35;
+const STAGES: usize = 36;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -199,6 +201,7 @@ pub fn render() -> String {
         ("close_locks", STAGE_CLOSE_LOCKS),
         ("close_drop", STAGE_CLOSE_DROP),
         ("close_wake", STAGE_CLOSE_WAKE),
+        ("close_drop_inner", STAGE_CLOSE_DROP_INNER),
     ] {
         let ns = TOTALS[stage].load(Ordering::Relaxed);
         total += ns;

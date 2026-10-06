@@ -888,8 +888,18 @@ pub fn release_locks_on_close(fd: FileDescriptor) {
         }
     }
     {
-        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_DROP);
-        drop(fd);
+        // H5d：把"只减一次引用"和"真正析构文件对象"分开计时。否则一个 10 ms 的
+        // 析构会被笼统地记在 drop(fd) 上，看不出是引用计数还是对象本体。
+        let keep = fd.inner.clone();
+        {
+            let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_DROP);
+            drop(fd);
+        }
+        {
+            let _t =
+                crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_DROP_INNER);
+            drop(keep);
+        }
     }
     if let Some(k) = key {
         let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_WAKE);
