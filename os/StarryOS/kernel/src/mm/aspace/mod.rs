@@ -833,6 +833,25 @@ pub(crate) enum EvictMappingOutcome {
     NeedsRepair,
 }
 
+/// Why an address space's quiescent contents are being cleared.
+///
+/// The two cases differ in whether the page table survives:
+///
+/// * [`ContentClearDisposition::Retire`] — the space is being reclaimed and its
+///   whole page table is destroyed by `PageTable::detach()` right afterwards, so
+///   the per-leaf `unmap_range` pass (whose only deferred-mode effect is
+///   clearing PTEs) is pure overhead.  Every installed leaf's software owner is
+///   its `MappingSlot`, and the slot pass performs the exact rmap/refcount
+///   accounting; 板上实测这一步占子进程地址空间析构的绝大部分
+///   （`exit_clear` 3.55 ms / 每次 fork+exit，见 `results/2026-10-07-c1-fork.txt`）。
+/// * [`ContentClearDisposition::ResetForReuse`] — the image is reused (a failed
+///   loader attempt keeps its root), so leaves are removed explicitly.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ContentClearDisposition {
+    Retire,
+    ResetForReuse,
+}
+
 /// The virtual memory address space.
 pub struct AddrSpace {
     id: AddressSpaceId,
@@ -5625,40 +5644,56 @@ impl AddrSpace {
     /// table cannot be installed on a CPU.  This is the shared apply step for
     /// unpublished-image abort and retired-MM reclaim; it deliberately does
     /// not publish an epoch or side-band event by itself.
-    fn clear_quiescent_contents(&mut self) -> StarryResult {
+    fn clear_quiescent_contents(
+        &mut self,
+        disposition: ContentClearDisposition,
+    ) -> StarryResult {
         self.ensure_quiescent_for_content_clear()?;
         let range = self.layout.range();
-        let operations = self.mapping_operation_fragments(range, false)?;
-        if operations
-            .iter()
-            .any(|(fragment, operation)| !operation.validate_unmap_range(*fragment, &self.pt))
-        {
-            return Err(StarryError::BadState);
-        }
-
-        let deferred_tlb = DeferredTlbRetireGuard::enter();
-        // A retired MM has no users, pins, activations, pending receipts or
-        // page-table walkers.  An unpublished loader image is likewise held by
-        // one `&mut AddrSpace`.  Linux uses the same isolation proof to run
-        // `free_pgtables()` without a PTL after VMAs have been detached.  Do
-        // not acquire the IRQ-saving structure lock here: backend validation,
-        // occupied-leaf vectors, page-table frame release and Arc destruction
-        // are all allowed to allocate or enter the allocator's reclaim path.
-        let clear_result = operations
-            .into_iter()
-            .try_for_each(|(fragment, operation)| operation.unmap_range(fragment, &mut self.pt));
-        drop(deferred_tlb);
-        if let Err(error) = clear_result {
-            if let Err(flush_error) = crate::mm::flush_tlb_range_sync(range.start, range.size()) {
-                warn!(
-                    "quiescent address-space clear could not invalidate {:?}+{:#x}: {flush_error}",
-                    range.start,
-                    range.size()
-                );
+        if disposition == ContentClearDisposition::ResetForReuse {
+            let operations = self.mapping_operation_fragments(range, false)?;
+            if operations
+                .iter()
+                .any(|(fragment, operation)| !operation.validate_unmap_range(*fragment, &self.pt))
+            {
+                return Err(StarryError::BadState);
             }
-            self.mutation_gate.mark_needs_repair();
-            return Err(error);
+
+            let deferred_tlb = DeferredTlbRetireGuard::enter();
+            // A retired MM has no users, pins, activations, pending receipts or
+            // page-table walkers.  An unpublished loader image is likewise held by
+            // one `&mut AddrSpace`.  Linux uses the same isolation proof to run
+            // `free_pgtables()` without a PTL after VMAs have been detached.  Do
+            // not acquire the IRQ-saving structure lock here: backend validation,
+            // occupied-leaf vectors, page-table frame release and Arc destruction
+            // are all allowed to allocate or enter the allocator's reclaim path.
+            let clear_result = operations
+                .into_iter()
+                .try_for_each(|(fragment, operation)| operation.unmap_range(fragment, &mut self.pt));
+            drop(deferred_tlb);
+            if let Err(error) = clear_result {
+                if let Err(flush_error) = crate::mm::flush_tlb_range_sync(range.start, range.size())
+                {
+                    warn!(
+                        "quiescent address-space clear could not invalidate {:?}+{:#x}: \
+                         {flush_error}",
+                        range.start,
+                        range.size()
+                    );
+                }
+                self.mutation_gate.mark_needs_repair();
+                return Err(error);
+            }
         }
+        // `Retire` 走这里：这个地址空间已经被证明"没有 user、没有 pin、没有
+        // activation、没有 page-table walker"，而它的页表紧接着会被
+        // `PageTable::detach()` **整棵释放**。逐页 `unmap_range` 在 deferred 模式下
+        // 做的唯一事情就是清 PTE（四个后端都如此：COW 清 PTE + 一个对已发布页
+        // 不会命中的 pending 索引检查、file/linear/shared 清 PTE），而叶子 PTE
+        // 会随页表帧一起消失 ⇒ 这一遍是纯冗余。真正必须做的记账 —— 每个
+        // `PageObject` 的 rmap 条目与 `mapping_refs`、以及 `CachedPagePin` 的释放
+        // —— 由下面按 `MappingSlot` 的精确 detach 完成（它本来就是"已安装映射的
+        // 唯一软件所有者"，file backend 的注释也是这么写的）。
         let slots = core::mem::take(&mut self.mapping_slots);
         for slot in slots.into_values() {
             slot.detach();
@@ -5685,7 +5720,7 @@ impl AddrSpace {
         let range = self.layout.range();
         let memfd_deltas =
             crate::syscall::memfd_prepare_aspace_unmap_deltas(self, range.start, range.size());
-        self.clear_quiescent_contents()?;
+        self.clear_quiescent_contents(ContentClearDisposition::ResetForReuse)?;
         self.resident_pages = ResidentPageCounts::default();
         self.heap = HeapState::new(USER_HEAP_BASE);
         self.executable_data = ExecutableDataLayout::default();
@@ -5695,7 +5730,7 @@ impl AddrSpace {
 
     /// Clears a retired, formerly published MM and records that teardown in
     /// the ordinary mutation protocol before page-table frames are detached.
-    fn clear_retired_contents(&mut self) -> StarryResult {
+    fn clear_retired_contents(&mut self, disposition: ContentClearDisposition) -> StarryResult {
         self.ensure_quiescent_for_content_clear()?;
         let base_epoch = self.vm_epoch();
         base_epoch.checked_next().ok_or(StarryError::BadState)?;
@@ -5725,7 +5760,7 @@ impl AddrSpace {
             ..MappingDelta::default()
         });
         mutation.set_resident_delta(self.resident_pages.checked_negated_delta()?);
-        self.clear_quiescent_contents()?;
+        self.clear_quiescent_contents(disposition)?;
         let result = self.commit_mutation(mutation);
         if self.vm_epoch() != base_epoch {
             crate::syscall::memfd_apply_shared_writable_deltas(&memfd_deltas);
@@ -5750,7 +5785,7 @@ impl AddrSpace {
             let _t = crate::mm::fault_attrib::scope(
                 crate::mm::fault_attrib::STAGE_EXIT_CLEAR,
             );
-            self.clear_retired_contents()?;
+            self.clear_retired_contents(ContentClearDisposition::Retire)?;
         }
         let epoch = self.vm_epoch();
 
