@@ -158,6 +158,11 @@ struct SeccompData {
 }
 
 impl SeccompState {
+    /// Returns true when seccomp filtering is disabled (every syscall allowed).
+    pub fn is_disabled(&self) -> bool {
+        self.mode == SeccompMode::Disabled
+    }
+
     /// Enable Linux strict seccomp mode for this thread.
     ///
     /// Strict mode can only be installed from the disabled state.  Once a

@@ -2,7 +2,7 @@
 
 use alloc::collections::BTreeMap;
 use core::{
-    sync::atomic::{AtomicI32, Ordering},
+    sync::atomic::{AtomicI32, AtomicUsize, Ordering},
     time::Duration,
 };
 
@@ -45,6 +45,10 @@ pub struct TimerSpec {
 /// Per-process POSIX timer table.
 pub struct PosixTimerTable {
     next_id: AtomicI32,
+    /// Lock-free count of timers in the table. `poll_expired` reads this
+    /// without taking the lock, so a process with no timers skips the lock +
+    /// tree walk entirely (the syscall-return hot path).
+    count: AtomicUsize,
     timers: Mutex<BTreeMap<i32, PosixTimer>>,
 }
 
@@ -52,6 +56,7 @@ impl Default for PosixTimerTable {
     fn default() -> Self {
         Self {
             next_id: AtomicI32::new(0),
+            count: AtomicUsize::new(0),
             timers: Mutex::new(BTreeMap::new()),
         }
     }
@@ -125,17 +130,23 @@ impl PosixTimerTable {
             deadline_ns: 0,
         };
         self.timers.lock().insert(id, timer);
+        self.count.fetch_add(1, Ordering::Relaxed);
         Ok(id)
     }
 
     /// Delete a timer. Returns true if it existed.
     pub fn delete(&self, id: i32) -> bool {
-        self.timers.lock().remove(&id).is_some()
+        let removed = self.timers.lock().remove(&id).is_some();
+        if removed {
+            self.count.fetch_sub(1, Ordering::Relaxed);
+        }
+        removed
     }
 
     /// Clear all timers. Used on execve.
     pub fn clear(&self) {
         self.timers.lock().clear();
+        self.count.store(0, Ordering::Relaxed);
     }
 
     /// Set (arm/disarm) a timer. Returns the old (interval, remaining) in nanos.
@@ -236,6 +247,11 @@ impl PosixTimerTable {
     /// `task` is the user task that owns these timers (needed to
     /// re-register alarms for periodic timers).
     pub fn poll_expired(&self, pid: Pid, mut emitter: impl FnMut(SignalInfo)) {
+        // Lock-free fast path: a process with no timers pays no lock or tree
+        // walk cost on every syscall return.
+        if self.count.load(Ordering::Relaxed) == 0 {
+            return;
+        }
         let mut timers = self.timers.lock();
         for timer in timers.values_mut() {
             if timer.deadline_ns == 0 {

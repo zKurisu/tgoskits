@@ -608,6 +608,15 @@ impl AddrSpace {
                             warn!("No pages populated for {vaddr:?} ({flags:?})");
                             false
                         } else {
+                            // The backend filled one or more pages through the
+                            // data cache. If the VMA is executable, synchronize
+                            // instruction fetch (fence.i on riscv64) before the
+                            // faulting instruction is re-executed; otherwise the
+                            // C9xx core can fetch stale instructions after the
+                            // COW file backend populates a text page.
+                            if flags.contains(MappingFlags::EXECUTE) {
+                                ax_runtime::hal::cache::flush_icache_all();
+                            }
                             true
                         }
                     }
