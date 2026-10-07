@@ -70,6 +70,15 @@ impl<I: RegisterIo> VpssControl<I> {
         &self.completion
     }
 
+    /// 直接读 `TOP_INTR_STATUS`（诊断用）。
+    ///
+    /// 用途：OS 侧等待超时时，用它区分两种失败——硬件其实已经置位、只是中断
+    /// 没送到 CPU（status != 0），还是 VPSS 根本没跑完（status == 0）。
+    /// 注意这是"观察"接口，不清 W1C 位，不要拿它当 IRQ handler 的替代品。
+    pub fn interrupt_status(&self) -> u32 {
+        self.io.read32(TOP_INTR_STATUS)
+    }
+
     /// Initializes only resources owned by IMG_V and SC_V1.
     pub fn initialize(&mut self) {
         self.disable_offline_interrupts();

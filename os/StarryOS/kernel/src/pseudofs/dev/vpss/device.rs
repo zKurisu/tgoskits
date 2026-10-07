@@ -224,6 +224,10 @@ impl VpssDevice {
                 warn!("[VPSS] failed to enable IRQ {irq:?}: {error:?}");
             })
             .ok()?;
+        info!(
+            "[VPSS] IRQ {irq:?} registered and enabled (mmio={:#x}+{:#x})",
+            resource.mmio_physical, resource.mmio_size
+        );
 
         info!(
             "[VPSS] offline NV12/YUV422P scaler ready: mmio={:#x}+{:#x}, dphy={:#x}+{:#x}, \
@@ -517,6 +521,15 @@ impl VpssDevice {
                 !wait_for_completion(remaining_ns, &self.completion)
             }
         };
+        if timed_out && !self.completion.is_finished() {
+            // 关键诊断：区分"硬件已置位但中断没送到 CPU"与"VPSS 根本没完成"。
+            warn!(
+                "[VPSS] completion wait timed out after {} ms: TOP_INTR_STATUS=0x{:x} stats={:?}",
+                timeout_ms,
+                control.interrupt_status(),
+                self.completion.stats()
+            );
+        }
         let completion = if timed_out && !self.completion.is_finished() {
             control.recover_timeout().map_err(map_driver_error)?
         } else {
