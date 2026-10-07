@@ -80,6 +80,7 @@ members = [
     "drivers/soc/rockchip/*",
     "drivers/test_crates/*",
     "drivers/tpu/*",
+    "drivers/video/*",
     "drivers/vpu/*",
     "drivers/usb/test_crates/*",
     "drivers/usb/usb-device/hid/*",
@@ -243,6 +244,7 @@ realtek-rtl8125 = { version = "0.3", path = "drivers/net/realtek-rtl8125" }
 rockchip-pm = { version = "0.4", path = "drivers/soc/rockchip/rockchip-pm" }
 rockchip-soc = { version = "0.4", path = "drivers/soc/rockchip/rockchip-soc" }
 sg2002-tpu = { version = "0.4", path = "drivers/tpu/sg2002-tpu" }
+sg2002-vpss = { version = "0.1", path = "drivers/video/sg2002-vpss" }
 sg2002-cmdqu = { version = "0.1", path = "drivers/ipc/sg2002-cmdqu" }
 rdrive = { version = "0.25", path = "drivers/rdrive" }
 rdrive-macros = { version = "0.4", path = "drivers/rdrive-macros" }

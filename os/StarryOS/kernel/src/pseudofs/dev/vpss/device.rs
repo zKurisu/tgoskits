@@ -7,11 +7,13 @@ use core::{
     time::Duration,
 };
 
-use ax_errno::{AxError, AxResult};
+// 分支原版跑在旧内核上，用的是 ax_errno / ax_sync / ax_task / starry_vm；
+// 现代内核里这些分别对应 crate::StarryError、crate::sync、ax_std 的任务 re-export
+// 与 crate::mm。StarryError 的变体名与 AxError 基本一一对应，所以用别名即可。
+use crate::{StarryError as AxError, StarryResult as AxResult};
 use ax_memory_addr::PhysAddr;
-use ax_sync::Mutex;
-use ax_task::WaitQueue;
 use axfs_ng_vfs::VfsResult;
+use ax_std::os::arceos::task::sync::WaitQueue;
 use sg200x_bsp::soc::CLKGEN_BASE;
 use sg2002_tpu::ion::IonBuffer;
 use sg2002_vpss::{
@@ -20,7 +22,8 @@ use sg2002_vpss::{
     Yuv422PlanarFrame,
     types::{MAX_DIMENSION, MIN_DIMENSION, STRIDE_ALIGNMENT},
 };
-use starry_vm::{VmMutPtr, VmPtr};
+use crate::mm::{VmMutPtr, VmPtr};
+use crate::sync::Mutex;
 
 use super::uapi::{
     VPSS_ABI_VERSION, VPSS_FEATURE_BORDER, VPSS_FEATURE_BT601_CSC, VPSS_FEATURE_ION_FD,
@@ -226,9 +229,13 @@ impl VpssDevice {
         })
     }
 
-    fn run_ioctl(&self, user_address: usize) -> VfsResult<usize> {
+    fn run_ioctl(
+        &self,
+        current: &crate::task::UserTaskRef,
+        user_address: usize,
+    ) -> VfsResult<usize> {
         let user_pointer = user_address as *mut VpssRun;
-        let mut request = user_pointer.vm_read()?;
+        let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
         request.queue_enter_ns = now_ns();
         let result = self.run(&mut request);
@@ -236,13 +243,17 @@ impl VpssDevice {
             Ok(()) => VPSS_STATUS_OK,
             Err(error) => status_from_error(*error),
         };
-        user_pointer.vm_write(request)?;
-        result.map(|()| 0)
+        user_pointer.vm_write(current, request)?;
+        result.map(|()| 0).map_err(Into::into)
     }
 
-    fn run_yuv422p_ioctl(&self, user_address: usize) -> VfsResult<usize> {
+    fn run_yuv422p_ioctl(
+        &self,
+        current: &crate::task::UserTaskRef,
+        user_address: usize,
+    ) -> VfsResult<usize> {
         let user_pointer = user_address as *mut VpssRunYuv422p;
-        let mut request = user_pointer.vm_read()?;
+        let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
         request.queue_enter_ns = now_ns();
         let result = self.run_yuv422p(&mut request);
@@ -250,13 +261,17 @@ impl VpssDevice {
             Ok(()) => VPSS_STATUS_OK,
             Err(error) => status_from_error(*error),
         };
-        user_pointer.vm_write(request)?;
-        result.map(|()| 0)
+        user_pointer.vm_write(current, request)?;
+        result.map(|()| 0).map_err(Into::into)
     }
 
-    fn run_yuv422p_rgb_ioctl(&self, user_address: usize) -> VfsResult<usize> {
+    fn run_yuv422p_rgb_ioctl(
+        &self,
+        current: &crate::task::UserTaskRef,
+        user_address: usize,
+    ) -> VfsResult<usize> {
         let user_pointer = user_address as *mut VpssRunYuv422pRgb;
-        let mut request = user_pointer.vm_read()?;
+        let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
         request.queue_enter_ns = now_ns();
         let result = self.run_yuv422p_rgb(&mut request);
@@ -264,8 +279,8 @@ impl VpssDevice {
             Ok(()) => VPSS_STATUS_OK,
             Err(error) => status_from_error(*error),
         };
-        user_pointer.vm_write(request)?;
-        result.map(|()| 0)
+        user_pointer.vm_write(current, request)?;
+        result.map(|()| 0).map_err(Into::into)
     }
 
     fn run(&self, request: &mut VpssRun) -> AxResult<()> {
@@ -570,17 +585,22 @@ impl DeviceOps for VpssDevice {
         Ok(0)
     }
 
-    fn ioctl(&self, command: u32, argument: usize) -> VfsResult<usize> {
+    fn ioctl(
+        &self,
+        current: &crate::task::UserTaskRef,
+        command: u32,
+        argument: usize,
+    ) -> VfsResult<usize> {
         match command {
-            VPSS_IOCTL_RUN => self.run_ioctl(argument),
-            VPSS_IOCTL_RUN_YUV422P => self.run_yuv422p_ioctl(argument),
-            VPSS_IOCTL_RUN_YUV422P_RGB => self.run_yuv422p_rgb_ioctl(argument),
+            VPSS_IOCTL_RUN => self.run_ioctl(current, argument),
+            VPSS_IOCTL_RUN_YUV422P => self.run_yuv422p_ioctl(current, argument),
+            VPSS_IOCTL_RUN_YUV422P_RGB => self.run_yuv422p_rgb_ioctl(current, argument),
             VPSS_IOCTL_GET_INFO => {
-                (argument as *mut VpssInfo).vm_write(self.info())?;
+                (argument as *mut VpssInfo).vm_write(current, self.info())?;
                 Ok(0)
             }
             VPSS_IOCTL_GET_STATS => {
-                (argument as *mut VpssStats).vm_write(self.stats())?;
+                (argument as *mut VpssStats).vm_write(current, self.stats())?;
                 Ok(0)
             }
             VPSS_IOCTL_RESET_STATS => {

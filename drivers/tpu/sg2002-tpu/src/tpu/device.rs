@@ -13,8 +13,7 @@ use ax_sync::SpinLock as Mutex;
 use super::{
     TDMA_PHYS_BASE, TIU_PHYS_BASE,
     error::TpuError,
-    platform::{TdmaTimingCallback, TiuIrqCallback, TpuRuntimeState, WaitIrqFn},
-    soc::{Cv181xTpuClockSnapshot, Cv181xTpuSoc},
+    platform::{TiuIrqCallback, TpuRuntimeState, WaitIrqFn},
     tdma::TdmaRegs,
     tiu::TiuRegs,
 };
@@ -59,8 +58,6 @@ pub struct Sg2002Tpu {
     tdma_vaddr: *mut u8,
     /// TIU 寄存器基地址
     tiu_vaddr: *mut u8,
-    /// CV181x TPU clock/reset control. None is retained for non-CV181x tests.
-    soc: Option<Cv181xTpuSoc>,
     /// 内部状态 (使用自旋锁保护)
     inner: Mutex<TpuDeviceInner>,
     /// 序列号计数器
@@ -71,24 +68,17 @@ pub struct Sg2002Tpu {
     irq_handler_hits: AtomicU64,
     /// MMIO 轮询兜底命中次数
     poll_fallback_hits: AtomicU64,
-    /// IRQ handler observed an error status for the current TDMA submission.
-    irq_error_status: AtomicU32,
     /// 是否已经提示过兜底路径
     fallback_warned: AtomicBool,
     /// 注入的阻塞等待函数指针（0 表示未注入，退化为忙等自旋）。
     wait_fn: AtomicUsize,
-    /// OS monotonic-clock callbacks used only to profile TDMA latency.
-    tdma_fire_fn: AtomicUsize,
-    irq_resume_fn: AtomicUsize,
 }
 
 /// 等待 TDMA 完成时每轮睡眠让出的时长（微秒）。
 ///
-/// SG2002 实测 TDMA fire-to-IRQ 约 0.8 ms。等待窗口必须长于正常 IRQ
-/// 延迟，否则 100 us 定时器会先把 worker 从 IRQ wait queue 移走，IRQ
-/// 到来时就无法使用 latency-sensitive front wake，最终额外等待一个 RR
-/// 时间片。2 ms 仍保留丢失 IRQ 时的快速 MMIO 轮询兜底。
-const WAIT_POLL_INTERVAL_US: u64 = 2_000;
+/// `run_one` 每隔该间隔被唤醒检查一次中断标志/硬件状态；注入了阻塞等待
+/// 函数后这段时间睡眠让出 CPU，而非空转自旋。
+const WAIT_POLL_INTERVAL_US: u64 = 100;
 
 /// 等待 TDMA 完成的总超时（约 10 秒），以轮询间隔为步长。
 const WAIT_TOTAL_STEPS: u64 = 10_000_000 / WAIT_POLL_INTERVAL_US;
@@ -113,37 +103,9 @@ impl Sg2002Tpu {
     /// # Safety
     /// 调用者必须确保虚拟地址有效
     pub unsafe fn from_vaddr(tdma_vaddr: *mut u8, tiu_vaddr: *mut u8) -> Self {
-        unsafe { Self::from_vaddr_optional_soc(tdma_vaddr, tiu_vaddr, None) }
-    }
-
-    /// Construct with CV181x CLKGEN and reset-controller mappings.
-    ///
-    /// # Safety
-    /// All four mappings must be valid and permanent device mappings.
-    pub unsafe fn from_vaddr_with_soc(
-        tdma_vaddr: *mut u8,
-        tiu_vaddr: *mut u8,
-        clkgen_vaddr: *mut u8,
-        reset_vaddr: *mut u8,
-    ) -> Self {
-        unsafe {
-            Self::from_vaddr_optional_soc(
-                tdma_vaddr,
-                tiu_vaddr,
-                Some(Cv181xTpuSoc::new(clkgen_vaddr, reset_vaddr)),
-            )
-        }
-    }
-
-    unsafe fn from_vaddr_optional_soc(
-        tdma_vaddr: *mut u8,
-        tiu_vaddr: *mut u8,
-        soc: Option<Cv181xTpuSoc>,
-    ) -> Self {
         Self {
             tdma_vaddr,
             tiu_vaddr,
-            soc,
             inner: Mutex::new(TpuDeviceInner {
                 tdma: unsafe { TdmaRegs::new(tdma_vaddr) },
                 tiu: unsafe { TiuRegs::new(tiu_vaddr) },
@@ -155,11 +117,8 @@ impl Sg2002Tpu {
             irq_pending: AtomicBool::new(false),
             irq_handler_hits: AtomicU64::new(0),
             poll_fallback_hits: AtomicU64::new(0),
-            irq_error_status: AtomicU32::new(0),
             fallback_warned: AtomicBool::new(false),
             wait_fn: AtomicUsize::new(0),
-            tdma_fire_fn: AtomicUsize::new(0),
-            irq_resume_fn: AtomicUsize::new(0),
         }
     }
 
@@ -183,27 +142,6 @@ impl Sg2002Tpu {
     /// 未注入时退化为 `spin_loop`。
     pub fn set_wait_irq_fn(&self, wait_fn: WaitIrqFn) {
         self.wait_fn.store(wait_fn as usize, Ordering::Release);
-    }
-
-    /// Register lightweight OS timing callbacks around each TDMA IRQ wait.
-    pub fn set_tdma_timing_callbacks(
-        &self,
-        fire_fn: TdmaTimingCallback,
-        resume_fn: TdmaTimingCallback,
-    ) {
-        self.tdma_fire_fn.store(fire_fn as usize, Ordering::Release);
-        self.irq_resume_fn
-            .store(resume_fn as usize, Ordering::Release);
-    }
-
-    fn call_timing_callback(callback: &AtomicUsize) {
-        let raw = callback.load(Ordering::Acquire);
-        if raw != 0 {
-            // SAFETY: only `TdmaTimingCallback` function pointers are stored.
-            let callback: TdmaTimingCallback =
-                unsafe { core::mem::transmute::<usize, TdmaTimingCallback>(raw) };
-            callback();
-        }
     }
 
     /// 阻塞等待 TDMA 中断到达，最多等待 `timeout_us` 微秒。
@@ -232,11 +170,6 @@ impl Sg2002Tpu {
 
     /// 初始化 TPU 设备 (probe)
     pub fn init(&self) -> Result<(), TpuError> {
-        let performance_clock_applied = self
-            .soc
-            .as_ref()
-            .is_some_and(Cv181xTpuSoc::configure_official_performance_clock);
-        let clock = self.soc.as_ref().map(Cv181xTpuSoc::prepare);
         let mut inner = self.inner.lock();
 
         // 重置命令 ID
@@ -245,41 +178,8 @@ impl Sg2002Tpu {
         inner.state = TpuState::Idle;
         inner.runtime = TpuRuntimeState::default();
 
-        drop(inner);
-        if let Some(snapshot) = clock {
-            info!(
-                "[TPU] CV181x clock/reset ready: tpu_hz={} fab_hz={} tpll_hz={} fpll_hz={} \
-                 mipimpll_hz={} perf_div_applied={} en0={:#010x} byp0={:#010x} div_tpu={:#010x} \
-                 reset0={:#010x}",
-                snapshot.tpu_rate_hz,
-                snapshot.fab_rate_hz,
-                snapshot.tpll_rate_hz,
-                snapshot.fpll_rate_hz,
-                snapshot.mipimpll_rate_hz,
-                performance_clock_applied,
-                snapshot.clock_enable_0,
-                snapshot.clock_bypass_0,
-                snapshot.clock_div_tpu,
-                snapshot.reset_0,
-            );
-            if snapshot.tpu_rate_hz != 700_000_000 {
-                warn!(
-                    "[TPU] clock is not SG2002 official TPU_PERF_MODE 700MHz; firmware/shared \
-                     TPLL was left unchanged for safety"
-                );
-            }
-            // Probe must leave the device in the same quiescent state as a
-            // completed Linux work item. Each run prepares it again below.
-            self.soc.as_ref().unwrap().finish();
-        }
-
         info!("TPU device initialized");
         Ok(())
-    }
-
-    /// Return the current CV181x clock/reset register snapshot, if wired.
-    pub fn soc_snapshot(&self) -> Option<Cv181xTpuClockSnapshot> {
-        self.soc.as_ref().map(Cv181xTpuSoc::snapshot)
     }
 
     /// 获取设备状态
@@ -306,9 +206,6 @@ impl Sg2002Tpu {
         }
         let has_error =
             int_status != super::tdma::TDMA_INT_EOD && int_status != super::tdma::TDMA_INT_EOPMU;
-        if has_error {
-            self.irq_error_status.store(int_status, Ordering::Release);
-        }
         tdma.clear_interrupt();
         self.irq_handler_hits.fetch_add(1, Ordering::AcqRel);
         self.irq_pending.store(true, Ordering::Release);
@@ -359,12 +256,6 @@ impl Sg2002Tpu {
             inner.tiu_irq_callback
         };
 
-        // Match SOPHGO Linux work_thread_run(): enable TPU/FAB clocks and
-        // pulse TDMA/TPU/TPUSYS resets for every submitted command buffer.
-        // Do this only after claiming the idle device, so an invalid parallel
-        // caller cannot reset hardware owned by the active submission.
-        let clock = self.soc.as_ref().map(Cv181xTpuSoc::prepare);
-
         // 寄存器为纯 MMIO vaddr 包装，单 worker 串行访问，无需持锁重建。
         let tdma = unsafe { TdmaRegs::new(self.tdma_vaddr) };
         let tiu = unsafe { TiuRegs::new(self.tiu_vaddr) };
@@ -380,7 +271,6 @@ impl Sg2002Tpu {
         let timeout_counter = Cell::new(0u64);
         let timeout_limit = 10_000_000_000u64; // 大约 10 秒
         self.irq_pending.store(false, Ordering::Release);
-        self.irq_error_status.store(0, Ordering::Release);
         let tdma_irq_poll = unsafe { TdmaRegs::new(self.tdma_vaddr) };
 
         let wait_irq = || -> Result<(), TpuError> {
@@ -389,22 +279,15 @@ impl Sg2002Tpu {
             let mut steps = 0u64;
             while steps < WAIT_TOTAL_STEPS {
                 if self.irq_pending.swap(false, Ordering::AcqRel) {
-                    let error_status = self.irq_error_status.swap(0, Ordering::AcqRel);
-                    if error_status != 0 {
-                        return Err(TpuError::TdmaError(error_status));
-                    }
                     return Ok(());
                 }
 
                 // 兜底：若外部 IRQ 未投递到内核，直接读取 TDMA 中断状态寄存器。
                 let int_status = tdma_irq_poll.get_int_status();
-                if int_status != 0 {
+                if int_status == super::tdma::TDMA_INT_EOD
+                    || int_status == super::tdma::TDMA_INT_EOPMU
+                {
                     tdma_irq_poll.clear_interrupt();
-                    if int_status != super::tdma::TDMA_INT_EOD
-                        && int_status != super::tdma::TDMA_INT_EOPMU
-                    {
-                        return Err(TpuError::TdmaError(int_status));
-                    }
                     self.poll_fallback_hits.fetch_add(1, Ordering::AcqRel);
                     if self
                         .fallback_warned
@@ -439,24 +322,8 @@ impl Sg2002Tpu {
                 &mut runtime,
                 wait_irq,
                 timeout_checker,
-                || Self::call_timing_callback(&self.tdma_fire_fn),
-                || Self::call_timing_callback(&self.irq_resume_fn),
             )
         };
-
-        // SOPHGO writes clk_get_rate(clk_tpu_axi) back into dma_hdr_t after
-        // execution. The command buffer is coherent/uncached in this driver,
-        // so a volatile store plus the device fence in finish() is sufficient.
-        if let Some(snapshot) = clock {
-            if result.is_ok() && snapshot.tpu_rate_hz != 0 {
-                unsafe {
-                    let header = dmabuf_vaddr as *mut super::types::DmaHeader;
-                    core::ptr::addr_of_mut!((*header).tpu_clk_rate)
-                        .write_volatile(snapshot.tpu_rate_hz);
-                }
-            }
-            self.soc.as_ref().unwrap().finish();
-        }
 
         {
             let mut inner = self.inner.lock();
@@ -559,20 +426,3 @@ impl Sg2002Tpu {
 // 实现 Send 和 Sync
 unsafe impl Send for Sg2002Tpu {}
 unsafe impl Sync for Sg2002Tpu {}
-
-#[cfg(test)]
-mod tests {
-    use super::{WAIT_POLL_INTERVAL_US, WAIT_TOTAL_STEPS};
-
-    #[test]
-    fn irq_wait_window_outlives_normal_sg2002_tdma_irq_latency() {
-        // Hardware profiling on SG2002 shows fire-to-IRQ around 0.8 ms.  A
-        // shorter timeout races the timer wake against the real IRQ and puts
-        // the worker back on the ordinary ready-queue path before IRQ wakeup
-        // can give it latency-sensitive placement.
-        let wait_us = core::hint::black_box(WAIT_POLL_INTERVAL_US);
-        let steps = core::hint::black_box(WAIT_TOTAL_STEPS);
-        assert!(wait_us >= 1_000);
-        assert_eq!(wait_us * steps, 10_000_000);
-    }
-}

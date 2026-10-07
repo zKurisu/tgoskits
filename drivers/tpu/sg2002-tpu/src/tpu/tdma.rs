@@ -178,20 +178,6 @@ impl TdmaRegs {
 
     /// 启动 TDMA 描述符执行
     pub fn fire_descriptor(&self, desc_offset: u64, num_tdma: u32) {
-        self.fire_descriptor_profiled(desc_offset, num_tdma, || {});
-    }
-
-    /// Configure and start a TDMA descriptor, invoking `before_fire` directly
-    /// before the final `TDMA_CTRL` write that starts hardware execution.
-    ///
-    /// Keeping the timestamp at the actual fire register (rather than before
-    /// four setup writes) makes fire-to-IRQ a genuine hardware interval.
-    pub fn fire_descriptor_profiled(
-        &self,
-        desc_offset: u64,
-        num_tdma: u32,
-        before_fire: impl FnOnce(),
-    ) {
         // 设置描述符地址
         self.write(TDMA_DES_BASE, desc_offset as u32);
         // 确保调试模式禁用
@@ -209,7 +195,6 @@ impl TdmaRegs {
             | (1 << TDMA_CTRL_FORCE_1ARRAY)
             | (1 << TDMA_CTRL_INTRA_CMD_OFF)
             | (1 << TDMA_CTRL_64BYTE_ALIGN_EN);
-        before_fire();
         self.write(TDMA_CTRL, ctrl);
     }
 }
