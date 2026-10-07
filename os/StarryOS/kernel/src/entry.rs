@@ -25,6 +25,14 @@ pub fn init(args: &[String], envs: &[String]) {
     // Install task-context diagnostics and contention backoff before userspace.
     crate::rdrive_osal::init();
 
+    // This board boots from a U-Boot FIT whose DTB carries no
+    // `/chosen/rng-seed`, so the platform cannot supply boot entropy — while
+    // secure Wi-Fi association requires real entropy and refuses replayable
+    // state. Take 32 bytes from the chip's own TRNG instead. See
+    // `sg2002_trng.rs`.
+    #[cfg(feature = "sg2002")]
+    crate::sg2002_trng::provide_boot_entropy();
+
     crate::stop_machine::init();
     crate::trap::init_handlers();
     static_keys::global_init();
