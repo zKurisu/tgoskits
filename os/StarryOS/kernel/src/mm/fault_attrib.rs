@@ -142,9 +142,16 @@ pub const STAGE_UACCESS_PREPARE: usize = 96;
 pub const STAGE_UACCESS_PIN: usize = 97;
 pub const STAGE_UACCESS_WALK: usize = 98;
 pub const STAGE_UACCESS_COPY: usize = 99;
-const STAGES: usize = 100;
+/// C2：管道 ping-pong（`ctx_switch` 探针）里一次"写/读 + 阻塞 + 唤醒 + 切换"的分解。
+pub const STAGE_PIPE_READ: usize = 100;
+pub const STAGE_PIPE_WRITE: usize = 101;
+pub const STAGE_PIPE_WAIT: usize = 102;
+pub const STAGE_PIPE_WAKE: usize = 103;
+const STAGES: usize = 104;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
+/// 每个段的样本数（供"每次调用"口径的段取平均用）。
+static CALLS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
 /// fork(2) 的调用次数 —— fork 各分段按"每次 fork"取平均，而不是按缺页数。
 static FORKS: AtomicU64 = AtomicU64::new(0);
@@ -207,6 +214,7 @@ pub fn stage_now() -> u64 {
 /// Adds one stage's elapsed nanoseconds.
 pub fn add(stage: usize, ns: u64) {
     TOTALS[stage].fetch_add(ns, Ordering::Relaxed);
+    CALLS[stage].fetch_add(1, Ordering::Relaxed);
 }
 
 /// Timestamps the enclosing scope and attributes it to `stage` on drop.
@@ -480,7 +488,6 @@ pub fn render() -> String {
             "exit_calls={}\n",
             EXIT_CALLS.load(Ordering::Relaxed)
         ));
-        let iters = TRAP_ITERS.load(Ordering::Relaxed).max(1);
         for (name, stage) in [
             ("sys_iter", STAGE_SYS_ITER),
             ("sys_uctx_enter", STAGE_SYS_UCTX_ENTER),
@@ -500,9 +507,19 @@ pub fn render() -> String {
             ("uaccess_pin", STAGE_UACCESS_PIN),
             ("uaccess_walk", STAGE_UACCESS_WALK),
             ("uaccess_copy", STAGE_UACCESS_COPY),
+            ("pipe_read", STAGE_PIPE_READ),
+            ("pipe_write", STAGE_PIPE_WRITE),
+            ("pipe_wait", STAGE_PIPE_WAIT),
+            ("pipe_wake", STAGE_PIPE_WAKE),
         ] {
             let ns = TOTALS[stage].load(Ordering::Relaxed);
-            out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / iters));
+            // 这些是"每次调用"口径的段：total 是真实累计，调用次数由 CALLS 记录，
+            // 平均值一律按调用次数算（不要拿 trap_iters 当分母）。
+            let calls = CALLS[stage].load(Ordering::Relaxed);
+            out.push_str(&format!(
+                "{name}_ns={ns} {name}_calls={calls} {name}_avg={}\n",
+                if calls == 0 { 0 } else { ns / calls }
+            ));
         }
         out.push_str(&format!(
             "trap_iters={}\n",

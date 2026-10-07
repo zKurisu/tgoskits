@@ -27,7 +27,27 @@ pub const STAGE_SW_BINDING: usize = 10;
 pub const STAGE_SW_ASM: usize = 11;
 /// C2：idle 循环里真正进入 `wfi` 的次数与耗时（判断 fork 的那 1.8 ms 是不是"空等"）。
 pub const STAGE_IDLE_WAIT: usize = 12;
-const STAGES: usize = 13;
+/// C2：一次唤醒的内部（选中 waiter vs 交给调度器投递）。
+pub const STAGE_WAKE_SELECT: usize = 13;
+pub const STAGE_WAKE_DELIVER: usize = 14;
+/// C2：一次"运行队列入队"的内部（实体快照 / 树插入 / 抢占判定 / 发布与放置）。
+pub const STAGE_ENQ_ENTITY: usize = 15;
+pub const STAGE_ENQ_TREE: usize = 16;
+pub const STAGE_ENQ_PREEMPT: usize = 17;
+pub const STAGE_ENQ_PUBLISH: usize = 18;
+/// C2：调度入口按"进入原因"和"结果"计数（找空转）。
+pub const STAGE_ENTRY_TASK: usize = 19;
+pub const STAGE_ENTRY_PREEMPT_EXIT: usize = 20;
+pub const STAGE_ENTRY_IRQ_RETURN: usize = 21;
+pub const STAGE_ENTRY_IRQ_GUARD: usize = 22;
+pub const STAGE_ENTRY_REPEAT: usize = 23;
+pub const STAGE_OUTCOME_QUIESCENT: usize = 24;
+pub const STAGE_OUTCOME_SWITCH: usize = 25;
+/// C2：入队里除"实体/树/抢占/发布"之外的三块（事务开启、定时器刷新、提交）。
+pub const STAGE_ENQ_TXN: usize = 26;
+pub const STAGE_ENQ_TIMERS: usize = 27;
+pub const STAGE_ENQ_COMMIT: usize = 28;
+const STAGES: usize = 29;
 
 const NAMES: [&str; STAGES] = [
     "finish_published",
@@ -43,6 +63,22 @@ const NAMES: [&str; STAGES] = [
     "sw_binding",
     "sw_asm",
     "idle_wait",
+    "wake_select",
+    "wake_deliver",
+    "enq_entity",
+    "enq_tree",
+    "enq_preempt",
+    "enq_publish",
+    "entry_task",
+    "entry_preempt_exit",
+    "entry_irq_return",
+    "entry_irq_guard",
+    "entry_repeat",
+    "outcome_quiescent",
+    "outcome_switch",
+    "enq_txn",
+    "enq_timers",
+    "enq_commit",
 ];
 
 /// 裸切换前的单调时间戳（单核板，跨切换传递一个全局值即可）。
@@ -101,6 +137,12 @@ pub fn add(stage: usize, ns: u64) {
         TOTALS[stage].fetch_add(ns, Ordering::Relaxed);
         CALLS[stage].fetch_add(1, Ordering::Relaxed);
     }
+}
+
+/// Counts one event (no duration) into a stage slot.
+#[inline]
+pub fn note(stage: usize) {
+    CALLS[stage].fetch_add(1, Ordering::Relaxed);
 }
 
 /// Timestamps the enclosing scope and attributes it to `stage` on drop.
