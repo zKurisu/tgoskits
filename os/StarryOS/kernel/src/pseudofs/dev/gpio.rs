@@ -14,9 +14,13 @@
 //! touched, and every access is a volatile 32-bit read/modify/write so a
 //! concurrent access to the same group cannot lose unrelated bits.
 
-use core::{any::Any, str};
+use core::{
+    any::Any,
+    str,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
-use ax_hal::mem::{PhysAddr, phys_to_virt};
+use ax_hal::mem::{PAGE_SIZE_4K, PhysAddr};
 use axfs_ng_vfs::{NodeFlags, VfsError, VfsResult};
 
 use crate::{
@@ -70,9 +74,31 @@ impl GPIODev {
             .ok_or(VfsError::InvalidInput)
     }
 
+    /// Returns the kernel alias of one GPIO group's register page.
+    ///
+    /// The blocks live in device MMIO and this platform has no static linear
+    /// MMIO window, so the raw physical address is not dereferenceable — it must
+    /// go through the kernel ioremap path. Each group is mapped once and the
+    /// translation memoized; a benign race can at worst map the same page twice.
+    fn group_alias(group: u32) -> Result<usize, VfsError> {
+        static ALIASES: [AtomicUsize; GPIO_GROUP_COUNT] =
+            [const { AtomicUsize::new(0) }; GPIO_GROUP_COUNT];
+
+        let index = group as usize;
+        let paddr = Self::base_addr(group)?;
+        let cached = ALIASES[index].load(Ordering::Acquire);
+        if cached != 0 {
+            return Ok(cached);
+        }
+        let vaddr = ax_mm::iomap(PhysAddr::from_usize(paddr), PAGE_SIZE_4K)
+            .map_err(|_| VfsError::Io)?
+            .as_usize();
+        ALIASES[index].store(vaddr, Ordering::Release);
+        Ok(vaddr)
+    }
+
     fn register_ptr(group: u32, reg_offset: usize) -> Result<*mut u32, VfsError> {
-        let paddr = PhysAddr::from_usize(Self::base_addr(group)? + reg_offset);
-        Ok(phys_to_virt(paddr).as_usize() as *mut u32)
+        Ok((Self::group_alias(group)? + reg_offset) as *mut u32)
     }
 
     fn read_register(group: u32, reg_offset: usize) -> Result<u32, VfsError> {
