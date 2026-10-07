@@ -545,8 +545,25 @@ fn do_job_stop(thr: &Thread, signo: Signo, uctx: &mut UserContext) {
     let tid = thr.tid();
     let cont_event = proc_data.cont_event();
     while proc_data.is_job_stopped() {
-        if proc_data.has_ptrace_pending_event_for(tid) {
+        // A traced process reports its group stop to the tracer even when no
+        // ptrace event is pending: Linux makes SIGSTOP/SIGTSTP visible as a stop
+        // of the tracee. Tracers that attach to an already stopped process
+        // depend on that notification to start from a consistent state — strace
+        // otherwise parses the first PTRACE_EVENT_EXEC as "stray" and traces
+        // nothing.
+        let traced = proc_data.is_ptrace_traceme() || proc_data.is_ptrace_attached();
+        let report = proc_data.has_ptrace_pending_event_for(tid)
+            || (traced && proc_data.job_stop_unreported());
+        if report {
+            if traced {
+                proc_data.mark_job_stop_reported();
+            }
             let resume_signo = ptrace_stop_current(thr, signo, uctx).flatten();
+            if proc_data.take_ptrace_listen(tid) {
+                // `PTRACE_LISTEN`: the ptrace stop ended but the group stop
+                // stands, so stay parked without reporting it again.
+                continue;
+            }
             match resume_signo {
                 // Linux re-reports a seized group stop after a tracer supplies
                 // SIGCONT to resume its PTRACE_EVENT_STOP. The signal is not a
@@ -574,8 +591,11 @@ fn do_job_stop(thr: &Thread, signo: Signo, uctx: &mut UserContext) {
         }
 
         block_on(super::process_wait::wait_on_pollset(&cont_event, || {
-            (!proc_data.is_job_stopped() || proc_data.has_ptrace_pending_event_for(tid))
-                .then_some(())
+            let traced = proc_data.is_ptrace_traceme() || proc_data.is_ptrace_attached();
+            (!proc_data.is_job_stopped()
+                || proc_data.has_ptrace_pending_event_for(tid)
+                || (traced && proc_data.job_stop_unreported()))
+            .then_some(())
         }));
     }
 }
