@@ -4606,7 +4606,7 @@ impl AddrSpace {
             Err(error) => {
                 return self
                     .abort_unpublished_huge_splits(splits, error)
-                    .map(|()| AddressSpaceMutationOutcome::Complete);
+                .map(|()| AddressSpaceMutationOutcome::Complete);
             }
         };
         let retired_owners = match self.prepare_retired_mapping_owners(range) {
@@ -4614,7 +4614,7 @@ impl AddrSpace {
             Err(error) => {
                 return self
                     .abort_unpublished_huge_splits(splits, error)
-                    .map(|()| AddressSpaceMutationOutcome::Complete);
+                .map(|()| AddressSpaceMutationOutcome::Complete);
             }
         };
         let Ok((detached_slots, detached_resident_pages, detached_resident)) =

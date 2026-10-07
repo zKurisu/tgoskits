@@ -153,7 +153,14 @@ pub const STAGE_ANON_PAGE_NEW: usize = 104;
 pub const STAGE_ANON_INDEX: usize = 105;
 pub const STAGE_ANON_MAP: usize = 106;
 pub const STAGE_ANON_MATERIALIZE: usize = 107;
-const STAGES: usize = 108;
+/// H2：`AddrSpace::unmap_classified` 的六个阶段（munmap 每次 29.5 µs/页 的归因）。
+pub const STAGE_UNMAP_PREIMAGE: usize = 108;
+pub const STAGE_UNMAP_RETIRED: usize = 109;
+pub const STAGE_UNMAP_SUMMARY: usize = 110;
+pub const STAGE_UNMAP_APPLY: usize = 111;
+pub const STAGE_UNMAP_SLOTS: usize = 112;
+pub const STAGE_UNMAP_COMMIT: usize = 113;
+const STAGES: usize = 114;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 /// 每个段的样本数（供"每次调用"口径的段取平均用）。
@@ -521,6 +528,12 @@ pub fn render() -> String {
             ("anon_index", STAGE_ANON_INDEX),
             ("anon_map", STAGE_ANON_MAP),
             ("anon_materialize", STAGE_ANON_MATERIALIZE),
+            ("unmap_preimage", STAGE_UNMAP_PREIMAGE),
+            ("unmap_retired", STAGE_UNMAP_RETIRED),
+            ("unmap_summary", STAGE_UNMAP_SUMMARY),
+            ("unmap_apply", STAGE_UNMAP_APPLY),
+            ("unmap_slots", STAGE_UNMAP_SLOTS),
+            ("unmap_commit", STAGE_UNMAP_COMMIT),
         ] {
             let ns = TOTALS[stage].load(Ordering::Relaxed);
             // 这些是"每次调用"口径的段：total 是真实累计，调用次数由 CALLS 记录，
