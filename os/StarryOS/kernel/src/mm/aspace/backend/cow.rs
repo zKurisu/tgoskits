@@ -343,16 +343,25 @@ impl CowPageIndex {
     /// carries all expired entries out of the critical path instead.
     fn get(&self, paddr: PhysAddr) -> Option<Arc<PageObject>> {
         let address = paddr.as_usize();
-        let position = self
+        let end = self
             .pages
-            .partition_point(|entry| entry.paddr.as_usize() <= address)
-            .checked_sub(1)?;
-        let entry = self.pages.get(position)?;
-        if entry.contains(paddr)? {
-            entry.owner.page()
-        } else {
-            None
+            .partition_point(|entry| entry.paddr.as_usize() <= address);
+        // Walk back over every entry whose frame still contains `paddr` and take
+        // the first live one.  A single `partition_point` step is not enough: a
+        // frame that was released and re-allocated keeps a dead `Weak` tombstone
+        // in the vector (tombstones are pruned only on the growth path), and
+        // that tombstone can sort at or above the live owner of the same bytes
+        // because it is inserted after it.  Returning the live owner is what
+        // makes a recycled frame resolve instead of reporting "no identity".
+        for entry in self.pages[..end].iter().rev() {
+            if !entry.contains(paddr)? {
+                break;
+            }
+            if let Some(page) = entry.owner.page() {
+                return Some(page);
+            }
         }
+        None
     }
 
     fn publish(&mut self, page: &Arc<PageObject>) -> StarryResult<CowPageIndexOwner> {
@@ -3595,6 +3604,77 @@ mod tests {
             super::cow_page_index_reservation_capacity(4, 4, 4).unwrap(),
             8,
             "a full live index must still grow geometrically",
+        );
+    }
+
+    #[cfg(all(test, not(axtest)))]
+    #[test]
+    fn cow_page_index_recycled_frame_resolves_around_stale_tombstone() {
+        use alloc::sync::Arc;
+        use super::MemoryAddr;
+
+        fn page(ordinal: usize, paddr: usize, bytes: usize) -> Arc<super::PageObject> {
+            let lease =
+                super::FrameLease::borrowed(super::PhysAddr::from_usize(paddr), bytes, None)
+                    .expect("borrowed lease must be non-empty");
+            super::PageObject::new_present(super::PageId::new(0x400 + ordinal as u64), lease)
+        }
+
+        fn insert_single(
+            index: &mut super::CowPageIndex,
+            page: &Arc<super::PageObject>,
+        ) -> Result<(), super::CowPageIndexInsertError> {
+            let capacity = index.insert_reservation_capacity().unwrap();
+            let mut reservation =
+                super::CowPageIndexReservation::try_with_capacity(capacity).unwrap();
+            index.insert_pending_reserved(page, &mut reservation)
+        }
+
+        fn retire_to_tombstone(index: &mut super::CowPageIndex, paddr: usize) {
+            let slot = index
+                .pages
+                .iter_mut()
+                .find(|entry| entry.paddr.as_usize() == paddr)
+                .expect("entry to retire");
+            let owner = core::mem::replace(
+                &mut slot.owner,
+                super::CowPageIndexOwner::Published(alloc::sync::Weak::new()),
+            );
+            drop(owner);
+        }
+
+        // (1) 同一帧地址被回收再分配：旧墓碑仍留在向量里，新主人必须可解析。
+        let base = 0x60_0000;
+        let old = page(0x0, base, super::PAGE_SIZE_4K);
+        let mut index = super::CowPageIndex::new();
+        assert!(insert_single(&mut index, &old).is_ok());
+        retire_to_tombstone(&mut index, base);
+        let fresh = page(0x1, base, super::PAGE_SIZE_4K);
+        assert!(insert_single(&mut index, &fresh).is_ok());
+        let resolved = index
+            .get(super::PhysAddr::from_usize(base))
+            .expect("a recycled frame must resolve to its new owner");
+        assert!(Arc::ptr_eq(&resolved, &fresh));
+
+        // (2) 墓碑落在新主人的帧区间内部（而不是边界上）也必须解析到新主人。
+        let wide_base = base + 0x100_000;
+        let stale = page(0x2, wide_base + super::PAGE_SIZE_4K, super::PAGE_SIZE_4K);
+        let mut index = super::CowPageIndex::new();
+        assert!(insert_single(&mut index, &stale).is_ok());
+        retire_to_tombstone(&mut index, wide_base + super::PAGE_SIZE_4K);
+        let wide = page(0x3, wide_base, super::PAGE_SIZE_4K * 2);
+        assert!(insert_single(&mut index, &wide).is_ok());
+        for offset in [0, super::PAGE_SIZE_4K] {
+            let resolved = index
+                .get(super::PhysAddr::from_usize(wide_base + offset))
+                .expect("an interior tombstone must not shadow the live owner");
+            assert!(Arc::ptr_eq(&resolved, &wide));
+        }
+        assert!(
+            index
+                .get(super::PhysAddr::from_usize(wide_base + super::PAGE_SIZE_4K * 2))
+                .is_none(),
+            "an address past the frame must stay unresolved",
         );
     }
 
