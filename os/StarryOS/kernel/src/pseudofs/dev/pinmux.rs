@@ -1,6 +1,6 @@
 use core::{any::Any, str};
 
-use ax_hal::mem::{PhysAddr, phys_to_virt};
+use ax_hal::mem::PhysAddr;
 use axfs_ng_vfs::{NodeFlags, VfsError, VfsResult};
 use bytemuck::AnyBitPattern;
 
@@ -34,12 +34,28 @@ impl PinmuxDev {
         if offset >= FMUX_SIZE || !offset.is_multiple_of(4) {
             return Err(VfsError::InvalidInput);
         }
-        let vaddr = phys_to_virt(PhysAddr::from_usize(FMUX_PBASE + offset)).as_usize();
+        // FMUX lives in device MMIO. This platform has no static linear MMIO
+        // window (`PHYS_VIRT_OFFSET == 0`), so `phys_to_virt` would hand back
+        // the raw physical address and the store below would fault. Map the
+        // register page once through the kernel ioremap path instead.
+        let vaddr = fmux_base() + offset;
         unsafe {
             core::ptr::write_volatile(vaddr as *mut u32, value);
         }
         Ok(())
     }
+}
+
+/// Lazily maps the FMUX register page and returns its kernel alias.
+fn fmux_base() -> usize {
+    use ax_lazyinit::LazyInit;
+
+    static BASE: LazyInit<usize> = LazyInit::new();
+    *BASE.get_or_init(|| {
+        ax_mm::iomap(PhysAddr::from_usize(FMUX_PBASE), FMUX_SIZE)
+            .unwrap_or_else(|err| panic!("failed to iomap FMUX at {FMUX_PBASE:#x}: {err:?}"))
+            .as_usize()
+    })
 }
 
 impl DeviceOps for PinmuxDev {
