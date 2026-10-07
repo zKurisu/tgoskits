@@ -21,7 +21,13 @@ pub const STAGE_GUARD_DROP: usize = 5;
 pub const STAGE_SCHED_ENTER: usize = 6;
 pub const STAGE_SCHED_DECISION: usize = 7;
 pub const STAGE_SCHED_SWITCH: usize = 8;
-const STAGES: usize = 9;
+/// C2：一次上下文切换内部（地址空间激活 → 线程绑定 → 裸切换交接）。
+pub const STAGE_SW_MM_PREP: usize = 9;
+pub const STAGE_SW_BINDING: usize = 10;
+pub const STAGE_SW_ASM: usize = 11;
+/// C2：idle 循环里真正进入 `wfi` 的次数与耗时（判断 fork 的那 1.8 ms 是不是"空等"）。
+pub const STAGE_IDLE_WAIT: usize = 12;
+const STAGES: usize = 13;
 
 const NAMES: [&str; STAGES] = [
     "finish_published",
@@ -33,7 +39,29 @@ const NAMES: [&str; STAGES] = [
     "sched_enter",
     "sched_decision",
     "sched_switch",
+    "sw_mm_prep",
+    "sw_binding",
+    "sw_asm",
+    "idle_wait",
 ];
+
+/// 裸切换前的单调时间戳（单核板，跨切换传递一个全局值即可）。
+static SWITCH_HANDOFF_START: AtomicU64 = AtomicU64::new(0);
+
+/// Records the instant just before the naked machine transfer.
+#[inline]
+pub fn note_switch_handoff_start(ns: u64) {
+    SWITCH_HANDOFF_START.store(ns, Ordering::Relaxed);
+}
+
+/// Attributes the hand-off latency to the incoming context's first instructions.
+#[inline]
+pub fn note_switch_handoff_end(ns: u64) {
+    let start = SWITCH_HANDOFF_START.swap(0, Ordering::Relaxed);
+    if start != 0 && ns > start {
+        add(STAGE_SW_ASM, ns - start);
+    }
+}
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static CALLS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];

@@ -83,6 +83,7 @@ pub fn idle_current_cpu_once() -> Result<(), TaskError> {
         cpu.prepare_idle_wait()
     };
     if may_wait {
+        let _t_idle = crate::diag::scope(crate::diag::STAGE_IDLE_WAIT);
         task_runtime::wait_for_interrupt();
     }
     Ok(())

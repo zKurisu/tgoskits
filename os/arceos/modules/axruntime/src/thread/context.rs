@@ -149,6 +149,9 @@ impl RuntimeContext {
     }
 
     unsafe fn finish_switch_tail(&self) -> (u64, u64) {
+        ax_task::diag::note_switch_handoff_end(
+            crate::clock_event_runtime::monotonic_now().as_nanos(),
+        );
         // SAFETY: the current incoming continuation owns this slot with local
         // IRQs disabled and completes the one-shot previous-binding token.
         let slot = unsafe { &mut *self.switch_tail.get() };
@@ -617,7 +620,9 @@ pub(super) unsafe fn switch_runtime_context(plan: RuntimeSwitchPlan) {
                 "incoming architecture context retained a different current header"
             );
             let prepared_address_space =
-                super::address_space::prepare_runtime_address_space_switch(
+                {
+                    let _t = ax_task::diag::scope(ax_task::diag::STAGE_SW_MM_PREP);
+                    super::address_space::prepare_runtime_address_space_switch(
                     pin,
                     previous_address_space,
                     next_address_space,
@@ -626,14 +631,18 @@ pub(super) unsafe fn switch_runtime_context(plan: RuntimeSwitchPlan) {
                 )
                 .unwrap_or_else(|status| {
                     panic!("failed to prepare runtime address-space switch: {status:?}")
-                });
+                })
+                };
             #[cfg(feature = "qperf-metrics")]
             let qperf_prepare_mm_finished_ns =
                 crate::clock_event_runtime::monotonic_now().as_nanos();
             // All CPU binding, FP and active-mm validation precedes the
             // irreversible baton transfer and both commits.
             let (prepared, previous_binding) =
-                prepare_runtime_thread_switch(pin, previous_context, next_context);
+                {
+                    let _t = ax_task::diag::scope(ax_task::diag::STAGE_SW_BINDING);
+                    prepare_runtime_thread_switch(pin, previous_context, next_context)
+                };
             #[cfg(feature = "qperf-metrics")]
             let qperf_prepare_binding_finished_ns =
                 crate::clock_event_runtime::monotonic_now().as_nanos();
@@ -698,6 +707,9 @@ pub(super) unsafe fn switch_runtime_context(plan: RuntimeSwitchPlan) {
             // operation is the inlined machine transfer; no checks, callbacks
             // or destructors run between publication and the naked switch.
             prepared.commit();
+            ax_task::diag::note_switch_handoff_start(
+                crate::clock_event_runtime::monotonic_now().as_nanos(),
+            );
             previous_arch_context.switch_to(next_arch_context);
         })
     };
