@@ -8,12 +8,14 @@
 pub mod device;
 pub mod error;
 pub mod platform;
+pub mod soc;
 pub mod tdma;
 pub mod tiu;
 pub mod types;
 
 pub use device::{Sg2002Tpu, TpuState, TpuSubmitPath};
 pub use platform::TiuIrqCallback;
+pub use soc::{Cv181xTpuClockSnapshot, Cv181xTpuSoc};
 
 /// TDMA 物理基地址
 pub const TDMA_PHYS_BASE: usize = 0x0C10_0000;

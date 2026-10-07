@@ -25,6 +25,12 @@ pub type TiuIrqCallback = fn(seq_no: u32, bd_cmd_id: u32);
 /// 必须在等待硬件期间真正睡眠让出 CPU，否则相机前处理与 TPU 推理无法重叠。
 pub type WaitIrqFn = fn(timeout_us: u64) -> bool;
 
+/// Optional OS timing callback invoked immediately before a TDMA command is
+/// fired, or immediately after the corresponding IRQ wait returns.  The
+/// hardware layer deliberately does not own a clock; the OS glue supplies a
+/// callback backed by its monotonic clock when latency profiling is enabled.
+pub type TdmaTimingCallback = fn();
+
 /// TPU 寄存器备份信息 (用于挂起/恢复)
 #[derive(Debug, Clone, Copy, Default)]
 pub struct TpuRegBackup {
@@ -122,6 +128,7 @@ pub fn handle_tdma_irq(tdma: &TdmaRegs, tiu: &TiuRegs, state: &mut TpuRuntimeSta
 
 /// 轮询等待命令完成
 pub fn poll_cmdbuf_done(
+    tdma: &TdmaRegs,
     tiu: &TiuRegs,
     id_node: &CmdIdNode,
     state: &mut TpuRuntimeState,
@@ -129,10 +136,13 @@ pub fn poll_cmdbuf_done(
 ) -> Result<(), TpuError> {
     // 检查 TDMA
     if id_node.tdma_cmd_id > 0 {
+        // The OS IRQ glue clears TDMA_INT_MASK before waking the worker, but
+        // TDMA_SYNC_STATUS remains readable.  Read it here instead of relying
+        // on `state.reg_backup`: the IRQ handler and worker intentionally do
+        // not share a mutable runtime state.
+        state.reg_backup.tdma_sync_status = tdma.read(super::tdma::TDMA_SYNC_STATUS);
         let tdma_id = state.reg_backup.tdma_sync_status >> 16;
-        if tdma_id < id_node.tdma_cmd_id {
-            // return Err(TpuError::TdmaError(tdma_id));
-        }
+        validate_tdma_completion(tdma_id, id_node.tdma_cmd_id)?;
     }
 
     // 轮询 TIU
@@ -164,6 +174,32 @@ pub fn poll_cmdbuf_done(
     Ok(())
 }
 
+/// Validate that the TDMA engine reached the final command in the submitted
+/// descriptor list.
+fn validate_tdma_completion(observed_id: u32, expected_id: u32) -> Result<(), TpuError> {
+    if observed_id < expected_id {
+        Err(TpuError::TdmaError(observed_id))
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn incomplete_tdma_command_list_is_rejected() {
+        assert_eq!(validate_tdma_completion(3, 4), Err(TpuError::TdmaError(3)));
+    }
+
+    #[test]
+    fn completed_tdma_command_list_is_accepted() {
+        assert_eq!(validate_tdma_completion(4, 4), Ok(()));
+        assert_eq!(validate_tdma_completion(5, 4), Ok(()));
+    }
+}
+
 /// 执行 DMA buffer
 ///
 /// 这是核心执行函数，对应原 platform_run_dmabuf
@@ -179,6 +215,8 @@ pub unsafe fn run_dmabuf(
     state: &mut TpuRuntimeState,
     wait_irq: impl Fn() -> Result<(), TpuError>,
     timeout_checker: impl Fn() -> bool,
+    tdma_fire: impl Fn(),
+    irq_resume: impl Fn(),
 ) -> Result<(), TpuError> {
     // 解析 header
     let header = unsafe { &*(dmabuf_vaddr as *const DmaHeader) };
@@ -240,23 +278,26 @@ pub unsafe fn run_dmabuf(
 
         // 启动 TDMA
         if tdma_num > 0 {
-            tdma.fire_descriptor(tdma_offset as u64, tdma_num);
+            tdma.fire_descriptor_profiled(tdma_offset as u64, tdma_num, &tdma_fire);
         }
 
         // 等待 TDMA 完成
         if tdma_num > 0 {
             wait_irq()?;
+            irq_resume();
         }
 
         // 检查完成状态
-        poll_cmdbuf_done(tiu, &id_node, state, &timeout_checker)?;
+        poll_cmdbuf_done(tdma, tiu, &id_node, state, &timeout_checker)?;
     }
 
     // 禁用 PMU
     if pmu_enabled {
         state.irq_received = false;
+        tdma_fire();
         pmu_disable(tdma);
         wait_irq()?;
+        irq_resume();
     }
 
     Ok(())

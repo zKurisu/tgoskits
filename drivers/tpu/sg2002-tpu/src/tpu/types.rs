@@ -73,8 +73,11 @@ pub struct CviSubmitDmaArg {
 }
 
 /// 等待 DMA 参数
+///
+/// `NoUninit`：内核侧要把它整块写回用户内存（bytemuck 要求无 padding；
+/// 本结构是 4+4 字节、repr(C)，满足）。
 #[repr(C)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, bytemuck::NoUninit)]
 pub struct CviWaitDmaArg {
     /// 序列号
     pub seq_no: u32,
