@@ -253,33 +253,60 @@ impl Configurable for UnixSocket {
 impl SocketOps for UnixSocket {
     fn bind(&self, local_addr: SocketAddrEx) -> NetResult {
         let local_addr = local_addr.into_unix()?;
-        let mut guard = self.local_addr.lock();
-        if matches!(&*guard, UnixSocketAddr::Unnamed) {
-            with_slot_or_insert(&local_addr, |slot| self.transport.bind(slot, &local_addr))?;
-            *guard = local_addr;
-            self.owns_bind.store(true, Ordering::Release);
-        } else {
-            return Err(NetError::InvalidInput);
+        {
+            let mut guard = self.local_addr.lock();
+            if !matches!(&*guard, UnixSocketAddr::Unnamed) {
+                return Err(NetError::InvalidInput);
+            }
+            // Reserve the address before doing any I/O.  Creating a path
+            // binding walks the Unix namespace — a filesystem path, following
+            // symlinks — so it must never run while this spinlock is held.
+            *guard = local_addr.clone();
         }
-        Ok(())
+        match with_slot_or_insert(&local_addr, |slot| self.transport.bind(slot, &local_addr)) {
+            Ok(()) => {
+                self.owns_bind.store(true, Ordering::Release);
+                Ok(())
+            }
+            Err(error) => {
+                // Roll the reservation back; nobody else could have taken it.
+                *self.local_addr.lock() = UnixSocketAddr::Unnamed;
+                Err(error)
+            }
+        }
     }
 
     fn start_connect(&self, remote_addr: SocketAddrEx) -> NetResult<ConnectStatus> {
         let remote_addr = remote_addr.into_unix()?;
         let local_addr = self.local_addr.lock().clone();
-        let accept_poll = {
+        {
             let mut guard = self.remote_addr.lock();
             if guard.is_some() {
                 return Err(NetError::InvalidInput);
             }
-            let accept_poll = with_slot(&remote_addr, |slot| {
-                self.transport.connect(slot, &local_addr)
-            })?;
-            *guard = Some(remote_addr);
-            accept_poll
-        };
-        self.transport.finish_connect(accept_poll);
-        Ok(ConnectStatus::Connected)
+            // Reserve the peer before any I/O.  `with_slot` resolves the
+            // address through the Unix namespace, which for a pathname socket
+            // is a filesystem lookup (e.g. `/dev/log` -> `/var/run/log`
+            // follows the `/var/run` symlink).  Holding this spinlock across
+            // that lookup made a concurrent global `sync` turn a plain
+            // connect into blocking I/O inside an atomic context: the block
+            // layer reported `WouldBlock` (surfaced as `EIO`) or the PI mutex
+            // validation panicked.
+            *guard = Some(remote_addr.clone());
+        }
+        match with_slot(&remote_addr, |slot| {
+            self.transport.connect(slot, &local_addr)
+        }) {
+            Ok(accept_poll) => {
+                self.transport.finish_connect(accept_poll);
+                Ok(ConnectStatus::Connected)
+            }
+            Err(error) => {
+                // Roll the reservation back; nobody else could have taken it.
+                *self.remote_addr.lock() = None;
+                Err(error)
+            }
+        }
     }
 
     fn listen(&self, _backlog: usize) -> NetResult {

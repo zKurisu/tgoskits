@@ -575,7 +575,7 @@ fn partial_cached_write_reads_backing_without_cache_index_lock() {
 }
 
 #[test]
-fn writeback_does_not_materialize_an_unbounded_contiguous_run() {
+fn writeback_merges_contiguous_pages_within_a_bounded_batch() {
     const PAGE_COUNT: usize = 92;
 
     with_test_page_provider(true, |_| {
@@ -589,9 +589,59 @@ fn writeback_does_not_materialize_an_unbounded_contiguous_run() {
         let state = backing.state.lock().unwrap();
         assert_eq!(state.physical_data, data);
         drop(state);
+
+        // D1：同一批快照里的**连续**脏页合并成一次 `write_at`（8 MiB 顺序写
+        // 从 2048 次 4 KiB 请求降到几十次），但一次 materialize 的字节数仍有界：
+        // 每批最多 `MAX_WRITEBACK_SNAPSHOT_PAGES` 页，所以写回期间的额外内存
+        // 是常数级，不会把任意长的连续脏区拼成第二个全尺寸缓冲区。
+        let batch_pages = super::writeback::MAX_WRITEBACK_SNAPSHOT_PAGES;
         let write_lengths = backing.write_lengths();
-        assert_eq!(write_lengths.len(), PAGE_COUNT);
-        assert!(write_lengths.iter().all(|len| *len <= PAGE_SIZE));
+        assert_eq!(
+            write_lengths.len(),
+            PAGE_COUNT.div_ceil(batch_pages),
+            "consecutive dirty pages must be merged into one request per bounded batch"
+        );
+        assert!(
+            write_lengths
+                .iter()
+                .all(|len| *len <= batch_pages * PAGE_SIZE),
+            "one write must never materialize more than one bounded batch"
+        );
+        assert_eq!(
+            write_lengths.iter().sum::<usize>(),
+            PAGE_COUNT * PAGE_SIZE
+        );
+    });
+}
+
+#[test]
+fn sequential_write_past_page_cache_capacity_flushes_dirty_pages() {
+    // A disk-backed cache is bounded by `DISK_PAGE_CACHE_CAP`.  Once every slot
+    // holds a dirty page, the next insertion has to evict one.  Draining the
+    // dirty pages through the normal writeback tracking is what lets the LRU
+    // evict a now-clean victim; without it the write fails with
+    // `ResourceBusy`, which is the 2 MiB wall observed on SG2002.
+    with_test_page_provider(true, |_| {
+        const CHUNK: usize = 64 * 1024;
+        let total = (DISK_PAGE_CACHE_CAP + 32) * PAGE_SIZE;
+        let backing = Arc::new(CacheTestFile::new(Vec::new()));
+        let cached = reopen_cached_file(backing.clone());
+        let data: Vec<u8> = (0..total).map(|index| (index % 251) as u8).collect();
+
+        let mut offset = 0;
+        while offset < total {
+            let end = (offset + CHUNK).min(total);
+            assert_eq!(
+                cached.write_at(&data[offset..end], offset as u64),
+                Ok(end - offset),
+                "write at offset {offset} must not stop at the page-cache capacity"
+            );
+            offset = end;
+        }
+
+        assert_eq!(cached.len(), total as u64);
+        cached.writeback().unwrap();
+        assert_eq!(backing.state.lock().unwrap().physical_data, data);
     });
 }
 

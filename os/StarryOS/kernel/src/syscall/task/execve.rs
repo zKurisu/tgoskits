@@ -176,6 +176,12 @@ fn do_execve(
     argv: *const *const c_char,
     envp: *const *const c_char,
 ) -> StarryResult<isize> {
+    // H1b：exec 总耗时（下面各段是它的子集）。
+    let _t_exec_total =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_TOTAL);
+    // 新映像的代码页是内核刚写进去的（含 static-PIE 重定位），用户 I-cache
+    // 在进入新程序前必须刷一次。
+    ax_cpu::user_cache::mark_stale();
     // ----------------------------------------------------------------
     // Phase 1: all fallible work — nothing is committed yet.
     // If any of these fail we return an error and the process is intact.
@@ -251,6 +257,9 @@ fn do_execve(
     let loaded_image = load_user_app(&mut image_builder, loc, &path, &args, &envs, &thr.cred())?;
     let prepared_image = image_builder.finish(loaded_image)?;
     let (new_aspace, entry_point, user_stack_base, auxv) = prepared_image.into_parts();
+    // H1b：镜像已就绪之后的"提交"段（建 MmHandle / 杀兄弟 / 换 aspace / 装栈）。
+    let _t_exec_install =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXEC_INSTALL);
 
     // Registration, runtime ownership and process metadata must all be ready
     // before the first sibling is killed, which is already irreversible.

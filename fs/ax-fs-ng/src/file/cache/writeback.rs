@@ -1,6 +1,6 @@
 use alloc::{boxed::Box, vec::Vec};
 
-use axfs_ng_vfs::{VfsError, VfsResult};
+use axfs_ng_vfs::{FileNode, VfsError, VfsResult};
 
 use super::{CacheMappingEvent, CacheMappingResult, CachedFileShared, PAGE_SIZE};
 
@@ -11,13 +11,26 @@ use super::{CacheMappingEvent, CacheMappingResult, CachedFileShared, PAGE_SIZE};
 /// backing interface is not scatter/gather-aware yet, so this implementation
 /// writes each stable page snapshot separately while bounding the number of
 /// snapshots retained across I/O.
-const MAX_WRITEBACK_SNAPSHOT_PAGES: usize = 16;
+pub(super) const MAX_WRITEBACK_SNAPSHOT_PAGES: usize = 64;
 
 struct DirtyPageSnapshot {
     pn: u32,
     generation: u64,
     data: Box<[u8]>,
     len: usize,
+}
+
+/// 把一段字节写到文件的 `offset`，直到写完或出错（`write_at` 允许短写）。
+fn write_all_at(backing: &FileNode, mut data: &[u8], mut offset: u64) -> VfsResult<()> {
+    while !data.is_empty() {
+        let count = backing.write_at(data, offset)?;
+        if count == 0 || count > data.len() {
+            return Err(VfsError::Io);
+        }
+        data = &data[count..];
+        offset += count as u64;
+    }
+    Ok(())
 }
 
 impl CachedFileShared {
@@ -76,6 +89,30 @@ impl CachedFileShared {
         self.page_cache.lock().iter().any(|(_, page)| page.dirty)
     }
 
+    /// Writes back every dirty page while the caller already holds `io_lock`.
+    ///
+    /// Page-cache insertion runs under `io_lock`; when the bounded disk cache
+    /// is full of dirty pages it must make capacity by writing them back.  The
+    /// regular [`Self::writeback`] path reacquires `io_lock`, so it would
+    /// self-deadlock in that context.  This variant reuses the exact same dirty
+    /// tracking, snapshotting, and generation-checked clearing, only assuming
+    /// the lock is already held and skipping the whole-filesystem sync.
+    ///
+    /// Precondition: the caller holds `io_lock` and no live mapping endpoint is
+    /// installed, so mapping protection cannot run while the lock is held.
+    pub(super) fn drain_dirty_pages_locked(&self) -> VfsResult<usize> {
+        let dirty_keys = self.begin_writeback_locked(None)?;
+        if dirty_keys.is_empty() {
+            return Ok(0);
+        }
+        self.protect_dirty_pages_before_writeback(&dirty_keys)
+            .inspect_err(|_| self.finish_writeback_tracking(&dirty_keys))?;
+        let result = self.writeback_page_runs(self.len(), &dirty_keys);
+        self.finish_writeback_tracking(&dirty_keys);
+        result?;
+        Ok(dirty_keys.len())
+    }
+
     pub(super) fn protect_dirty_pages_before_writeback(&self, pns: &[u32]) -> VfsResult<()> {
         for pn in pns {
             let Some(paddr) = ({
@@ -108,6 +145,11 @@ impl CachedFileShared {
 
     fn begin_writeback(&self, requested: Option<&[u32]>) -> VfsResult<Vec<u32>> {
         let _io = self.io_lock.lock();
+        self.begin_writeback_locked(requested)
+    }
+
+    /// Selects the dirty pages to write back.  The caller must hold `io_lock`.
+    fn begin_writeback_locked(&self, requested: Option<&[u32]>) -> VfsResult<Vec<u32>> {
         let file_len = self.len();
         let mut requested_pns = if let Some(requested) = requested {
             let mut copy = Vec::new();
@@ -172,17 +214,43 @@ impl CachedFileShared {
 
     fn writeback_snapshot_batch(&self, snapshots: &[DirtyPageSnapshot]) -> VfsResult<()> {
         let backing = self.backing()?;
-        for page in snapshots {
-            let offset = page.pn as u64 * PAGE_SIZE as u64;
-            let mut written = 0;
-            while written < page.len {
-                let count =
-                    backing.write_at(&page.data[written..page.len], offset + written as u64)?;
-                if count == 0 || count > page.len - written {
-                    return Err(VfsError::Io);
-                }
-                written += count;
+        // D1：把**连续**的脏页合并成一次 `write_at`。
+        //
+        // 原来这里即使拿到的是一批连续页快照，也仍然每页单独下发一次
+        // `backing.write_at` —— 8 MiB 顺序写就是 2048 次 4 KiB 写，每次都走一遍
+        // ext4 → 日志 → 块层的请求路径。同一张卡上 Linux 的「8 MiB 写 + fsync」
+        // 是 0.79–0.86 s，我们是 7.6–8.0 s（见
+        // results/2026-10-07-h5f-atime-policy.txt [f]）；而 2048 次 4 KiB 请求正是
+        // 我们这边与 Linux（bio 合并成大请求）最大的结构性差异。
+        //
+        // 合并只在**同一批快照内**做（批大小已由 MAX_WRITEBACK_SNAPSHOT_PAGES
+        // 限定），所以写回期间额外持有的内存仍是常数级；缓冲区上限
+        // 64 页 = 256 KiB。
+        let mut index = 0;
+        while index < snapshots.len() {
+            // 一段 run：页号连续，且除最后一页外都是整页（非整页只可能出现在
+            // 文件末尾，后面不可能再有脏页）。
+            let start = index;
+            let mut end = index + 1;
+            while end < snapshots.len()
+                && snapshots[end].pn == snapshots[end - 1].pn + 1
+                && snapshots[end - 1].len == PAGE_SIZE
+            {
+                end += 1;
             }
+            let run = &snapshots[start..end];
+            if run.len() == 1 {
+                write_all_at(backing, &run[0].data[..run[0].len], run[0].pn as u64 * PAGE_SIZE as u64)?;
+            } else {
+                let total: usize = run.iter().map(|page| page.len).sum();
+                let mut merged = Vec::new();
+                merged.try_reserve_exact(total).map_err(|_| VfsError::NoMemory)?;
+                for page in run {
+                    merged.extend_from_slice(&page.data[..page.len]);
+                }
+                write_all_at(backing, &merged, run[0].pn as u64 * PAGE_SIZE as u64)?;
+            }
+            index = end;
         }
 
         let mut guard = self.page_cache.lock();

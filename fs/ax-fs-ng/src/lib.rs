@@ -23,6 +23,7 @@ pub mod api;
 pub mod block;
 mod error;
 pub mod file;
+pub mod diag;
 pub mod fops;
 mod fs;
 mod fs_core;
@@ -54,6 +55,7 @@ pub use block::{
 };
 #[cfg(feature = "vfs")]
 pub use highlevel::*;
+pub use file::cached_file_identity_stats;
 #[cfg(feature = "vfs")]
 pub mod vfs {
     /// Create an ext4 filesystem from an owned file source and its open lease.

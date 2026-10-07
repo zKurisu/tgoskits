@@ -47,6 +47,7 @@ impl Inode {
     }
 
     fn create_entry(&self, info: rsext4::InodeInfo, name: &str) -> DirEntry {
+        let _t = crate::diag::scope(crate::diag::STAGE_EXT4_INODE_NEW);
         let name = name.to_owned();
         let reference = Reference::new(
             self.this.as_ref().and_then(WeakDirEntry::upgrade),
@@ -77,6 +78,7 @@ impl Inode {
     }
 
     fn lookup_locked(&self, name: &str) -> VfsResult<DirEntry> {
+        let _t = crate::diag::scope(crate::diag::STAGE_EXT4_LOOKUP);
         let raw_name = FileName::new(name.as_bytes()).map_err(into_vfs_err)?;
         let mut state = self.fs.lock();
         let info = state
@@ -196,11 +198,16 @@ impl Inode {
 
 impl Drop for Inode {
     fn drop(&mut self) {
-        let claim = self.fs.lock().release_ref(self.ino);
-        if let Some(claim) = claim
-            && let Err(error) = self.fs.reap(claim)
-        {
-            log::error!("failed to reap zero-link ext4 inode: {error:?}");
+        let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_EXT4_INODE_DROP);
+        let claim = {
+            let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_EXT4_RELEASE_REF);
+            self.fs.lock().release_ref(self.ino)
+        };
+        if let Some(claim) = claim {
+            let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_EXT4_REAP);
+            if let Err(error) = self.fs.reap(claim) {
+                log::error!("failed to reap zero-link ext4 inode: {error:?}");
+            }
         }
     }
 }

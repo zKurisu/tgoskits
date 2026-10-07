@@ -478,12 +478,34 @@ pub unsafe extern "C" fn free(ptr: *mut c_void) {
 /// # Safety
 ///
 /// Callers must uphold the Linux/musl ABI contract for this libc symbol.
+///
+/// Word-at-a-time bulk copy. The original byte loop made every kernel copy
+/// (page copies, page-cache fills, fork) an ~8x pessimisation on SG2002: a
+/// 4 KiB fill measured 31 µs (~130 MB/s). Unaligned traffic falls back to the
+/// byte loop, so no misaligned word access is ever emitted.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcpy(dst: *mut c_void, src: *const c_void, n: SizeT) -> *mut c_void {
     let dst_u8 = dst.cast::<u8>();
     let src_u8 = src.cast::<u8>();
-    for i in 0..n {
+    let mut i = 0usize;
+    if (dst_u8 as usize) & 7 == (src_u8 as usize) & 7 {
+        loop {
+            let addr = unsafe { dst_u8.add(i) } as usize;
+            if i >= n || addr & 7 == 0 {
+                break;
+            }
+            unsafe { *dst_u8.add(i) = *src_u8.add(i) };
+            i += 1;
+        }
+        while i + 8 <= n {
+            let word = unsafe { (src_u8.add(i) as *const u64).read() };
+            unsafe { (dst_u8.add(i) as *mut u64).write(word) };
+            i += 8;
+        }
+    }
+    while i < n {
         unsafe { *dst_u8.add(i) = *src_u8.add(i) };
+        i += 1;
     }
     dst
 }
@@ -498,13 +520,30 @@ pub unsafe extern "C" fn memmove(dst: *mut c_void, src: *const c_void, n: SizeT)
     let dst_addr = dst_u8 as usize;
     let src_addr = src_u8 as usize;
     if dst_addr <= src_addr || dst_addr >= src_addr.saturating_add(n) {
-        for i in 0..n {
+        // Forward, non-overlapping (or src behind dst is handled below).
+        return unsafe { memcpy(dst, src, n) };
+    }
+    // Backward copy for overlap; aligned word stores when both sides share
+    // their alignment, byte-wise otherwise.
+    let mut i = n;
+    if dst_addr & 7 == src_addr & 7 {
+        while i > 0 {
+            let addr = unsafe { dst_u8.add(i - 1) } as usize;
+            if addr & 7 == 0 {
+                break;
+            }
+            i -= 1;
             unsafe { *dst_u8.add(i) = *src_u8.add(i) };
         }
-    } else {
-        for i in (0..n).rev() {
-            unsafe { *dst_u8.add(i) = *src_u8.add(i) };
+        while i >= 8 {
+            i -= 8;
+            let word = unsafe { (src_u8.add(i) as *const u64).read() };
+            unsafe { (dst_u8.add(i) as *mut u64).write(word) };
         }
+    }
+    while i > 0 {
+        i -= 1;
+        unsafe { *dst_u8.add(i) = *src_u8.add(i) };
     }
     dst
 }
@@ -515,8 +554,24 @@ pub unsafe extern "C" fn memmove(dst: *mut c_void, src: *const c_void, n: SizeT)
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memset(dst: *mut c_void, value: c_int, n: SizeT) -> *mut c_void {
     let dst_u8 = dst.cast::<u8>();
-    for i in 0..n {
-        unsafe { *dst_u8.add(i) = value as u8 };
+    let byte = value as u8;
+    let mut i = 0usize;
+    loop {
+        let addr = unsafe { dst_u8.add(i) } as usize;
+        if i >= n || addr & 7 == 0 {
+            break;
+        }
+        unsafe { *dst_u8.add(i) = byte };
+        i += 1;
+    }
+    let word = u64::from_ne_bytes([byte; 8]);
+    while i + 8 <= n {
+        unsafe { (dst_u8.add(i) as *mut u64).write(word) };
+        i += 8;
+    }
+    while i < n {
+        unsafe { *dst_u8.add(i) = byte };
+        i += 1;
     }
     dst
 }
@@ -526,14 +581,26 @@ pub unsafe extern "C" fn memset(dst: *mut c_void, value: c_int, n: SizeT) -> *mu
 /// Callers must uphold the Linux/musl ABI contract for this libc symbol.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn memcmp(left: *const c_void, right: *const c_void, n: SizeT) -> c_int {
-    let left = left.cast::<u8>();
-    let right = right.cast::<u8>();
-    for i in 0..n {
-        let lhs = unsafe { *left.add(i) };
-        let rhs = unsafe { *right.add(i) };
+    let left_u8 = left.cast::<u8>();
+    let right_u8 = right.cast::<u8>();
+    let mut i = 0usize;
+    if (left_u8 as usize) & 7 == (right_u8 as usize) & 7 {
+        while i + 8 <= n {
+            let lhs = unsafe { (left_u8.add(i) as *const u64).read() };
+            let rhs = unsafe { (right_u8.add(i) as *const u64).read() };
+            if lhs != rhs {
+                break;
+            }
+            i += 8;
+        }
+    }
+    while i < n {
+        let lhs = unsafe { *left_u8.add(i) };
+        let rhs = unsafe { *right_u8.add(i) };
         if lhs != rhs {
             return lhs as c_int - rhs as c_int;
         }
+        i += 1;
     }
     0
 }

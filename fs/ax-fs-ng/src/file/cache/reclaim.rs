@@ -1,8 +1,5 @@
 use alloc::{sync::Arc, vec::Vec as AllocVec};
-use core::{
-    mem,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use axfs_ng_vfs::VfsResult;
 use heapless::Vec as InlineVec;
@@ -10,6 +7,21 @@ use heapless::Vec as InlineVec;
 use super::{CachedFileShared, PageCache};
 
 const MAX_RECLAIM_BATCH: usize = 256;
+
+/// 关闭后仍然保留页缓存的"小文件"个数上限。
+///
+/// 这是 H5 的核心：原来的裁剪条件是"没有别人引用就摘掉"，而缓存身份的唯一强引用
+/// 来自打开的文件对象 —— 于是**每一次 close 都把整片页缓存丢掉**，下次 open 只能
+/// 回 SD 卡读。板上实测 ext4 上 `open+read(0 KB)+close` 中位 10.0 ms（procfs 0.4 ms），
+/// 而且每次都重复；exec 一个 busybox ≈36 ms、模型加载 ≈3 s、cat ~32 MB/s 全是这一个原因。
+///
+/// 保留是有代价的（内存随"被访问过的文件数"增长），所以这里用**可证明的上界**：
+/// 一个文件的缓存页数不可能超过它的长度，于是只要限制"保留几个文件"以及"文件多大"，
+/// 就能给出总上界，不需要新增任何页计数：
+///   4 个文件 × 4 MiB = 16 MiB（本板 236 MB 内存的 7%）。
+/// busybox（803 KB）、常用动态库、akars 模型（3.63 MB）都落在窗口内。
+const RETAIN_CLOSED_CACHE_FILES: usize = 4;
+const RETAIN_CLOSED_CACHE_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
 struct ReclaimGuard;
 
@@ -47,25 +59,50 @@ impl CachedFileRegistry {
     }
 
     fn prune_with(&self, before_restore: impl FnOnce()) {
-        // Cached-file destruction can take a sleepable filesystem lock.
-        let mut files = {
+        // 一次加锁 + 线性扫描：把"没有别人引用且没有脏页"的缓存身份摘掉。
+        // 被摘掉的 Arc 收集到局部 Vec，**锁外**再析构（析构可能取可睡眠的
+        // 文件系统锁）。
+        //
+        // 原实现是 `mem::take` 出整个注册表 → `retain` → 再**逐个**加写锁 +
+        // `iter().any(ptr_eq)` 查重后放回：那是 O(n²)，而它在每次创建新的
+        // 缓存身份时都会跑（打开一个还没被缓存的文件）。板上实测：
+        // `open+read(64K)+close` 中位数 10.3 ms（其中读数据只 ~0.9 ms），
+        // `execve("/bin/true")` ≈36 ms —— 都是这 O(n²) 在付账；而且探针的
+        // max(44 ms) ≫ median(10 ms) 正说明注册表在增长。
+        //
+        // 换成原地 retain 之后不再存在"注册表被整体取出"的窗口，因此原来那种
+        // "unlink 先置位、恢复时在锁内复查"的补偿也就不需要了：unlink 与本
+        // 扫描在同一把写锁下互斥。
+        let mut doomed: AllocVec<Arc<CachedFileShared>> = AllocVec::new();
+        {
             let mut registry = self.files.write();
-            mem::take(&mut *registry)
-        };
-        files.retain(|cached| Arc::strong_count(cached) > 1 || cached.has_dirty_pages());
-        before_restore();
-        for file in files {
-            let mut registry = self.files.write();
-            // Unlink publishes this flag before taking the registry lock.
-            // Recheck under that same lock: either restoration observes it,
-            // or unlink subsequently removes the restored registration.
-            if file.unlinked.load(Ordering::Acquire) || file.retired.load(Ordering::Acquire) {
-                drop(registry);
-                drop(file);
-            } else if !registry.iter().any(|cached| Arc::ptr_eq(cached, &file)) {
-                registry.push(file);
-            }
+            // 注册表按插入顺序排列，保留"最近 N 个"才有意义（保留最旧的一批
+            // 等于保留一堆再也不会被访问的文件，而被反复访问的那个反而被裁掉）。
+            let tail_start = registry.len().saturating_sub(RETAIN_CLOSED_CACHE_FILES);
+            let mut position = 0usize;
+            registry.retain(|cached| {
+                let index = position;
+                position += 1;
+                // 已经 unlink / 已被退休的注册必须消失（原来的语义：它们不得被恢复）。
+                if cached.unlinked.load(Ordering::Acquire) || cached.retired.load(Ordering::Acquire) {
+                    doomed.push(cached.clone());
+                    return false;
+                }
+                if Arc::strong_count(cached) > 1 || cached.has_dirty_pages() {
+                    true
+                } else if index >= tail_start && cached.len() <= RETAIN_CLOSED_CACHE_MAX_BYTES {
+                    // H5：关闭后按上界保留页缓存，见常量说明。
+                    true
+                } else {
+                    // 先计数、后 clone：判定看到的是"注册表自己那一个引用"之外
+                    // 还有没有人持有。
+                    doomed.push(cached.clone());
+                    false
+                }
+            });
         }
+        before_restore();
+        drop(doomed);
     }
 }
 
@@ -134,6 +171,19 @@ pub fn page_cache_reclaim(num_pages: usize) -> usize {
             "page_cache_reclaim: evicted {} clean pages across {} files",
             reclaimed, visited_files
         );
+    } else if num_pages > 0 {
+        // 诊断：分配器已经来求救了，我们却一页都没腾出来 —— 这正是板子上
+        // "内存慢慢被吃光最后 OOM panic" 的前兆。打一条有上限的 warn，把
+        // 现场信息（注册表里有多少文件、目标页数、回收是否重入）留下来，
+        // 免得事故只能靠事后猜。
+        static STARVED_REPORTS: core::sync::atomic::AtomicU64 =
+            core::sync::atomic::AtomicU64::new(0);
+        if STARVED_REPORTS.fetch_add(1, Ordering::Relaxed) < 8 {
+            warn!(
+                "page_cache_reclaim: freed 0 of {num_pages} requested pages \
+                 (registered_files={scan_len}, reentrant_or_empty)",
+            );
+        }
     }
     reclaimed
 }

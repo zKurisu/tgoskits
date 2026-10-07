@@ -6559,6 +6559,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rdif-ipc"
+version = "0.1.0"
+dependencies = [
+ "rdif-base",
+ "thiserror 2.0.20",
+]
+
+[[package]]
 name = "rdif-msi"
 version = "0.3.1"
 dependencies = [
@@ -7492,6 +7500,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sg2002-cmdqu"
+version = "0.1.0"
+dependencies = [
+ "rdif-ipc",
+]
+
+[[package]]
 name = "sg2002-tpu"
 version = "0.4.1"
 dependencies = [
@@ -7887,6 +7902,7 @@ dependencies = [
  "rand 0.10.2",
  "rbpf",
  "rdif-block",
+ "rdif-ipc",
  "rdif-pinctrl",
  "rdif-pwm",
  "rdrive",
@@ -7894,6 +7910,7 @@ dependencies = [
  "riscv",
  "rockchip-rga",
  "scope-local",
+ "sg2002-cmdqu",
  "sg2002-tpu",
  "sg200x-bsp",
  "sg200x-jpu",

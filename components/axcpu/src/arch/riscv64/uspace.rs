@@ -119,15 +119,16 @@ impl UserContext {
             fn enter_user(uctx: &mut UserContext);
         }
 
-        // No `fence.i` here: instruction-cache coherence for user text is
-        // established where the mapping is created, not on every return to
-        // user space. `PageObject::prepare_executable_mapping` performs
-        // `clean_dcache_range_to_pou` + `flush_icache_all` before an executable
-        // leaf is published, and the ptrace/kmod/mprotect paths that modify
-        // text synchronize explicitly (`AddrSpace::sync_modified_text`).
-        // Keeping an unconditional `fence_i` on this path costs several
-        // microseconds on every syscall return, which dominates the syscall
-        // round trip on this core.
+        // Refresh the instruction cache only when the user image may actually be
+        // stale (exec / newly executable mapping / address-space switch). 板上
+        // 实测这次 `fence.i` 要 2.17 µs，而它原来挂在每一次返回用户态上。
+        //
+        // 移植侧 S4（`344b29d0f`）当时是把这次 flush 整个删掉；这里保留父线的
+        // 惰性版本：稳态同样不刷（`take_stale()` 取一次即清），但 exec / 新可执行
+        // 映射 / 换地址空间仍会补刷，语义更稳。
+        if crate::user_cache::need_flush() {
+            riscv::asm::fence_i();
+        }
 
         assert!(
             !crate::asm::irqs_enabled(),

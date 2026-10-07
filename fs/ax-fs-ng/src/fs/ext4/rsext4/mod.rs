@@ -13,6 +13,7 @@ use rsext4::{
 };
 
 use crate::block::{BlockRegion, FsBlockDevice, RegionBlockDevice};
+use crate::BlockResult;
 
 pub(crate) struct Ext4Disk {
     device: RegionBlockDevice<Box<dyn FsBlockDevice>>,
@@ -21,6 +22,44 @@ pub(crate) struct Ext4Disk {
 
 pub(crate) type MountedExt4 =
     rsext4::Ext4<Ext4Disk, MountedServices<Ext4Entropy, Ext4Observer, Ext4Delay>>;
+
+/// How many times a block request that reports `WouldBlock` is retried before
+/// it is surfaced as an I/O error.
+///
+/// `BlockError::WouldBlock` means "this context may not block right now"
+/// (`request_cannot_block()`), not "the device failed".  Under concurrent file
+/// system load the condition is transient, and turning it into `Ext4Error::io()`
+/// made a single hiccup a hard `EIO` at the syscall boundary — that is what
+/// broke `sshd`'s `initgroups` (and any other lookup) while scp was writing.
+const BLOCK_IO_RETRY_LIMIT: usize = 512;
+const BLOCK_IO_RETRY_DELAY: core::time::Duration = core::time::Duration::from_millis(1);
+
+/// Waits out one `WouldBlock` retry without assuming the context can sleep.
+fn block_io_retry_wait() {
+    if let Ok(runtime) = crate::os::runtime_ops()
+        && runtime.can_block()
+    {
+        let _ = runtime.notification().wait_timeout(BLOCK_IO_RETRY_DELAY);
+        return;
+    }
+    // Non-sleepable context: give the other CPU/task a chance and retry.
+    core::hint::spin_loop();
+}
+
+/// Runs one block operation, retrying the transient `WouldBlock` condition.
+fn run_block_io(mut op: impl FnMut() -> BlockResult) -> Ext4Result<()> {
+    let mut attempt = 0;
+    loop {
+        match op() {
+            Ok(()) => return Ok(()),
+            Err(crate::BlockError::WouldBlock) if attempt < BLOCK_IO_RETRY_LIMIT => {
+                attempt += 1;
+                block_io_retry_wait();
+            }
+            Err(_error) => return Err(Ext4Error::io()),
+        }
+    }
+}
 
 #[derive(Default)]
 pub(crate) struct Ext4Observer;
@@ -90,9 +129,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        self.device
-            .write_block(sector.raw(), &buffer[..required_size])
-            .map_err(|_| Ext4Error::io())
+        run_block_io(|| self.device.write_block(sector.raw(), &buffer[..required_size]))
     }
 
     fn read(&mut self, buffer: &mut [u8], sector: SectorId, count: u32) -> Ext4Result<()> {
@@ -103,9 +140,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        self.device
-            .read_block(sector.raw(), &mut buffer[..required_size])
-            .map_err(|_| Ext4Error::io())
+        run_block_io(|| self.device.read_block(sector.raw(), &mut buffer[..required_size]))
     }
 
     fn write_with_flags(
@@ -131,9 +166,7 @@ impl BlockIo for Ext4Disk {
         if buffer.len() < required_size {
             return Err(Ext4Error::buffer_too_small(buffer.len(), required_size));
         }
-        self.device
-            .write_block_fua(sector.raw(), &buffer[..required_size])
-            .map_err(|_| Ext4Error::io())
+        run_block_io(|| self.device.write_block_fua(sector.raw(), &buffer[..required_size]))
     }
 
     fn geometry(&self) -> DeviceGeometry {
@@ -155,7 +188,7 @@ impl BlockIo for Ext4Disk {
         if !self.device.supports_flush() {
             return Err(Ext4Error::unsupported_capability("block_io:flush"));
         }
-        self.device.flush().map_err(|_| Ext4Error::io())
+        run_block_io(|| self.device.flush())
     }
 
     fn barrier(&mut self) -> Ext4Result<()> {

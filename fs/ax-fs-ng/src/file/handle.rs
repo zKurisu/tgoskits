@@ -1,3 +1,4 @@
+use core::time::Duration;
 #[cfg(test)]
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::{AtomicU8, Ordering};
@@ -40,6 +41,17 @@ impl FileBackend {
         match self {
             Self::Cached(cached) => Ok(cached.len()),
             Self::Direct(loc) => loc.len(),
+        }
+    }
+
+    /// H5f：close 时是否要补一次 atime 落盘（需要时记录时刻）。
+    fn claim_atime_persist(&self, window: Duration) -> bool {
+        match self {
+            // 磁盘后端：交给页缓存身份判断"24 h 内是否已写过"。
+            Self::Cached(cached) => cached.claim_atime_persist(crate::os::monotonic_time(), window),
+            // 非缓存后端（O_PATH / O_DIRECT / 字符设备 / procfs 等）：元数据写回
+            // 本来就不是块设备同步写，保持原有语义。
+            Self::Direct(_) => true,
         }
     }
 
@@ -490,25 +502,67 @@ fn needs_metadata_update_on_drop(location: &Location, access_flags: u8) -> bool 
     access_flags != 0 && !location.is_readonly()
 }
 
+/// Linux `MS_NOATIME`（`include/uapi/linux/mount.h`）。
+const MS_NOATIME: u32 = 1 << 10;
+/// Linux `MS_STRICTATIME`。
+const MS_STRICTATIME: u32 = 1 << 24;
+/// Linux `relatime` 的时间窗：每个文件每天最多写回一次 atime。
+const RELATIME_INTERVAL: core::time::Duration = core::time::Duration::from_secs(24 * 60 * 60);
+
+/// 判断这次 close 是否**必须**把 atime 落盘（H5f）。
+///
+/// 原来的实现只要句柄被读过就无条件 `update_metadata`，而 ext4 的
+/// `update_metadata` 末尾是 `sync_to_disk()` —— 也就是**每次 close 都强制一次
+/// 同步日志提交**。SG2002 上实测一次就是 ~10 ms 的 SD 写：
+/// `open+read(0 KB)+close` 中位 10.0 ms、块层每次 close 多出 ~3.4 个写请求，
+/// 而同内容的 tmpfs 只有 0.5 ms（`update_metadata` 是纯内存操作）——
+/// 这正是 exec(36 ms)、cat(~32 MB/s)、模型加载(~3 s) 的共同底盘。
+///
+/// Linux 从来不是这么做的：默认 `relatime` 只在 atime 落后于 mtime/ctime 或
+/// 超过 24 h 时更新，`noatime` 则完全不更新，只有显式 `strictatime` 才每次更新。
+/// 这里按同一套语义处理，让"读文件"不再变成"写文件"。
+fn should_persist_atime(inner: &FileBackend, mount_flags: u32) -> bool {
+    if mount_flags & MS_NOATIME != 0 {
+        return false;
+    }
+    if mount_flags & MS_STRICTATIME != 0 {
+        return true;
+    }
+    // 其余情况按 Linux 默认的 `relatime` 处理（`MS_RELATIME` 只是把它写明）。
+    // 判据不用磁盘上的 atime/mtime（本板时钟停在 1970，比镜像里的 mtime 还小，
+    // 那样会永远判成"过期"），而是用页缓存身份里记的**单调**时刻。
+    inner.claim_atime_persist(RELATIME_INTERVAL)
+}
+
 #[cfg(test)]
 static DROP_METADATA_UPDATE_ATTEMPTS: AtomicUsize = AtomicUsize::new(0);
 
 impl Drop for File {
     fn drop(&mut self) {
         let flags = self.access_flags.load(Ordering::Acquire);
-        if needs_metadata_update_on_drop(self.inner.location(), flags) {
-            #[cfg(test)]
-            DROP_METADATA_UPDATE_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
-            let mut update = axfs_ng_vfs::MetadataUpdate::default();
-            if flags & 1 != 0 {
+        if !needs_metadata_update_on_drop(self.inner.location(), flags) {
+            return;
+        }
+        let location = self.inner.location();
+        let mut update = axfs_ng_vfs::MetadataUpdate::default();
+        if flags & 1 != 0 {
+            if should_persist_atime(&self.inner, location.mountpoint().mount_flags()) {
+                crate::diag::note_atime_persist();
                 update.atime = Some(crate::os::wall_time());
+            } else {
+                crate::diag::note_atime_skip();
             }
-            if flags & 2 != 0 {
-                update.mtime = Some(crate::os::wall_time());
-            }
-            if let Err(err) = self.inner.location().update_metadata(update) {
-                warn!("Failed to update file times on drop: {err:?}");
-            }
+        }
+        if flags & 2 != 0 {
+            update.mtime = Some(crate::os::wall_time());
+        }
+        if update.atime.is_none() && update.mtime.is_none() {
+            return;
+        }
+        #[cfg(test)]
+        DROP_METADATA_UPDATE_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
+        if let Err(err) = location.update_metadata(update) {
+            warn!("Failed to update file times on drop: {err:?}");
         }
     }
 }

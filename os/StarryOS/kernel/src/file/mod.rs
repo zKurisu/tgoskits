@@ -816,7 +816,10 @@ pub fn add_file_like(f: Arc<dyn FileLike>, cloexec: bool) -> crate::StarryResult
 
 /// Close a file by `fd`.
 pub fn close_file_like(fd: c_int) -> StarryResult {
-    let removed = current_fd_table().write().remove(fd as usize);
+    let removed = {
+        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_TABLE);
+        current_fd_table().write().remove(fd as usize)
+    };
     if let Some(f) = removed {
         debug!("close_file_like <= count: {}", Arc::strong_count(&f.inner));
         release_locks_on_close(f);
@@ -863,22 +866,43 @@ fn notify_close_write(fd: &FileDescriptor) {
 /// pre-drop wake would leave the waiter to re-check, see the OFD's
 /// `Weak` still alive, and sleep forever.
 pub fn release_locks_on_close(fd: FileDescriptor) {
-    let key = fd.inner.inode_key();
-    let owner = current_user_task().as_thread().proc_data.identity().id();
-    // Linux `filp_flush` runs `f_op->flush` on every fd-closing path (explicit
-    // close, close_range, dup2/dup3 replacement, exec CLOEXEC, process exit),
-    // all of which funnel through here. This is where an mq descriptor drops a
-    // matching `mq_notify` registration (`mqueue_flush_file`).
-    fd.inner.on_close(owner);
-    notify_close_write(&fd);
+    let (key, owner) = {
+        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_ONCLOSE);
+        let key = fd.inner.inode_key();
+        let owner = current_user_task().as_thread().proc_data.identity().id();
+        // Linux `filp_flush` runs `f_op->flush` on every fd-closing path (explicit
+        // close, close_range, dup2/dup3 replacement, exec CLOEXEC, process exit),
+        // all of which funnel through here. This is where an mq descriptor drops a
+        // matching `mq_notify` registration (`mqueue_flush_file`).
+        fd.inner.on_close(owner);
+        notify_close_write(&fd);
+        (key, owner)
+    };
     if let Some(k) = key {
-        crate::syscall::release_inode_posix_locks(owner, k);
-        if !fd_tables_contain_file(&fd.inner) {
-            crate::syscall::release_flock_lock(k, &fd.inner);
+        {
+            let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_LOCKS);
+            crate::syscall::release_inode_posix_locks(owner, k);
+            if !fd_tables_contain_file(&fd.inner) {
+                crate::syscall::release_flock_lock(k, &fd.inner);
+            }
         }
     }
-    drop(fd);
+    {
+        // H5d：把"只减一次引用"和"真正析构文件对象"分开计时。否则一个 10 ms 的
+        // 析构会被笼统地记在 drop(fd) 上，看不出是引用计数还是对象本体。
+        let keep = fd.inner.clone();
+        {
+            let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_DROP);
+            drop(fd);
+        }
+        {
+            let _t =
+                crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_DROP_INNER);
+            drop(keep);
+        }
+    }
     if let Some(k) = key {
+        let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_CLOSE_WAKE);
         crate::syscall::wake_lock_waiters(k);
         crate::syscall::wake_flock_waiters(k);
     }

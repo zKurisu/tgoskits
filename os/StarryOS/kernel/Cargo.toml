@@ -47,6 +47,8 @@ sg2002 = [
     "ax-driver/usb",
     "dep:rdif-pwm",
     "dep:sg2002-tpu",
+    "dep:sg2002-cmdqu",
+    "dep:rdif-ipc",
     "dep:some-serial",
     "dep:sg200x-bsp",
     "dep:tock-registers",
@@ -94,6 +96,7 @@ ax-std = { workspace = true, default-features = false, features = [
 ] }
 rockchip-rga = { workspace = true, optional = true }
 sg2002-tpu = { workspace = true, optional = true }
+sg2002-cmdqu = { workspace = true, optional = true }
 k230-kpu = { workspace = true, optional = true }
 crab-usb.workspace = true
 usb-serial.workspace = true
@@ -103,6 +106,7 @@ axbacktrace = { workspace = true }
 ax-cgroup = { workspace = true }
 axfs-ng-vfs = { workspace = true }
 rdif-block = { workspace = true }
+rdif-ipc = { workspace = true, optional = true }
 rdif-pinctrl = { workspace = true, optional = true }
 rdif-pwm = { workspace = true, optional = true }
 ax-io = { workspace = true }

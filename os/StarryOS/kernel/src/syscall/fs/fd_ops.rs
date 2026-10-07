@@ -478,6 +478,7 @@ pub fn sys_openat(
 ) -> StarryResult<isize> {
     // call tp:trace_sys_enter_openat
     trace_sys_enter_openat(dirfd, path as _, flags as _, mode);
+    let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_SYSCALL_OPEN);
 
     let curr = current;
     let thread = curr.as_thread();
@@ -674,6 +675,7 @@ pub fn sys_creat(
 
 pub fn sys_close(fd: c_int) -> StarryResult<isize> {
     debug!("sys_close <= {fd}");
+    let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_SYSCALL_CLOSE);
     close_file_like(fd)?;
     Ok(0)
 }

@@ -251,7 +251,14 @@ pub(crate) const fn receive_starts_next_edge(consumed: usize, remaining: usize) 
     consumed != 0 && remaining == 0
 }
 
-const DHCP_BOOTSTRAP_TIMEOUT: Duration = Duration::from_secs(2);
+/// 启动阶段等 DHCP 配置的**宽限期**。
+///
+/// 原来这里等满 2 s：有热点且协商快时它提前返回，热点不可达（或关联要 20 s 以上）
+/// 时就白等 2 s —— 实测这 2.1 s 正好落在"用户态标记"之前，直接拖长 TTFI。
+/// 真正需要等 IP 的是用户态（`/root/boot_net_up.sh` 的闸门与重试），内核开关机
+/// 阶段不该替它阻塞：这里只留一个短宽限（已经在线协商的 DHCP 通常 <300 ms 就
+/// 配好），其余情况让启动继续，DHCP 在后台完成。
+const DHCP_BOOTSTRAP_TIMEOUT: Duration = Duration::from_millis(300);
 
 fn get_service() -> ax_sync::MutexGuard<'static, Service> {
     SERVICE
@@ -993,7 +1000,8 @@ fn wait_for_dhcp_bootstrap() {
     if get_control().wait_for_dhcp_configuration(DHCP_BOOTSTRAP_TIMEOUT) {
         return;
     }
-    warn!("DHCP bootstrap timed out");
+    // 不是错误：热点不可达/关联较慢时 DHCP 会在后台补上，用户态自己等 IP。
+    debug!("DHCP bootstrap still pending; continuing boot");
 }
 
 #[cfg(test)]

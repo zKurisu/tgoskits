@@ -10,6 +10,7 @@ impl TaskSystem {
         handle: &ThreadHandle,
     ) {
         let mut state = self.state.lock();
+        let _t_enqueue = crate::diag::scope(crate::diag::STAGE_ENQUEUE);
         let record = state
             .thread_record_mut(handle.id())
             .expect("staged task remains registered");
@@ -54,6 +55,8 @@ impl TaskSystem {
         if completed {
             core.notify_affinity_waiters();
         }
+        drop(_t_enqueue);
+        let _t_finish = crate::diag::scope(crate::diag::STAGE_FINISH_ENQUEUE);
         self.finish_owner_enqueue(
             cpu.as_mut(),
             EnqueueReason::Wake,
@@ -62,10 +65,13 @@ impl TaskSystem {
             Some(commit.effective_policy),
             commit.push_class,
         );
+        drop(_t_finish);
+        let _t_timer = crate::diag::scope(crate::diag::STAGE_TIMER_PROGRAM);
         self.program_local_timer(cpu, SchedulerDeadlineDerivationSource::Placement)
             .unwrap_or_else(|_| {
                 task_runtime::fatal_invariant(0x5354_0001, core.id().as_u64() as usize)
             });
+        drop(_t_timer);
     }
 
     pub(in crate::sched::system::task_system) fn enqueue_owner_thread(

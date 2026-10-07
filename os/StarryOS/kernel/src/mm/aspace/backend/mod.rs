@@ -12,7 +12,7 @@ use ax_memory_addr::{DynPageIter, MemoryAddr, PAGE_SIZE_4K, PhysAddr, VirtAddr, 
 use ax_memory_set::MappingBackend;
 use ax_runtime::hal::{
     mem::{phys_to_virt, virt_to_phys},
-    paging::{MappingFlags, PageTable},
+    paging::{MappingFlags, PageTable, PageTableEntry},
 };
 use scope_local::scope_local;
 
@@ -87,15 +87,20 @@ fn divide_page(size: usize, page_size: usize) -> usize {
 }
 
 pub(crate) fn alloc_frame(zeroed: bool, size: usize) -> StarryResult<PhysAddr> {
+    use crate::mm::fault_attrib::{STAGE_FRAME_ALLOC, STAGE_FRAME_ZERO, add, stage_now};
     let num_pages = size / PAGE_SIZE_4K;
+    let t_alloc = stage_now();
     let vaddr = VirtAddr::from(
         global_allocator()
             .alloc_pages(num_pages, size, UsageKind::VirtMem)
             .map_err(|_| StarryError::NoMemory)?,
     );
+    let t_zero = stage_now();
+    add(STAGE_FRAME_ALLOC, t_zero.saturating_sub(t_alloc));
     if zeroed {
         unsafe { core::ptr::write_bytes(vaddr.as_mut_ptr(), 0, size) };
     }
+    add(STAGE_FRAME_ZERO, stage_now().saturating_sub(t_zero));
     let paddr = virt_to_phys(vaddr);
 
     Ok(paddr)
@@ -121,6 +126,31 @@ fn occupied_leaf_ranges(
     range: VirtAddrRange,
     pt: &PageTable,
 ) -> StarryResult<Vec<(VirtAddr, usize)>> {
+    Ok(occupied_leaf_records(range, pt)?
+        .into_iter()
+        .map(|record| (record.vaddr, record.page_size))
+        .collect())
+}
+
+/// 一次页表遍历拿到的叶子信息。
+///
+/// `occupied_leaf_ranges` 只回虚拟地址和页大小，调用方（如 fork 的 COW
+/// 复制）随后还要为每个叶子再 `pt.query()` 走一遍页表拿 paddr/flags。
+/// 遍历本身已经拿着原始 PTE，`paddr()`/`config()` 是纯位域读取，把这两项
+/// 一起带出来就能省掉每个叶子的第二次三级页表走查。
+#[derive(Clone, Copy, Debug)]
+pub(super) struct OccupiedLeafRecord {
+    pub vaddr: VirtAddr,
+    pub paddr: PhysAddr,
+    #[expect(dead_code, reason = "flags 供后续 fork 复制路径直接复用页表遍历结果")]
+    pub flags: MappingFlags,
+    pub page_size: usize,
+}
+
+fn occupied_leaf_records(
+    range: VirtAddrRange,
+    pt: &PageTable,
+) -> StarryResult<Vec<OccupiedLeafRecord>> {
     if range.is_empty() || !range.start.is_aligned_4k() || !range.end.is_aligned_4k() {
         return Err(StarryError::InvalidInput);
     }
@@ -146,7 +176,13 @@ fn occupied_leaf_ranges(
             return Err(StarryError::OperationNotSupported);
         }
         leaves.try_reserve(1).map_err(|_| StarryError::NoMemory)?;
-        leaves.push((entry.vaddr, leaf_size));
+        let is_directory_level = entry.level > 1;
+        leaves.push(OccupiedLeafRecord {
+            vaddr: entry.vaddr,
+            paddr: entry.pte.paddr(is_directory_level),
+            flags: entry.pte.config(is_directory_level),
+            page_size: leaf_size,
+        });
     }
     Ok(leaves)
 }

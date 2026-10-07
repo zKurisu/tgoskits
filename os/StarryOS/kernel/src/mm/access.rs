@@ -9,7 +9,7 @@ use core::{
 };
 
 use ax_io::prelude::*;
-use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr};
+use ax_memory_addr::{MemoryAddr, PAGE_SIZE_4K, VirtAddr, VirtAddrRange};
 use ax_runtime::hal::{
     cpu::{
         trap::PageFaultFlags,
@@ -169,12 +169,53 @@ impl UserAccess<Faultable> {
         }
 
         let span = self.range.page_span().ok_or(VmError::AccessDenied)?;
+        // 软件"整段已映射"快路径。
+        //
+        // riscv64 的 `user_access_ok_page` 是个恒返回 false 的桩（没有硬件探测
+        // 指令），所以上面那个锁外探测在这里**永远不成立**，于是每一次 uaccess
+        // 都要：取地址空间锁 + 逐页调用完整的缺页事务 —— 即使这一整段早就
+        // 映射好、权限也对。实测这就是"缓存命中的文件读只有 60–68 MB/s
+        // （4 KiB 一页 ~60 µs）"的来源，而它是 exec、模型加载、cat、scp 的
+        // 共同底座。这里补一次廉价的软件检查（一次地址空间锁 + 一次页表走查）：
+        // 整段都在页表里且权限满足就直接返回，省下逐页缺页事务。
+        //
+        // 与上面那个锁外探测一样，这只是"已存在页"的优化判断，不建立任何
+        // 引用；真正的拷贝仍然由异常表兜底。分段缺页（例如刚 mmap 的缓冲区）
+        // 会在这里判定失败，继续走原来的慢路径补齐页面。
+        if aspace_pin.lock().materialized_range_satisfies_access(
+            VirtAddrRange::new(VirtAddr::from(span.start), VirtAddr::from(span.end)),
+            self.intent.mapping_flags(),
+        ) {
+            return Ok(());
+        }
         if !aspace_pin.lock().can_access_range(
             self.range.start,
             self.range.len(),
             self.intent.mapping_flags(),
         ) {
             return Err(VmError::AccessDenied);
+        }
+        // H2：整段一次性物化。
+        //
+        // 原来这里逐页调用 `handle_page_fault_result()`，也就是**每一页**都要走
+        // 一遍完整的缺页事务（plan → prepare → apply → publish）。一次 803 KB 的
+        // `read()` 往"还没触碰过"的用户缓冲里拷，就要付 196 次事务；板上实测
+        // 82.7 µs/页（Linux 同一探针 15.1 µs/页）。
+        //
+        // `AddrSpace::populate_area()` 是 exec 已经在用的整段原语：它内部按 VMA
+        // 分段（所以跨 VMA 也安全），并把整段收进**一次** mutation 事务
+        // （一份 preimage / 一次 receipt / 一次提交）。块的分配与记账也就能按
+        // "连续 run"批量走（见 `alloc_new_anon_run`）。
+        //
+        // 语义保持不变：批量路径成功就跟逐页成功等价；失败（未整段映射、
+        // OOM、后端错误）就回退到下面原有的逐页循环，因此 EFAULT 的判定完全一致。
+        let bulk = aspace_pin.lock().populate_area(
+            VirtAddr::from(span.start),
+            span.end - span.start,
+            self.intent.mapping_flags(),
+        );
+        if bulk.is_ok() {
+            return Ok(());
         }
         let access = PageFaultFlags::USER
             | match self.intent {

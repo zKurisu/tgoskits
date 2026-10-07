@@ -132,6 +132,7 @@ pub fn sys_dummy_fd(current: &UserTaskRef, sysno: Sysno) -> StarryResult<isize> 
 ///
 /// Return the read size if success.
 pub fn sys_read(current: &UserTaskRef, fd: i32, buf: *mut u8, len: usize) -> StarryResult<isize> {
+    let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_SYSCALL_READ);
     debug!("sys_read <= fd: {fd}, buf: {buf:p}, len: {len}");
     Ok(get_file_like(fd)?.read(&mut VmBytesMut::new(current, buf, len))? as _)
 }

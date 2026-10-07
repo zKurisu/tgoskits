@@ -305,6 +305,7 @@ impl CloneArgs {
             PidReservationKind::ProcessLeader
         };
         let reservation = PidReservation::reserve(&target_pid_ns, reservation_kind)?;
+        let mut t_mark = crate::mm::fault_attrib::stage_now();
         let root_tid = TidNumber::from(
             reservation
                 .number_in(&crate::task::ROOT_PID_NS)
@@ -327,6 +328,11 @@ impl CloneArgs {
             .transpose()?;
         let mut clone_transaction = CloneTransaction::new(identity.clone());
         let mut prepared_fork = None;
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_PID,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         let child_kind = if flags.contains(CloneFlags::THREAD) {
             ax_cgroup::CgroupChildKind::Thread
@@ -343,6 +349,11 @@ impl CloneArgs {
             }
         };
         let child_cgroup = cgroup_guard.cgroup();
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_CGROUP,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
         let mut prepared_nsproxy = (!flags.contains(CloneFlags::THREAD)).then(|| {
             let mut nsproxy = old_proc_data.nsproxy.lock().clone_all();
             if flags.contains(CloneFlags::NEWUTS) {
@@ -368,19 +379,29 @@ impl CloneArgs {
             }
             nsproxy
         });
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_NSPROXY,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         let new_proc_data = if flags.contains(CloneFlags::THREAD) {
             old_proc_data.clone()
         } else {
-            let prepared = if flags.contains(CloneFlags::PARENT) {
-                old_proc_data
-                    .proc
-                    .parent()
-                    .ok_or(StarryError::InvalidInput)?
-            } else {
-                old_proc_data.proc.clone()
-            }
-            .prepare_fork(identity.clone())?;
+            let prepared = {
+                let parent_source = if flags.contains(CloneFlags::PARENT) {
+                    old_proc_data
+                        .proc
+                        .parent()
+                        .ok_or(StarryError::InvalidInput)?
+                } else {
+                    old_proc_data.proc.clone()
+                };
+                let _t = crate::mm::fault_attrib::scope(
+                    crate::mm::fault_attrib::STAGE_FORK_PREP_PROC,
+                );
+                parent_source.prepare_fork(identity.clone())?
+            };
             let proc = prepared.process().clone();
             prepared_fork = Some(prepared);
 
@@ -389,6 +410,7 @@ impl CloneArgs {
                     .clone_aspace_user_ref()
                     .map_err(|_| StarryError::InvalidInput)?
             } else {
+                crate::mm::fault_attrib::note_fork();
                 let parent_mm = old_proc_data.pin_aspace()?;
                 let aspace = parent_mm.lock().try_clone()?;
                 copy_from_kernel(&mut aspace.lock())?;
@@ -448,6 +470,11 @@ impl CloneArgs {
 
             proc_data
         };
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_IMAGE,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         let mut scope = Scope::new();
         let current_fd_table = crate::file::current_fd_table();
@@ -488,6 +515,11 @@ impl CloneArgs {
             scope,
         )?;
         thr.set_nice(child_nice);
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_SCOPE,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
         if flags.contains(CloneFlags::CHILD_CLEARTID) {
             thr.set_clear_child_tid(child_tid);
         }
@@ -530,6 +562,11 @@ impl CloneArgs {
             options,
         )
         .map_err(map_task_creation_error)?;
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_PREP_THREAD,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         #[cfg(target_arch = "aarch64")]
         prepared_task
@@ -602,7 +639,17 @@ impl CloneArgs {
 
         cgroup_guard.commit();
         clone_transaction.commit();
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_STAGE_PUB,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
         let task = staged_task.activate();
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_ACTIVATE,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         if trace_clone && needs_vfork_block {
             let _ = crate::task::send_signal_to_thread(
@@ -632,6 +679,10 @@ impl CloneArgs {
         if needs_vfork_block && task.as_thread().wait_vfork_done(current) {
             let _ = super::ptrace::ptrace_notify_vfork_done(parent_pid, parent_tid, &identity);
         }
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_FORK_TASK,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
 
         Ok(parent_visible_tid.get() as _)
     }
@@ -730,6 +781,7 @@ pub fn sys_clone(
         },
     };
 
+    let _t = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_FORK_SYSCALL);
     args.do_clone(current, uctx)
 }
 

@@ -706,7 +706,7 @@ pub(crate) fn send_signal_to_task(
 
     if let Some(sig) = sig {
         let signo = sig.signo();
-        info!("Send signal {signo:?} to thread {}", thread.tid());
+        debug!("Send signal {signo:?} to thread {}", thread.tid());
         continue_process_for_signal(&thread.proc_data, signo);
         // Only wake the target thread when the signal is deliverable
         // (not blocked/not ignored).  Sending a blocked signal via
@@ -753,7 +753,7 @@ pub(crate) fn send_signal_to_process_data(
 
     if let Some(sig) = sig {
         let signo = sig.signo();
-        info!("Send signal {signo:?} to process {}", proc_data.proc.pid());
+        debug!("Send signal {signo:?} to process {}", proc_data.proc.pid());
         let ptrace_stop_tid = (signo == Signo::SIGKILL)
             .then(|| proc_data.selected_ptrace_stop_tid())
             .flatten();
@@ -837,7 +837,7 @@ pub(crate) fn send_signal_to_process_group_ref(
     sig: Option<SignalInfo>,
 ) -> StarryResult<()> {
     if let Some(sig) = sig {
-        info!(
+        debug!(
             "Send signal {:?} to process group {}",
             sig.signo(),
             pg.pgid()

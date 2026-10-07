@@ -19,7 +19,7 @@ use core::{
     sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering},
 };
 
-use ax_memory_addr::{PhysAddr, VirtAddr};
+use ax_memory_addr::{PAGE_SIZE_4K, PhysAddr, VirtAddr};
 use ax_runtime::hal::trap::PageFaultFlags;
 
 use super::{AddrSpace, FaultResult, PageFaultApplyOutcome, TransparentHugePageMode};
@@ -346,6 +346,13 @@ struct MmInner {
     /// state without leaving stale active bits behind.
     active_per_cpu: [AtomicUsize; usize::BITS as usize],
     retire_queued: AtomicBool,
+    /// 顺序缺页预取的游标：上一次已处理缺页窗口末尾的虚址，`usize::MAX`
+    /// 表示还没有前驱。只有「这一页正好是游标那一页」才扩展成整窗，
+    /// 所以跨步与随机访问不会命中预取。
+    fault_around_cursor: AtomicUsize,
+    /// 连续命中的窗口数。窗口大小按它爬坡（8/16/32/…/上限），这样「只顺序
+    /// 碰两页」的程序不会被一次预取掉整窗内存。任何不连续的一次缺页都清零。
+    fault_around_run: AtomicUsize,
     /// Allocated with the MM, like Linux's mm_struct::async_put_work. Token
     /// destruction never needs to allocate a separate deferred-work node.
     work_link: IrqMutex<MmWorkLink>,
@@ -716,6 +723,8 @@ impl MmHandle {
                 active_mask,
                 active_per_cpu: core::array::from_fn(|_| AtomicUsize::new(0)),
                 retire_queued: AtomicBool::new(false),
+                fault_around_cursor: AtomicUsize::new(usize::MAX),
+                fault_around_run: AtomicUsize::new(0),
                 work_link: IrqMutex::new(MmWorkLink::default()),
             }),
             owner: AtomicBool::new(true),
@@ -909,26 +918,76 @@ impl MmPin {
         vaddr: VirtAddr,
         access_flags: PageFaultFlags,
     ) -> FaultResult {
+        use crate::mm::fault_attrib::{
+            STAGE_APPLY, STAGE_FAULT_AROUND, STAGE_MMU_CACHE, STAGE_PLAN, STAGE_PREPARE, STAGE_TLB,
+            add, note_fault, note_faults, stage_now,
+        };
+        let t_plan = stage_now();
         let plan = {
             let aspace = self.0.aspace.lock();
             let mode = self.0.transparent_huge_page_mode();
             match aspace.plan_page_fault(vaddr, access_flags, mode) {
                 Ok(plan) => plan,
-                Err(result) => return result,
+                Err(result) => {
+                    add(STAGE_PLAN, stage_now().saturating_sub(t_plan));
+                    note_fault();
+                    return result;
+                }
             }
         };
+        let t_prepare = stage_now();
+        add(STAGE_PLAN, t_prepare.saturating_sub(t_plan));
+
+        // 顺序缺页预取：严格升序的私有匿名缺页不再只看一页，而是把接下来一整窗
+        // （64 KiB）交给既有的批量 populate 事务。逐页的 plan/apply/事务发布开销
+        // 因此摊到整窗上；窗口的每一步都由 `populate_area` 重新校验，任何不成立
+        // 都退回下面的单页缺页路径，所以判定可以只读不可变的计划。
+        let plan_range = plan.range;
+        let raw_cursor = self.0.fault_around_cursor.load(Ordering::Relaxed);
+        let cursor = (raw_cursor != usize::MAX).then(|| VirtAddr::from_usize(raw_cursor));
+        let run = self.0.fault_around_run.load(Ordering::Relaxed);
+        if let Some(window) = plan.fault_around_window(cursor, run) {
+            let t_around = stage_now();
+            let populated = {
+                let mut aspace = self.0.aspace.lock();
+                aspace.populate_area(window.start, window.size(), plan.access_flags)
+            };
+            let t_around_done = stage_now();
+            add(STAGE_FAULT_AROUND, t_around_done.saturating_sub(t_around));
+            if populated.is_ok() {
+                self.0
+                    .fault_around_cursor
+                    .store(window.end.as_usize(), Ordering::Relaxed);
+                self.0
+                    .fault_around_run
+                    .store(run.saturating_add(1), Ordering::Relaxed);
+                note_faults((window.size() / PAGE_SIZE_4K) as u64);
+                ax_cpu::mmu::update_mmu_cache(vaddr);
+                add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_around_done));
+                return FaultResult::Handled;
+            }
+        }
+
         // Allocation, file I/O and page-cache reservation happen with no
         // address-space metadata lock held. The apply phase below rechecks the
         // exact VMA epoch and PTE preimage before publishing anything.
         let prepared = match AddrSpace::prepare_page_fault(plan) {
             Ok(prepared) => prepared,
-            Err(result) => return result,
+            Err(result) => {
+                add(STAGE_PREPARE, stage_now().saturating_sub(t_prepare));
+                note_fault();
+                return result;
+            }
         };
+        let t_apply = stage_now();
+        add(STAGE_PREPARE, t_apply.saturating_sub(t_prepare));
         let mut attempt = prepared.into_apply_attempt();
         let outcome = {
             let mut aspace = self.0.aspace.lock();
             aspace.apply_prepared_page_fault(&mut attempt)
         };
+        let t_tlb = stage_now();
+        add(STAGE_APPLY, t_tlb.saturating_sub(t_apply));
         let result = match outcome {
             PageFaultApplyOutcome::Complete(result) => result,
             PageFaultApplyOutcome::Cancel(result) => {
@@ -973,9 +1032,21 @@ impl MmPin {
                 }
             }
         };
+        let t_cache = stage_now();
+        add(STAGE_TLB, t_cache.saturating_sub(t_tlb));
         if matches!(result, FaultResult::Handled) {
+            // 单页缺页也推进游标：顺序访问流的第二页因此就能命中预取，
+            // 而跨步访问永远不会让游标对上。
+            self.0
+                .fault_around_cursor
+                .store(plan_range.end.as_usize(), Ordering::Relaxed);
+            // 走到了单页路径，说明这一步不是「接在上一窗口末尾」，顺序流断了，
+            // 窗口从 8 页重新爬坡。
+            self.0.fault_around_run.store(0, Ordering::Relaxed);
             ax_cpu::mmu::update_mmu_cache(vaddr);
         }
+        add(STAGE_MMU_CACHE, stage_now().saturating_sub(t_cache));
+        note_fault();
         result
     }
 
@@ -1246,6 +1317,19 @@ static REPAIR_QUEUE: IrqMutex<MmWorkQueue> = IrqMutex::new(MmWorkQueue::new());
 static RECLAIMER_STARTED: AtomicBool = AtomicBool::new(false);
 static REPAIR_RETRY_REQUESTED: AtomicBool = AtomicBool::new(false);
 
+/// Diagnostic snapshot of the MM lifecycle queues.
+///
+/// `retire` is the queue the background reclaimer drains (16 per 10 ms pass);
+/// `repair` holds address spaces whose reclaim *failed* — they keep every page
+/// they mapped until an explicit repair retry is requested, so a growing
+/// `repair` length is exactly "the kernel is leaking whole address spaces".
+/// Exposed through `/proc/fault_attrib` to make memory-leak reports one-liners.
+pub fn mm_queue_lengths() -> (usize, usize, bool) {
+    let retire = RETIRE_QUEUE.lock().len();
+    let repair = REPAIR_QUEUE.lock().len();
+    (retire, repair, REPAIR_RETRY_REQUESTED.load(Ordering::Relaxed))
+}
+
 struct CoalescedReclaimRequest {
     pending: AtomicBool,
 }
@@ -1510,7 +1594,13 @@ impl RetirePermit {
                 return Err(ReclaimError::NotRetired);
             }
         }
-        let result = inner.aspace.lock().try_reclaim_contents();
+        let result = {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_EXIT_ASPACE,
+            );
+            crate::mm::fault_attrib::note_exit_aspace();
+            inner.aspace.lock().try_reclaim_contents()
+        };
         match result {
             Ok(()) => {
                 {

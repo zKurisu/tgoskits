@@ -1,0 +1,30 @@
+//! SG2002（Cvitek）大小核命令队列（command queue，简称 cmdqu）硬件层。
+//!
+//! 本 crate 只包含与操作系统无关的部分：8 字节信封的编解码、mailbox 寄存器
+//! 与 8 个槽位的读写、以及门铃/应答序列。文件描述符、ioctl、等待队列等 OS
+//! 粘合代码由使用它的内核提供（StarryOS 侧见
+//! `os/StarryOS/kernel/src/pseudofs/dev/cmdqu.rs`）。
+//!
+//! 调用方必须先把这个寄存器窗口映射成**非缓存**虚拟地址再传进来：该窗口被
+//! 两个核共享，按可缓存映射会让写停留在缓存里，表现为"消息没人取"。
+//!
+//! 提供两层内容：
+//! - 硬件细节：[`mailbox`]（寄存器与槽位）、[`protocol`]（8 字节信封）、[`shm`]（共享区布局）、
+//!   [`core_ctl`]（对端核的复位与启动控制寄存器）；
+//! - 通用能力：`rdif_ipc::Interface` 的后端实现 [`ipc::Sg2002Ipc`]——发信、把硬件里已到达
+//!   的消息搬进定长队列、报告对端状态。操作系统的等待/唤醒语义不在这里，见 `ipc.rs` 头部说明。
+
+#![cfg_attr(not(test), no_std)]
+
+pub mod core_ctl;
+pub mod ipc;
+pub mod mailbox;
+pub mod protocol;
+pub mod queue;
+pub mod shm;
+
+pub use core_ctl::{C906L_RUN_ADDR, ChipReset, CoreCtl, CoreCtlSnapshot, RTOS_MAGIC_CODE};
+pub use ipc::{FLAG_BLOCK, RX_QUEUE_DEPTH, Sg2002Ipc};
+pub use mailbox::{Mailbox, MailboxError};
+pub use protocol::{EncodeError, Envelope, IpId, SysCmdId};
+pub use queue::EnvelopeQueue;

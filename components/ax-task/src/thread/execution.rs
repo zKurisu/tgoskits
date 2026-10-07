@@ -73,16 +73,23 @@ impl StagedThread {
     }
     /// Commits first activation after all external identity publication is complete.
     pub fn activate(mut self) -> ThreadHandle {
+        let _t_activate = crate::diag::scope(crate::diag::STAGE_ENTER_GUARD);
         let mut irq = crate::runtime::context::RuntimeIrqGuard::enter();
         let mut cpu = crate::runtime::context::runtime_current_cpu_mut(&mut irq)
             .expect("activation requires an installed owner CPU");
+        drop(_t_activate);
         let handle = self.handle.as_ref().expect("unconsumed stage");
         runtime_task_system()
             .expect("staged system remains installed")
             .activate_staged_thread(cpu.as_mut(), handle);
         // Until admission commits, Drop must retain cancellation ownership.
         // Consume it before dropping IRQ/preemption guards, which may schedule.
-        self.handle.take().expect("committed stage")
+        let handle = self.handle.take().expect("committed stage");
+        drop(cpu);
+        let _t_guard_drop = crate::diag::scope(crate::diag::STAGE_GUARD_DROP);
+        drop(irq);
+        drop(_t_guard_drop);
+        handle
     }
 }
 impl Drop for StagedThread {

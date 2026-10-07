@@ -1,0 +1,14 @@
+[package]
+authors.workspace = true
+categories = ["embedded", "no-std"]
+description = "Driver Interface for inter-processor (cross-core) message channels."
+edition.workspace = true
+keywords = ["os", "driver", "ipc", "mailbox"]
+license.workspace = true
+name = "rdif-ipc"
+repository.workspace = true
+version = "0.1.0"
+
+[dependencies]
+rdif-base.workspace = true
+thiserror = { version = "2", default-features = false }

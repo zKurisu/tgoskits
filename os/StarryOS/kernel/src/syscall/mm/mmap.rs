@@ -202,6 +202,12 @@ pub fn sys_mmap(
     let Some(permission_flags) = MmapProt::from_bits(prot) else {
         return Err(StarryError::InvalidInput);
     };
+    // 新映射可能是可执行代码（文件映射 / JIT）：内核随时可能通过直接映射把代码
+    // 写进这些页，用户 I-cache 需要在下一次进用户态时刷一次。保守起见只要带
+    // PROT_EXEC 就标脏（失败路径多标一次无副作用）。
+    if permission_flags.contains(MmapProt::EXEC) {
+        ax_cpu::user_cache::mark_stale();
+    }
     let map_flags = match MmapFlags::from_bits(flags) {
         Some(flags) => flags,
         None => {
@@ -388,7 +394,7 @@ pub fn sys_mmap(
             let buffer_len = checked_align_up(range.size(), page_size)?;
             let map_length = checked_align_up(length, page_size)?;
             let reported_mapping_flags = reported_mapping_flags_from_prot(permission_flags);
-            info!(
+            debug!(
                 "Ion buffer mmap: phys_addr=0x{:x}, buffer_size={}, requested_length={}, \
                  map_length={}",
                 range.start.as_usize(),
@@ -438,7 +444,7 @@ pub fn sys_mmap(
                 MappingPublication::mmap(replace_existing, lock_mode, mapping_memlock_limit),
             )?;
             drop(aspace);
-            info!(
+            debug!(
                 "Ion buffer mmap success: vaddr=0x{:x}, length={}",
                 start.as_usize(),
                 map_length
@@ -829,6 +835,10 @@ pub fn sys_mprotect(
 
     if permission_flags.contains(MmapProt::GROWDOWN | MmapProt::GROWSUP) {
         return Err(StarryError::InvalidInput);
+    }
+    // 把已有页改成可执行（含 mprotect 出来的 JIT/代码页）后，I-cache 要重刷。
+    if permission_flags.contains(MmapProt::EXEC) {
+        ax_cpu::user_cache::mark_stale();
     }
 
     // man 2 mprotect: addr is not a multiple of page size → EINVAL.

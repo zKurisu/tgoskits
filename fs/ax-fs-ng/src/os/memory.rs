@@ -11,6 +11,13 @@ pub trait FsPageProvider: Send + Sync {
     fn alloc_page(&self) -> VfsResult<FsPage>;
     fn dealloc_page(&self, page: FsPage);
     fn virt_to_phys(&self, vaddr: usize) -> Option<usize>;
+    /// Returns the kernel mapping of a page-cache frame's physical address.
+    ///
+    /// The cached read path uses this to read a **pinned** cache page without
+    /// copying it into a scratch frame first (see `CachedFile::read_at`): the
+    /// pin keeps the frame alive, and the returned alias is the kernel direct
+    /// map, which is valid for the lifetime of that frame.
+    fn phys_to_virt(&self, paddr: usize) -> Option<usize>;
 }
 
 #[derive(Debug)]
@@ -72,6 +79,12 @@ pub fn virt_to_phys(vaddr: usize) -> Option<usize> {
     PAGE_PROVIDER
         .get()
         .and_then(|provider| provider.virt_to_phys(vaddr))
+}
+
+pub fn phys_to_virt(paddr: usize) -> Option<usize> {
+    PAGE_PROVIDER
+        .get()
+        .and_then(|provider| provider.phys_to_virt(paddr))
 }
 
 pub fn has_page_provider() -> bool {
@@ -151,6 +164,11 @@ pub mod test_support {
             self.translate
                 .load(Ordering::Acquire)
                 .then_some(vaddr + 0x1000_0000)
+        }
+
+        fn phys_to_virt(&self, paddr: usize) -> Option<usize> {
+            // The model only needs a stable kernel alias: undo the same bias.
+            paddr.checked_sub(0x1000_0000)
         }
     }
 

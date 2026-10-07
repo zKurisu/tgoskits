@@ -29,7 +29,8 @@ use super::{
     },
     FaultFallback, FaultMaterialization, FaultPteSnapshot, MappingExecution, MappingFileInfo,
     MappingOperation, PopulateRequest, PreparedPteOwner, ProviderPublication, PteMaterialization,
-    RssKind, alloc_frame, occupied_leaf_ranges, pages_in, validate_occupied_leaf_range,
+    RssKind, alloc_frame, occupied_leaf_ranges, occupied_leaf_records, pages_in,
+    validate_occupied_leaf_range,
 };
 use crate::{StarryError, StarryResult, sync::IrqMutex};
 
@@ -161,6 +162,15 @@ impl CowPageIndex {
     /// observes metadata; the caller must allocate the returned reservation
     /// after releasing the index lock and revalidate during apply.
     fn insert_reservation_capacity(&self) -> Result<usize, StarryError> {
+        // Fast path: with spare capacity the insert cannot allocate, so no
+        // rebuild is needed and there is no reason to walk the index counting
+        // live entries.  That walk is O(n) *per insert* and each entry costs an
+        // atomic strong_count read (usually a cache miss); it dominated the
+        // first-touch fault cost on SG2002.  Dead entries are pruned on the
+        // growth path below instead of on every insert.
+        if self.pages.len() < self.pages.capacity() {
+            return Ok(0);
+        }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
         cow_page_index_reservation_capacity(live, self.pages.len(), self.pages.capacity())
     }
@@ -186,6 +196,11 @@ impl CowPageIndex {
         &mut self,
         reservation: &mut CowPageIndexReservation,
     ) -> Result<(), CowPageIndexInsertError> {
+        // Spare capacity means `Vec::insert` below cannot allocate; skip the
+        // live-entry scan (and the compaction it would drive).
+        if self.pages.len() < self.pages.capacity() {
+            return Ok(());
+        }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
         let required = live
             .checked_add(1)
@@ -217,6 +232,10 @@ impl CowPageIndex {
         page: &Arc<PageObject>,
         reservation: &mut CowPageIndexReservation,
     ) -> Result<(), CowPageIndexInsertError> {
+        use crate::mm::fault_attrib::{
+            STAGE_PEND_OVERLAP, STAGE_PEND_SEARCH, STAGE_PEND_STORE, add, note_insert_position,
+            stage_now,
+        };
         if page.mapping_refs() != 0 {
             return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
         }
@@ -229,29 +248,39 @@ impl CowPageIndex {
             .checked_add(page.frame().size())
             .ok_or_else(|| CowPageIndexInsertError::Invalid(StarryError::BadState))?;
 
+        let t_search = stage_now();
         self.rebuild_for_insert(reservation)?;
         let position = self
             .pages
             .partition_point(|entry| entry.paddr.as_usize() < start);
-        let predecessor_overlaps = if position == 0 {
-            false
-        } else {
-            self.pages[position - 1]
-                .end()
-                .is_none_or(|existing_end| start < existing_end)
-        };
+        add(STAGE_PEND_SEARCH, stage_now().saturating_sub(t_search));
+        let t_overlap = stage_now();
+        // Only *live* entries still own a frame.  Dead entries (published
+        // owners whose page object was dropped) are pruned lazily on the growth
+        // path, so they must not participate in the overlap check here —
+        // otherwise a reused physical frame would be rejected as a conflict.
+        let predecessor_overlaps = self.pages[..position]
+            .iter()
+            .rev()
+            .find(|entry| entry.is_live())
+            .is_some_and(|entry| entry.end().is_none_or(|existing_end| start < existing_end));
         let successor_overlaps = self
             .pages
-            .get(position)
+            .get(position..)
+            .and_then(|rest| rest.iter().find(|entry| entry.is_live()))
             .is_some_and(|entry| entry.paddr.as_usize() < end);
         if predecessor_overlaps || successor_overlaps {
             return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
         }
+        add(STAGE_PEND_OVERLAP, stage_now().saturating_sub(t_overlap));
 
+        note_insert_position(position, self.pages.len());
+        let t_store = stage_now();
         // `rebuild_for_insert` proved spare capacity, so this shifts entries
         // but cannot allocate while the IRQ-saving guard is held.
         self.pages
             .insert(position, CowPageIndexEntry::pending(page));
+        add(STAGE_PEND_STORE, stage_now().saturating_sub(t_store));
         Ok(())
     }
 
@@ -530,6 +559,15 @@ pub struct CowBackend {
     shared: bool,
 }
 
+/// 匿名批量缺页时一次尝试分配的**连续物理块**上限（4 KiB 页）。
+///
+/// 逐页分配要为每一页各做一次页帧分配、一次 `Arc<FrameAllocation>` 和一次
+/// 4 KiB 清零；顺序缺页预取的窗口一次就是 64 页，这三笔固定开销直接乘 64。
+/// 整块分配把它们并成一次，而且窗口内的 paddr 变成连续递增，COW 页索引的
+/// 插入也从「插到中间」变成「追加」。256 KiB 是这块板的页分配器容易满足的
+/// 档位；拿不到连续块时逐页退回，行为不变。
+const ANON_BLOCK_PAGES: usize = 64;
+
 impl Clone for CowBackend {
     fn clone(&self) -> Self {
         Self {
@@ -704,6 +742,24 @@ impl CowBackend {
     }
 
     fn insert_pending_page(&self, page: &Arc<PageObject>) -> StarryResult {
+        use crate::mm::fault_attrib::{STAGE_PEND_LOCK, add, stage_now};
+        // 快路径：有富余容量时插入不会分配，整段只需要一次 IRQ 关-开。原来的
+        // 写法无论是否需要重建，都先加一次锁问容量、再加一次锁插入；而缺页
+        // 预取一次要连插 16 页，这笔固定开销直接乘 16。
+        {
+            let t_lock = stage_now();
+            let mut pages = self.pages.lock();
+            let capacity = pages.insert_reservation_capacity()?;
+            add(STAGE_PEND_LOCK, stage_now().saturating_sub(t_lock));
+            if capacity == 0 {
+                let mut reservation = CowPageIndexReservation::try_with_capacity(0)?;
+                match pages.insert_pending_reserved(page, &mut reservation) {
+                    Ok(()) => return Ok(()),
+                    Err(CowPageIndexInsertError::StaleReservation) => {}
+                    Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                }
+            }
+        }
         loop {
             let capacity = {
                 let pages = self.pages.lock();
@@ -744,18 +800,26 @@ impl CowBackend {
             return Err(StarryError::InvalidInput);
         }
         let frame = alloc_frame(zeroed, size)?;
-        let page = PageObject::new_present_with_resident_kind(
-            PageId::allocate(),
-            // SAFETY: alloc_frame just returned this unique allocation with
-            // the same size, and the lease takes over its only release duty.
-            unsafe { FrameLease::owned(frame, size) },
-            Some(resident_kind),
-        );
+        use crate::mm::fault_attrib::{
+            STAGE_PAGE_OBJECT, STAGE_PENDING_INSERT, STAGE_PO_LEASE, STAGE_PO_NEW, add, stage_now,
+        };
+        let t_page_object = stage_now();
+        // SAFETY: alloc_frame just returned this unique allocation with the
+        // same size, and the lease takes over its only release duty.
+        let lease = unsafe { FrameLease::owned(frame, size) };
+        let t_new = stage_now();
+        add(STAGE_PO_LEASE, t_new.saturating_sub(t_page_object));
+        let page =
+            PageObject::new_present_with_resident_kind(PageId::allocate(), lease, Some(resident_kind));
+        let t_insert = stage_now();
+        add(STAGE_PO_NEW, t_insert.saturating_sub(t_new));
+        add(STAGE_PAGE_OBJECT, t_insert.saturating_sub(t_page_object));
         // The source-local index owns this page only while the PTE/slot pair
         // is prepared. The returned typed materialization publishes the slot
         // before downgrading this entry to Weak, so there is no second mapping
         // owner.
         self.insert_pending_page(&page)?;
+        add(STAGE_PENDING_INSERT, stage_now().saturating_sub(t_insert));
         Ok(page)
     }
 
@@ -786,6 +850,135 @@ impl CowBackend {
             return Err(err.into());
         }
         Ok(page)
+    }
+
+    /// 一段连续的匿名 4 KiB 新页：优先**整块**分配物理帧再切成子租约。
+    ///
+    /// `addrs` 必须是一段连续且当前未映射的虚拟地址。整块分配失败就退回逐页
+    /// 分配（原来的行为）。整块路径下每个 PageObject 拿到的是同一块分配的
+    /// 4 KiB 子租约（`FrameLease::sublease`），最后一次子租约释放时才把整块
+    /// 还给页分配器 —— 与 THP 把 2 MiB 大页切成 4 KiB 子页用的是同一套机制。
+    fn alloc_new_anon_run(
+        &self,
+        addrs: &[VirtAddr],
+        flags: MappingFlags,
+        access_flags: MappingFlags,
+        pt: &mut PageTable,
+        materialization: &mut PteMaterialization,
+    ) -> StarryResult<()> {
+        let kind = self.rss_kind_for_fault(access_flags);
+        let pte_flags = self.pte_flags_for_fault_in(flags, access_flags);
+        let leaf_size = PAGE_SIZE_4K;
+
+        // 页分配器长时间运行后不一定给得出 64 页的连续块，所以按「块大小阶梯」
+        // 逐级退让：64 → 32 → 16 → 8 → 4 → 2 页，最后才是逐页。拿不到大块
+        // 也不影响正确性，只是退回原来的每页分配。
+        let mut start = 0;
+        while start < addrs.len() {
+            let remaining = addrs.len() - start;
+            let mut size = ANON_BLOCK_PAGES.min(remaining);
+            let mut block = None;
+            while size >= 2 {
+                let total = size
+                    .checked_mul(leaf_size)
+                    .ok_or(StarryError::BadState)?;
+                if let Ok(base) = alloc_frame(true, total) {
+                    // SAFETY: alloc_frame 刚返回这块唯一的分配，大小一致，租约
+                    // 接管它的唯一释放职责。
+                    block = Some((size, unsafe { FrameLease::owned(base, total) }));
+                    break;
+                }
+                size /= 2;
+            }
+            match block {
+                Some((size, block)) => {
+                    crate::mm::fault_attrib::note_anon_block(size as u64);
+                    self.install_anon_block(
+                        &addrs[start..start + size],
+                        &block,
+                        leaf_size,
+                        kind,
+                        pte_flags,
+                        pt,
+                        materialization,
+                    )?;
+                    start += size;
+                }
+                None => {
+                    crate::mm::fault_attrib::note_anon_block_fallback(1);
+                    let addr = addrs[start];
+                    let page = self.alloc_new_at_sized(addr, leaf_size, flags, access_flags, pt)?;
+                    materialization.push(PreparedPteOwner::installed(
+                        addr,
+                        page.frame().paddr(),
+                        leaf_size,
+                        page.clone(),
+                        page.resident_kind(),
+                        ProviderPublication::Pending,
+                    ));
+                    materialization.increment_satisfied(1)?;
+                    start += 1;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 把一整块子租约装成 PageObject 并映到 PTE 上；失败则整段回滚。
+    #[allow(clippy::too_many_arguments)]
+    fn install_anon_block(
+        &self,
+        addrs: &[VirtAddr],
+        block: &FrameLease,
+        leaf_size: usize,
+        kind: RssKind,
+        pte_flags: MappingFlags,
+        pt: &mut PageTable,
+        materialization: &mut PteMaterialization,
+    ) -> StarryResult<()> {
+        let mut mapped: Vec<(VirtAddr, Arc<PageObject>)> = Vec::new();
+        mapped
+            .try_reserve(addrs.len())
+            .map_err(|_| StarryError::NoMemory)?;
+        // 逐页登记到 COW 页索引：子租约保证窗口内的 paddr 连续递增，插入位置
+        // 集中在尾部，搬移量远小于散列分配。
+        for (index, &addr) in addrs.iter().enumerate() {
+            let page = index
+                .checked_mul(leaf_size)
+                .and_then(|offset| block.sublease(offset, leaf_size))
+                .map(|lease| {
+                    PageObject::new_present_with_resident_kind(PageId::allocate(), lease, Some(kind))
+                })
+                .ok_or(StarryError::BadState)
+                .and_then(|page| self.insert_pending_page(&page).map(|()| page));
+            let page = match page {
+                Ok(page) => page,
+                Err(error) => {
+                    self.rollback_new_pages(&mut mapped, pt);
+                    return Err(error);
+                }
+            };
+            let frame = page.frame().paddr();
+            page.prepare_executable_mapping(frame, leaf_size, pte_flags);
+            if let Err(err) = pt.map_page(addr, frame, leaf_size, pte_flags) {
+                self.discard_pending_page(&page);
+                self.rollback_new_pages(&mut mapped, pt);
+                return Err(err.into());
+            }
+            mapped.push((addr, page));
+        }
+        for (addr, page) in mapped {
+            materialization.push(PreparedPteOwner::installed(
+                addr,
+                page.frame().paddr(),
+                leaf_size,
+                page.clone(),
+                page.resident_kind(),
+                ProviderPublication::Pending,
+            ));
+            materialization.increment_satisfied(1)?;
+        }
+        Ok(())
     }
 
     /// Allocates and fills one private fault page without publishing a PTE.
@@ -1543,10 +1736,10 @@ impl MappingExecution for CowBackend {
                             access_flags,
                             pt,
                         )?)?;
-                    } else {
-                        let (installed_addr, installed_size, page) = if transparent_huge_fault {
-                            let fault_address =
-                                request.fault_address().ok_or(StarryError::BadState)?;
+                    } else if transparent_huge_fault {
+                        let fault_address =
+                            request.fault_address().ok_or(StarryError::BadState)?;
+                        let (installed_addr, installed_size, page) =
                             allocate_transparent_fault_with(
                                 addr,
                                 fault_address,
@@ -1560,17 +1753,7 @@ impl MappingExecution for CowBackend {
                                         pt,
                                     )
                                 },
-                            )?
-                        } else {
-                            let page = self.alloc_new_at_sized(
-                                addr,
-                                preferred_leaf_size,
-                                flags,
-                                access_flags,
-                                pt,
                             )?;
-                            (addr, preferred_leaf_size, page)
-                        };
                         materialization.push(PreparedPteOwner::installed(
                             installed_addr,
                             page.frame().paddr(),
@@ -1581,6 +1764,24 @@ impl MappingExecution for CowBackend {
                         ));
                         materialization.increment_satisfied(1)?;
                         i += 1;
+                    } else {
+                        // 匿名 4 KiB：把「连续未映射」的一段（最多 ANON_BLOCK_PAGES
+                        // 页）交给整块分配，见 `alloc_new_anon_run`。剩下的页仍由
+                        // 外层循环继续处理。
+                        let run_start = i;
+                        while i < addrs.len()
+                            && i - run_start < ANON_BLOCK_PAGES
+                            && matches!(pt.query(addrs[i]), Err(PagingError::NotMapped))
+                        {
+                            i += 1;
+                        }
+                        self.alloc_new_anon_run(
+                            &addrs[run_start..i],
+                            flags,
+                            access_flags,
+                            pt,
+                            &mut materialization,
+                        )?;
                     }
                 }
                 Err(_) => return Err(StarryError::BadAddress),
@@ -1597,15 +1798,23 @@ impl MappingExecution for CowBackend {
         new_pt: &mut PageTable,
     ) -> StarryResult<(MappingOperation, PteMaterialization)> {
         let cow_flags = flags - MappingFlags::WRITE;
-        let leaves = occupied_leaf_ranges(range, old_pt)?;
+        let leaves = {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_FORK_CLONE_WALK,
+            );
+            occupied_leaf_records(range, old_pt)?
+        };
         let capacity = leaves.len();
         let mut transaction = CowChildCloneTransaction::new(new_pt, capacity)?;
         let mut materialization = PteMaterialization::with_capacity(capacity)?;
-        for (vaddr, page_size) in leaves {
-            let (paddr, _, installed_size) = old_pt.query(vaddr)?;
-            if installed_size != page_size {
-                return Err(StarryError::BadState);
-            }
+        for leaf in leaves {
+            use crate::mm::fault_attrib::{
+                STAGE_FORK_CLONE_LEAF, STAGE_FORK_CLONE_PTE, add, stage_now,
+            };
+            let vaddr = leaf.vaddr;
+            let paddr = leaf.paddr;
+            let page_size = leaf.page_size;
+            let t_leaf = stage_now();
             let page = self
                 .page_object_for_frame(paddr)
                 .ok_or(StarryError::BadState)?;
@@ -1613,10 +1822,13 @@ impl MappingExecution for CowBackend {
                 return Err(StarryError::BadState);
             }
             page.prepare_executable_mapping(paddr, page_size, cow_flags);
-            if let Err(err) = transaction
+            add(STAGE_FORK_CLONE_LEAF, stage_now().saturating_sub(t_leaf));
+            let t_pte = stage_now();
+            let mapped = transaction
                 .page_table_mut()
-                .map_page(vaddr, paddr, page_size, cow_flags)
-            {
+                .map_page(vaddr, paddr, page_size, cow_flags);
+            add(STAGE_FORK_CLONE_PTE, stage_now().saturating_sub(t_pte));
+            if let Err(err) = mapped {
                 return Err(err.into());
             }
             // The parent's slot is the strong owner until the unpublished

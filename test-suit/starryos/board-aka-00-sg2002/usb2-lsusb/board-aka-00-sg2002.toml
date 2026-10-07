@@ -20,5 +20,7 @@ timeout = 600
 [[shell_check_steps]]
 shell_prefix = "root@starry:"
 # The AKA-00 board lab may attach either a Genesys USB2 hub or the Realtek UVC camera.
-shell_cmd = "sleep 5; echo STARRY_AKA_USB2_LSUSB_BEGIN; lsusb > /tmp/starry-aka-usb2-lsusb.out; cat /tmp/starry-aka-usb2-lsusb.out; if ! grep -Eq 'ID 1d6b:0002' /tmp/starry-aka-usb2-lsusb.out; then echo STARRY_AKA_USB2_ROOT_HUB_MISSING; elif ! grep -Eq 'ID (05e3:06(10|20)|0bda:5856)' /tmp/starry-aka-usb2-lsusb.out; then echo STARRY_AKA_USB2_DEVICE_MISSING; else echo STARRY_AKA_USB2_LSUSB_OK; fi"
+# The AKA-00 board lab may attach either a Genesys USB2 hub, the Realtek UVC camera,
+# or (the one actually on the car) the `1e45:8022` UVC camera.
+shell_cmd = "sleep 5; echo STARRY_AKA_USB2_LSUSB_BEGIN; lsusb > /tmp/starry-aka-usb2-lsusb.out; cat /tmp/starry-aka-usb2-lsusb.out; if ! grep -Eq 'ID 1d6b:0002' /tmp/starry-aka-usb2-lsusb.out; then echo STARRY_AKA_USB2_ROOT_HUB_MISSING; elif ! grep -Eq 'ID (05e3:06(10|20)|0bda:5856|1e45:8022)' /tmp/starry-aka-usb2-lsusb.out; then echo STARRY_AKA_USB2_DEVICE_MISSING; else echo STARRY_AKA_USB2_LSUSB_OK; fi"
 success_regex = ["(?m)^(?:\\x1b\\[[0-9;]*m)*STARRY_AKA_USB2_LSUSB_OK\\s*$"]

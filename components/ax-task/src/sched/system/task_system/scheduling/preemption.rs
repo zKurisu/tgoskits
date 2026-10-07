@@ -182,7 +182,10 @@ impl TaskSystem {
         // endpoint while this scheduling transaction and switch tail are live.
         let remote = unsafe { cpu.as_ref().get_ref().remote_for_owner() };
         let initial_request = remote.claim_scheduler_request(request_scope);
-        self.drain_owner_work(cpu.as_mut())?;
+        {
+            let _t = crate::diag::scope(crate::diag::STAGE_SCHED_DRAIN);
+            self.drain_owner_work(cpu.as_mut())?;
+        }
         if validate_owner {
             self.ensure_owner_cpu_registration_online(&cpu)?;
         }
@@ -193,13 +196,19 @@ impl TaskSystem {
         // SAFETY: propagated from the selected entry contract.
         let mut transaction = unsafe { rq_entry.begin(self, remote) };
         transaction.adopt_scheduler_request(initial_request);
-        if transaction.current().is_some() {
-            let _settled = transaction.settle_current(0);
+        {
+            let _t = crate::diag::scope(crate::diag::STAGE_SCHED_TXN1);
+            if transaction.current().is_some() {
+                let _settled = transaction.settle_current(0);
+            }
         }
         // This claim is the decision boundary: requests published by current
         // accounting participate in this pass; later sticky publications stay
         // set for the scheduler loop's final recheck.
-        let mut request = transaction.merge_scheduler_request(request_scope);
+        let mut request = {
+            let _t = crate::diag::scope(crate::diag::STAGE_SCHED_REQUEST);
+            transaction.merge_scheduler_request(request_scope)
+        };
         if request_scope == SchedulerRequestScope::Immediate
             && request.immediate_preempt_requested()
         {
@@ -229,6 +238,7 @@ impl TaskSystem {
         if !switch_requested
             || self.lone_realtime_preemption_keeps_dispatch(&mut transaction, previous_core_hint)
         {
+            let _t = crate::diag::scope(crate::diag::STAGE_SCHED_NOOP);
             let deadline_rq_observation =
                 transaction.scheduler_deadline_rq_observation(cpu.as_ref().get_ref());
             return self.finish_owner_no_switch(
@@ -239,9 +249,12 @@ impl TaskSystem {
                 OwnerSchedulerDeadline::Reevaluate(deadline_rq_observation),
             );
         }
-        if let Some(schedule_out) =
+        let schedule_out = {
+            let _t = crate::diag::scope(crate::diag::STAGE_SCHED_OUT);
             self.prepare_owner_rq_schedule_out(&transaction, previous_core_hint)
-        {
+        };
+        if let Some(schedule_out) = schedule_out {
+            let _t_out = crate::diag::scope(crate::diag::STAGE_SCHED_OUT);
             let now_ns = transaction.clock().wall().as_nanos();
             let dispatch_commit = self.sync_owner_settled_current_dispatch_in_rq(&mut transaction);
             let OwnerRqScheduledOut {
@@ -274,6 +287,7 @@ impl TaskSystem {
         // Publications in this gap leave their sticky bits set and are merged
         // by the second transaction instead of being lost.
         transaction.commit();
+        let _t_pass2 = crate::diag::scope(crate::diag::STAGE_SCHED_PASS2);
 
         // A real switch follows the established p->pi_lock -> rq order. The
         // second rq pass resamples its clock and revalidates current rather

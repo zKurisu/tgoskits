@@ -299,7 +299,24 @@ impl AicDevice {
                         );
                         continue;
                     }
-                    let indication = parse_connect_indication(&payload)?;
+                    let indication = match parse_connect_indication(&payload) {
+                        Ok(indication) => indication,
+                        Err(error) => {
+                            // A non-zero `SM_CONNECT_IND` status is an
+                            // association failure (the firmware scanned and
+                            // could not join), not a device fault.  Letting it
+                            // reach `fail()` marked the device `Failed` for the
+                            // rest of the boot, so every later control request
+                            // returned `Busy` and Wi-Fi stayed dead until a
+                            // power cycle.  Fail only the control transaction
+                            // and leave the device usable for a retry.
+                            self.lifecycle.control = None;
+                            self.data.link.clear_peer();
+                            self.data.clear_internal_tx();
+                            self.data.push_event(AicEvent::ControlFailed(error))?;
+                            continue;
+                        }
+                    };
                     log::info!(
                         "[wifi] association complete; learned firmware vif={} station={}",
                         indication.interface_index,
@@ -721,7 +738,7 @@ mod tests {
     }
 
     #[test]
-    fn active_connect_rejection_is_not_discarded_as_a_startup_indication() {
+    fn active_connect_rejection_fails_only_the_control_transaction() {
         let mut device = ready_transmitter(ChipVariant::Aic8800DC, 60);
         let mut control = super::super::control::build(
             ControlRequest::Connect {
@@ -745,10 +762,23 @@ mod tests {
                 RxPath::Command,
                 SdioResponse::Data(indication_fifo(SM_CONNECT_IND, &payload)),
             ),
-            Err(AicError::FirmwareRejected {
+            Ok(())
+        );
+        assert!(
+            device.lifecycle.control.is_none(),
+            "a rejected association clears only the control transaction"
+        );
+        assert_eq!(
+            device.lifecycle.state,
+            AicState::Ready,
+            "a rejected association must not fail the device"
+        );
+        assert_eq!(
+            device.data.pop_event(),
+            Some(AicEvent::ControlFailed(AicError::FirmwareRejected {
                 message_id: SM_CONNECT_IND,
                 status: 1
-            })
+            }))
         );
     }
 

@@ -1,0 +1,184 @@
+//! H5b 用的只读分段计时（零行为改变）。
+//!
+//! 板子上 ext4 的 `open+read(0 KB)+close` 中位 ~10 ms，而 procfs 只要 0.4 ms，
+//! 且与数据量无关、每次重复都一样 —— 单靠系统调用级的时间没法知道钱花在
+//! 路径解析、inode 构建、缓存身份还是页填充上。这里按段累计纳秒与次数：
+//!
+//! * `open_get_or_create`：`CachedFile::get_or_create` 全过程；
+//! * `open_register`：身份发布 + `register_cached_file`（含注册表裁剪）；
+//! * `read_populate`：`populate_page_window`（页缓存未命中时的落盘填充）；
+//! * `read_copy`：页内容拷到 scratch + 拷到用户缓冲；
+//! * `ext4_inode_new`：ext4 每次 lookup 构造 `Inode` 的开销；
+//! * `ext4_lookup`：ext4 目录项查找。
+//!
+//! 时钟由内核在启动时注册（`ax_fs_ng::diag::register_clock`），宿主单测下没有
+//! 时钟 ⇒ 全部退化成 no-op，不影响测试。
+
+use core::sync::atomic::{AtomicU64, Ordering};
+
+pub const STAGE_OPEN_GET_OR_CREATE: usize = 0;
+pub const STAGE_OPEN_REGISTER: usize = 1;
+pub const STAGE_READ_POPULATE: usize = 2;
+pub const STAGE_READ_COPY: usize = 3;
+pub const STAGE_EXT4_INODE_NEW: usize = 4;
+pub const STAGE_EXT4_LOOKUP: usize = 5;
+/// H5c：close 时析构路径的分段（文件对象 / 共享缓存对象 / ext4 索引节点）。
+pub const STAGE_CLOSE_CACHED_FILE_DROP: usize = 6;
+pub const STAGE_CLOSE_SHARED_DROP: usize = 7;
+pub const STAGE_CLOSE_EXT4_INODE_DROP: usize = 8;
+pub const STAGE_CLOSE_EXT4_RELEASE_REF: usize = 9;
+pub const STAGE_CLOSE_EXT4_REAP: usize = 10;
+/// H2：读路径每页三段 —— 取页（mapping_layout_lock + page_cache.lock + LRU）、
+/// 页→scratch 拷贝、scratch→用户缓冲拷贝。前两段按"页"取平均，最后一段按"页"计。
+pub const STAGE_READ_PAGE_LOOKUP: usize = 11;
+pub const STAGE_READ_USER_COPY: usize = 12;
+const STAGES: usize = 13;
+
+const NAMES: [&str; STAGES] = [
+    "open_get_or_create",
+    "open_register",
+    "read_populate",
+    "read_copy",
+    "ext4_inode_new",
+    "ext4_lookup",
+    "close_cached_file_drop",
+    "close_shared_drop",
+    "close_ext4_inode_drop",
+    "close_ext4_release_ref",
+    "close_ext4_reap",
+    "read_page_lookup",
+    "read_user_copy",
+];
+
+/// 读路径经过的页数（用于把 `fs_read_*_avg` 归一成"每页"）。
+static READ_PAGES: AtomicU64 = AtomicU64::new(0);
+
+/// Counts one page passed through the cached read path.
+#[inline]
+pub fn note_read_page() {
+    READ_PAGES.fetch_add(1, Ordering::Relaxed);
+}
+
+static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
+static CALLS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
+
+/// H5f：close 时 atime 元数据写回的"提交 / 按策略跳过"次数。
+///
+/// 明细见 `file/handle.rs` 的 `should_persist_atime`：默认按 Linux `relatime`
+/// 语义处理，只有 atime 落后于 mtime/ctime 或超过 24 h 才需要落盘。没有这两个
+/// 计数就无法把"每次 close 的 ~10 ms 消失"归因到策略，而不是别处的偶然因素。
+pub static ATIME_PERSIST: AtomicU64 = AtomicU64::new(0);
+pub static ATIME_SKIP: AtomicU64 = AtomicU64::new(0);
+
+#[inline]
+pub fn note_atime_persist() {
+    ATIME_PERSIST.fetch_add(1, Ordering::Relaxed);
+}
+
+#[inline]
+pub fn note_atime_skip() {
+    ATIME_SKIP.fetch_add(1, Ordering::Relaxed);
+}
+
+/// 单调时钟函数指针（0 = 未注册；宿主测试下就是 0）。
+static CLOCK: AtomicU64 = AtomicU64::new(0);
+
+/// Registers the monotonic clock the kernel uses for this diagnostic.
+pub fn register_clock(clock: fn() -> u64) {
+    CLOCK.store(clock as usize as u64, Ordering::Release);
+}
+
+#[inline]
+fn now() -> u64 {
+    let raw = CLOCK.load(Ordering::Acquire);
+    if raw == 0 {
+        return 0;
+    }
+    // SAFETY: 只有 `register_clock` 会写入这个值，写进来的一定是 `fn() -> u64`
+    // 的地址（`fn` 指针非空、表示可直接调用）。
+    let clock: fn() -> u64 = unsafe { core::mem::transmute(raw as usize) };
+    clock()
+}
+
+/// Adds one stage's elapsed nanoseconds.
+#[inline]
+pub fn add(stage: usize, ns: u64) {
+    if ns != 0 {
+        TOTALS[stage].fetch_add(ns, Ordering::Relaxed);
+        CALLS[stage].fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+/// Timestamps the enclosing scope and attributes it to `stage` on drop.
+#[must_use]
+pub struct Scope {
+    stage: usize,
+    start: u64,
+}
+
+impl Scope {
+    #[inline]
+    pub fn new(stage: usize) -> Self {
+        Self {
+            stage,
+            start: now(),
+        }
+    }
+}
+
+impl Drop for Scope {
+    fn drop(&mut self) {
+        let end = now();
+        if end > self.start {
+            add(self.stage, end - self.start);
+        }
+    }
+}
+
+/// Convenience constructor: `let _t = diag::scope(diag::STAGE_X);`
+#[inline]
+pub fn scope(stage: usize) -> Scope {
+    Scope::new(stage)
+}
+
+/// Renders the cumulative per-stage table (for `/proc/fault_attrib`).
+pub fn render() -> alloc::string::String {
+    use alloc::format;
+    use alloc::string::String;
+
+    let mut out = String::new();
+    for stage in 0..STAGES {
+        let total = TOTALS[stage].load(Ordering::Relaxed);
+        let calls = CALLS[stage].load(Ordering::Relaxed);
+        out.push_str(&format!(
+            "fs_{}_ns={total} fs_{}_avg={}\n",
+            NAMES[stage],
+            NAMES[stage],
+            if calls == 0 { 0 } else { total / calls }
+        ));
+    }
+    out.push_str(&format!(
+        "fs_atime_persist={} fs_atime_skip={}\n",
+        ATIME_PERSIST.load(Ordering::Relaxed),
+        ATIME_SKIP.load(Ordering::Relaxed)
+    ));
+    {
+        // H2：读路径按"页"归一的平均（lookup / 页→scratch 拷贝 / scratch→用户拷贝）。
+        let pages = READ_PAGES.load(Ordering::Relaxed);
+        let per_page = |stage: usize| {
+            if pages == 0 {
+                0
+            } else {
+                TOTALS[stage].load(Ordering::Relaxed) / pages
+            }
+        };
+        out.push_str(&format!(
+            "fs_read_pages={pages} fs_read_page_lookup_per_page={} \
+             fs_read_copy_per_page={} fs_read_user_copy_per_page={}\n",
+            per_page(STAGE_READ_PAGE_LOOKUP),
+            per_page(STAGE_READ_COPY),
+            per_page(STAGE_READ_USER_COPY)
+        ));
+    }
+    out
+}

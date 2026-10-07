@@ -27,13 +27,46 @@ use crate::os::{
     sync::{SleepMutex as Mutex, SleepMutexGuard},
 };
 
-const DISK_PAGE_CACHE_CAP: usize = 512;
+/// 每个文件页缓存的上限（4 KiB 页）。
+///
+/// 512 页 = 2 MiB 是原来拍的值：它让"超过 2 MiB 就写不进去"的缺陷暴露成
+/// `ResourceBusy`，修好插入路径后（先 drain 再插入）写入变正确，但**每次缓存
+/// 满都要把整片脏页写回一次**，8 MiB 连续写要 drain 4 轮，端到端吞吐掉到
+/// 1–2 MiB/s。4096 页 = 16 MiB 让 8 MiB 这种规模的写完全落在缓存里，一次
+/// drain 都不需要；代价是每个被打开写的大文件最多钉住 16 MiB 页缓存，本板
+/// 236 MB 内存下占 7%，可以接受。
+///
+/// 下一步（D2b）再把"整片 drain"改成"只 drain 够腾出位置的子集"，这样即使
+/// 文件大于缓存也不至于反复全量写回。
+const DISK_PAGE_CACHE_CAP: usize = 4096;
+
+/// How many times one cache insertion may drain dirty pages before giving up.
+///
+/// A single drain makes every resident dirty page clean, so a following
+/// insertion can evict the LRU victim.  More than one round is only needed when
+/// new pages were dirtied between the drain and the retry; the bound keeps a
+/// pathological workload from spinning inside the insertion path.
+const MAX_EVICTION_DRAIN_ATTEMPTS: usize = 4;
 
 type CachedFileKey = (usize, u64);
 type InodeCacheIndex = BTreeMap<CachedFileKey, Weak<CachedFileShared>>;
 
 static CACHED_FILE_BY_INODE: ax_lazyinit::LazyLock<Mutex<InodeCacheIndex>> =
     ax_lazyinit::LazyLock::new(|| Mutex::new(BTreeMap::new()));
+
+/// 诊断：`CachedFile::get_or_create` 三条路径各走了多少次（零行为改变）。
+///
+/// 判定"重复 open 同一个文件时页缓存有没有被复用"：
+/// * `from_location`：命中 `Location.user_data()`（同一个 VFS 节点对象被复用）；
+/// * `from_inode`：命中 `CACHED_FILE_BY_INODE` 的 Weak 升级（跨 close 复用）；
+/// * `created`：两者都没命中，**新建**了缓存身份 —— 这个比例高就说明每次 open
+///   都在重建身份，页缓存不可能复用（H5 空转的原因）。
+pub static IDENTITY_FROM_LOCATION: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
+pub static IDENTITY_FROM_INODE: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
+pub static IDENTITY_CREATED: core::sync::atomic::AtomicU64 =
+    core::sync::atomic::AtomicU64::new(0);
 
 /// Stable identity of one page-cache ownership domain.
 ///
@@ -289,6 +322,12 @@ struct CachedFileShared {
     unlinked: AtomicBool,
     #[cfg(feature = "vfs")]
     retired: AtomicBool,
+    /// H5f：上次把 atime 落盘的**单调**时刻（纳秒；0 = 本 boot 还没写过）。
+    ///
+    /// 挂在缓存身份上而不是全局表里：`CachedFileShared` 本来就跨 open 存活
+    /// （页缓存身份复用的就是它），于是"每个文件每 24 h 最多写一次 atime"
+    /// 不需要额外的锁，也不需要分配。判定细节见 `CachedFile::claim_atime_persist`。
+    atime_persist_nanos: AtomicU64,
 }
 
 impl CachedFileShared {
@@ -308,6 +347,7 @@ impl CachedFileShared {
             unlinked: AtomicBool::new(false),
             #[cfg(feature = "vfs")]
             retired: AtomicBool::new(false),
+            atime_persist_nanos: AtomicU64::new(0),
         }
     }
 
@@ -325,6 +365,7 @@ impl CachedFileShared {
             unlinked: AtomicBool::new(false),
             #[cfg(feature = "vfs")]
             retired: AtomicBool::new(false),
+            atime_persist_nanos: AtomicU64::new(0),
         }
     }
 
@@ -437,6 +478,8 @@ impl CachedFileShared {
 
 impl Drop for CachedFileShared {
     fn drop(&mut self) {
+        // H5c 诊断：共享缓存对象析构（close 时若为最后一个强引用就会走到这里）。
+        let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_SHARED_DROP);
         if !self.unlinked.load(Ordering::Acquire) {
             return;
         }
@@ -484,6 +527,7 @@ fn filesystem_uses_unbounded_page_cache(name: &str) -> bool {
 impl CachedFile {
     /// Returns an existing cached file for `location`, or creates a new one.
     pub fn get_or_create(location: Location) -> VfsResult<Self> {
+        let _t = crate::diag::scope(crate::diag::STAGE_OPEN_GET_OR_CREATE);
         let in_memory = filesystem_uses_unbounded_page_cache(location.filesystem().name());
 
         let existing = {
@@ -494,6 +538,7 @@ impl CachedFile {
                 .map(FileUserData::get)
         };
         if let Some(shared) = existing {
+            IDENTITY_FROM_LOCATION.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
             #[cfg(feature = "vfs")]
             if shared.retired.swap(false, Ordering::AcqRel) {
                 reclaim::register_cached_file(&shared);
@@ -516,10 +561,16 @@ impl CachedFile {
             Arc::new(CachedFileShared::new(len, backing))
         };
         let (created, owner_created) = if let Some(key) = inode_key {
+            let _t = crate::diag::scope(crate::diag::STAGE_OPEN_REGISTER);
             publish_inode_cached_file(key, candidate)
         } else {
             (candidate, true)
         };
+        if owner_created {
+            IDENTITY_CREATED.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        } else {
+            IDENTITY_FROM_INODE.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        }
         let user_data = FileUserData::Strong(created.clone());
 
         let shared = {
@@ -540,6 +591,7 @@ impl CachedFile {
         // lose data. Only register disk-backed files for reclaim.
         #[cfg(feature = "vfs")]
         if !in_memory && (owner_created || shared.retired.swap(false, Ordering::AcqRel)) {
+            let _t = crate::diag::scope(crate::diag::STAGE_OPEN_REGISTER);
             reclaim::register_cached_file(&shared);
         }
         #[cfg(not(feature = "vfs"))]
@@ -556,6 +608,34 @@ impl CachedFile {
     /// Returns `true` if both handles refer to the same shared state.
     pub fn ptr_eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.shared, &other.shared)
+    }
+
+    /// H5f：close 时是否要为"这次读过"补一次 atime 落盘；需要时顺手记下时刻。
+    ///
+    /// 返回 `false` 表示"这个文件的 atime 最近刚写过，可以跳过"。
+    ///
+    /// 时刻记在缓存身份（跨 open 存活）上、且用**单调时钟**度量：本板没有
+    /// RTC/NTP 时 `wall_time()` 停在 1970（板上实测 `date` =
+    /// `1970-01-01 00:03:50`），而镜像里文件的 mtime 是真实的 2025/2026
+    /// 时间戳 —— 拿墙上时钟去套 Linux 的 relatime 判据（atime 落后于 mtime 就
+    /// 写回）会永远判成"过期"，退化成每次 close 都写一遍。用单调时钟 + 页缓存
+    /// 身份既保住了 relatime 真正的保证（每文件每 24 h 至多一次写），又不依赖
+    /// 墙上时钟是否正确。
+    pub(crate) fn claim_atime_persist(
+        &self,
+        now: core::time::Duration,
+        window: core::time::Duration,
+    ) -> bool {
+        let now_nanos = u64::try_from(now.as_nanos()).unwrap_or(u64::MAX);
+        let window_nanos = u64::try_from(window.as_nanos()).unwrap_or(u64::MAX);
+        let last = self.shared.atime_persist_nanos.load(Ordering::Relaxed);
+        if last != 0 && now_nanos.saturating_sub(last) < window_nanos {
+            return false;
+        }
+        self.shared
+            .atime_persist_nanos
+            .store(now_nanos, Ordering::Relaxed);
+        true
     }
 
     /// Returns the stable identity of the shared page-cache owner.
@@ -828,35 +908,46 @@ impl CachedFile {
 
         let mut prepared = self.prepare_cache_page(file, pn, read_backing)?;
         let has_mapping_endpoint = self.shared.has_mapping_endpoint();
-        let (result, retired) = {
+        let mut drained = 0;
+        let (result, retired) = loop {
             let mut cache = self.shared.page_cache.lock();
             if cache.contains(&pn) {
                 let page = cache.get_mut(&pn).ok_or(VfsError::BadState)?;
                 let result = update.take().ok_or(VfsError::BadState)?(page, false);
-                (result, Some(prepared))
-            } else {
-                if cache.len() >= cache.cap().get() {
-                    if has_mapping_endpoint {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::ResourceBusy);
-                    }
-                    let Some((_, victim)) = cache.peek_lru() else {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::BadState);
-                    };
-                    if victim.dirty || victim.pins != 0 {
-                        drop(cache);
-                        drop(prepared);
-                        return Err(VfsError::ResourceBusy);
-                    }
-                }
-
-                let result = update.take().ok_or(VfsError::BadState)?(&mut prepared, true);
-                let retired = cache.push(pn, prepared).map(|(_, page)| page);
-                (result, retired)
+                break (result, Some(prepared));
             }
+
+            if cache.len() >= cache.cap().get() {
+                if has_mapping_endpoint {
+                    drop(cache);
+                    drop(prepared);
+                    return Err(VfsError::ResourceBusy);
+                }
+                let Some((_, victim)) = cache.peek_lru() else {
+                    drop(cache);
+                    drop(prepared);
+                    return Err(VfsError::BadState);
+                };
+                if victim.dirty || victim.pins != 0 {
+                    drop(cache);
+                    // A dirty or pinned LRU victim would block eviction.  Dirty
+                    // pages become evictable once they are written back through
+                    // the normal tracking; the caller holds `io_lock`, so use
+                    // the lock-holding drain instead of reacquiring it.
+                    if drained >= MAX_EVICTION_DRAIN_ATTEMPTS
+                        || self.shared.drain_dirty_pages_locked()? == 0
+                    {
+                        drop(prepared);
+                        return Err(VfsError::ResourceBusy);
+                    }
+                    drained += 1;
+                    continue;
+                }
+            }
+
+            let result = update.take().ok_or(VfsError::BadState)?(&mut prepared, true);
+            let retired = cache.push(pn, prepared).map(|(_, page)| page);
+            break (result, retired);
         };
         drop(retired);
         Ok(result)
@@ -1030,6 +1121,43 @@ impl CachedFile {
         }))
     }
 
+    /// H1f：一次 pin 一整段页（`pns` 升序；通常是 exec 的连续未映射段）。
+    ///
+    /// 与逐页 `pin_page_or_insert` 的区别是**每段只取一次 `io_lock`**：逐页调用时
+    /// 「io_lock + 页缓存窗口填充 + 取页锁」这三笔是每页一轮，exec 读只读段时
+    /// 200 页就是 200 轮（opt35 实测 `file_pop_pin` = 3.6 ms/次 exec）。
+    /// 页缓存锁仍按页（窗口填充需要），但那把是自旋锁、且命中时只是一次 contains。
+    pub fn pin_pages_run(&self, pns: &[u32]) -> VfsResult<Vec<CachedPagePin>> {
+        let mut pins = Vec::new();
+        if pns.is_empty() {
+            return Ok(pins);
+        }
+        if self
+            .shared
+            .mapping_update_in_progress
+            .load(Ordering::Acquire)
+        {
+            return Err(VfsError::ResourceBusy);
+        }
+        let _io = self.shared.io_lock.lock();
+        if self
+            .shared
+            .mapping_update_in_progress
+            .load(Ordering::Acquire)
+        {
+            return Err(VfsError::ResourceBusy);
+        }
+        let file = self.inner.entry().as_file()?;
+        pins.try_reserve_exact(pns.len())
+            .map_err(|_| VfsError::NoMemory)?;
+        for (index, &pn) in pns.iter().enumerate() {
+            // 窗口一次填到段尾；后面的页此时已在缓存里，这一步就退化成一次 contains。
+            self.populate_page_window(file, pn, pns.len() - index)?;
+            pins.push(self.pin_cached_page(pn)?);
+        }
+        Ok(pins)
+    }
+
     /// Reads data from the file at `offset` into `dst`.
     pub fn read_at(&self, mut dst: impl Write + IoBufMut, offset: u64) -> VfsResult<usize> {
         let len = self.shared.len();
@@ -1044,11 +1172,15 @@ impl CachedFile {
         };
 
         let file = self.inner.entry().as_file()?;
-        let mut scratch = PageCache::new()?;
         let mut read = 0;
         let mut current = offset;
         while current < end {
-            let chunk_len = {
+            // H2：命中缓存时**pin 住这一页**，出锁后直接用内核直接映射把它拷给
+            // 调用方，省掉"页 → scratch"那次全量拷贝（板上实测 4.3 µs/页，占缓存
+            // 命中读 11 µs/页的四成）。pin 期间淘汰与 truncate 都会跳过该页
+            // （`CachedPagePin` 的既有契约：reclaim/resize 都查 `pins != 0`），
+            // 所以出锁读是安全的；只有未命中才回填。
+            let (chunk_len, pin, page_offset) = {
                 let _layout = self.shared.mapping_layout_lock.lock();
                 // A preceding user copy may have faulted or slept while a
                 // truncate committed. Resample EOF before each cache snapshot.
@@ -1061,20 +1193,33 @@ impl CachedFile {
                 let page_offset = (current - page_start) as usize;
                 let chunk_len =
                     (visible_end - page_start).min(PAGE_SIZE as u64) as usize - page_offset;
-                let _io = self.shared.io_lock.lock();
-                self.populate_page_window(file, pn, window_pages)?;
-                let mut guard = self.shared.page_cache.lock();
-                let page = guard.get_mut(&pn).ok_or(VfsError::BadState)?;
-                scratch.data()[..chunk_len]
-                    .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
-                chunk_len
+                // 命中的快路径一次锁都不多拿；未命中才出锁回填（回填要拿可睡眠
+                // 的 io_lock，不能在持有页缓存索引锁时做）。
+                // `LruCache` 没有 `contains_key`，用 `get_mut` 探一下是否存在
+                // （命中路径上它本来也要 `get_mut`，这里不额外多付）。
+                let resident = self.shared.page_cache.lock().get_mut(&pn).is_some();
+                if !resident {
+                    let _io = self.shared.io_lock.lock();
+                    self.populate_page_window(file, pn, window_pages)?;
+                }
+                (chunk_len, self.pin_cached_page(pn)?, page_offset)
             };
 
             // `dst` may point at user memory. Copy after releasing cached-file
             // locks so a user page fault can take AddrSpace without creating a
             // cached-I/O -> AddrSpace lock order.
-            dst.write_all(&scratch.data()[..chunk_len])
+            let source = crate::os::memory::phys_to_virt(pin.paddr())
+                .ok_or(VfsError::BadState)?
+                .checked_add(page_offset)
+                .ok_or(VfsError::BadState)?;
+            // SAFETY: `pin` keeps the cache-owned frame alive and unreclaimable
+            // for this borrow, the alias is the kernel's direct mapping of that
+            // frame, and `page_offset + chunk_len` stays within one 4 KiB page.
+            let bytes =
+                unsafe { core::slice::from_raw_parts(source as *const u8, chunk_len) };
+            dst.write_all(bytes)
                 .map_err(crate::io_error_to_vfs_error)?;
+            drop(pin);
             read += chunk_len;
             current += chunk_len as u64;
         }
@@ -1276,6 +1421,8 @@ impl Drop for CachedFile {
     fn drop(&mut self) {
         // Linux close(2) does not imply fsync(2). Disk-backed page cache is
         // retained by the inode user_data and written by explicit sync paths.
+        // H5c 诊断：close 时文件对象析构的耗时（`drop(fd)` 里 11 ms 的候选之一）。
+        let _t = crate::diag::scope(crate::diag::STAGE_CLOSE_CACHED_FILE_DROP);
     }
 }
 

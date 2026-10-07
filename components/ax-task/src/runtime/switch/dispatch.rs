@@ -65,12 +65,15 @@ fn schedule_current_cpu_with_entry(
     mut entry: RuntimeSchedulerEntry,
 ) -> Result<SchedulerOutcome, TaskError> {
     let original_entry = entry;
+    let mut t_sched = crate::diag::scope(crate::diag::STAGE_SCHED_ENTER);
     loop {
         let request_scope = scheduler_request_scope(entry, original_entry);
         let mut scheduler_frame =
             RuntimeSchedulerFrameGuard::enter(RuntimeScheduleOrigin::Preempt, entry)?;
         let system = scheduler_frame.task_system();
         let current_publication = scheduler_frame.current_thread_publication();
+        drop(t_sched);
+        let t_decision = crate::diag::scope(crate::diag::STAGE_SCHED_DECISION);
         let (mut outcome, no_switch_request_pending) = {
             let mut cpu = runtime_current_cpu_mut(&mut scheduler_frame)?;
             // SAFETY: RuntimeSchedulerFrameGuard owns the IRQ-off scheduler baton.
@@ -101,9 +104,12 @@ fn schedule_current_cpu_with_entry(
             };
             (outcome, request_pending)
         };
+        drop(t_decision);
+        let t_switch = crate::diag::scope(crate::diag::STAGE_SCHED_SWITCH);
         if let Some(decision) = outcome.decision_mut() {
             execute_switch_plan(&mut scheduler_frame, decision);
         }
+        drop(t_switch);
         let needs_reschedule = if let Some(request_pending) = no_switch_request_pending {
             request_pending
         } else {
@@ -114,6 +120,7 @@ fn schedule_current_cpu_with_entry(
         if !repeat {
             return Ok(outcome);
         }
+        t_sched = crate::diag::scope(crate::diag::STAGE_SCHED_ENTER);
         entry = match entry {
             RuntimeSchedulerEntry::IrqReturn | RuntimeSchedulerEntry::IrqReturnContinuation => {
                 RuntimeSchedulerEntry::IrqReturnContinuation
@@ -260,6 +267,7 @@ pub(crate) fn execute_switch_plan(
     if !decision.requires_context_switch() {
         return;
     }
+    crate::diag::note_switch();
     #[cfg(feature = "qperf-metrics")]
     let prepare_started_ns = task_runtime::monotonic_now().as_nanos();
     let Some(previous) = decision.previous() else {

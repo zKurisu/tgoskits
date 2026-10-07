@@ -1,0 +1,13 @@
+[package]
+name = "sg2002-cmdqu"
+version = "0.1.0"
+edition.workspace = true
+authors = ["RCore Team <yuchen@tsinghua.edu.cn>"]
+license.workspace = true
+repository.workspace = true
+description = "SG2002 (Cvitek) cross-core command queue (cmdqu) mailbox driver layer"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["sg2002", "cvitek", "mailbox", "ipc", "cmdqu"]
+
+[dependencies]
+rdif-ipc.workspace = true

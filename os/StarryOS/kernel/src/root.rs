@@ -42,6 +42,8 @@ mod namespace;
 mod perf;
 mod pseudofs;
 mod rdrive_osal;
+#[cfg(feature = "sg2002")]
+mod sg2002_trng;
 mod stop_machine;
 mod sync;
 mod syscall;

@@ -305,19 +305,58 @@ pub(crate) fn me_config_payload() -> [u8; 112] {
     payload
 }
 
+/// 单个信道的发射功率上限（dBm）。厂商驱动里 `CHAN(_freq)` 宏同样写 30。
+const CHANNEL_TX_POWER: u8 = 30;
+/// `struct mac_chan_def.band`：厂商驱动直接写 Linux 的 band 枚举。
+const BAND_2G4: u8 = 0;
+const BAND_5G: u8 = 1;
+
+/// 按厂商 `struct mac_chan_def` 填一条信道：`freq:u16, band:u8, flags:u8, tx_power:i8, pad`。
+fn write_channel(entry: &mut [u8], frequency: u16, band: u8) {
+    entry[0..2].copy_from_slice(&frequency.to_le_bytes());
+    entry[2] = band;
+    entry[3] = 0; // flags：不标 DISABLED/NO_IR/RADAR
+    entry[4] = CHANNEL_TX_POWER;
+}
+
+/// `ME_CHAN_CONFIG_REQ` 的载荷：`chan2G4[14] + chan5G[28] + chan2G4_cnt + chan5G_cnt`
+/// （厂商 `struct me_chan_config_req`，共 254 字节）。
+///
+/// **5 GHz 这一段不能省**：只填 2.4 GHz 并把 5G 计数留 0，等于告诉固件"世界上只有
+/// 2.4 GHz 信道"，固件就不会去扫 5 GHz——连 5745 MHz（信道 149）这种常见热点时会直接
+/// 以 `SM_CONNECT_IND status=1`（关联失败）收场，看起来像"找不到 AP"。
 pub(crate) fn channel_config_payload() -> [u8; 254] {
-    let mut payload = [0; 254];
-    const CHANNELS: [u16; 14] = [
+    const CHANNELS_2G4: [u16; 14] = [
         2412, 2417, 2422, 2427, 2432, 2437, 2442, 2447, 2452, 2457, 2462, 2467, 2472, 2484,
     ];
-    for (index, frequency) in CHANNELS.into_iter().enumerate() {
-        let offset = index * 6;
-        payload[offset..offset + 2].copy_from_slice(&frequency.to_le_bytes());
-        payload[offset + 4] = 30;
+    /// 厂商 `rwnx_5ghz_channels[]` 里非扩展的那一组（信道 36~177，共 28 个）。
+    /// 数量必须与 `CHANNEL_CONFIG_PAYLOAD_LEN` 的 `28 * 6` 一致：少填会静默把
+    /// 尾部信道留 0，多填会越界。
+    const CHANNELS_5G: [u16; 28] = [
+        5180, 5200, 5220, 5240, 5260, 5280, 5300, 5320, 5500, 5520, 5540, 5560, 5580, 5600, 5620,
+        5640, 5660, 5680, 5700, 5720, 5745, 5765, 5785, 5805, 5825, 5845, 5865, 5885,
+    ];
+    debug_assert_eq!(
+        CHANNELS_2G4.len() * 6 + CHANNELS_5G.len() * 6 + 2,
+        CHANNEL_CONFIG_PAYLOAD_LEN
+    );
+
+    let mut payload = [0; CHANNEL_CONFIG_PAYLOAD_LEN];
+    for (index, frequency) in CHANNELS_2G4.into_iter().enumerate() {
+        write_channel(&mut payload[index * 6..index * 6 + 6], frequency, BAND_2G4);
     }
-    payload[252] = CHANNELS.len() as u8;
+    let base_5g = CHANNELS_2G4.len() * 6;
+    for (index, frequency) in CHANNELS_5G.into_iter().enumerate() {
+        let offset = base_5g + index * 6;
+        write_channel(&mut payload[offset..offset + 6], frequency, BAND_5G);
+    }
+    payload[252] = CHANNELS_2G4.len() as u8;
+    payload[253] = CHANNELS_5G.len() as u8;
     payload
 }
+
+/// `chan2G4[14] + chan5G[28]` 各 6 字节，再加两个计数。
+pub(crate) const CHANNEL_CONFIG_PAYLOAD_LEN: usize = 14 * 6 + 28 * 6 + 2;
 
 pub(crate) fn add_interface_payload(mac: [u8; 6], role: u8) -> [u8; 10] {
     let mut payload = [0; 10];
@@ -571,15 +610,28 @@ mod tests {
     }
 
     #[test]
-    fn channel_config_uses_six_byte_vendor_channel_entries() {
+    fn channel_config_carries_both_bands_and_their_counts() {
         let payload = channel_config_payload();
 
         assert_eq!(payload.len(), 254);
+        // 2.4 GHz 段：第一条 2412、第二条 2417，band=0
         assert_eq!(&payload[0..2], &2412u16.to_le_bytes());
+        assert_eq!(payload[2], 0);
         assert_eq!(&payload[6..8], &2417u16.to_le_bytes());
         assert_eq!(payload[4], 30);
+        // 5 GHz 段从第 14 条之后开始：第一条 5180、band=1、含信道 149（5745）
+        let base_5g = 14 * 6;
+        assert_eq!(&payload[base_5g..base_5g + 2], &5180u16.to_le_bytes());
+        assert_eq!(payload[base_5g + 2], 1);
+        assert_eq!(payload[base_5g + 4], 30);
+        let has_149 = (0..28).any(|index| {
+            let entry = base_5g + index * 6;
+            u16::from_le_bytes([payload[entry], payload[entry + 1]]) == 5745
+        });
+        assert!(has_149, "5 GHz 段必须包含 5745 MHz（信道 149）");
+        // 两个计数
         assert_eq!(payload[252], 14);
-        assert_eq!(payload[253], 0);
+        assert_eq!(payload[253], 28);
     }
 
     #[test]

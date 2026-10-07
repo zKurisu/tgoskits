@@ -376,8 +376,10 @@ pub fn sys_waitpid(
     exit_code: *mut i32,
     options: u32,
 ) -> StarryResult<isize> {
+    let _t_wait_syscall =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_WAIT_SYSCALL);
     let options = WaitPidOptions::from_bits(options).ok_or(StarryError::InvalidInput)?;
-    info!("sys_waitpid <= pid: {pid:?}, options: {options:?}");
+    debug!("sys_waitpid <= pid: {pid:?}, options: {options:?}");
 
     let curr = current;
     let thr = curr.as_thread();
@@ -504,6 +506,8 @@ pub fn sys_waitid(
     infop: *mut linux_raw_sys::general::siginfo,
     options: u32,
 ) -> crate::StarryResult<isize> {
+    let _t_wait_syscall =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_WAIT_SYSCALL);
     let curr = current;
     let thr = curr.as_thread();
     let proc = &thr.proc_data.proc;
@@ -537,7 +541,7 @@ pub fn sys_waitid(
         return Err(StarryError::InvalidInput);
     }
 
-    info!("sys_waitid <= idtype: {idtype}, id: {id}, options: {options:?}");
+    debug!("sys_waitid <= idtype: {idtype}, id: {id}, options: {options:?}");
 
     let candidate_scan = WaitCandidateScan::new(|| {
         waitable_processes(
