@@ -13,7 +13,13 @@ use core::{
 use crate::{StarryError as AxError, StarryResult as AxResult};
 use ax_memory_addr::PhysAddr;
 use axfs_ng_vfs::VfsResult;
-use ax_std::os::arceos::task::sync::WaitQueue;
+use ax_std::os::arceos::{
+    task as scheduler,
+    task::sync::{
+        WaitQueue,
+        irq::{IrqRegisterResult, IrqWaitCell, IrqWaitRegistration},
+    },
+};
 use sg200x_bsp::soc::CLKGEN_BASE;
 use sg2002_tpu::ion::IonBuffer;
 use sg2002_vpss::{
@@ -22,7 +28,7 @@ use sg2002_vpss::{
     Yuv422PlanarFrame,
     types::{MAX_DIMENSION, MIN_DIMENSION, STRIDE_ALIGNMENT},
 };
-use crate::mm::{VmMutPtr, VmPtr};
+use crate::mm::VmPtr;
 use crate::sync::Mutex;
 
 use super::uapi::{
@@ -63,7 +69,11 @@ const CLK_ENABLE_2_MASK: u32 = (1 << 4) // AXI_VIP
     | (1 << 25); // SC_V1
 const CLK_ENABLE_3_MASK: u32 = 1 << 29; // VIP_SYS_2
 
-static DONE_WAIT_QUEUE: WaitQueue = WaitQueue::new();
+/// IRQ→任务唤醒通道。IRQ 侧只允许 `notify()`；本树的 `WaitQueue::notify_all()`
+/// 带 `assert_task_context_notification()`，在中断上下文会直接 panic。
+static VPSS_IRQ_NOTIFY: IrqWaitCell = IrqWaitCell::new();
+/// 等待侧真正 park 的队列。
+static VPSS_IRQ_PARK: WaitQueue = WaitQueue::new();
 
 #[derive(Clone, Copy, Debug)]
 struct VpssResource {
@@ -198,7 +208,7 @@ impl VpssDevice {
                     // waiter. Task wake-up latency must not be charged to
                     // VPSS hardware execution.
                     irq_completion.record_finished_at_ns(now_ns());
-                    DONE_WAIT_QUEUE.notify_all_from_irq();
+                    let _ = VPSS_IRQ_NOTIFY.notify();
                 }
                 ax_runtime::hal::irq::IrqReturn::Handled
             }
@@ -233,7 +243,7 @@ impl VpssDevice {
         &self,
         current: &crate::task::UserTaskRef,
         user_address: usize,
-    ) -> VfsResult<usize> {
+    ) -> AxResult<usize> {
         let user_pointer = user_address as *mut VpssRun;
         let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
@@ -241,17 +251,17 @@ impl VpssDevice {
         let result = self.run(&mut request);
         request.status = match &result {
             Ok(()) => VPSS_STATUS_OK,
-            Err(error) => status_from_error(*error),
+            Err(error) => status_from_error(error),
         };
-        user_pointer.vm_write(current, request)?;
-        result.map(|()| 0).map_err(Into::into)
+        write_user_record(current, user_pointer, &request)?;
+        result.map(|()| 0)
     }
 
     fn run_yuv422p_ioctl(
         &self,
         current: &crate::task::UserTaskRef,
         user_address: usize,
-    ) -> VfsResult<usize> {
+    ) -> AxResult<usize> {
         let user_pointer = user_address as *mut VpssRunYuv422p;
         let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
@@ -259,17 +269,17 @@ impl VpssDevice {
         let result = self.run_yuv422p(&mut request);
         request.status = match &result {
             Ok(()) => VPSS_STATUS_OK,
-            Err(error) => status_from_error(*error),
+            Err(error) => status_from_error(error),
         };
-        user_pointer.vm_write(current, request)?;
-        result.map(|()| 0).map_err(Into::into)
+        write_user_record(current, user_pointer, &request)?;
+        result.map(|()| 0)
     }
 
     fn run_yuv422p_rgb_ioctl(
         &self,
         current: &crate::task::UserTaskRef,
         user_address: usize,
-    ) -> VfsResult<usize> {
+    ) -> AxResult<usize> {
         let user_pointer = user_address as *mut VpssRunYuv422pRgb;
         let mut request = user_pointer.vm_read(current)?;
         request.clear_output();
@@ -277,10 +287,10 @@ impl VpssDevice {
         let result = self.run_yuv422p_rgb(&mut request);
         request.status = match &result {
             Ok(()) => VPSS_STATUS_OK,
-            Err(error) => status_from_error(*error),
+            Err(error) => status_from_error(error),
         };
-        user_pointer.vm_write(current, request)?;
-        result.map(|()| 0).map_err(Into::into)
+        write_user_record(current, user_pointer, &request)?;
+        result.map(|()| 0)
     }
 
     fn run(&self, request: &mut VpssRun) -> AxResult<()> {
@@ -504,9 +514,7 @@ impl VpssDevice {
             if remaining_ns == 0 {
                 true
             } else {
-                DONE_WAIT_QUEUE.wait_timeout_until(Duration::from_nanos(remaining_ns), || {
-                    self.completion.is_finished()
-                })
+                !wait_for_completion(remaining_ns, &self.completion)
             }
         };
         let completion = if timed_out && !self.completion.is_finished() {
@@ -574,6 +582,32 @@ impl VpssDevice {
             max_elapsed_ns: self.runtime_stats.max_elapsed_ns.load(Ordering::Relaxed),
         }
     }
+    fn ioctl_inner(
+        &self,
+        current: &crate::task::UserTaskRef,
+        command: u32,
+        argument: usize,
+    ) -> AxResult<usize> {
+        match command {
+            VPSS_IOCTL_RUN => self.run_ioctl(current, argument),
+            VPSS_IOCTL_RUN_YUV422P => self.run_yuv422p_ioctl(current, argument),
+            VPSS_IOCTL_RUN_YUV422P_RGB => self.run_yuv422p_rgb_ioctl(current, argument),
+            VPSS_IOCTL_GET_INFO => {
+                write_user_record(current, argument as *mut VpssInfo, &self.info())?;
+                Ok(0)
+            }
+            VPSS_IOCTL_GET_STATS => {
+                write_user_record(current, argument as *mut VpssStats, &self.stats())?;
+                Ok(0)
+            }
+            VPSS_IOCTL_RESET_STATS => {
+                self.completion.reset_stats();
+                self.runtime_stats.reset();
+                Ok(0)
+            }
+            _ => Err(AxError::Unsupported),
+        }
+    }
 }
 
 impl DeviceOps for VpssDevice {
@@ -591,29 +625,57 @@ impl DeviceOps for VpssDevice {
         command: u32,
         argument: usize,
     ) -> VfsResult<usize> {
-        match command {
-            VPSS_IOCTL_RUN => self.run_ioctl(current, argument),
-            VPSS_IOCTL_RUN_YUV422P => self.run_yuv422p_ioctl(current, argument),
-            VPSS_IOCTL_RUN_YUV422P_RGB => self.run_yuv422p_rgb_ioctl(current, argument),
-            VPSS_IOCTL_GET_INFO => {
-                (argument as *mut VpssInfo).vm_write(current, self.info())?;
-                Ok(0)
-            }
-            VPSS_IOCTL_GET_STATS => {
-                (argument as *mut VpssStats).vm_write(current, self.stats())?;
-                Ok(0)
-            }
-            VPSS_IOCTL_RESET_STATS => {
-                self.completion.reset_stats();
-                self.runtime_stats.reset();
-                Ok(0)
-            }
-            _ => Err(AxError::Unsupported),
-        }
+        self.ioctl_inner(current, command, argument)
+            .map_err(Into::into)
     }
+
 
     fn as_any(&self) -> &dyn core::any::Any {
         self
+    }
+}
+
+/// 把一份 `repr(C)` 的 ABI 记录整块写进用户内存。
+///
+/// 这些结构体带 padding，不满足 `bytemuck::NoUninit`（给它 derive 会直接编译
+/// 报错 "applied to a type with padding"），所以不能走 `vm_write`；按字节拷贝
+/// 即可（`u8: NoUninit`）。
+fn write_user_record<T>(
+    current: &crate::task::UserTaskRef,
+    pointer: *mut T,
+    value: &T,
+) -> AxResult<()> {
+    // SAFETY: `value` 是已初始化的 repr(C) 记录，按 `size_of::<T>()` 取它的字节
+    // 表示是合法的；这里只读，不写。
+    let bytes = unsafe {
+        core::slice::from_raw_parts(value as *const T as *const u8, core::mem::size_of::<T>())
+    };
+    crate::mm::vm_write_slice::<u8>(current, pointer as *mut u8, bytes)?;
+    Ok(())
+}
+
+/// 等待一次 VPSS 完成（IRQ 侧已经 `VPSS_IRQ_NOTIFY.notify()`）。
+///
+/// 分支原版直接调 `DONE_WAIT_QUEUE.notify_all_from_irq()`；本树没有这个方法，
+/// 而 `WaitQueue::notify_all()` 要求任务上下文，所以按 `dev/tpu` 的写法承载：
+/// `IrqWaitCell` 的 pending/register 握手覆盖"IRQ 早于注册"，park 队列的
+/// generation 再覆盖"唤醒早于 park"。返回 `true` 表示观察到完成。
+fn wait_for_completion(timeout_ns: u64, completion: &CompletionState) -> bool {
+    let current = scheduler::thread::current::current_thread_handle()
+        .unwrap_or_else(|error| panic!("VPSS waiter has no scheduler thread: {error}"));
+    let registration = IrqWaitRegistration::new(current.wake_handle());
+    match VPSS_IRQ_NOTIFY.register(&registration) {
+        IrqRegisterResult::ConsumedPending => completion.is_finished(),
+        IrqRegisterResult::Registered(token) | IrqRegisterResult::NotificationInFlight(token) => {
+            let _timed_out = VPSS_IRQ_PARK.wait_timeout_until(
+                Duration::from_nanos(timeout_ns),
+                || !token.is_attached() || completion.is_finished(),
+            );
+            scheduler::sync::irq::quiesce_irq_wait(token)
+                .unwrap_or_else(|error| panic!("VPSS IRQ waiter could not quiesce: {error}"));
+            completion.is_finished()
+        }
+        IrqRegisterResult::Occupied => completion.is_finished(),
     }
 }
 
@@ -633,7 +695,7 @@ fn resolve_nv12_frame(
     y_stride: u32,
     uv_stride: u32,
 ) -> AxResult<Nv12Frame> {
-    let base = buffer.dma_info.bus_addr.as_u64();
+    let base = buffer.dma_addr().as_u64();
     let y_address = base.checked_add(y_offset).ok_or(AxError::InvalidInput)?;
     let uv_address = base.checked_add(uv_offset).ok_or(AxError::InvalidInput)?;
     let frame = Nv12Frame {
@@ -667,7 +729,7 @@ fn resolve_yuv422_planar_frame(
     y_stride: u32,
     c_stride: u32,
 ) -> AxResult<Yuv422PlanarFrame> {
-    let base = buffer.dma_info.bus_addr.as_u64();
+    let base = buffer.dma_addr().as_u64();
     let y_address = base.checked_add(y_offset).ok_or(AxError::InvalidInput)?;
     let cb_address = base.checked_add(cb_offset).ok_or(AxError::InvalidInput)?;
     let cr_address = base.checked_add(cr_offset).ok_or(AxError::InvalidInput)?;
@@ -711,7 +773,7 @@ fn resolve_rgb_planar_frame(
     r_stride: u32,
     gb_stride: u32,
 ) -> AxResult<RgbPlanarFrame> {
-    let base = buffer.dma_info.bus_addr.as_u64();
+    let base = buffer.dma_addr().as_u64();
     let r_address = base.checked_add(r_offset).ok_or(AxError::InvalidInput)?;
     let g_address = base.checked_add(g_offset).ok_or(AxError::InvalidInput)?;
     let b_address = base.checked_add(b_offset).ok_or(AxError::InvalidInput)?;
@@ -821,7 +883,14 @@ fn validate_buffer_range(buffer_size: usize, offset: u64, span: u64) -> AxResult
 }
 
 fn enable_vpss_clocks() -> AxResult<()> {
-    let mapping = axklib::mem::iomap(PhysAddr::from(CLKGEN_BASE), CLKGEN_MMIO_SIZE)?;
+    // `axklib::mem::iomap` 返回的是 KlibError，本树的 StarryError 没有它的
+    // From 实现，所以在边界显式折算成 Io。
+    let mapping = axklib::mem::iomap(PhysAddr::from(CLKGEN_BASE), CLKGEN_MMIO_SIZE).map_err(
+        |error| {
+            warn!("[VPSS] failed to map CLKGEN: {error:?}");
+            AxError::Io
+        },
+    )?;
     let base = mapping.as_mut_ptr();
     // SAFETY: CLKGEN is a mapped device page and both offsets are aligned
     // 32-bit gate registers. Preserve firmware-selected parents/dividers and
@@ -850,7 +919,7 @@ fn map_driver_error(error: VpssError) -> AxError {
     }
 }
 
-fn status_from_error(error: AxError) -> i32 {
+fn status_from_error(error: &AxError) -> i32 {
     match error {
         AxError::InvalidInput | AxError::BadFileDescriptor => VPSS_STATUS_INVALID,
         AxError::ResourceBusy => VPSS_STATUS_BUSY,
