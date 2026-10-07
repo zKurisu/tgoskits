@@ -124,14 +124,19 @@ struct CowPageIndexReservation {
 enum CowPageIndexInsertError {
     StaleReservation,
     Invalid(StarryError),
+    /// The caller should retry with the per-page path.  Raised only for batch
+    /// inserts where the run itself is well-formed but the sorted index cannot
+    /// take it in one step (see [`CowPageIndex::insert_pending_run_reserved`]).
+    NotApplicable,
 }
 
 fn cow_page_index_reservation_capacity(
     live: usize,
     len: usize,
     capacity: usize,
+    additional: usize,
 ) -> Result<usize, StarryError> {
-    let required = live.checked_add(1).ok_or(StarryError::BadState)?;
+    let required = live.checked_add(additional).ok_or(StarryError::BadState)?;
     if live == len && capacity >= required {
         return Ok(0);
     }
@@ -162,17 +167,37 @@ impl CowPageIndex {
     /// observes metadata; the caller must allocate the returned reservation
     /// after releasing the index lock and revalidate during apply.
     fn insert_reservation_capacity(&self) -> Result<usize, StarryError> {
+        self.insert_reservation_capacity_for(1)
+    }
+
+    /// Returns the allocation size needed by the next `additional` inserts
+    /// (a single page or a whole run).  Same contract as
+    /// [`Self::insert_reservation_capacity`].
+    fn insert_reservation_capacity_for(&self, additional: usize) -> Result<usize, StarryError> {
+        if additional == 0 {
+            return Ok(0);
+        }
         // Fast path: with spare capacity the insert cannot allocate, so no
         // rebuild is needed and there is no reason to walk the index counting
         // live entries.  That walk is O(n) *per insert* and each entry costs an
         // atomic strong_count read (usually a cache miss); it dominated the
         // first-touch fault cost on SG2002.  Dead entries are pruned on the
         // growth path below instead of on every insert.
-        if self.pages.len() < self.pages.capacity() {
+        let projected = self
+            .pages
+            .len()
+            .checked_add(additional)
+            .ok_or(StarryError::BadState)?;
+        if projected <= self.pages.capacity() {
             return Ok(0);
         }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
-        cow_page_index_reservation_capacity(live, self.pages.len(), self.pages.capacity())
+        cow_page_index_reservation_capacity(
+            live,
+            self.pages.len(),
+            self.pages.capacity(),
+            additional,
+        )
     }
 
     fn ensure_published_reservation_capacity(
@@ -196,14 +221,29 @@ impl CowPageIndex {
         &mut self,
         reservation: &mut CowPageIndexReservation,
     ) -> Result<(), CowPageIndexInsertError> {
+        self.rebuild_for_insert_n(reservation, 1)
+    }
+
+    /// Grows/compacts the index so that `additional` more entries can be pushed
+    /// without allocating under the index lock.
+    fn rebuild_for_insert_n(
+        &mut self,
+        reservation: &mut CowPageIndexReservation,
+        additional: usize,
+    ) -> Result<(), CowPageIndexInsertError> {
         // Spare capacity means `Vec::insert` below cannot allocate; skip the
         // live-entry scan (and the compaction it would drive).
-        if self.pages.len() < self.pages.capacity() {
+        let projected = self
+            .pages
+            .len()
+            .checked_add(additional)
+            .ok_or_else(|| CowPageIndexInsertError::Invalid(StarryError::BadState))?;
+        if projected <= self.pages.capacity() {
             return Ok(());
         }
         let live = self.pages.iter().filter(|entry| entry.is_live()).count();
         let required = live
-            .checked_add(1)
+            .checked_add(additional)
             .ok_or_else(|| CowPageIndexInsertError::Invalid(StarryError::BadState))?;
         if live == self.pages.len() && self.pages.capacity() >= required {
             return Ok(());
@@ -280,6 +320,114 @@ impl CowPageIndex {
         // but cannot allocate while the IRQ-saving guard is held.
         self.pages
             .insert(position, CowPageIndexEntry::pending(page));
+        add(STAGE_PEND_STORE, stage_now().saturating_sub(t_store));
+        Ok(())
+    }
+
+    /// Registers a whole run of freshly allocated anonymous pages in one step.
+    ///
+    /// A run carved out of a single contiguous block ([`FrameLease::sublease`])
+    /// has strictly increasing, gapless frame addresses, so the per-page
+    /// `binary/partition_point` + `Vec::insert` shift can be replaced by a
+    /// single position search plus one bulk append/rotate.  That removes the
+    /// per-page index cost from the first-touch fault of a sequential
+    /// populate (the SG2002 hot path), while keeping the same O(n) memmove
+    /// worst case for the vector as a whole.
+    ///
+    /// The caller must pass pages in ascending frame order; the batch is
+    /// all-or-nothing.  Returns [`CowPageIndexInsertError::NotApplicable`] when
+    /// the run is well-formed but this index cannot take it in one step — the
+    /// caller then falls back to the per-page path, which is always correct.
+    fn insert_pending_run_reserved(
+        &mut self,
+        pages: &[Arc<PageObject>],
+        reservation: &mut CowPageIndexReservation,
+    ) -> Result<(), CowPageIndexInsertError> {
+        use crate::mm::fault_attrib::{
+            STAGE_PEND_OVERLAP, STAGE_PEND_SEARCH, STAGE_PEND_STORE, add, note_insert_position,
+            stage_now,
+        };
+        let Some(first) = pages.first() else {
+            return Ok(());
+        };
+        if first.mapping_refs() != 0 {
+            return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
+        }
+        // Validate the whole run up front so a rejection cannot leave a
+        // partially inserted batch behind.  Contiguity is required: a run with
+        // a hole could still be inserted per page (a live owner may live in the
+        // hole), so that case degrades instead of failing.
+        let first_start = first.frame().paddr().as_usize();
+        let mut last_end = first_start;
+        for (index, page) in pages.iter().enumerate() {
+            if page.mapping_refs() != 0 {
+                return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
+            }
+            let size = page.frame().size();
+            if size == 0 {
+                return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
+            }
+            let start = page.frame().paddr().as_usize();
+            if index > 0 && start != last_end {
+                return Err(CowPageIndexInsertError::NotApplicable);
+            }
+            last_end = start
+                .checked_add(size)
+                .ok_or_else(|| CowPageIndexInsertError::Invalid(StarryError::BadState))?;
+        }
+        let count = pages.len();
+
+        let t_search = stage_now();
+        self.rebuild_for_insert_n(reservation, count)?;
+        let position = self
+            .pages
+            .partition_point(|entry| entry.paddr.as_usize() < first_start);
+        add(STAGE_PEND_SEARCH, stage_now().saturating_sub(t_search));
+        let t_overlap = stage_now();
+        // Same live-only rules as the per-page path.  In addition, a *dead*
+        // entry whose frame falls inside the run would have to be inserted
+        // after the run to keep the vector sorted by frame base; bail out to the
+        // per-page path rather than leave a mis-ordered index behind.
+        let predecessor_overlaps = self.pages[..position]
+            .iter()
+            .rev()
+            .find(|entry| entry.is_live())
+            .is_some_and(|entry| {
+                entry
+                    .end()
+                    .is_none_or(|existing_end| first_start < existing_end)
+            });
+        let mut successor_overlaps = false;
+        let mut interior_tombstone = false;
+        for entry in &self.pages[position..] {
+            if entry.paddr.as_usize() >= last_end {
+                break;
+            }
+            if entry.is_live() {
+                successor_overlaps = true;
+                break;
+            }
+            interior_tombstone = true;
+        }
+        if predecessor_overlaps || successor_overlaps {
+            return Err(CowPageIndexInsertError::Invalid(StarryError::BadState));
+        }
+        if interior_tombstone {
+            return Err(CowPageIndexInsertError::NotApplicable);
+        }
+        add(STAGE_PEND_OVERLAP, stage_now().saturating_sub(t_overlap));
+
+        note_insert_position(position, self.pages.len());
+        let t_store = stage_now();
+        // `rebuild_for_insert_n` proved room for `count` more entries, so the
+        // append below cannot allocate while the IRQ-saving guard is held.
+        debug_assert!(self.pages.len() + count <= self.pages.capacity());
+        self.pages
+            .extend(pages.iter().map(CowPageIndexEntry::pending));
+        // The appended entries are the tail of `pages[position..]`; rotating
+        // them to the front places the whole run at `position` in one memmove,
+        // exactly where `partition_point` said the first page belongs.
+        self.pages[position..].rotate_right(count);
         add(STAGE_PEND_STORE, stage_now().saturating_sub(t_store));
         Ok(())
     }
@@ -631,6 +779,10 @@ impl CowBackend {
                 }
                 Err(CowPageIndexInsertError::StaleReservation) => continue,
                 Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                // `ensure_published_reserved` only ever inserts one page.
+                Err(CowPageIndexInsertError::NotApplicable) => {
+                    return Err(StarryError::BadState);
+                }
             }
         }
     }
@@ -766,6 +918,10 @@ impl CowBackend {
                     Ok(()) => return Ok(()),
                     Err(CowPageIndexInsertError::StaleReservation) => {}
                     Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                    // Batches only; the single-page insert never returns this.
+                    Err(CowPageIndexInsertError::NotApplicable) => {
+                        return Err(StarryError::BadState);
+                    }
                 }
             }
         }
@@ -787,8 +943,68 @@ impl CowBackend {
                 Ok(()) => return Ok(()),
                 Err(CowPageIndexInsertError::StaleReservation) => continue,
                 Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                Err(CowPageIndexInsertError::NotApplicable) => {
+                    return Err(StarryError::BadState);
+                }
             }
         }
+    }
+
+    /// Registers a contiguous run of new anonymous pages as one batch.
+    ///
+    /// `pages` must be ordered by ascending frame address (a contiguous
+    /// [`FrameLease::sublease`] run is).  If the batch cannot be applied in one
+    /// step the pages are registered one by one, which is the previous
+    /// behaviour; the batch is never partially applied, so either path leaves
+    /// the index fully consistent on both success and failure.
+    fn insert_pending_run(&self, pages: &[Arc<PageObject>]) -> StarryResult<()> {
+        if pages.is_empty() {
+            return Ok(());
+        }
+        let count = pages.len();
+        let mut fallback = false;
+        {
+            let t_lock = crate::mm::fault_attrib::stage_now();
+            let mut index = self.pages.lock();
+            let capacity = index.insert_reservation_capacity_for(count)?;
+            crate::mm::fault_attrib::add(
+                crate::mm::fault_attrib::STAGE_PEND_LOCK,
+                crate::mm::fault_attrib::stage_now().saturating_sub(t_lock),
+            );
+            if capacity == 0 {
+                let mut reservation = CowPageIndexReservation::try_with_capacity(0)?;
+                match index.insert_pending_run_reserved(pages, &mut reservation) {
+                    Ok(()) => return Ok(()),
+                    Err(CowPageIndexInsertError::StaleReservation) => {}
+                    Err(CowPageIndexInsertError::NotApplicable) => fallback = true,
+                    Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                }
+            }
+        }
+        if !fallback {
+            loop {
+                let capacity = {
+                    let index = self.pages.lock();
+                    index.insert_reservation_capacity_for(count)?
+                };
+                let mut reservation = CowPageIndexReservation::try_with_capacity(capacity)?;
+                let result = {
+                    let mut index = self.pages.lock();
+                    index.insert_pending_run_reserved(pages, &mut reservation)
+                };
+                drop(reservation);
+                match result {
+                    Ok(()) => return Ok(()),
+                    Err(CowPageIndexInsertError::StaleReservation) => continue,
+                    Err(CowPageIndexInsertError::NotApplicable) => break,
+                    Err(CowPageIndexInsertError::Invalid(error)) => return Err(error),
+                }
+            }
+        }
+        for page in pages {
+            self.insert_pending_page(page)?;
+        }
+        Ok(())
     }
 
     fn alloc_new_frame(
@@ -949,32 +1165,42 @@ impl CowBackend {
         mapped
             .try_reserve(addrs.len())
             .map_err(|_| StarryError::NoMemory)?;
-        // 逐页登记到 COW 页索引：子租约保证窗口内的 paddr 连续递增，插入位置
-        // 集中在尾部，搬移量远小于散列分配。
-        for (index, &addr) in addrs.iter().enumerate() {
+        // 先把这一段子租约整成 PageObject，再**一次性**登记到 COW 页索引：同一整块
+        // 分配切出的子租约 paddr 连续递增，所以索引侧可以一次定位 + 一次整段搬移，
+        // 不必每页一次锁、一次二分、一次逐页搬移（第一刀 a）。批量失败（含索引里
+        // 落入墓碑这类只能逐页安置的情形）会自动退回逐页登记，语义不变。
+        let mut pending: Vec<Arc<PageObject>> = Vec::new();
+        pending
+            .try_reserve(addrs.len())
+            .map_err(|_| StarryError::NoMemory)?;
+        for index in 0..addrs.len() {
             let page = index
                 .checked_mul(leaf_size)
                 .and_then(|offset| block.sublease(offset, leaf_size))
                 .map(|lease| {
                     PageObject::new_present_with_resident_kind(PageId::allocate(), lease, Some(kind))
                 })
-                .ok_or(StarryError::BadState)
-                .and_then(|page| self.insert_pending_page(&page).map(|()| page));
-            let page = match page {
-                Ok(page) => page,
-                Err(error) => {
-                    self.rollback_new_pages(&mut mapped, pt);
-                    return Err(error);
-                }
-            };
+                .ok_or(StarryError::BadState)?;
+            pending.push(page);
+        }
+        // The batch is all-or-nothing, so a failure here leaves no index entry
+        // behind and dropping `pending` releases every sublease.
+        self.insert_pending_run(&pending)?;
+        for (index, &addr) in addrs.iter().enumerate() {
+            let page = &pending[index];
             let frame = page.frame().paddr();
             page.prepare_executable_mapping(frame, leaf_size, pte_flags);
             if let Err(err) = pt.map_page(addr, frame, leaf_size, pte_flags) {
-                self.discard_pending_page(&page);
+                // This page and every not-yet-mapped successor are registered in
+                // the index but have no PTE yet; retire their entries before
+                // rolling the already-mapped prefix back.
+                for leftover in &pending[index..] {
+                    self.discard_pending_page(leftover);
+                }
                 self.rollback_new_pages(&mut mapped, pt);
                 return Err(err.into());
             }
-            mapped.push((addr, page));
+            mapped.push((addr, page.clone()));
         }
         for (addr, page) in mapped {
             materialization.push(PreparedPteOwner::installed(
@@ -3595,23 +3821,33 @@ mod tests {
     #[cfg_attr(not(axtest), test)]
     fn cow_page_index_retired_capacity_does_not_compound() {
         assert_eq!(
-            super::cow_page_index_reservation_capacity(0, 1, 4).unwrap(),
+            super::cow_page_index_reservation_capacity(0, 1, 4, 1).unwrap(),
             4,
             "compacting one tombstone must size storage from live entries, not double retired \
              capacity",
         );
         assert_eq!(
-            super::cow_page_index_reservation_capacity(4, 4, 4).unwrap(),
+            super::cow_page_index_reservation_capacity(4, 4, 4, 1).unwrap(),
             8,
             "a full live index must still grow geometrically",
+        );
+        assert_eq!(
+            super::cow_page_index_reservation_capacity(0, 1, 4, 8).unwrap(),
+            8,
+            "a run must reserve room for every page it inserts at once",
+        );
+        assert_eq!(
+            super::cow_page_index_reservation_capacity(6, 6, 8, 4).unwrap(),
+            16,
+            "a run on top of tombstones sizes from live entries plus the run",
         );
     }
 
     #[cfg(all(test, not(axtest)))]
     #[test]
     fn cow_page_index_recycled_frame_resolves_around_stale_tombstone() {
-        use alloc::sync::Arc;
         use super::MemoryAddr;
+        use alloc::sync::Arc;
 
         fn page(ordinal: usize, paddr: usize, bytes: usize) -> Arc<super::PageObject> {
             let lease =
@@ -3676,6 +3912,116 @@ mod tests {
                 .is_none(),
             "an address past the frame must stay unresolved",
         );
+    }
+
+    #[cfg(all(test, not(axtest)))]
+    #[test]
+    fn cow_page_index_batch_run_matches_per_page_inserts() {
+        use alloc::sync::Arc;
+        use super::MemoryAddr;
+
+        fn page(ordinal: usize, paddr: usize) -> Arc<super::PageObject> {
+            let lease = super::FrameLease::borrowed(
+                super::PhysAddr::from_usize(paddr),
+                super::PAGE_SIZE_4K,
+                None,
+            )
+            .expect("borrowed lease must be non-empty");
+            super::PageObject::new_present(super::PageId::new(0x500 + ordinal as u64), lease)
+        }
+
+        fn insert_single(
+            index: &mut super::CowPageIndex,
+            page: &Arc<super::PageObject>,
+        ) -> Result<(), super::CowPageIndexInsertError> {
+            let capacity = index.insert_reservation_capacity().unwrap();
+            let mut reservation =
+                super::CowPageIndexReservation::try_with_capacity(capacity).unwrap();
+            index.insert_pending_reserved(page, &mut reservation)
+        }
+
+        fn insert_run(
+            index: &mut super::CowPageIndex,
+            pages: &[Arc<super::PageObject>],
+        ) -> Result<(), super::CowPageIndexInsertError> {
+            let capacity = index.insert_reservation_capacity_for(pages.len()).unwrap();
+            let mut reservation =
+                super::CowPageIndexReservation::try_with_capacity(capacity).unwrap();
+            index.insert_pending_run_reserved(pages, &mut reservation)
+        }
+
+        // (1) 一整段连续帧：批量登记后每页都能按 paddr 解析，且索引仍按基址有序。
+        let base = 0x20_0000;
+        let run: alloc::vec::Vec<_> = (0..4)
+            .map(|i| page(i, base + i * super::PAGE_SIZE_4K))
+            .collect();
+        let mut index = super::CowPageIndex::new();
+        assert!(insert_run(&mut index, &run).is_ok());
+        assert_eq!(index.pages.len(), 4);
+        for (i, expected) in run.iter().enumerate() {
+            let resolved = index
+                .get(super::PhysAddr::from_usize(base + i * super::PAGE_SIZE_4K))
+                .expect("batch insert must publish every page");
+            assert!(Arc::ptr_eq(&resolved, expected));
+        }
+        assert!(
+            index
+                .pages
+                .windows(2)
+                .all(|pair| pair[0].paddr.as_usize() < pair[1].paddr.as_usize()),
+            "batch insert must keep the index sorted by frame base",
+        );
+
+        // (2) 段内有洞：交回逐页路径，且不得留下半截状态。
+        let holed: alloc::vec::Vec<_> = alloc::vec![
+            page(0x10, base + 0x40_0000),
+            page(0x11, base + 0x40_0000 + 2 * super::PAGE_SIZE_4K),
+        ];
+        let before = index.pages.len();
+        assert!(matches!(
+            insert_run(&mut index, &holed),
+            Err(super::CowPageIndexInsertError::NotApplicable)
+        ));
+        assert_eq!(index.pages.len(), before);
+
+        // (3) 段内落在墓碑上：整段插会破坏"按基址有序"，必须回退逐页；
+        //     回退后新页仍可解析（含墓碑占住的那个地址）。
+        let tombstone = page(0x20, base + 8 * super::PAGE_SIZE_4K);
+        assert!(insert_single(&mut index, &tombstone).is_ok());
+        if let Some(slot) = index
+            .pages
+            .iter_mut()
+            .find(|entry| entry.paddr.as_usize() == base + 8 * super::PAGE_SIZE_4K)
+        {
+            slot.owner = super::CowPageIndexOwner::Published(Arc::downgrade(&tombstone));
+        }
+        drop(tombstone);
+        let spanning: alloc::vec::Vec<_> = (0x30..0x33)
+            .map(|i| page(i, base + (6 + i - 0x30) * super::PAGE_SIZE_4K))
+            .collect();
+        assert!(matches!(
+            insert_run(&mut index, &spanning),
+            Err(super::CowPageIndexInsertError::NotApplicable)
+        ));
+        for one in &spanning {
+            assert!(insert_single(&mut index, one).is_ok());
+        }
+        for one in &spanning {
+            let resolved = index
+                .get(one.frame().paddr())
+                .expect("the per-page fallback must resolve every page it inserted");
+            assert!(Arc::ptr_eq(&resolved, one));
+        }
+
+        // (4) 与活条目真正重叠：整段拒绝，而不是降级。
+        let conflict: alloc::vec::Vec<_> = alloc::vec![
+            page(0x40, base),
+            page(0x41, base + super::PAGE_SIZE_4K),
+        ];
+        assert!(matches!(
+            insert_run(&mut index, &conflict),
+            Err(super::CowPageIndexInsertError::Invalid(_))
+        ));
     }
 
     #[cfg(all(test, not(axtest)))]
