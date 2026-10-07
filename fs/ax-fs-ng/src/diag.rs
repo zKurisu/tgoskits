@@ -28,7 +28,11 @@ pub const STAGE_CLOSE_SHARED_DROP: usize = 7;
 pub const STAGE_CLOSE_EXT4_INODE_DROP: usize = 8;
 pub const STAGE_CLOSE_EXT4_RELEASE_REF: usize = 9;
 pub const STAGE_CLOSE_EXT4_REAP: usize = 10;
-const STAGES: usize = 11;
+/// H2：读路径每页三段 —— 取页（mapping_layout_lock + page_cache.lock + LRU）、
+/// 页→scratch 拷贝、scratch→用户缓冲拷贝。前两段按"页"取平均，最后一段按"页"计。
+pub const STAGE_READ_PAGE_LOOKUP: usize = 11;
+pub const STAGE_READ_USER_COPY: usize = 12;
+const STAGES: usize = 13;
 
 const NAMES: [&str; STAGES] = [
     "open_get_or_create",
@@ -42,7 +46,18 @@ const NAMES: [&str; STAGES] = [
     "close_ext4_inode_drop",
     "close_ext4_release_ref",
     "close_ext4_reap",
+    "read_page_lookup",
+    "read_user_copy",
 ];
+
+/// 读路径经过的页数（用于把 `fs_read_*_avg` 归一成"每页"）。
+static READ_PAGES: AtomicU64 = AtomicU64::new(0);
+
+/// Counts one page passed through the cached read path.
+#[inline]
+pub fn note_read_page() {
+    READ_PAGES.fetch_add(1, Ordering::Relaxed);
+}
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static CALLS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
@@ -147,5 +162,23 @@ pub fn render() -> alloc::string::String {
         ATIME_PERSIST.load(Ordering::Relaxed),
         ATIME_SKIP.load(Ordering::Relaxed)
     ));
+    {
+        // H2：读路径按"页"归一的平均（lookup / 页→scratch 拷贝 / scratch→用户拷贝）。
+        let pages = READ_PAGES.load(Ordering::Relaxed);
+        let per_page = |stage: usize| {
+            if pages == 0 {
+                0
+            } else {
+                TOTALS[stage].load(Ordering::Relaxed) / pages
+            }
+        };
+        out.push_str(&format!(
+            "fs_read_pages={pages} fs_read_page_lookup_per_page={} \
+             fs_read_copy_per_page={} fs_read_user_copy_per_page={}\n",
+            per_page(STAGE_READ_PAGE_LOOKUP),
+            per_page(STAGE_READ_COPY),
+            per_page(STAGE_READ_USER_COPY)
+        ));
+    }
     out
 }

@@ -130,7 +130,19 @@ pub const STAGE_SYS_POST: usize = 86;
 pub const STAGE_SYS_FENCE_I: usize = 87;
 pub const STAGE_SYS_USER_ROUNDTRIP: usize = 88;
 pub const STAGE_SYS_PREP_RETURN: usize = 89;
-const STAGES: usize = 90;
+/// B2：陷阱循环里那些"每次都要查一遍"的开关（单步 / ptrace / 信号 / seccomp / trace）。
+pub const STAGE_SYS_SINGLESTEP: usize = 90;
+pub const STAGE_SYS_TRACE_CHECK: usize = 91;
+pub const STAGE_SYS_RETURN_WORK: usize = 92;
+pub const STAGE_SYS_SECCOMP: usize = 93;
+pub const STAGE_SYS_TRACE_ENTER: usize = 94;
+pub const STAGE_SYS_BODY_GETPID: usize = 95;
+/// H2：uaccess 每次拷贝前的准备（pin + 地址空间锁 + 页表走查 + 用户内存作用域）。
+pub const STAGE_UACCESS_PREPARE: usize = 96;
+pub const STAGE_UACCESS_PIN: usize = 97;
+pub const STAGE_UACCESS_WALK: usize = 98;
+pub const STAGE_UACCESS_COPY: usize = 99;
+const STAGES: usize = 100;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -473,6 +485,16 @@ pub fn render() -> String {
             ("sys_fence_i", STAGE_SYS_FENCE_I),
             ("sys_user_roundtrip", STAGE_SYS_USER_ROUNDTRIP),
             ("sys_prep_return", STAGE_SYS_PREP_RETURN),
+            ("sys_singlestep", STAGE_SYS_SINGLESTEP),
+            ("sys_trace_check", STAGE_SYS_TRACE_CHECK),
+            ("sys_return_work", STAGE_SYS_RETURN_WORK),
+            ("sys_seccomp", STAGE_SYS_SECCOMP),
+            ("sys_trace_enter", STAGE_SYS_TRACE_ENTER),
+            ("sys_body_getpid", STAGE_SYS_BODY_GETPID),
+            ("uaccess_prepare", STAGE_UACCESS_PREPARE),
+            ("uaccess_pin", STAGE_UACCESS_PIN),
+            ("uaccess_walk", STAGE_UACCESS_WALK),
+            ("uaccess_copy", STAGE_UACCESS_COPY),
         ] {
             let ns = TOTALS[stage].load(Ordering::Relaxed);
             out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / iters));

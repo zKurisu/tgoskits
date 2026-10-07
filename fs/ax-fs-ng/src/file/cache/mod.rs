@@ -1177,6 +1177,8 @@ impl CachedFile {
         let mut current = offset;
         while current < end {
             let chunk_len = {
+                crate::diag::note_read_page();
+                let _t_lookup = crate::diag::scope(crate::diag::STAGE_READ_PAGE_LOOKUP);
                 let _layout = self.shared.mapping_layout_lock.lock();
                 // A preceding user copy may have faulted or slept while a
                 // truncate committed. Resample EOF before each cache snapshot.
@@ -1225,6 +1227,7 @@ impl CachedFile {
             // `dst` may point at user memory. Copy after releasing cached-file
             // locks so a user page fault can take AddrSpace without creating a
             // cached-I/O -> AddrSpace lock order.
+            let _t_user = crate::diag::scope(crate::diag::STAGE_READ_USER_COPY);
             dst.write_all(&scratch.data()[..chunk_len])
                 .map_err(crate::io_error_to_vfs_error)?;
             read += chunk_len;

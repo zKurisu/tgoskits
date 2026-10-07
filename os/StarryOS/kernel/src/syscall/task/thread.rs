@@ -5,6 +5,7 @@ use crate::{
 
 #[inline(never)]
 pub fn sys_getpid(current: &UserTaskRef) -> StarryResult<isize> {
+    let _t = crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_BODY_GETPID);
     Ok(current
         .as_thread()
         .proc_data
