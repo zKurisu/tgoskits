@@ -2,16 +2,37 @@ use core::{num::NonZeroUsize, ptr::NonNull};
 
 use mbarrier::mb;
 
-use crate::{DmaAllocHandle, DmaConstraints, DmaDirection, DmaError, DmaMapHandle};
+use crate::{DmaAddr, DmaAllocHandle, DmaConstraints, DmaDirection, DmaError, DmaMapHandle};
 
 cfg_if::cfg_if! {
     if #[cfg(target_arch = "aarch64")] {
         #[path = "aarch64.rs"]
         pub mod arch;
-    } else{
+    } else if #[cfg(target_arch = "riscv64")] {
+        #[path = "riscv64.rs"]
+        pub mod arch;
+    } else {
         #[path = "nop.rs"]
         pub mod arch;
     }
+}
+
+/// Returns the address passed to the arch cache-maintenance backend.
+///
+/// The XuanTie C906 XTheadCmo instructions (`dcache.cpa`/`dcache.cipa`) index the
+/// dcache by *physical* address (the vendor Linux tree passes `phys_addr_t`),
+/// whereas AArch64's `dcache_range` operates on virtual addresses. Resolve the
+/// right one per target.
+#[cfg(target_arch = "riscv64")]
+#[inline]
+fn cache_addr(_cpu: NonNull<u8>, dma: DmaAddr, offset: usize) -> NonNull<u8> {
+    NonNull::new((dma.as_u64() + offset as u64) as *mut u8).unwrap()
+}
+
+#[cfg(not(target_arch = "riscv64"))]
+#[inline]
+fn cache_addr(cpu: NonNull<u8>, _dma: DmaAddr, offset: usize) -> NonNull<u8> {
+    unsafe { cpu.add(offset) }
 }
 
 pub trait DmaOp: Sync + Send + 'static {
@@ -106,9 +127,9 @@ pub trait DmaOp: Sync + Send + 'static {
             direction,
             DmaDirection::ToDevice | DmaDirection::Bidirectional
         ) {
-            self.flush(unsafe { handle.as_ptr().add(offset) }, size);
+            self.flush(cache_addr(handle.as_ptr(), handle.dma_addr(), offset), size);
         } else if matches!(direction, DmaDirection::FromDevice) {
-            self.invalidate(unsafe { handle.as_ptr().add(offset) }, size);
+            self.invalidate(cache_addr(handle.as_ptr(), handle.dma_addr(), offset), size);
         }
     }
 
@@ -123,7 +144,7 @@ pub trait DmaOp: Sync + Send + 'static {
             direction,
             DmaDirection::FromDevice | DmaDirection::Bidirectional
         ) {
-            self.invalidate(unsafe { handle.as_ptr().add(offset) }, size);
+            self.invalidate(cache_addr(handle.as_ptr(), handle.dma_addr(), offset), size);
         }
     }
 
@@ -148,17 +169,23 @@ pub trait DmaOp: Sync + Send + 'static {
                         .as_ptr()
                         .copy_from_nonoverlapping(source.as_ptr(), size);
                 }
-                self.flush(target, size);
+                self.flush(cache_addr(target, handle.dma_addr(), offset), size);
             } else if matches!(direction, DmaDirection::FromDevice) {
-                self.invalidate(target, size);
+                self.invalidate(cache_addr(target, handle.dma_addr(), offset), size);
             }
             return;
         }
 
         match direction {
-            DmaDirection::ToDevice => self.flush(source, size),
-            DmaDirection::FromDevice => self.invalidate(source, size),
-            DmaDirection::Bidirectional => self.flush_invalidate(source, size),
+            DmaDirection::ToDevice => {
+                self.flush(cache_addr(source, handle.dma_addr(), offset), size)
+            }
+            DmaDirection::FromDevice => {
+                self.invalidate(cache_addr(source, handle.dma_addr(), offset), size)
+            }
+            DmaDirection::Bidirectional => {
+                self.flush_invalidate(cache_addr(source, handle.dma_addr(), offset), size)
+            }
         }
     }
 
@@ -181,7 +208,7 @@ pub trait DmaOp: Sync + Send + 'static {
             && map_virt != handle.as_ptr()
         {
             let source = unsafe { map_virt.add(offset) };
-            self.invalidate(source, size);
+            self.invalidate(cache_addr(source, handle.dma_addr(), offset), size);
             unsafe {
                 target
                     .as_ptr()
@@ -190,6 +217,6 @@ pub trait DmaOp: Sync + Send + 'static {
             return;
         }
 
-        self.invalidate(target, size);
+        self.invalidate(cache_addr(target, handle.dma_addr(), offset), size);
     }
 }

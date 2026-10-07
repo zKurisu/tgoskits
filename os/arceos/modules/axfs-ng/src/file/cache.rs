@@ -18,7 +18,7 @@ use lru::LruCache;
 use super::page::PageCache;
 use crate::os::{memory::PAGE_SIZE, sync::SleepMutex as Mutex};
 
-const DISK_PAGE_CACHE_CAP: usize = 512;
+const DISK_PAGE_CACHE_CAP: usize = 2048;
 
 #[cfg(feature = "ext4")]
 type CachedFileKey = (usize, u64);
@@ -771,7 +771,10 @@ impl CachedFile {
         let end = offset.saturating_add(buf.remaining() as u64);
         let old_len = self.shared.len();
         if end > old_len {
-            file.set_len(end)?;
+            // Delayed allocation: extend the cached length only. The inode
+            // size and data-block allocation happen later during writeback via
+            // `write_inode_data`, so appending writes stay buffered instead of
+            // triggering a block allocation plus a full `sync_to_disk` per write.
             self.shared.update_len_max(end);
         }
 

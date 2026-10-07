@@ -92,7 +92,9 @@ fn probe_fdt(probe: ProbeFdt<'_>) -> Result<(), OnProbeError> {
         config.has_card_detect_gpio,
     );
 
-    let host = unsafe { Cv181xSdhci::new(Cv181xMmio::new(core, syscon), config) };
+    let mut host = unsafe { Cv181xSdhci::new(Cv181xMmio::new(core, syscon), config) };
+    let dma = axklib::dma::device_with_mask(u32::MAX as u64);
+    host.inner_mut().set_dma(dma.clone());
     let mut card = SdioSdmmc::new_host2(host);
     card.set_sd_uhs_selection_enabled(false);
 
@@ -118,7 +120,7 @@ fn probe_fdt(probe: ProbeFdt<'_>) -> Result<(), OnProbeError> {
 
     let dev = cv181x_rdif::device(
         card,
-        cvsd_block_config(card_info.capacity_blocks.unwrap_or(0)),
+        cvsd_block_config(card_info.capacity_blocks.unwrap_or(0), dma),
     );
     let irq = probe.register_block(dev)?;
     info!("cvsd block device registered irq={:?}", irq);
@@ -205,8 +207,8 @@ fn fdt_u32(info: &FdtInfo<'_>, name: &str, default: u32) -> u32 {
         .unwrap_or(default)
 }
 
-fn cvsd_block_config(capacity_blocks: u64) -> cv181x_rdif::BlockConfig {
-    cv181x_rdif::fifo_config(DEVICE_NAME, capacity_blocks, CVSD_IRQ_DRIVEN)
+fn cvsd_block_config(capacity_blocks: u64, dma: dma_api::DeviceDma) -> cv181x_rdif::BlockConfig {
+    cv181x_rdif::dma_config(DEVICE_NAME, capacity_blocks, CVSD_IRQ_DRIVEN, dma)
 }
 
 #[cfg(not(test))]
@@ -299,12 +301,56 @@ mod tests {
     }
 
     #[test]
-    fn cvsd_block_io_uses_irq_driven_sdmmc_rdif_fifo_config() {
-        let config = cvsd_block_config(8);
+    fn cvsd_block_io_uses_adma_dma_config() {
+        let config = cvsd_block_config(
+            8,
+            dma_api::DeviceDma::new_legacy(u32::MAX as u64, &TEST_DMA),
+        );
 
         assert_eq!(config.name, DEVICE_NAME);
         assert_eq!(config.capacity_blocks, 8);
-        assert!(!config.uses_dma());
+        assert!(config.uses_dma());
         assert!(config.irq_driven);
+    }
+
+    struct TestDma;
+    static TEST_DMA: TestDma = TestDma;
+
+    impl dma_api::DmaOp for TestDma {
+        fn page_size(&self) -> usize {
+            512
+        }
+
+        unsafe fn alloc_contiguous(
+            &self,
+            _constraints: dma_api::DmaConstraints,
+            _layout: core::alloc::Layout,
+        ) -> Option<dma_api::DmaAllocHandle> {
+            None
+        }
+
+        unsafe fn dealloc_contiguous(&self, _handle: dma_api::DmaAllocHandle) {}
+
+        unsafe fn alloc_coherent(
+            &self,
+            _constraints: dma_api::DmaConstraints,
+            _layout: core::alloc::Layout,
+        ) -> Option<dma_api::DmaAllocHandle> {
+            None
+        }
+
+        unsafe fn dealloc_coherent(&self, _handle: dma_api::DmaAllocHandle) {}
+
+        unsafe fn map_streaming(
+            &self,
+            _constraints: dma_api::DmaConstraints,
+            _addr: core::ptr::NonNull<u8>,
+            _size: core::num::NonZeroUsize,
+            _direction: dma_api::DmaDirection,
+        ) -> Result<dma_api::DmaMapHandle, dma_api::DmaError> {
+            Err(dma_api::DmaError::NoMemory)
+        }
+
+        unsafe fn unmap_streaming(&self, _handle: dma_api::DmaMapHandle) {}
     }
 }

@@ -78,8 +78,10 @@ const ADMA2_MAX_PER_DESC: usize = 65_528; // 64 KiB - 8B, multiple of 8
 pub const ADMA2_DESC_COUNT: usize = 16;
 pub const ADMA2_DESC_ALIGN: usize = 64;
 const BLOCK_SIZE: usize = 512;
+// One descriptor slot is reserved for the terminating NOP+END entry, so the
+// data descriptors can only use ADMA2_DESC_COUNT - 1 slots.
 pub const ADMA2_MAX_TRANSFER_SIZE: usize =
-    (ADMA2_DESC_COUNT * ADMA2_MAX_PER_DESC / BLOCK_SIZE) * BLOCK_SIZE;
+    ((ADMA2_DESC_COUNT - 1) * ADMA2_MAX_PER_DESC / BLOCK_SIZE) * BLOCK_SIZE;
 pub const ADMA2_MAX_BLOCKS: u32 = (ADMA2_MAX_TRANSFER_SIZE / BLOCK_SIZE) as u32;
 const DWC_MSHC_ADMA_BOUNDARY: u64 = 128 * 1024 * 1024;
 
@@ -200,9 +202,8 @@ impl DmaRequestBuffer {
                 if read {
                     let completed = unsafe { buffer.complete_after_quiesce() };
                     if let Some((dst, len)) = readback {
-                        completed.copy_from_device_to_slice(unsafe {
-                            core::slice::from_raw_parts_mut(dst.as_ptr(), len)
-                        });
+                        let slice = unsafe { core::slice::from_raw_parts_mut(dst.as_ptr(), len) };
+                        completed.copy_from_device_to_slice(slice);
                     }
                     None
                 } else {
@@ -341,18 +342,18 @@ pub(crate) fn build_descriptors(
     let mut written = 0usize;
 
     while remaining > 0 {
-        if written >= ADMA2_DESC_COUNT {
+        // Reserve one slot for the terminating NOP+END descriptor, matching
+        // the Cvitek/DWC_mshc ADMA2 convention (see Linux's
+        // sdhci_adma_table_pre: data descriptors carry TRAN|VALID without END,
+        // followed by a single NOP|END|VALID terminator).
+        if written >= ADMA2_DESC_COUNT - 1 {
             return Err(Error::Misaligned);
         }
         let boundary_room = DWC_MSHC_ADMA_BOUNDARY - ((base + offset) % DWC_MSHC_ADMA_BOUNDARY);
         let chunk = remaining
             .min(ADMA2_MAX_PER_DESC)
             .min(boundary_room as usize);
-        let is_last = chunk == remaining;
-        let mut attr = ADMA2_ATTR_VALID | ADMA2_ATTR_ACT_TRAN;
-        if is_last {
-            attr |= ADMA2_ATTR_END;
-        }
+        let attr = ADMA2_ATTR_VALID | ADMA2_ATTR_ACT_TRAN;
         table[written] = Adma2Desc32 {
             attr,
             length: chunk as u16,
@@ -362,6 +363,14 @@ pub(crate) fn build_descriptors(
         offset += chunk as u64;
         remaining -= chunk;
     }
+
+    // Terminating descriptor: NOP | END | VALID.
+    table[written] = Adma2Desc32 {
+        attr: ADMA2_ATTR_VALID | ADMA2_ATTR_END,
+        length: 0,
+        address: 0,
+    };
+    written += 1;
 
     Ok(written)
 }
@@ -1546,14 +1555,15 @@ mod tests {
     fn single_descriptor_for_small_buffer() {
         let mut table = empty_table();
         let n = build_descriptors(&mut table, 0x1000_0000, 512, Phase::DataRead).unwrap();
-        assert_eq!(n, 1);
+        assert_eq!(n, 2);
         assert_eq!(table[0].length, 512);
         assert_eq!(table[0].address, 0x1000_0000);
-        // Valid + End + Tran action
-        assert_eq!(
-            table[0].attr,
-            ADMA2_ATTR_VALID | ADMA2_ATTR_END | ADMA2_ATTR_ACT_TRAN
-        );
+        // Valid + Tran action, no END on the data descriptor
+        assert_eq!(table[0].attr, ADMA2_ATTR_VALID | ADMA2_ATTR_ACT_TRAN);
+        // NOP | END | VALID terminator
+        assert_eq!(table[1].attr, ADMA2_ATTR_VALID | ADMA2_ATTR_END);
+        assert_eq!(table[1].length, 0);
+        assert_eq!(table[1].address, 0);
     }
 
     #[test]
@@ -1561,14 +1571,16 @@ mod tests {
         let mut table = empty_table();
         let total = ADMA2_MAX_PER_DESC + 4096;
         let n = build_descriptors(&mut table, 0x2000_0000, total, Phase::DataRead).unwrap();
-        assert_eq!(n, 2);
+        assert_eq!(n, 3);
         assert_eq!(table[0].length as usize, ADMA2_MAX_PER_DESC);
         // first descriptor must NOT have END
         assert!(table[0].attr & ADMA2_ATTR_END == 0);
-        // second descriptor covers the tail and has END
+        // second descriptor covers the tail and also has no END
         assert_eq!(table[1].length, 4096);
-        assert!(table[1].attr & ADMA2_ATTR_END != 0);
+        assert!(table[1].attr & ADMA2_ATTR_END == 0);
         assert_eq!(table[1].address, 0x2000_0000 + ADMA2_MAX_PER_DESC as u32);
+        // terminator
+        assert_eq!(table[2].attr, ADMA2_ATTR_VALID | ADMA2_ATTR_END);
     }
 
     #[test]
@@ -1577,13 +1589,15 @@ mod tests {
         let base = DWC_MSHC_ADMA_BOUNDARY - 1024;
         let n = build_descriptors(&mut table, base, 4096, Phase::DataRead).unwrap();
 
-        assert_eq!(n, 2);
+        assert_eq!(n, 3);
         assert_eq!(table[0].length, 1024);
         assert_eq!(table[0].address, base as u32);
         assert!(table[0].attr & ADMA2_ATTR_END == 0);
         assert_eq!(table[1].length, 3072);
         assert_eq!(table[1].address, DWC_MSHC_ADMA_BOUNDARY as u32);
-        assert!(table[1].attr & ADMA2_ATTR_END != 0);
+        assert!(table[1].attr & ADMA2_ATTR_END == 0);
+        // terminator
+        assert_eq!(table[2].attr, ADMA2_ATTR_VALID | ADMA2_ATTR_END);
     }
 
     #[test]
