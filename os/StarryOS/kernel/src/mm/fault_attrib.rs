@@ -147,7 +147,13 @@ pub const STAGE_PIPE_READ: usize = 100;
 pub const STAGE_PIPE_WRITE: usize = 101;
 pub const STAGE_PIPE_WAIT: usize = 102;
 pub const STAGE_PIPE_WAKE: usize = 103;
-const STAGES: usize = 104;
+/// H2：匿名整块填充（`install_anon_block`）的每页四段 —— 定位 67 µs/页里
+/// 那 63 µs 未归因的部分到底在"建 PageObject / COW 索引插入 / 装 PTE / 物化记录"哪一步。
+pub const STAGE_ANON_PAGE_NEW: usize = 104;
+pub const STAGE_ANON_INDEX: usize = 105;
+pub const STAGE_ANON_MAP: usize = 106;
+pub const STAGE_ANON_MATERIALIZE: usize = 107;
+const STAGES: usize = 108;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 /// 每个段的样本数（供"每次调用"口径的段取平均用）。
@@ -511,6 +517,10 @@ pub fn render() -> String {
             ("pipe_write", STAGE_PIPE_WRITE),
             ("pipe_wait", STAGE_PIPE_WAIT),
             ("pipe_wake", STAGE_PIPE_WAKE),
+            ("anon_page_new", STAGE_ANON_PAGE_NEW),
+            ("anon_index", STAGE_ANON_INDEX),
+            ("anon_map", STAGE_ANON_MAP),
+            ("anon_materialize", STAGE_ANON_MATERIALIZE),
         ] {
             let ns = TOTALS[stage].load(Ordering::Relaxed);
             // 这些是"每次调用"口径的段：total 是真实累计，调用次数由 CALLS 记录，

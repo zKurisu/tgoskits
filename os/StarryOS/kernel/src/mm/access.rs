@@ -195,6 +195,28 @@ impl UserAccess<Faultable> {
         ) {
             return Err(VmError::AccessDenied);
         }
+        // H2：整段一次性物化。
+        //
+        // 原来这里逐页调用 `handle_page_fault_result()`，也就是**每一页**都要走
+        // 一遍完整的缺页事务（plan → prepare → apply → publish）。一次 803 KB 的
+        // `read()` 往"还没触碰过"的用户缓冲里拷，就要付 196 次事务；板上实测
+        // 82.7 µs/页（Linux 同一探针 15.1 µs/页）。
+        //
+        // `AddrSpace::populate_area()` 是 exec 已经在用的整段原语：它内部按 VMA
+        // 分段（所以跨 VMA 也安全），并把整段收进**一次** mutation 事务
+        // （一份 preimage / 一次 receipt / 一次提交）。块的分配与记账也就能按
+        // "连续 run"批量走（见 `alloc_new_anon_run`）。
+        //
+        // 语义保持不变：批量路径成功就跟逐页成功等价；失败（未整段映射、
+        // OOM、后端错误）就回退到下面原有的逐页循环，因此 EFAULT 的判定完全一致。
+        let bulk = aspace_pin.lock().populate_area(
+            VirtAddr::from(span.start),
+            span.end - span.start,
+            self.intent.mapping_flags(),
+        );
+        if bulk.is_ok() {
+            return Ok(());
+        }
         let access = PageFaultFlags::USER
             | match self.intent {
                 UserAccessIntent::Read => PageFaultFlags::READ,
