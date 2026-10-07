@@ -119,8 +119,15 @@ impl UserContext {
             fn enter_user(uctx: &mut UserContext);
         }
 
-        // Refresh all instruction caches before entering the user program space to resolve user program errors
-        riscv::asm::fence_i();
+        // No `fence.i` here: instruction-cache coherence for user text is
+        // established where the mapping is created, not on every return to
+        // user space. `PageObject::prepare_executable_mapping` performs
+        // `clean_dcache_range_to_pou` + `flush_icache_all` before an executable
+        // leaf is published, and the ptrace/kmod/mprotect paths that modify
+        // text synchronize explicitly (`AddrSpace::sync_modified_text`).
+        // Keeping an unconditional `fence_i` on this path costs several
+        // microseconds on every syscall return, which dominates the syscall
+        // round trip on this core.
 
         assert!(
             !crate::asm::irqs_enabled(),
