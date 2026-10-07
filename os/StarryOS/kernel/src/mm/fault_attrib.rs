@@ -73,10 +73,61 @@ pub const STAGE_FILE_POP_PIN: usize = 46;
 pub const STAGE_FILE_POP_POBJ: usize = 47;
 pub const STAGE_FILE_POP_PREP: usize = 48;
 pub const STAGE_FILE_POP_MAP: usize = 49;
-const STAGES: usize = 50;
+/// C1：fork 分段（定位 7.4 ms 的 fork 成本落在"页表复制 / 父侧写保护"哪一段）。
+///
+/// `fork_exit` 探针是 fork()+_exit()+waitpid() 的整体耗时，而 fork 本身要扫父
+/// 页表两遍（`prepare_fork_parent_mutation` + 每个 VMA 的 `clone_map`），父侧写
+/// 保护还要再扫一遍（`apply_fork_parent_mutation`）。这组计数器把这几遍分开，
+/// 并顺带量出子地址空间析构（占用 `_exit()` 的那半边）。
+pub const STAGE_FORK_TOTAL: usize = 50;
+pub const STAGE_FORK_PARENT_PREP: usize = 51;
+pub const STAGE_FORK_CLONE_MAP: usize = 52;
+pub const STAGE_FORK_CLONE_WALK: usize = 53;
+pub const STAGE_FORK_CLONE_ENTRY: usize = 54;
+pub const STAGE_FORK_APPLY_PARENT: usize = 55;
+pub const STAGE_FORK_PREP_PROC: usize = 56;
+pub const STAGE_EXIT_ASPACE: usize = 57;
+/// C1 细分：`clone_map` 的每叶循环 vs 子侧 `map_page`，以及子地址空间析构的两半。
+pub const STAGE_FORK_CLONE_LEAF: usize = 58;
+pub const STAGE_FORK_CLONE_PTE: usize = 59;
+pub const STAGE_FORK_PUB_PREP: usize = 60;
+pub const STAGE_FORK_PUB_APPLY: usize = 61;
+pub const STAGE_EXIT_CLEAR: usize = 62;
+pub const STAGE_EXIT_DETACH: usize = 63;
+/// C1 粗粒度：把 `fork()` / `_exit()` / `waitpid()` 三个系统调用各自计时，
+/// 好把 `fork_exit` 探针的 7.5 ms 先劈成两半再细看。全部按"每次 fork"取平均
+/// （`exit`/`wait` 的次数与 fork 同量级）。
+pub const STAGE_FORK_SYSCALL: usize = 64;
+pub const STAGE_EXIT_SYSCALL: usize = 65;
+pub const STAGE_WAIT_SYSCALL: usize = 66;
+/// C1：`do_clone` 里"地址空间之外"的几大块（fork 系统调用总耗时的大头）。
+pub const STAGE_FORK_PID: usize = 67;
+pub const STAGE_FORK_CGROUP: usize = 68;
+pub const STAGE_FORK_NSPROXY: usize = 69;
+pub const STAGE_FORK_IMAGE: usize = 70;
+pub const STAGE_FORK_SCOPE: usize = 71;
+pub const STAGE_FORK_TASK: usize = 72;
+/// C1：`fork_task`（2.5 ms）与 `do_exit`（1.1 ms）内部的再细分。
+pub const STAGE_FORK_PREP_THREAD: usize = 73;
+pub const STAGE_FORK_STAGE_PUB: usize = 74;
+pub const STAGE_FORK_ACTIVATE: usize = 75;
+pub const STAGE_EXIT_FD: usize = 76;
+pub const STAGE_EXIT_MM: usize = 77;
+pub const STAGE_EXIT_PROC: usize = 78;
+pub const STAGE_EXIT_PUB: usize = 79;
+/// C1：`fork_clone_entry`（每个 VMA ~700 µs）内部再拆 memfd 增量与 VMA 树操作。
+pub const STAGE_FORK_MEMFD: usize = 80;
+pub const STAGE_FORK_VMA: usize = 81;
+const STAGES: usize = 82;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
+/// fork(2) 的调用次数 —— fork 各分段按"每次 fork"取平均，而不是按缺页数。
+static FORKS: AtomicU64 = AtomicU64::new(0);
+/// 进程退出时销毁地址空间的次数（`fork_exit` 探针的另一半）。
+static EXITS: AtomicU64 = AtomicU64::new(0);
+/// `do_exit` 的调用次数（每个退出的线程一次），用于 `exit_fd/mm/proc/pub` 取平均。
+static EXIT_CALLS: AtomicU64 = AtomicU64::new(0);
 
 /// 有序索引插入的位置直方图（诊断 COW 页索引的搬移代价）。
 ///
@@ -177,6 +228,47 @@ pub fn note_faults(pages: u64) {
     FAULTS.fetch_add(pages, Ordering::Relaxed);
 }
 
+/// Counts one `fork(2)` (i.e. one non-`CLONE_VM` clone).
+pub fn note_fork() {
+    FORKS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Fork 深度：`publish_prepared_pte_owners` 是缺页与 fork 共用的路径，只有
+/// 嵌套在 `AddrSpace::try_clone` 里的那次才该记到 `fork_pub_*` 名下。
+static FORK_DEPTH: AtomicU64 = AtomicU64::new(0);
+
+/// Marks the enclosing scope as running inside `AddrSpace::try_clone`.
+#[must_use]
+pub struct ForkDepthGuard;
+
+impl ForkDepthGuard {
+    pub fn new() -> Self {
+        FORK_DEPTH.fetch_add(1, Ordering::Relaxed);
+        Self
+    }
+}
+
+impl Drop for ForkDepthGuard {
+    fn drop(&mut self) {
+        FORK_DEPTH.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// Whether the current thread is inside `AddrSpace::try_clone`.
+pub fn in_fork() -> bool {
+    FORK_DEPTH.load(Ordering::Relaxed) != 0
+}
+
+/// Counts one address-space teardown performed by process exit.
+pub fn note_exit_aspace() {
+    EXITS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Counts one `do_exit` call.
+pub fn note_exit_call() {
+    EXIT_CALLS.fetch_add(1, Ordering::Relaxed);
+}
+
 /// Renders the cumulative per-stage table (for `/proc/fault_attrib`).
 pub fn render() -> String {
     let faults = FAULTS.load(Ordering::Relaxed);
@@ -243,6 +335,75 @@ pub fn render() -> String {
         "total_ns={total} total_avg={}\nfaults={faults}\n",
         if faults == 0 { 0 } else { total / faults }
     ));
+    {
+        // fork 分段：按"每次 fork"取平均。`fork_total` 只覆盖地址空间克隆
+        // （`AddrSpace::try_clone`），不含任务创建与调度。
+        let forks = FORKS.load(Ordering::Relaxed).max(1);
+        let mut fork_total = 0u64;
+        for (name, stage) in [
+            ("fork_total", STAGE_FORK_TOTAL),
+            ("fork_parent_prep", STAGE_FORK_PARENT_PREP),
+            ("fork_clone_map", STAGE_FORK_CLONE_MAP),
+            ("fork_clone_walk", STAGE_FORK_CLONE_WALK),
+            ("fork_clone_entry", STAGE_FORK_CLONE_ENTRY),
+            ("fork_apply_parent", STAGE_FORK_APPLY_PARENT),
+            ("fork_prep_proc", STAGE_FORK_PREP_PROC),
+            ("fork_clone_leaf", STAGE_FORK_CLONE_LEAF),
+            ("fork_clone_pte", STAGE_FORK_CLONE_PTE),
+            ("fork_pub_prep", STAGE_FORK_PUB_PREP),
+            ("fork_pub_apply", STAGE_FORK_PUB_APPLY),
+            ("fork_syscall", STAGE_FORK_SYSCALL),
+            ("exit_syscall", STAGE_EXIT_SYSCALL),
+            ("wait_syscall", STAGE_WAIT_SYSCALL),
+            ("fork_pid", STAGE_FORK_PID),
+            ("fork_cgroup", STAGE_FORK_CGROUP),
+            ("fork_nsproxy", STAGE_FORK_NSPROXY),
+            ("fork_image", STAGE_FORK_IMAGE),
+            ("fork_scope", STAGE_FORK_SCOPE),
+            ("fork_task", STAGE_FORK_TASK),
+            ("fork_prep_thread", STAGE_FORK_PREP_THREAD),
+            ("fork_stage_pub", STAGE_FORK_STAGE_PUB),
+            ("fork_activate", STAGE_FORK_ACTIVATE),
+            ("fork_memfd", STAGE_FORK_MEMFD),
+            ("fork_vma", STAGE_FORK_VMA),
+        ] {
+            let ns = TOTALS[stage].load(Ordering::Relaxed);
+            fork_total += ns;
+            out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / forks));
+        }
+        out.push_str(&format!(
+            "fork_calls={} fork_accounted_avg={}\n",
+            FORKS.load(Ordering::Relaxed),
+            fork_total / forks
+        ));
+        let exits = EXITS.load(Ordering::Relaxed).max(1);
+        for (name, stage) in [
+            ("exit_aspace", STAGE_EXIT_ASPACE),
+            ("exit_clear", STAGE_EXIT_CLEAR),
+            ("exit_detach", STAGE_EXIT_DETACH),
+        ] {
+            let ns = TOTALS[stage].load(Ordering::Relaxed);
+            out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / exits));
+        }
+        out.push_str(&format!(
+            "exit_aspace_calls={}\n",
+            EXITS.load(Ordering::Relaxed)
+        ));
+        let exit_calls = EXIT_CALLS.load(Ordering::Relaxed).max(1);
+        for (name, stage) in [
+            ("exit_fd", STAGE_EXIT_FD),
+            ("exit_mm", STAGE_EXIT_MM),
+            ("exit_proc", STAGE_EXIT_PROC),
+            ("exit_pub", STAGE_EXIT_PUB),
+        ] {
+            let ns = TOTALS[stage].load(Ordering::Relaxed);
+            out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / exit_calls));
+        }
+        out.push_str(&format!(
+            "exit_calls={}\n",
+            EXIT_CALLS.load(Ordering::Relaxed)
+        ));
+    }
     let (reclaim_calls, reclaim_ns) = ax_alloc::reclaim_stats();
     out.push_str(&format!(
         "reclaim_calls={reclaim_calls} reclaim_ns={reclaim_ns} reclaim_avg={}\n",
@@ -294,5 +455,12 @@ pub fn render() -> String {
     }
     // FS 侧分段（ax-fs-ng 自己的计数器，见 fs/ax-fs-ng/src/diag.rs）。
     out.push_str(&ax_fs_ng::diag::render());
+    // ax-task 侧分段（见 components/ax-task/src/diag.rs）。
+    out.push_str(&ax_std::os::arceos::task::diag::render());
+    // C1：地址空间标签能力（1 = 只能全量刷 TLB，值越大 = 能用硬件 ASID）。
+    out.push_str(&format!(
+        "asid_tag_capacity={}\n",
+        ax_runtime::hal::cache::address_space_tag_capacity()
+    ));
     out
 }

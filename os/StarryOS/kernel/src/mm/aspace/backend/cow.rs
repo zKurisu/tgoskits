@@ -29,7 +29,8 @@ use super::{
     },
     FaultFallback, FaultMaterialization, FaultPteSnapshot, MappingExecution, MappingFileInfo,
     MappingOperation, PopulateRequest, PreparedPteOwner, ProviderPublication, PteMaterialization,
-    RssKind, alloc_frame, occupied_leaf_ranges, pages_in, validate_occupied_leaf_range,
+    RssKind, alloc_frame, occupied_leaf_ranges, occupied_leaf_records, pages_in,
+    validate_occupied_leaf_range,
 };
 use crate::{StarryError, StarryResult, sync::IrqMutex};
 
@@ -1797,15 +1798,23 @@ impl MappingExecution for CowBackend {
         new_pt: &mut PageTable,
     ) -> StarryResult<(MappingOperation, PteMaterialization)> {
         let cow_flags = flags - MappingFlags::WRITE;
-        let leaves = occupied_leaf_ranges(range, old_pt)?;
+        let leaves = {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_FORK_CLONE_WALK,
+            );
+            occupied_leaf_records(range, old_pt)?
+        };
         let capacity = leaves.len();
         let mut transaction = CowChildCloneTransaction::new(new_pt, capacity)?;
         let mut materialization = PteMaterialization::with_capacity(capacity)?;
-        for (vaddr, page_size) in leaves {
-            let (paddr, _, installed_size) = old_pt.query(vaddr)?;
-            if installed_size != page_size {
-                return Err(StarryError::BadState);
-            }
+        for leaf in leaves {
+            use crate::mm::fault_attrib::{
+                STAGE_FORK_CLONE_LEAF, STAGE_FORK_CLONE_PTE, add, stage_now,
+            };
+            let vaddr = leaf.vaddr;
+            let paddr = leaf.paddr;
+            let page_size = leaf.page_size;
+            let t_leaf = stage_now();
             let page = self
                 .page_object_for_frame(paddr)
                 .ok_or(StarryError::BadState)?;
@@ -1813,10 +1822,13 @@ impl MappingExecution for CowBackend {
                 return Err(StarryError::BadState);
             }
             page.prepare_executable_mapping(paddr, page_size, cow_flags);
-            if let Err(err) = transaction
+            add(STAGE_FORK_CLONE_LEAF, stage_now().saturating_sub(t_leaf));
+            let t_pte = stage_now();
+            let mapped = transaction
                 .page_table_mut()
-                .map_page(vaddr, paddr, page_size, cow_flags)
-            {
+                .map_page(vaddr, paddr, page_size, cow_flags);
+            add(STAGE_FORK_CLONE_PTE, stage_now().saturating_sub(t_pte));
+            if let Err(err) = mapped {
                 return Err(err.into());
             }
             // The parent's slot is the strong owner until the unpublished

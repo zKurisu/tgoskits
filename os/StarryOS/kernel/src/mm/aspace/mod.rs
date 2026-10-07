@@ -2807,9 +2807,10 @@ impl AddrSpace {
         publications
             .try_reserve(owners.len())
             .map_err(|_| StarryError::NoMemory)?;
-        let mut seen = Vec::new();
-        seen.try_reserve(owners.len())
-            .map_err(|_| StarryError::NoMemory)?;
+        // 重复键检测原来是 `seen: Vec` + 线性 `contains`，Bulk 填充（exec 的
+        // 整段 populate、fork 的子侧复制）一次带上几百个 owner，退化成 O(n²)。
+        // 用有序集替代：插一次 O(log n)，语义（任一处重复即 BadState）不变。
+        let mut seen = alloc::collections::BTreeSet::new();
         let mut mapping_delta = MappingDelta::default();
         let mut resident_delta = ResidentDelta::default();
 
@@ -2817,11 +2818,19 @@ impl AddrSpace {
         // and rmap owner before publishing the first one so rollback retains a
         // complete inverse operation.
         for owner in owners {
+            let timed = crate::mm::fault_attrib::in_fork();
+            let t_prep = crate::mm::fault_attrib::stage_now();
             let publication = self.prepare_slot_publication(operation, range, owner)?;
+            if timed {
+                crate::mm::fault_attrib::add(
+                    crate::mm::fault_attrib::STAGE_FORK_PUB_PREP,
+                    crate::mm::fault_attrib::stage_now().saturating_sub(t_prep),
+                );
+            }
             if seen.contains(&publication.key) {
                 return Err(StarryError::BadState);
             }
-            seen.push(publication.key);
+            seen.insert(publication.key);
             mapping_delta.attached = mapping_delta
                 .attached
                 .checked_add(publication.mapping_delta.attached)
@@ -2835,7 +2844,16 @@ impl AddrSpace {
         }
 
         for publication in publications {
-            self.apply_slot_publication(operation, publication)?;
+            let timed = crate::mm::fault_attrib::in_fork();
+            let t_apply = crate::mm::fault_attrib::stage_now();
+            let applied = self.apply_slot_publication(operation, publication);
+            if timed {
+                crate::mm::fault_attrib::add(
+                    crate::mm::fault_attrib::STAGE_FORK_PUB_APPLY,
+                    crate::mm::fault_attrib::stage_now().saturating_sub(t_apply),
+                );
+            }
+            applied?;
         }
         Ok(PteOwnerPublication {
             satisfied_pages: materialization.satisfied_pages(),
@@ -5728,7 +5746,12 @@ impl AddrSpace {
         {
             return Err(StarryError::ResourceBusy);
         }
-        self.clear_retired_contents()?;
+        {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_EXIT_CLEAR,
+            );
+            self.clear_retired_contents()?;
+        }
         let epoch = self.vm_epoch();
 
         // Detach page-table frames from the materialized tree before allocator
@@ -5746,6 +5769,9 @@ impl AddrSpace {
         // completed zero-target request proves that consuming each token in
         // the callback cannot race an architectural page-table walk.
         unsafe {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_EXIT_DETACH,
+            );
             self.pt.detach(|token| token.reclaim());
         }
         Ok(())
@@ -6579,6 +6605,9 @@ impl AddrSpace {
     /// Applies and publishes the parent half of fork after the child is fully
     /// prepared but still unreachable by the scheduler.
     fn apply_fork_parent_mutation(&mut self, prepared: PreparedForkParentMutation) -> StarryResult {
+        let _t = crate::mm::fault_attrib::scope(
+            crate::mm::fault_attrib::STAGE_FORK_APPLY_PARENT,
+        );
         let PreparedForkParentMutation {
             mutation,
             ptes,
@@ -6671,10 +6700,21 @@ impl AddrSpace {
     /// is built and applied only after the child's receipt is published.
     /// (`CLONE_VM` shares one address space and does not duplicate VMAs here.)
     pub fn try_clone(&mut self) -> StarryResult<Arc<Mutex<Self>>> {
+        use crate::mm::fault_attrib::{
+            STAGE_FORK_CLONE_ENTRY, STAGE_FORK_CLONE_MAP, STAGE_FORK_MEMFD, STAGE_FORK_VMA, add,
+            stage_now,
+        };
+        let _t_fork_total = crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_FORK_TOTAL);
+        let _fork_depth = crate::mm::fault_attrib::ForkDepthGuard::new();
         // Capture every fallible parent-side allocation and PTE preimage before
         // constructing the child. No published parent state changes in this
         // phase, so a child preparation failure is a true abort.
-        let parent_mutation = self.prepare_fork_parent_mutation()?;
+        let parent_mutation = {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_FORK_PARENT_PREP,
+            );
+            self.prepare_fork_parent_mutation()?
+        };
         let new_aspace = Arc::new(Mutex::new(Self::new_with_layout(self.layout)?));
 
         // The caller holds the source AddrSpace lock while this fresh AddrSpace
@@ -6692,13 +6732,17 @@ impl AddrSpace {
                 if entry.snapshot().advice_policy.dont_fork() {
                     continue;
                 }
+                let t_clone_map = stage_now();
                 let (new_backend, materialization) = entry.operation().clone_map(
                     entry.range(),
                     entry.rights(),
                     self_modify,
                     &mut guard.pt,
                 )?;
+                add(STAGE_FORK_CLONE_MAP, stage_now().saturating_sub(t_clone_map));
+                let t_entry = stage_now();
                 let start = entry.start();
+                let t_memfd = stage_now();
                 child_memfd_deltas.extend(crate::syscall::memfd_prepare_aspace_replace_deltas(
                     &guard,
                     start,
@@ -6706,7 +6750,9 @@ impl AddrSpace {
                     entry.rights(),
                     &new_backend,
                 ));
+                add(STAGE_FORK_MEMFD, stage_now().saturating_sub(t_memfd));
 
+                let t_vma = stage_now();
                 let child_entry = guard
                     .vma_root
                     .prepare_mapping_entry(
@@ -6725,7 +6771,9 @@ impl AddrSpace {
                     .with_mapping_entry(child_entry, false)
                     .ok_or(StarryError::BadState)?;
                 guard.vma_root = Arc::new(child_root);
+                add(STAGE_FORK_VMA, stage_now().saturating_sub(t_vma));
                 guard.publish_prepared_pte_owners(&new_backend, entry.range(), &materialization)?;
+                add(STAGE_FORK_CLONE_ENTRY, stage_now().saturating_sub(t_entry));
                 child_vss_pages = child_vss_pages
                     .checked_add((entry.size() / PAGE_SIZE_4K) as u64)
                     .ok_or(StarryError::BadState)?;

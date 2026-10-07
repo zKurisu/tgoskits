@@ -1594,7 +1594,13 @@ impl RetirePermit {
                 return Err(ReclaimError::NotRetired);
             }
         }
-        let result = inner.aspace.lock().try_reclaim_contents();
+        let result = {
+            let _t = crate::mm::fault_attrib::scope(
+                crate::mm::fault_attrib::STAGE_EXIT_ASPACE,
+            );
+            crate::mm::fault_attrib::note_exit_aspace();
+            inner.aspace.lock().try_reclaim_contents()
+        };
         match result {
             Ok(()) => {
                 {

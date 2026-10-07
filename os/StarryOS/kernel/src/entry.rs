@@ -60,6 +60,8 @@ pub fn init(args: &[String], envs: &[String]) {
     ax_alloc::register_page_reclaim_fn(ax_fs_ng::vfs::page_cache_reclaim);
     // H5b 分段探针用的单调时钟（见 fs/ax-fs-ng/src/diag.rs；宿主测试下不注册即 no-op）。
     ax_fs_ng::diag::register_clock(ax_hal::time::monotonic_time_nanos);
+    // C1：`StagedThread::activate` 的内部分段（见 components/ax-task/src/diag.rs）。
+    ax_std::os::arceos::task::diag::register_clock(ax_hal::time::monotonic_time_nanos);
 
     let loc = current_fs_context()
         .lock()

@@ -518,6 +518,10 @@ fn close_process_relations_for_exit(
 }
 
 pub fn do_exit(exit_code: i32, group_exit: bool) {
+    let _t_exit_syscall =
+        crate::mm::fault_attrib::scope(crate::mm::fault_attrib::STAGE_EXIT_SYSCALL);
+    let mut t_mark = crate::mm::fault_attrib::stage_now();
+    crate::mm::fault_attrib::note_exit_call();
     let curr = current_user_task();
     let thr = curr.as_thread();
     // Linux do_group_exit commits the group decision before do_exit claims
@@ -565,6 +569,11 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
     // close_range(CLOSE_RANGE_UNSHARE). Release it when that thread exits;
     // shared tables remain alive until their final sharer exits.
     crate::file::close_all_fds();
+    crate::mm::fault_attrib::add(
+        crate::mm::fault_attrib::STAGE_EXIT_FD,
+        crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+    );
+    t_mark = crate::mm::fault_attrib::stage_now();
 
     // Linux exit_fs() precedes zombie publication. A retained runtime task
     // must not keep cwd/root references alive after waitpid can observe exit.
@@ -708,7 +717,17 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
         // Release the process owner before publishing the zombie.  The typed
         // MM lifecycle defers reclaim until all kernel pins and activations
         // have quiesced, so this path cannot clear a root still in use.
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_EXIT_PROC,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
         thr.proc_data.retire_mm_owner();
+        crate::mm::fault_attrib::add(
+            crate::mm::fault_attrib::STAGE_EXIT_MM,
+            crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+        );
+        t_mark = crate::mm::fault_attrib::stage_now();
 
         publish_zombie(
             &thr.proc_data,
@@ -808,6 +827,10 @@ pub fn do_exit(exit_code: i32, group_exit: bool) {
     // Exec observes transfer readiness from the exact retained PID identity.
     // Wake after completing that identity-owned exit path.
     unsafe { thr.proc_data.thread_exit_event().wake(axpoll::IoEvents::IN) };
+    crate::mm::fault_attrib::add(
+        crate::mm::fault_attrib::STAGE_EXIT_PUB,
+        crate::mm::fault_attrib::stage_now().saturating_sub(t_mark),
+    );
 }
 
 /// Request a sibling thread to exit with thread-only semantics.

@@ -78,7 +78,11 @@ impl StagedUserTask {
     /// Commits first runqueue admission after all Linux-visible state is committed.
     pub fn activate(self) -> UserTaskRef {
         let extension_data = self.extension_data;
-        let task = finish_published_user_thread(self.scheduler.activate());
+        let handle = self.scheduler.activate();
+        let _t_finish = ax_std::os::arceos::task::diag::scope(
+            ax_std::os::arceos::task::diag::STAGE_FINISH_PUBLISHED,
+        );
+        let task = finish_published_user_thread(handle);
         debug_assert_eq!(task.extension_data, extension_data);
         task
     }

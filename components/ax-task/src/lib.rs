@@ -21,5 +21,6 @@ pub mod sync;
 pub mod thread;
 
 pub mod diagnostics;
+pub mod diag;
 pub mod sched;
 pub mod time;
