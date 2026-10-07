@@ -32,6 +32,11 @@ pub fn init(args: &[String], envs: &[String]) {
 
     tracepoint_init().expect("Failed to initialize tracepoints");
 
+    // Bridge kernel `info!`/`warn!`/`error!` records into the `syslog(2)` ring
+    // so `dmesg` shows them alongside the console output. Registered after the
+    // tracepoints so the sink is never called with an uninitialized tracer.
+    ax_runtime::set_aux_log_writer(crate::syscall::syslog_write);
+
     crate::ebpf::init_ebpf();
     crate::perf::perf_event_init();
     crate::kmod::init_kmod();
