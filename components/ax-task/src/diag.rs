@@ -47,7 +47,15 @@ pub const STAGE_OUTCOME_SWITCH: usize = 25;
 pub const STAGE_ENQ_TXN: usize = 26;
 pub const STAGE_ENQ_TIMERS: usize = 27;
 pub const STAGE_ENQ_COMMIT: usize = 28;
-const STAGES: usize = 29;
+/// C2：真决策（`schedule_if_requested_owner`）的内部八段。
+pub const STAGE_SCHED_TXN1: usize = 29;
+pub const STAGE_SCHED_REQUEST: usize = 30;
+pub const STAGE_SCHED_NOOP: usize = 31;
+pub const STAGE_SCHED_OUT: usize = 32;
+pub const STAGE_SCHED_COMMIT: usize = 33;
+pub const STAGE_SCHED_PASS2: usize = 34;
+pub const STAGE_SCHED_DRAIN: usize = 35;
+const STAGES: usize = 36;
 
 const NAMES: [&str; STAGES] = [
     "finish_published",
@@ -79,6 +87,13 @@ const NAMES: [&str; STAGES] = [
     "enq_txn",
     "enq_timers",
     "enq_commit",
+    "sched_txn1",
+    "sched_request",
+    "sched_noop",
+    "sched_out",
+    "sched_commit",
+    "sched_pass2",
+    "sched_drain",
 ];
 
 /// 裸切换前的单调时间戳（单核板，跨切换传递一个全局值即可）。
