@@ -248,16 +248,19 @@ pub fn scope(stage: usize) -> Scope {
 /// 空闲 shell 卡在 `read()` 上等命令结束）会把整段墙钟算进去，一个样本就能
 /// 把均值抬高几个数量级。按 Linux 的 sched_switch 计时口径，这种样本本来就
 /// 不该算进"处理一次系统调用要多久"，所以直接丢。
+#[expect(dead_code, reason = "热路径探针按需启停，保留采样器供后续定位使用")]
 pub const SAMPLE_CAP_NS: u64 = 100_000;
 
 /// [`Scope`] 的"丢弃阻塞样本"版本，供每线程热路径使用。
 #[must_use]
+#[expect(dead_code, reason = "热路径探针按需启停，保留采样器供后续定位使用")]
 pub struct ScopeCapped {
     stage: usize,
     start: u64,
 }
 
 impl ScopeCapped {
+    #[expect(dead_code, reason = "热路径探针按需启停，保留采样器供后续定位使用")]
     pub fn new(stage: usize) -> Self {
         Self {
             stage,
@@ -279,6 +282,7 @@ impl Drop for ScopeCapped {
 }
 
 /// Convenience constructor for [`ScopeCapped`].
+#[expect(dead_code, reason = "热路径探针按需启停，保留采样器供后续定位使用")]
 pub fn scope_capped(stage: usize) -> ScopeCapped {
     ScopeCapped::new(stage)
 }
@@ -337,6 +341,7 @@ pub fn note_exit_call() {
 }
 
 /// Counts one iteration of the user trap loop.
+#[expect(dead_code, reason = "热路径探针按需启停，保留计数器供后续定位使用")]
 pub fn note_trap_iter() {
     TRAP_ITERS.fetch_add(1, Ordering::Relaxed);
 }

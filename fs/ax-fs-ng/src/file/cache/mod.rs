@@ -1172,13 +1172,15 @@ impl CachedFile {
         };
 
         let file = self.inner.entry().as_file()?;
-        let mut scratch = PageCache::new()?;
         let mut read = 0;
         let mut current = offset;
         while current < end {
-            let chunk_len = {
-                crate::diag::note_read_page();
-                let _t_lookup = crate::diag::scope(crate::diag::STAGE_READ_PAGE_LOOKUP);
+            // H2：命中缓存时**pin 住这一页**，出锁后直接用内核直接映射把它拷给
+            // 调用方，省掉"页 → scratch"那次全量拷贝（板上实测 4.3 µs/页，占缓存
+            // 命中读 11 µs/页的四成）。pin 期间淘汰与 truncate 都会跳过该页
+            // （`CachedPagePin` 的既有契约：reclaim/resize 都查 `pins != 0`），
+            // 所以出锁读是安全的；只有未命中才回填。
+            let (chunk_len, pin, page_offset) = {
                 let _layout = self.shared.mapping_layout_lock.lock();
                 // A preceding user copy may have faulted or slept while a
                 // truncate committed. Resample EOF before each cache snapshot.
@@ -1191,45 +1193,33 @@ impl CachedFile {
                 let page_offset = (current - page_start) as usize;
                 let chunk_len =
                     (visible_end - page_start).min(PAGE_SIZE as u64) as usize - page_offset;
-                // 快路径：页已经在缓存里就只做一次取页拷贝。
-                //
-                // 原来每页都要**无条件**拿 `io_lock`（可睡眠互斥量）再调
-                // `populate_page_window`，即使这一页早就在缓存里 —— 反复读同一个
-                // 文件（exec、模型加载、cat、scp）时这就是白付两次锁 + 一次窗口
-                // 填充。实测缓存命中的读只有 ~60 MB/s（4 KiB 一页 ~64 µs），而
-                // 匿名内存 memcpy 是 ~1 GB/s；慢的正是这几笔每页固定开销。
-                let mut guard = self.shared.page_cache.lock();
-                match guard.get_mut(&pn) {
-                    Some(page) => {
-                        let _t = crate::diag::scope(crate::diag::STAGE_READ_COPY);
-                        scratch.data()[..chunk_len]
-                            .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
-                    }
-                    None => {
-                        drop(guard);
-                        let _io = self.shared.io_lock.lock();
-                        {
-                            let _t = crate::diag::scope(crate::diag::STAGE_READ_POPULATE);
-                            self.populate_page_window(file, pn, window_pages)?;
-                        }
-                        let mut guard = self.shared.page_cache.lock();
-                        let page = guard.get_mut(&pn).ok_or(VfsError::BadState)?;
-                        {
-                            let _t = crate::diag::scope(crate::diag::STAGE_READ_COPY);
-                            scratch.data()[..chunk_len]
-                                .copy_from_slice(&page.data()[page_offset..page_offset + chunk_len]);
-                        }
-                    }
+                // 命中的快路径一次锁都不多拿；未命中才出锁回填（回填要拿可睡眠
+                // 的 io_lock，不能在持有页缓存索引锁时做）。
+                // `LruCache` 没有 `contains_key`，用 `get_mut` 探一下是否存在
+                // （命中路径上它本来也要 `get_mut`，这里不额外多付）。
+                let resident = self.shared.page_cache.lock().get_mut(&pn).is_some();
+                if !resident {
+                    let _io = self.shared.io_lock.lock();
+                    self.populate_page_window(file, pn, window_pages)?;
                 }
-                chunk_len
+                (chunk_len, self.pin_cached_page(pn)?, page_offset)
             };
 
             // `dst` may point at user memory. Copy after releasing cached-file
             // locks so a user page fault can take AddrSpace without creating a
             // cached-I/O -> AddrSpace lock order.
-            let _t_user = crate::diag::scope(crate::diag::STAGE_READ_USER_COPY);
-            dst.write_all(&scratch.data()[..chunk_len])
+            let source = crate::os::memory::phys_to_virt(pin.paddr())
+                .ok_or(VfsError::BadState)?
+                .checked_add(page_offset)
+                .ok_or(VfsError::BadState)?;
+            // SAFETY: `pin` keeps the cache-owned frame alive and unreclaimable
+            // for this borrow, the alias is the kernel's direct mapping of that
+            // frame, and `page_offset + chunk_len` stays within one 4 KiB page.
+            let bytes =
+                unsafe { core::slice::from_raw_parts(source as *const u8, chunk_len) };
+            dst.write_all(bytes)
                 .map_err(crate::io_error_to_vfs_error)?;
+            drop(pin);
             read += chunk_len;
             current += chunk_len as u64;
         }

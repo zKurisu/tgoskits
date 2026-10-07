@@ -122,11 +122,7 @@ ax_tracepoint::define_event_trace!(
 pub fn handle_syscall(current: &UserTaskRef, uctx: &mut UserContext) -> SyscallRestart {
     let thread = current.as_thread();
     let raw_sysno = uctx.sysno();
-    let seccomp_work = {
-        let _t = crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_SECCOMP);
-        thread.has_seccomp_syscall_work()
-    };
-    if seccomp_work {
+    if thread.has_seccomp_syscall_work() {
         match thread.evaluate_seccomp(uctx) {
             SeccompDecision::Allow => {}
             SeccompDecision::Errno(errno) => {
@@ -153,11 +149,7 @@ pub fn handle_syscall(current: &UserTaskRef, uctx: &mut UserContext) -> SyscallR
     // Linux emits raw_syscalls:sys_enter after seccomp and before dispatch.
     // When no consumer is attached, the tracepoint reduces to its inline
     // enabled check and does not collect the six arguments.
-    {
-        let _t =
-            crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_TRACE_ENTER);
-        trace_sys_enter(uctx, raw_sysno as i64);
-    }
+    trace_sys_enter(uctx, raw_sysno as i64);
 
     let Some(sysno) = Sysno::new(raw_sysno) else {
         // Linux returns ENOSYS silently here; logging on a user-controllable

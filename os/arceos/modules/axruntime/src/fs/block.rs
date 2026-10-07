@@ -96,6 +96,10 @@ impl FsPageProvider for RuntimePageProvider {
     fn virt_to_phys(&self, vaddr: usize) -> Option<usize> {
         Some(ax_hal::mem::virt_to_phys(ax_hal::mem::VirtAddr::from(vaddr)).as_usize())
     }
+
+    fn phys_to_virt(&self, paddr: usize) -> Option<usize> {
+        Some(ax_hal::mem::phys_to_virt(ax_hal::mem::PhysAddr::from(paddr)).as_usize())
+    }
 }
 
 struct RuntimeNotification {

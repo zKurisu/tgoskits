@@ -143,9 +143,6 @@ impl UserAccess<Faultable> {
     }
 
     fn prepare(&self, task: &UserTaskRef, _op: &str) -> VmResult {
-        let _t_prepare = crate::mm::fault_attrib::scope_capped(
-            crate::mm::fault_attrib::STAGE_UACCESS_PREPARE,
-        );
         if self.range.is_empty() {
             return Ok(());
         }
@@ -157,14 +154,10 @@ impl UserAccess<Faultable> {
         super::record_eager_user_memory_preparation(task);
 
         let thr = task.as_thread();
-        let aspace_pin = {
-            let _t = crate::mm::fault_attrib::scope_capped(
-                crate::mm::fault_attrib::STAGE_UACCESS_PIN,
-            );
-            thr.proc_data
-                .pin_aspace()
-                .map_err(|_| VmError::AccessDenied)?
-        };
+        let aspace_pin = thr
+            .proc_data
+            .pin_aspace()
+            .map_err(|_| VmError::AccessDenied)?;
         if unsafe { aspace_pin.raw() }.is_owned_by_current() {
             return Err(VmError::AccessDenied);
         }
@@ -189,16 +182,10 @@ impl UserAccess<Faultable> {
         // 与上面那个锁外探测一样，这只是"已存在页"的优化判断，不建立任何
         // 引用；真正的拷贝仍然由异常表兜底。分段缺页（例如刚 mmap 的缓冲区）
         // 会在这里判定失败，继续走原来的慢路径补齐页面。
-        let satisfied = {
-            let _t = crate::mm::fault_attrib::scope_capped(
-                crate::mm::fault_attrib::STAGE_UACCESS_WALK,
-            );
-            aspace_pin.lock().materialized_range_satisfies_access(
-                VirtAddrRange::new(VirtAddr::from(span.start), VirtAddr::from(span.end)),
-                self.intent.mapping_flags(),
-            )
-        };
-        if satisfied {
+        if aspace_pin.lock().materialized_range_satisfies_access(
+            VirtAddrRange::new(VirtAddr::from(span.start), VirtAddr::from(span.end)),
+            self.intent.mapping_flags(),
+        ) {
             return Ok(());
         }
         if !aspace_pin.lock().can_access_range(
@@ -241,8 +228,6 @@ impl UserAccess<Faultable> {
         super::synchronize_user_copy_with_address_space_holder(task);
         // SAFETY: the checked range is user memory, the kernel buffer is valid
         // for its declared length, and the exception table resolves faults.
-        let _t_copy =
-            crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_UACCESS_COPY);
         let failed_at = access_user_memory(task, || unsafe {
             user_copy(
                 dst.as_mut_ptr().cast(),
@@ -269,8 +254,6 @@ impl UserAccess<Faultable> {
         super::synchronize_user_copy_with_address_space_holder(task);
         // SAFETY: the checked range is user memory, the kernel buffer is valid
         // for its declared length, and the exception table resolves faults.
-        let _t_copy =
-            crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_UACCESS_COPY);
         let failed_at = access_user_memory(task, || unsafe {
             user_copy(
                 self.range.start.as_usize() as *mut u8,

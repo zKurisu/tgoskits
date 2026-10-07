@@ -101,16 +101,7 @@ pub fn new_user_task(
             while check_signals(&curr, &mut uctx, None, None) {}
         }
         while !thr.pending_exit() {
-            let _t_iter =
-                crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_ITER);
-            crate::mm::fault_attrib::note_trap_iter();
-            let singlestep_work = {
-                let _t = crate::mm::fault_attrib::scope_capped(
-                    crate::mm::fault_attrib::STAGE_SYS_SINGLESTEP,
-                );
-                thr.proc_data.has_ptrace_singlestep_work()
-            };
-            if singlestep_work {
+            if thr.proc_data.has_ptrace_singlestep_work() {
                 let tid = thr.tid();
                 let is_ptraced =
                     thr.proc_data.is_ptrace_traceme() || thr.proc_data.is_ptrace_attached();
@@ -139,14 +130,9 @@ pub fn new_user_task(
                 }
             }
 
-            let reason = {
-                let _t = crate::mm::fault_attrib::scope_capped(
-                    crate::mm::fault_attrib::STAGE_SYS_UCTX_ENTER,
-                );
-                uctx.enter().expect(
-                    "return-to-user validation must match the current task and address space",
-                )
-            };
+            let reason = uctx
+                .enter()
+                .expect("return-to-user validation must match the current task and address space");
 
             let saved_a0 = uctx.arg0();
             let saved_sysno = uctx.sysno();
@@ -154,24 +140,13 @@ pub fn new_user_task(
             let is_syscall = matches!(reason, ReturnReason::Syscall);
             let mut syscall_restart = SyscallRestart::Allowed;
 
-            let ptrace_stop = {
-                let _t = crate::mm::fault_attrib::scope_capped(
-                    crate::mm::fault_attrib::STAGE_SYS_PTRACE_PRE,
-                );
-                stop_for_pending_ptrace_event(thr, &mut uctx)
-            };
-            if ptrace_stop {
+            if stop_for_pending_ptrace_event(thr, &mut uctx) {
                 continue;
             }
 
             match reason {
                 ReturnReason::Syscall => {
-                    let ptrace_trace = {
-                        let _t = crate::mm::fault_attrib::scope_capped(
-                            crate::mm::fault_attrib::STAGE_SYS_TRACE_CHECK,
-                        );
-                        thr.proc_data.ptrace.syscall_trace_if_active(|| thr.tid())
-                    };
+                    let ptrace_trace = thr.proc_data.ptrace.syscall_trace_if_active(|| thr.tid());
                     if matches!(ptrace_trace, Some((_, SyscallTraceState::Entry)))
                         && let Some(resume_signo) =
                             ptrace_syscall_stop_current(thr, Signo::SIGTRAP, &mut uctx, saved_sysno)
@@ -192,9 +167,6 @@ pub fn new_user_task(
                         let _ = ptrace_stop_current(thr, Signo::SIGTRAP, &mut uctx);
                     }
 
-                    let _t = crate::mm::fault_attrib::scope_capped(
-                        crate::mm::fault_attrib::STAGE_SYS_HANDLE,
-                    );
                     syscall_restart = handle_syscall(&curr, &mut uctx);
                     if address_space_replaced {
                         uctx.refresh_address_space()
@@ -242,15 +214,7 @@ pub fn new_user_task(
                 }
             }
 
-            let _t_post =
-                crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_POST);
-            let has_return_work = {
-                let _t = crate::mm::fault_attrib::scope_capped(
-                    crate::mm::fault_attrib::STAGE_SYS_RETURN_WORK,
-                );
-                !thr.unblock_next_signal_check() && thr.has_user_return_work()
-            };
-            if has_return_work {
+            if !thr.unblock_next_signal_check() && thr.has_user_return_work() {
                 let eintr_code = -(crate::Errno::EINTR.into_raw() as isize);
                 let restart = if is_syscall
                     && (uctx.retval() as isize) == eintr_code
