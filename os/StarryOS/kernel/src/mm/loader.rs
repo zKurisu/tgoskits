@@ -388,11 +388,20 @@ fn map_elf<'a>(
                     crate::mm::fault_attrib::STAGE_EXEC_POPULATE,
                 );
                 // Populate PT_LOAD segments so relocation writes can access pages
+                //
+                // H1g：**只物化可写段**。重定位只会写 .got / .data.rel.ro / .bss
+                // —— 它们都在带 WRITE 的 PT_LOAD 里；只读段（text/rodata）在 exec
+                // 阶段不会有人写，整段 `populate_area` 是白做的：803 KB 的 busybox
+                // 只读段约 175 页，占 exec 里 populate 的绝大部分，而 `/bin/true`
+                // 实际只会碰到其中几十页。改成按需缺页（Linux 同样是 lazy 的）。
+                // 若某个二进制把重定位落进只读段（违反链接约定），写会按 VMA 权限
+                // 失败——与 Linux 的行为一致。
                 for seg in elf_parser
                     .headers()
                     .ph
                     .iter()
                     .filter(|p| p.get_type() == Ok(xmas_elf::program::Type::Load))
+                    .filter(|p| p.flags.is_write())
                 {
                     let seg_start =
                         VirtAddr::from_usize(base + seg.virtual_addr as usize).align_down_4k();

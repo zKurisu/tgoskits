@@ -1121,6 +1121,43 @@ impl CachedFile {
         }))
     }
 
+    /// H1f：一次 pin 一整段页（`pns` 升序；通常是 exec 的连续未映射段）。
+    ///
+    /// 与逐页 `pin_page_or_insert` 的区别是**每段只取一次 `io_lock`**：逐页调用时
+    /// 「io_lock + 页缓存窗口填充 + 取页锁」这三笔是每页一轮，exec 读只读段时
+    /// 200 页就是 200 轮（opt35 实测 `file_pop_pin` = 3.6 ms/次 exec）。
+    /// 页缓存锁仍按页（窗口填充需要），但那把是自旋锁、且命中时只是一次 contains。
+    pub fn pin_pages_run(&self, pns: &[u32]) -> VfsResult<Vec<CachedPagePin>> {
+        let mut pins = Vec::new();
+        if pns.is_empty() {
+            return Ok(pins);
+        }
+        if self
+            .shared
+            .mapping_update_in_progress
+            .load(Ordering::Acquire)
+        {
+            return Err(VfsError::ResourceBusy);
+        }
+        let _io = self.shared.io_lock.lock();
+        if self
+            .shared
+            .mapping_update_in_progress
+            .load(Ordering::Acquire)
+        {
+            return Err(VfsError::ResourceBusy);
+        }
+        let file = self.inner.entry().as_file()?;
+        pins.try_reserve_exact(pns.len())
+            .map_err(|_| VfsError::NoMemory)?;
+        for (index, &pn) in pns.iter().enumerate() {
+            // 窗口一次填到段尾；后面的页此时已在缓存里，这一步就退化成一次 contains。
+            self.populate_page_window(file, pn, pns.len() - index)?;
+            pins.push(self.pin_cached_page(pn)?);
+        }
+        Ok(pins)
+    }
+
     /// Reads data from the file at `offset` into `dst`.
     pub fn read_at(&self, mut dst: impl Write + IoBufMut, offset: u64) -> VfsResult<usize> {
         let len = self.shared.len();

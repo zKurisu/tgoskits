@@ -83,11 +83,29 @@ impl FilePageEntry {
 #[derive(Default)]
 struct FilePageIndex {
     pages: BTreeMap<u32, FilePageEntry>,
+    /// 距上次整表清理过了多少次预留（见 `needs_periodic_prune`）。
+    reserve_calls: u32,
 }
 
 impl FilePageIndex {
     fn prune_stale(&mut self) {
         self.pages.retain(|_, entry| entry.page().is_some());
+    }
+
+    /// 该页号是否留着一个"页已释放"的陈旧条目。
+    fn entry_is_stale(&self, page_number: u32) -> bool {
+        self.pages
+            .get(&page_number)
+            .is_some_and(|entry| entry.page().is_none())
+    }
+
+    /// H1h：`prune_stale()` 是 **O(表长)** 的全表 retain，原来在**每一次**单页预留里
+    /// 都跑一遍。单页缺页路径（exec 的只读段现在走按需缺页，79 次/次 exec）因此
+    /// 每页白付一次全表扫描。改成：只有**真的命中了陈旧条目**才整表清理，另外每
+    /// 512 次预留兜底清一次，保证陈旧条目不会无限累积。
+    fn needs_periodic_prune(&mut self) -> bool {
+        self.reserve_calls = self.reserve_calls.wrapping_add(1);
+        self.reserve_calls % 512 == 0
     }
 
     fn reserve_publication(
@@ -96,7 +114,40 @@ impl FilePageIndex {
         page_number: u32,
         pin: CachedPagePin,
     ) -> StarryResult<Arc<PageObject>> {
+        if self.entry_is_stale(page_number) || self.needs_periodic_prune() {
+            self.prune_stale();
+        }
+        self.reserve_publication_no_prune(file_epoch, page_number, pin)
+    }
+
+    /// H1f：整段预留（`prune_stale` 从每页一次降到每段一次）。
+    ///
+    /// `prune_stale()` 是一次全表 `retain`；原来在**每页**的预留里都跑一遍，
+    /// run 长 200、表内 200 条时就是 4 万次谓词 —— 与 H4 修掉的注册表 O(n²)
+    /// 同一类问题。exec 的只读段正好是一条长 run。
+    fn reserve_pages_run(
+        &mut self,
+        file_epoch: u64,
+        entries: impl Iterator<Item = (u32, CachedPagePin)>,
+    ) -> StarryResult<Vec<Arc<PageObject>>> {
         self.prune_stale();
+        let mut pages = Vec::new();
+        let (lower, _) = entries.size_hint();
+        pages
+            .try_reserve_exact(lower)
+            .map_err(|_| StarryError::NoMemory)?;
+        for (page_number, pin) in entries {
+            pages.push(self.reserve_publication_no_prune(file_epoch, page_number, pin)?);
+        }
+        Ok(pages)
+    }
+
+    fn reserve_publication_no_prune(
+        &mut self,
+        file_epoch: u64,
+        page_number: u32,
+        pin: CachedPagePin,
+    ) -> StarryResult<Arc<PageObject>> {
         let paddr = PhysAddr::from_usize(pin.paddr());
         if let Some(entry) = self.pages.get_mut(&page_number) {
             let page = entry.page().ok_or(StarryError::BadState)?;
@@ -336,6 +387,15 @@ impl FilePageDomain {
             .reserve_publication(file_epoch, page_number, pin)
     }
 
+    /// H1f：整段预留（域锁与 `prune_stale` 各一次，而不是每页一次）。
+    fn reserve_pages_run(
+        &self,
+        file_epoch: u64,
+        entries: impl Iterator<Item = (u32, CachedPagePin)>,
+    ) -> StarryResult<Vec<Arc<PageObject>>> {
+        self.pages.lock().reserve_pages_run(file_epoch, entries)
+    }
+
     fn resolve_page(
         &self,
         file_epoch: u64,
@@ -562,6 +622,16 @@ impl FileBackendInner {
             .reserve_page(self.cache.mapping_epoch(), pn, pin)
     }
 
+    /// H1f：整段预留（域锁 + `prune_stale` 各一次）。
+    fn get_or_create_page_objects_run(
+        &self,
+        pns: &[u32],
+        pins: Vec<CachedPagePin>,
+    ) -> StarryResult<Vec<Arc<PageObject>>> {
+        self.page_domain
+            .reserve_pages_run(self.cache.mapping_epoch(), pns.iter().copied().zip(pins))
+    }
+
     fn finish_page_publication(&self, va: VirtAddr, page: &Arc<PageObject>) -> StarryResult {
         let page_number = self.page_number_at(va).ok_or(StarryError::BadState)?;
         self.page_domain
@@ -644,6 +714,73 @@ impl FileBackend {
         } else {
             RssKind::File
         }
+    }
+
+    /// H1f：把一段**连续未映射**的文件页整段一次 pin（`pin_pages_run`），
+    /// 再逐页建 PageObject、映射 PTE。
+    ///
+    /// 与逐页 `pin_page_or_insert` 的差别只有锁的轮数：`io_lock` 从每页一次
+    /// 降到每段一次。exec 一个 803 KB 的 busybox 只读段约 200 页，这一项在
+    /// opt35 上单列 3.6 ms/次，且它同时缩短了持锁窗口。
+    fn map_file_run(
+        &self,
+        addrs: &[VirtAddr],
+        first_pn: u32,
+        map_flags: MappingFlags,
+        pt: &mut PageTable,
+        materialization: &mut PteMaterialization,
+    ) -> StarryResult<()> {
+        use crate::mm::fault_attrib::{
+            STAGE_FILE_POP_MAP, STAGE_FILE_POP_PIN, STAGE_FILE_POP_POBJ, STAGE_FILE_POP_PREP, add,
+            stage_now,
+        };
+        let mut pns: Vec<u32> = Vec::new();
+        pns.try_reserve_exact(addrs.len())
+            .map_err(|_| StarryError::NoMemory)?;
+        for index in 0..addrs.len() {
+            pns.push(
+                first_pn
+                    .checked_add(u32::try_from(index).map_err(|_| StarryError::InvalidInput)?)
+                    .ok_or(StarryError::InvalidInput)?,
+            );
+        }
+        let pins = {
+            let t = stage_now();
+            let pins = self.0.cache.pin_pages_run(&pns)?;
+            add(STAGE_FILE_POP_PIN, stage_now().saturating_sub(t));
+            pins
+        };
+        // 域预留也整段一次：域锁 + prune 从每页一次降到每段一次。
+        let page_objects = {
+            let t = stage_now();
+            let pages = self.0.get_or_create_page_objects_run(&pns, pins)?;
+            add(STAGE_FILE_POP_POBJ, stage_now().saturating_sub(t));
+            pages
+        };
+        for (&addr, page_object) in addrs.iter().zip(page_objects) {
+            let paddr = page_object.frame().paddr();
+            {
+                let t = stage_now();
+                page_object.prepare_executable_mapping(paddr, PAGE_SIZE_4K, map_flags);
+                add(STAGE_FILE_POP_PREP, stage_now().saturating_sub(t));
+            }
+            let t_map = stage_now();
+            if let Err(error) = pt.map_page(addr, paddr, PAGE_SIZE_4K, map_flags) {
+                self.0.cancel_page_publication(addr, &page_object)?;
+                return Err(error.into());
+            }
+            add(STAGE_FILE_POP_MAP, stage_now().saturating_sub(t_map));
+            materialization.push(PreparedPteOwner::installed(
+                addr,
+                paddr,
+                PAGE_SIZE_4K,
+                page_object,
+                Some(self.rss_kind()),
+                ProviderPublication::Pending,
+            ));
+            materialization.increment_satisfied(1)?;
+        }
+        Ok(())
     }
 
     pub fn cache(&self) -> &CachedFile {
@@ -1072,11 +1209,17 @@ impl MappingExecution for FileBackend {
         // Pages at or beyond EOF must not be eagerly backed (Linux SIGBUS past EOF;
         // without this bound MAP_POPULATE over a sparse mapping exhausts RAM).
         let eof_page = self.0.cache.file_len()?.div_ceil(PAGE_SIZE_4K as u64);
-        for (i, addr) in pages_in(range, PAGE_SIZE_4K)?.enumerate() {
+        // H1f：改成按「连续未映射 run」处理 —— 逐页 pin 时每页一轮 io_lock +
+        // 窗口填充，按 run 后整段只取一次 io_lock（`CachedFile::pin_pages_run`）。
+        let addrs: Vec<VirtAddr> = pages_in(range, PAGE_SIZE_4K)?.collect();
+        let mut i = 0;
+        while i < addrs.len() {
+            let addr = addrs[i];
             let pn = start_page
                 .checked_add(u32::try_from(i).map_err(|_| StarryError::InvalidInput)?)
                 .ok_or(StarryError::InvalidInput)?;
             if (pn as u64) >= eof_page {
+                i += 1;
                 continue;
             }
             // H1d：每页细分（file_pop_*）。先量准再决定改哪儿。
@@ -1115,6 +1258,7 @@ impl MappingExecution for FileBackend {
                     } else if page_flags.contains(access_flags) {
                         materialization.increment_satisfied(1)?;
                     }
+                    i += 1;
                 }
                 // If the page is not mapped, try map it.
                 Err(PagingError::NotMapped) => {
@@ -1126,43 +1270,35 @@ impl MappingExecution for FileBackend {
                     } else {
                         flags - MappingFlags::WRITE
                     };
-                    use crate::mm::fault_attrib::{
-                        STAGE_FILE_POP_MAP, STAGE_FILE_POP_PIN, STAGE_FILE_POP_POBJ,
-                        STAGE_FILE_POP_PREP, add, stage_now,
-                    };
-                    let page_pin = {
-                        let t = stage_now();
-                        let pin = self.0.cache.pin_page_or_insert(pn)?;
-                        add(STAGE_FILE_POP_PIN, stage_now().saturating_sub(t));
-                        pin
-                    };
-                    let paddr = PhysAddr::from(page_pin.paddr());
-                    let page_object = {
-                        let t = stage_now();
-                        let page = self.0.get_or_create_page_object(pn, page_pin)?;
-                        add(STAGE_FILE_POP_POBJ, stage_now().saturating_sub(t));
-                        page
-                    };
-                    {
-                        let t = stage_now();
-                        page_object.prepare_executable_mapping(paddr, PAGE_SIZE_4K, map_flags);
-                        add(STAGE_FILE_POP_PREP, stage_now().saturating_sub(t));
+                    // 收集连续、未映射、且不越过 EOF 的一段（与 cow.rs 的
+                    // `alloc_file_run` 同一写法），整段一次 pin 后逐页映射。
+                    let run_start = i;
+                    while i < addrs.len() {
+                        let candidate = start_page
+                            .checked_add(
+                                u32::try_from(i).map_err(|_| StarryError::InvalidInput)?,
+                            )
+                            .ok_or(StarryError::InvalidInput)?;
+                        if (candidate as u64) >= eof_page
+                            || !matches!(pt.query(addrs[i]), Err(PagingError::NotMapped))
+                        {
+                            break;
+                        }
+                        i += 1;
                     }
-                    let t_map = stage_now();
-                    if let Err(error) = pt.map_page(addr, paddr, PAGE_SIZE_4K, map_flags) {
-                        self.0.cancel_page_publication(addr, &page_object)?;
-                        return Err(error.into());
+                    if i == run_start {
+                        return Err(StarryError::BadState);
                     }
-                    add(STAGE_FILE_POP_MAP, stage_now().saturating_sub(t_map));
-                    materialization.push(PreparedPteOwner::installed(
-                        addr,
-                        paddr,
-                        PAGE_SIZE_4K,
-                        page_object,
-                        Some(self.rss_kind()),
-                        ProviderPublication::Pending,
-                    ));
-                    materialization.increment_satisfied(1)?;
+                    let first_pn = start_page
+                        .checked_add(u32::try_from(run_start).map_err(|_| StarryError::InvalidInput)?)
+                        .ok_or(StarryError::InvalidInput)?;
+                    self.map_file_run(
+                        &addrs[run_start..i],
+                        first_pn,
+                        map_flags,
+                        pt,
+                        &mut materialization,
+                    )?;
                 }
                 Err(_) => return Err(StarryError::BadAddress),
             }
