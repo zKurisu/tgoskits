@@ -52,6 +52,16 @@ if [ -x /test_runner.sh ]; then
     echo "[init] /test_runner.sh started pid=$!"
 fi
 
+# Board hook: a card may carry its own bring-up script at /root/init.sh
+# (network association, pinmux, debug scaffolding). Run it in the foreground so
+# its output lands on the console before the interactive shell starts, and so a
+# hang in the hook is visible rather than racing the prompt.
+if [ -x /root/init.sh ]; then
+    echo "[init] /root/init.sh detected, running board init script"
+    /bin/sh /root/init.sh
+    echo "[init] /root/init.sh finished"
+fi
+
 cd "$HOME" || cd /
 
 cat > /tmp/starry-shrc <<'EOF'
