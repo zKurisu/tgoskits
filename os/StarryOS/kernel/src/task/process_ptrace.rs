@@ -586,6 +586,26 @@ impl ProcessData {
         unsafe { self.ptrace.stop_event.wake(IoEvents::IN) };
     }
 
+    /// Clears one thread's ptrace stop without ending an in-progress group
+    /// stop.
+    ///
+    /// `PTRACE_LISTEN` needs exactly this: Linux ends the ptrace-stop but
+    /// leaves the group-stop in place, so the tracee must fall back into its
+    /// job-stop park loop instead of resuming user execution. Keep this
+    /// per-thread so a sibling's pending stop is never dropped.
+    pub fn clear_ptrace_stop_for(&self, tid: TidNumber) {
+        if self.ptrace.stops.lock().remove(&tid).is_none() {
+            return;
+        }
+        self.ptrace.resume_signo.lock().remove(&tid);
+        self.ptrace.pending_events.remove(tid);
+        if self.ptrace.selected_tid.load(Ordering::Acquire) == tid.get() {
+            self.ptrace.selected_tid.store(0, Ordering::Release);
+        }
+        // Ptrace stop state is cleared before waking waiters.
+        unsafe { self.ptrace.stop_event.wake(IoEvents::IN) };
+    }
+
     pub fn set_ptrace_exec_stop_pending(&self, former_tid: PidSnapshot) {
         *self.ptrace.exec_stop_pending.lock() = Some(former_tid);
     }

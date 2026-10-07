@@ -59,6 +59,7 @@ const PTRACE_GETREGSET: u32 = 0x4204;
 const PTRACE_SETREGSET: u32 = 0x4205;
 const PTRACE_SEIZE: u32 = 0x4206;
 const PTRACE_INTERRUPT: u32 = 0x4207;
+const PTRACE_LISTEN: u32 = 0x4208;
 
 const NT_PRSTATUS: usize = 1;
 #[cfg(any(
@@ -316,6 +317,7 @@ pub fn sys_ptrace(
         PTRACE_SETREGSET => ptrace_setregset(current, target()?, addr, data),
         PTRACE_SEIZE => ptrace_seize(current, target()?, addr, data),
         PTRACE_INTERRUPT => ptrace_interrupt(current, target()?),
+        PTRACE_LISTEN => ptrace_listen(current, target()?),
         _ => Err(StarryError::Unsupported),
     }
 }
@@ -349,6 +351,33 @@ fn ptrace_cont(current: &UserTaskRef, pid: PtraceTarget, data: usize) -> StarryR
     tracee.set_ptrace_singlestep_for(tid, false);
     tracee.set_ptrace_syscall_trace_for(tid, false);
     tracee.resume_ptrace_stop_with_signal_for(tid, signo);
+    crate::task::yield_now();
+    Ok(0)
+}
+
+/// Linux `PTRACE_LISTEN`: end the tracee's ptrace-stop but leave an
+/// in-progress group-stop in place.
+///
+/// Tracers that attach with `PTRACE_SEIZE` — strace 6.x by default — issue
+/// this request as soon as they classify a stop as a group-stop (see strace's
+/// `TE_GROUP_STOP` case). A kernel that implements `PTRACE_SEIZE` but answers
+/// `ENOSYS` here makes such a tracer abort before the first traced syscall,
+/// which is exactly how `strace /bin/true` failed on this tree.
+fn ptrace_listen(current: &UserTaskRef, pid: PtraceTarget) -> StarryResult<isize> {
+    let (tracee, tid) = ptrace_stopped_tracee_with_tid(current, pid)?;
+    if !tracee.is_ptrace_seized() {
+        return Err(StarryError::from(Errno::EIO));
+    }
+    tracee.set_ptrace_singlestep_for(tid, false);
+    tracee.set_ptrace_syscall_trace_for(tid, false);
+    if tracee.is_job_stopped() {
+        // Only the ptrace-stop ends. The tracee stays parked in its job-stop
+        // loop until a later PTRACE_CONT or SIGCONT releases the group stop.
+        tracee.clear_ptrace_stop_for(tid);
+    } else {
+        // No group stop to preserve: LISTEN reduces to a zero-signal resume.
+        tracee.resume_ptrace_stop_with_signal_for(tid, 0);
+    }
     crate::task::yield_now();
     Ok(0)
 }
