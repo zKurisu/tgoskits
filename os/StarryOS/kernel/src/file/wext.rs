@@ -31,9 +31,15 @@ use crate::{
 // ---------------------------------------------------------------------------
 
 pub const SIOCSIWCOMMIT: u32 = 0x8B00;
+/// Getter: protocol name. Tools (iwconfig) refuse to run without it.
+pub const SIOCGIWNAME: u32 = 0x8B01;
 pub const SIOCSIWFREQ: u32 = 0x8B04;
 pub const SIOCSIWMODE: u32 = 0x8B06;
+/// Getter: current/staged mode (Managed vs Master).
+pub const SIOCGIWMODE: u32 = 0x8B07;
 pub const SIOCSIWESSID: u32 = 0x8B1A;
+/// Getter: current BSSID.
+pub const SIOCGIWAP: u32 = 0x8B15;
 pub const SIOCSIWENCODEEXT: u32 = 0x8B34;
 
 /// `iw_mode` values from <linux/wireless.h>.
@@ -217,7 +223,14 @@ fn scale_iw_frequency_hz(mantissa: i32, exponent: i16) -> StarryResult<i64> {
 pub fn is_wext_ioctl(cmd: u32) -> bool {
     matches!(
         cmd,
-        SIOCSIWCOMMIT | SIOCSIWFREQ | SIOCSIWMODE | SIOCSIWESSID | SIOCSIWENCODEEXT
+        SIOCSIWCOMMIT
+            | SIOCSIWFREQ
+            | SIOCSIWMODE
+            | SIOCSIWESSID
+            | SIOCSIWENCODEEXT
+            | SIOCGIWNAME
+            | SIOCGIWMODE
+            | SIOCGIWAP
     )
 }
 
@@ -271,6 +284,32 @@ pub fn handle(
             with_pending(&ifname, |p| p.channel = Some(channel));
         }
         SIOCSIWCOMMIT => return commit(&ifname),
+        // ---- getters ----
+        //
+        // Best-effort read-back. Wireless-extensions state that the hardware
+        // would own in Linux (BSSID, live mode) is either staged here or not
+        // yet known, so these report the same thing a Linux driver reports
+        // before association completes.
+        SIOCGIWNAME => {
+            let mut buf = [0u8; 16];
+            let name = b"IEEE 802.11bgn";
+            let n = name.len().min(buf.len());
+            buf[..n].copy_from_slice(&name[..n]);
+            write_iwreq_data(current, arg, &buf)?;
+        }
+        SIOCGIWMODE => {
+            let mode = with_pending(&ifname, |p| match p.mode {
+                Some(StagedMode::Station) => IW_MODE_INFRA,
+                Some(StagedMode::AccessPoint) => IW_MODE_MASTER,
+                None => IW_MODE_MASTER,
+            });
+            write_iwreq_data(current, arg, &mode.to_ne_bytes())?;
+        }
+        SIOCGIWAP => {
+            // An unassociated interface has no BSSID; Linux reports it as the
+            // all-zero address rather than failing the request.
+            write_iwreq_data(current, arg, &[0u8; 6])?;
+        }
         _ => return Err(StarryError::Unsupported),
     }
     Ok(0)
@@ -337,9 +376,10 @@ fn parse_pmk_encode_ext(encoded: &[u8]) -> StarryResult<ax_net::Wpa2Pmk> {
 }
 
 /// Silences unused-write-helper warnings if a setter that echoes data back is
-/// added later. Currently all WE setters here only stage, so no write-back.
-#[allow(dead_code)]
-fn _write_iwreq_data(
+/// Writes back the 16-byte `union iwreq_data` of a WE request. The setters only
+/// stage, but the getters ([`SIOCGIWNAME`], [`SIOCGIWMODE`], [`SIOCGIWAP`])
+/// report through this path.
+fn write_iwreq_data(
     current: &crate::task::UserTaskRef,
     arg: usize,
     data: &[u8],
@@ -353,13 +393,17 @@ fn _write_iwreq_data(
 
 #[cfg(all(test, not(axtest)))]
 fn is_wext_ioctl_validation_rules_hold_for_test() -> bool {
-    // is_wext_ioctl: returns true only for the 5 handled WE ioctl commands.
+    // is_wext_ioctl: returns true for every WE command handled here — the five
+    // setters/commit plus the three getters.
     let valid_cmds = [
         SIOCSIWCOMMIT,
         SIOCSIWFREQ,
         SIOCSIWMODE,
         SIOCSIWESSID,
         SIOCSIWENCODEEXT,
+        SIOCGIWNAME,
+        SIOCGIWMODE,
+        SIOCGIWAP,
     ];
     let all_valid = valid_cmds.iter().all(|&cmd| is_wext_ioctl(cmd));
 

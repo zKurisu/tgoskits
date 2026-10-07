@@ -13,6 +13,8 @@ mod drm;
 pub mod event;
 mod fb;
 #[cfg(feature = "sg2002")]
+mod gpio;
+#[cfg(feature = "sg2002")]
 pub mod ion;
 #[cfg(any(feature = "input", feature = "k230-kpu"))]
 mod irq_service;
@@ -24,6 +26,7 @@ mod log;
 pub(crate) mod r#loop;
 #[cfg(feature = "memtrack")]
 mod memtrack;
+mod mem;
 #[cfg(feature = "jpeg")]
 mod mpp_service;
 #[cfg(feature = "sg2002")]
@@ -593,6 +596,17 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
     );
     // /dev/kmsg — standard char major 1, minor 11 (LANANA memory-device major,
     // same group as null/zero/random above).
+    // /dev/mem — standard char major 1, minor 1. Board bring-up tooling drives
+    // pin muxing and other register-only peripherals through this window.
+    root.add(
+        "mem",
+        Device::new(
+            fs.clone(),
+            NodeType::CharacterDevice,
+            DeviceId::new(1, 1),
+            Arc::new(mem::MemDev),
+        ),
+    );
     root.add(
         "kmsg",
         Device::new(
@@ -799,8 +813,19 @@ fn builder(fs: Arc<SimpleFs>) -> DirMaker {
             Device::new(
                 fs.clone(),
                 NodeType::CharacterDevice,
-                DeviceId::new(1, 1),
+                // (1,1) belongs to /dev/mem below; keep pinmux on a private
+                // minor so udev-style major:minor lookups stay unambiguous.
+                DeviceId::new(1, 254),
                 Arc::new(pinmux::PinmuxDev),
+            ),
+        );
+        root.add(
+            "gpio",
+            Device::new(
+                fs.clone(),
+                NodeType::CharacterDevice,
+                DeviceId::new(1, 253),
+                Arc::new(gpio::GPIODev),
             ),
         );
         #[cfg(feature = "sg2002-cvi-usb-camera")]
