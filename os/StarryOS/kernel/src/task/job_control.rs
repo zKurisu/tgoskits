@@ -27,6 +27,12 @@ struct JobControl {
     continue_generation: u64,
     /// The thread physically parked by the process-directed stop.
     waiter_tid: Option<TidNumber>,
+    /// Whether this group stop has already been reported to a tracer.
+    ///
+    /// Linux reports one group stop to the tracer once; a tracer that resumes
+    /// (PTRACE_CONT) or listens (PTRACE_LISTEN) must not be notified again for
+    /// the same stop, otherwise the tracee and tracer ping-pong stops forever.
+    reported_to_tracer: bool,
 }
 
 pub(super) struct ProcessJobControl {
@@ -61,7 +67,22 @@ impl ProcessData {
         state.stopped = Some(signo);
         state.status = Some(JobStatus::Stopped(signo));
         state.waiter_tid = Some(waiter_tid);
+        state.reported_to_tracer = false;
         true
+    }
+
+    /// Returns whether the current group stop still owes its tracer a report.
+    ///
+    /// A traced process reports SIGSTOP/SIGTSTP to its tracer even when no
+    /// ptrace event is pending; `do_job_stop` uses this to publish that stop.
+    pub fn job_stop_unreported(&self) -> bool {
+        let state = self.job_control.state.lock();
+        state.stopped.is_some() && !state.reported_to_tracer
+    }
+
+    /// Records that the current group stop has been reported to a tracer.
+    pub fn mark_job_stop_reported(&self) {
+        self.job_control.state.lock().reported_to_tracer = true;
     }
 
     /// Returns whether `tid` is the thread physically parked for this stop.
@@ -79,6 +100,7 @@ impl ProcessData {
         state.continue_generation = state.continue_generation.wrapping_add(1);
         let was_stopped = state.stopped.take().is_some();
         state.waiter_tid = None;
+        state.reported_to_tracer = false;
         if was_stopped {
             state.status = Some(JobStatus::Continued);
             drop(state);

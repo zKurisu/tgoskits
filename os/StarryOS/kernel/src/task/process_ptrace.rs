@@ -191,6 +191,12 @@ pub(super) struct ProcessPtraceState {
     stop_event: Arc<PollSet>,
     resume_signo: Mutex<BTreeMap<TidNumber, u32>>,
     resume_signal_bypass: Mutex<BTreeMap<TidNumber, u32>>,
+    /// Threads whose current ptrace stop was ended by `PTRACE_LISTEN`.
+    ///
+    /// Linux's LISTEN ends the ptrace-stop but leaves an in-progress group stop
+    /// standing. `do_job_stop` has to tell that apart from a zero-signal
+    /// `PTRACE_CONT`, which does release the group stop.
+    listening: Mutex<BTreeMap<TidNumber, ()>>,
     exec_stop_pending: Mutex<Option<PidSnapshot>>,
     attach_mode: AtomicU8,
     singlestep_tid: AtomicU32,
@@ -211,6 +217,7 @@ impl ProcessPtraceState {
             stop_event: Arc::default(),
             resume_signo: Mutex::new(BTreeMap::new()),
             resume_signal_bypass: Mutex::new(BTreeMap::new()),
+            listening: Mutex::new(BTreeMap::new()),
             exec_stop_pending: Mutex::new(None),
             attach_mode: AtomicU8::new(PtraceAttachMode::None as u8),
             singlestep_tid: AtomicU32::new(0),
@@ -604,6 +611,20 @@ impl ProcessData {
         }
         // Ptrace stop state is cleared before waking waiters.
         unsafe { self.ptrace.stop_event.wake(IoEvents::IN) };
+    }
+
+    /// Records that `PTRACE_LISTEN` ended this thread's ptrace stop while its
+    /// group stop stands.
+    ///
+    /// `do_job_stop` consumes the mark to distinguish LISTEN from a zero-signal
+    /// `PTRACE_CONT` (which does release the group stop).
+    pub fn note_ptrace_listen(&self, tid: TidNumber) {
+        self.ptrace.listening.lock().insert(tid, ());
+    }
+
+    /// Consumes the `PTRACE_LISTEN` mark for one thread, if any.
+    pub fn take_ptrace_listen(&self, tid: TidNumber) -> bool {
+        self.ptrace.listening.lock().remove(&tid).is_some()
     }
 
     pub fn set_ptrace_exec_stop_pending(&self, former_tid: PidSnapshot) {

@@ -373,6 +373,9 @@ fn ptrace_listen(current: &UserTaskRef, pid: PtraceTarget) -> StarryResult<isize
     if tracee.is_job_stopped() {
         // Only the ptrace-stop ends. The tracee stays parked in its job-stop
         // loop until a later PTRACE_CONT or SIGCONT releases the group stop.
+        // Mark the stop so `do_job_stop` does not mistake this for a
+        // zero-signal resume, which would release the group stop.
+        tracee.note_ptrace_listen(tid);
         tracee.clear_ptrace_stop_for(tid);
     } else {
         // No group stop to preserve: LISTEN reduces to a zero-signal resume.
@@ -708,7 +711,7 @@ fn ptrace_seize(
 
     let tracer_identity = current.as_thread().proc_data.identity();
     let tracer = current.as_thread().proc_data.clone();
-    let (tracee, _tracee_tid) = ptrace_tracee_by_pid_or_tid(current, pid)?;
+    let (tracee, tracee_tid) = ptrace_tracee_by_pid_or_tid(current, pid)?;
     if Arc::ptr_eq(&tracee.identity(), &tracer_identity) {
         return Err(StarryError::from(Errno::EPERM));
     }
@@ -721,6 +724,18 @@ fn ptrace_seize(
     tracee.set_ptrace_tracer(&tracer_identity);
     tracee.set_ptrace_options(options);
     tracee.set_ptrace_attach_mode(crate::task::PtraceAttachMode::Seize);
+
+    // Linux notifies a tracer that seizes a tracee which is already in a
+    // group-stop: the tracee reports that stop to its new tracer. The tracee is
+    // parked in `do_job_stop`, so wake it — the loop re-evaluates with the new
+    // tracer relationship and publishes the stop. Without this notification a
+    // tracer that seizes a stopped child (strace's startup: the child SIGSTOPs
+    // itself, its parent seizes it and then sends SIGCONT) never learns where it
+    // stands and mis-parses the first PTRACE_EVENT_EXEC as "stray", tracing
+    // nothing.
+    if tracee.is_job_stopped() && tracee.is_job_stop_waiter(tracee_tid) {
+        tracee.wake_job_stop_waiter();
+    }
     Ok(0)
 }
 
