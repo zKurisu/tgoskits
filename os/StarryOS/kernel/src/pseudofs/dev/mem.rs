@@ -15,7 +15,7 @@
 use alloc::vec::Vec;
 use core::any::Any;
 
-use ax_hal::mem::{PAGE_SIZE_4K, PhysAddr, memory_regions, phys_to_virt};
+use ax_hal::mem::{PAGE_SIZE_4K, PhysAddr};
 use ax_memory_addr::PhysAddrRange;
 use axfs_ng_vfs::{NodeFlags, VfsError, VfsResult};
 
@@ -29,17 +29,20 @@ pub(crate) struct MemDev;
 impl MemDev {
     /// Translates one physical range into a dereferenceable kernel address.
     ///
-    /// DRAM is reachable through the identity mapping (`phys_to_virt`). Device
-    /// MMIO is *not*: this platform sets `PHYS_VIRT_OFFSET == 0` and installs no
-    /// static linear MMIO window, so a raw dereference of a register address
-    /// faults. Those ranges are mapped on demand with `ax_mm::iomap` and the
-    /// translation is memoized, because every `iomap` call carves out a fresh
-    /// kernel VA range and repeated register pokes would otherwise leak.
+    /// Every requested range is mapped on demand with `ax_mm::iomap`.
+    ///
+    /// This platform sets `PHYS_VIRT_OFFSET == 0` and installs no static linear
+    /// window that covers device MMIO, so a raw `phys_to_virt` dereference of a
+    /// register address faults (and the identity map cannot be assumed to cover
+    /// firmware-reserved DRAM either). `iomap` validates the range and returns a
+    /// proper kernel mapping; the translation is memoized because each call
+    /// carves out a fresh kernel VA range.
+    ///
+    /// The alias is mapped device/uncached, which is what `/dev/mem` users
+    /// expect for registers. Cacheable aliasing of RAM through this node is
+    /// intentionally not offered — use `mmap()` (which goes through the VMA
+    /// device-mapping path) when a cached mapping is wanted.
     fn alias(paddr: usize, size: usize) -> VfsResult<usize> {
-        if in_ram(paddr, size) {
-            return Ok(phys_to_virt(PhysAddr::from_usize(paddr)).as_usize());
-        }
-
         let page = paddr & !(PAGE_SIZE_4K - 1);
         let offset = paddr - page;
         let len = (offset + size).div_ceil(PAGE_SIZE_4K) * PAGE_SIZE_4K;
@@ -58,18 +61,6 @@ impl MemDev {
         cache.push((page, len, vaddr));
         Ok(vaddr + offset)
     }
-}
-
-/// Returns whether `[paddr, paddr+size)` lies inside a reported RAM region.
-fn in_ram(paddr: usize, size: usize) -> bool {
-    let Some(end) = paddr.checked_add(size) else {
-        return false;
-    };
-    memory_regions().any(|region| {
-        let start = region.paddr.as_usize();
-        let region_end = start.saturating_add(region.size);
-        paddr >= start && end <= region_end
-    })
 }
 
 impl DeviceOps for MemDev {
