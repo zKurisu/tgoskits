@@ -684,12 +684,15 @@ fn create_transient_mountpoint_dir(
 }
 
 fn mount_path_for_partition(partition: &PartitionInfo) -> String {
-    let name = partition
-        .name
-        .as_deref()
-        .filter(|name| !name.is_empty())
-        .unwrap_or("partition");
-    if name.to_ascii_lowercase().contains("boot") {
+    let label = partition.name.as_deref().filter(|name| !name.is_empty());
+    let name = label.unwrap_or("partition");
+    // A label that names a boot role wins outright. Otherwise an *unlabelled*
+    // partition carrying the table's bootable flag is the boot partition: SG2002
+    // SD images ship an unlabelled FAT holding `boot.sd`/`fip.bin`, and userspace
+    // reaches that content through `/boot`. Requiring the label to be absent
+    // keeps a labelled, incidentally-bootable data partition from being
+    // remounted at `/boot`.
+    if name.to_ascii_lowercase().contains("boot") || (label.is_none() && partition.bootable) {
         String::from("/boot")
     } else {
         format!("/{name}")
