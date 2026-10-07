@@ -1252,6 +1252,35 @@ impl<T: TableMeta, A: FrameAllocator> PageTableRef<T, A> {
         Ok((paddr, config, page_size))
     }
 
+    /// Unmaps one occupied leaf **without** issuing a local TLB invalidation.
+    ///
+    /// Semantics, validation, and empty-directory pruning are identical to
+    /// [`Self::unmap_page`]; only the per-leaf `T::flush(Some(vaddr))` is
+    /// skipped.  The caller must therefore already hold a deferred-retirement
+    /// obligation whose receipt publishes one range invalidation covering this
+    /// leaf before the CPU can return to user space (the kernel's
+    /// `DeferredTlbRetireGuard` + mutation receipt path).  Without that
+    /// obligation the stale translation stays reachable and this must not be
+    /// used.
+    pub fn unmap_page_without_flush(
+        &mut self,
+        vaddr: VirtAddr,
+    ) -> PagingResult<(PhysAddr, PteConfigOf<T>, usize)> {
+        let (pte, level) = self
+            .root
+            .find_occupied_leaf(vaddr, Frame::<T, A>::PT_LEVEL)?;
+        let page_size = Frame::<T, A>::level_size(level);
+        let is_dir = level > 1;
+        let paddr = pte.paddr(is_dir);
+        let config = pte.config(is_dir);
+        self.unmap_with_config(&UnmapConfig {
+            start_vaddr: vaddr.align_down(page_size),
+            size: page_size,
+            flush: false,
+        })?;
+        Ok((paddr, config, page_size))
+    }
+
     /// Unmaps one occupied leaf without reclaiming detached intermediate
     /// page-table frames.
     ///

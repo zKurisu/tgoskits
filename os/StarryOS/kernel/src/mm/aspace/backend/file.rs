@@ -1037,7 +1037,14 @@ impl MappingExecution for FileBackend {
             } else {
                 None
             };
-            match pt.unmap_page(addr) {
+            // 见 cow.rs：延迟失效路径的外层事务已对整段登记一次 TLB 失效，
+            // 逐页 `sfence.vma` 是冗余。
+            let unmap = if provider_rollback {
+                pt.unmap_page(addr)
+            } else {
+                pt.unmap_page_without_flush(addr)
+            };
+            match unmap {
                 Ok((paddr, _, page_size)) => {
                     if page_size != PAGE_SIZE_4K {
                         return Err(StarryError::BadState);

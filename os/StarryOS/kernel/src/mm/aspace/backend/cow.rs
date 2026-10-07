@@ -1299,7 +1299,15 @@ impl CowBackend {
         if expected_size < PAGE_SIZE_4K || !expected_size.is_power_of_two() {
             return Err(StarryError::BadState);
         }
-        let (frame, _flags, page_size) = pt.unmap_page(addr).map_err(StarryError::from)?;
+        // 延迟失效路径（munmap / 地址空间回收）的外层事务已经对**整段**登记了
+        // 一次 TLB 失效（`prepare_mutation_range`），所以这里逐页 `sfence.vma`
+        // 是纯冗余 —— 196 页一次 munmap 就要白付 196 次。
+        let unmap = if super::tlb_retire_is_deferred() {
+            pt.unmap_page_without_flush(addr)
+        } else {
+            pt.unmap_page(addr)
+        };
+        let (frame, _flags, page_size) = unmap.map_err(StarryError::from)?;
         if page_size != expected_size || frame != expected_frame {
             // This indicates a concurrent or corrupted page-table update.  A
             // caller holding the address-space gate will mark NeedsRepair;

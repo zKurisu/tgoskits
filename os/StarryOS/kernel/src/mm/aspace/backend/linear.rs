@@ -151,7 +151,13 @@ impl MappingExecution for LinearBackend {
             .ok_or(StarryError::InvalidInput)?;
         debug!("Linear::unmap: {range:?} -> {pa_range:?}");
         for (vaddr, expected_size) in occupied_leaf_ranges(range, pt)? {
-            match pt.unmap_page(vaddr) {
+            // 延迟失效路径的外层事务已对整段登记一次 TLB 失效（见 cow.rs）。
+            let unmap = if super::tlb_retire_is_deferred() {
+                pt.unmap_page_without_flush(vaddr)
+            } else {
+                pt.unmap_page(vaddr)
+            };
+            match unmap {
                 Ok((_, _, page_size)) if page_size == expected_size => {}
                 Ok(_) => return Err(StarryError::BadState),
                 Err(PagingError::NotMapped) => {}
