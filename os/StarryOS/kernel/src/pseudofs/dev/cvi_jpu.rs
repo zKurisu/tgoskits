@@ -7,7 +7,7 @@ use sg200x_jpu::{
     FrameLayout, FrameLayoutError, JpuCreateError, JpuDecodeError, JpuDecoder, JpuMmio, JpuScale,
 };
 
-use crate::{StarryError, StarryResult, mm::vm_write_slice, sync::Mutex, task::UserTaskRef};
+use crate::{StarryError, StarryResult, sync::Mutex};
 
 const JPU_REG_BASE: usize = 0x0b00_0000;
 const VC_REG_BASE: usize = 0x0b03_0000;
@@ -16,6 +16,10 @@ const TOP_MMIO_SIZE: usize = 0x4000;
 
 #[derive(Clone, Copy, Debug)]
 pub(super) struct DecodedJpuFrame {
+    /// 输出有效宽度（对应 `layout.visible`）。
+    pub width: u32,
+    /// 输出有效高度（对应 `layout.visible`）。
+    pub height: u32,
     pub layout: FrameLayout,
     pub dma_address: u64,
 }
@@ -102,25 +106,35 @@ impl CviJpu {
         self.state.lock().vdec_owned = false;
     }
 
-    pub fn decode_camera_to_user(
+    /// 解码一帧相机 JPEG，把结果拷进调用方提供的内核缓冲，并返回布局几何。
+    ///
+    /// 供 ION/VPSS 这类"解码结果要落在内核持有的缓冲里"的路径使用
+    /// （本树的 JPU 不允许第二个持有者，所以不能像分支那样让相机自建解码器）。
+    pub fn decode_camera_into(
         &self,
-        current: &UserTaskRef,
         jpeg: &[u8],
-        destination: *mut u8,
-    ) -> StarryResult<usize> {
+        destination: &mut [u8],
+    ) -> StarryResult<DecodedJpuFrame> {
         let mut state = self.state.lock();
         if state.vdec_owned {
             return Err(crate::StarryError::ResourceBusy);
         }
-        // Count attempts (not just successes): a wedged engine must still be
-        // recycled after a bounded number of tries.
         state.decode_count = state.decode_count.saturating_add(1);
         let result = state
             .decoder()?
             .decode(jpeg)
             .map_err(|error| map_decode_error(&error))?;
-        vm_write_slice(current, destination, result.yuv_data)?;
-        Ok(result.yuv_data.len())
+        let len = result.yuv_data.len();
+        if destination.len() < len {
+            return Err(StarryError::InvalidInput);
+        }
+        destination[..len].copy_from_slice(result.yuv_data);
+        Ok(DecodedJpuFrame {
+            width: result.width,
+            height: result.height,
+            layout: result.layout,
+            dma_address: u64::from(result.yuv_dma_addr),
+        })
     }
 
     pub fn decode_vdec(&self, jpeg: &[u8], scale: JpuScale) -> StarryResult<DecodedJpuFrame> {
@@ -134,6 +148,8 @@ impl CviJpu {
             .decode_scaled(jpeg, scale)
             .map_err(|error| map_decode_error(&error))?;
         Ok(DecodedJpuFrame {
+            width: result.width,
+            height: result.height,
             layout: result.layout,
             dma_address: u64::from(result.yuv_dma_addr),
         })
