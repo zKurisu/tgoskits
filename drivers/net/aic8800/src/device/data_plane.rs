@@ -299,7 +299,24 @@ impl AicDevice {
                         );
                         continue;
                     }
-                    let indication = parse_connect_indication(&payload)?;
+                    let indication = match parse_connect_indication(&payload) {
+                        Ok(indication) => indication,
+                        Err(error) => {
+                            // A non-zero `SM_CONNECT_IND` status is an
+                            // association failure (the firmware scanned and
+                            // could not join), not a device fault. Letting it
+                            // reach `fail()` marked the device `Failed` for the
+                            // rest of the boot, so every later control request
+                            // returned `Busy` and Wi-Fi stayed dead until a
+                            // power cycle. Fail only the control transaction and
+                            // leave the device usable for a retry.
+                            self.lifecycle.control = None;
+                            self.data.link.clear_peer();
+                            self.data.clear_internal_tx();
+                            self.data.push_event(AicEvent::ControlFailed(error))?;
+                            continue;
+                        }
+                    };
                     log::info!(
                         "[wifi] association complete; learned firmware vif={} station={}",
                         indication.interface_index,

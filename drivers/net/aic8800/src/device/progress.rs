@@ -22,10 +22,27 @@ impl AicDevice {
         if let Err(error) = self.observe_time(input.now) {
             return self.fail(error);
         }
-        if let Some(event) = input.event
-            && let Err(error) = self.consume_input(event, input.now)
-        {
-            return self.fail(error);
+        if let Some(event) = input.event {
+            match self.consume_input(event, input.now) {
+                Ok(()) => {}
+                // A control request that arrives before the asynchronous
+                // startup (SDIO enumeration + firmware download) has finished
+                // reports `Busy`. That is transient, not a device failure:
+                // `fail()` would mark the device `Failed` for the rest of the
+                // boot, after which every later control request also returns
+                // `Busy` and Wi-Fi stays dead until the next power cycle.
+                // Surface the retryable condition to the control owner while
+                // leaving the running startup untouched.
+                Err(error @ AicError::Busy) => {
+                    let _ = self.data.push_event(AicEvent::ControlFailed(error));
+                    return AicAction::Event(
+                        self.data
+                            .pop_event()
+                            .expect("busy control always publishes a control-failed event"),
+                    );
+                }
+                Err(error) => return self.fail(error),
+            }
         }
         if let Some(event) = self.data.pop_event() {
             return AicAction::Event(event);
@@ -100,8 +117,19 @@ impl AicDevice {
     ) -> Result<(), AicError> {
         match request {
             ControlRequest::Cancel => {
-                if self.lifecycle.control.is_none() && self.lifecycle.state != AicState::Starting {
-                    return Err(AicError::InvalidControlRequest);
+                // A device-level `Cancel` targets the Wi-Fi *control*
+                // transaction; the startup owner cancels its own SDIO work
+                // through `owner.shutdown()`, not through this request. When no
+                // control transaction is active the request is therefore a
+                // no-op.
+                //
+                // This matters because the runtime sends `Cancel` after *any*
+                // failed transaction: an early `Connect` is refused with `Busy`
+                // while the asynchronous startup runs, the runtime then
+                // cancels, and the old code aborted that startup (and failed
+                // the device), leaving Wi-Fi dead until the next power cycle.
+                if self.lifecycle.control.is_none() {
+                    return Ok(());
                 }
                 self.lifecycle.cancel_pending = true;
                 if self.io.pending.is_none() {
