@@ -40,7 +40,28 @@ const JPU_RECYCLE_INTERVAL: u32 = 100;
 
 impl JpuState {
     fn decoder(&mut self) -> StarryResult<&mut JpuDecoder> {
-        if self.decode_count >= JPU_RECYCLE_INTERVAL {
+        // A poisoned engine answers every later decode with `Poisoned`, so
+        // waiting for the periodic recycle would keep failing for up to
+        // `JPU_RECYCLE_INTERVAL` frames (and, before the decoder released its
+        // ownership on drop, made the rebuild itself fail forever). Drop it
+        // eagerly; the rebuild below re-runs `hardware_init_at`, which is what
+        // actually clears the wedge.
+        let poisoned = self
+            .decoder
+            .as_ref()
+            .is_some_and(JpuDecoder::is_poisoned);
+        if poisoned {
+            warn!(
+                "cvi-jpu: recycling poisoned decoder after {} decodes; next decode re-initializes the engine",
+                self.decode_count
+            );
+            self.decoder = None;
+            self.decode_count = 0;
+        } else if self.decode_count >= JPU_RECYCLE_INTERVAL {
+            info!(
+                "cvi-jpu: periodic JPU recycle after {} decodes",
+                self.decode_count
+            );
             self.decoder = None;
             self.decode_count = 0;
         }

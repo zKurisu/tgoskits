@@ -173,6 +173,15 @@ impl JpuDecoder {
         self.decode_scaled(jpeg_data, JpuScale::Full)
     }
 
+    /// Whether a previous failure left this decoder unusable.
+    ///
+    /// Once set, every later call fails with [`JpuDecodeError::Poisoned`]; the
+    /// owner recovers by dropping this decoder and constructing a fresh one,
+    /// which re-runs [`hardware_init_at`].
+    pub const fn is_poisoned(&self) -> bool {
+        self.poisoned
+    }
+
     /// Decodes a baseline JPEG using one isotropic hardware downscale mode.
     ///
     /// # Errors
@@ -419,9 +428,17 @@ impl JpuDecoder {
 
 impl Drop for JpuDecoder {
     fn drop(&mut self) {
-        if !self.poisoned {
-            JPU_IN_USE.store(false, Ordering::Release);
-        }
+        // Release the engine on every drop path, including the poisoned one.
+        //
+        // Holding the flag back after a poisoned decode made "drop this
+        // decoder and build a fresh one" — the only recovery the hardware
+        // offers — impossible: `new` then failed with `AlreadyOwned` and the
+        // JPU stayed dead for the rest of the boot. Re-acquisition is safe
+        // because `new` re-runs `hardware_init_at`, which gates the JPEG
+        // clock, asserts the reset and waits out `START_INIT` before any new
+        // transfer is programmed, and because the failed decode quarantined
+        // its DMA buffers instead of freeing them.
+        JPU_IN_USE.store(false, Ordering::Release);
     }
 }
 
