@@ -155,6 +155,51 @@ fn ax_app_entry() {
 
 struct LogIfImpl;
 
+/// Additional consumer of every published log record.
+///
+/// The OS layer registers a sink here (see `starry-kernel`'s `entry::init`) so
+/// records reach the kernel `dmesg` ring as well as the console. The hook is
+/// stored as a plain `fn` pointer and is a no-op while unregistered, so an
+/// ArceOS application that never sets it pays one relaxed atomic load.
+static AUX_LOG_WRITER: core::sync::atomic::AtomicPtr<()> =
+    core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
+
+/// Registers the auxiliary log sink used for `dmesg`-style ring buffering.
+pub fn set_aux_log_writer(sink: fn(&str)) {
+    AUX_LOG_WRITER.store(sink as *mut (), core::sync::atomic::Ordering::Release);
+}
+
+/// Forwards one fully formatted record to the auxiliary sink, if registered.
+///
+/// Formatting goes through the same structured writer the console uses, so the
+/// ring buffer sees byte-identical lines (timestamp, CPU id, task id, level,
+/// target). Runs after the record has been handed to the console pipeline, and
+/// never allocates.
+fn publish_aux_record(meta: ax_log::RecordMeta, args: core::fmt::Arguments<'_>) {
+    let raw = AUX_LOG_WRITER.load(core::sync::atomic::Ordering::Acquire);
+    if raw.is_null() {
+        return;
+    }
+    // SAFETY: `set_aux_log_writer` is the only writer of this slot and it
+    // stores a `fn(&str)` value whose lifetime is that of the program.
+    let sink: fn(&str) = unsafe { core::mem::transmute(raw) };
+    let context = structured_log::with_runtime_log_context(core::convert::identity)
+        .unwrap_or_else(|_| structured_log::fallback_runtime_log_context(meta));
+    let mut writer = AuxLogWriter { sink };
+    let _ = structured_log::write_record(&mut writer, meta, context, args);
+}
+
+struct AuxLogWriter {
+    sink: fn(&str),
+}
+
+impl core::fmt::Write for AuxLogWriter {
+    fn write_str(&mut self, text: &str) -> core::fmt::Result {
+        (self.sink)(text);
+        Ok(())
+    }
+}
+
 #[ax_crate_interface::impl_interface]
 impl ax_log::LogIf for LogIfImpl {
     fn try_publish(
@@ -162,15 +207,19 @@ impl ax_log::LogIf for LogIfImpl {
         args: core::fmt::Arguments<'_>,
     ) -> ax_log::PublishStatus {
         if let Some(status) = serial::try_publish_record(meta, args) {
+            publish_aux_record(meta, args);
             return status;
         }
         let context = structured_log::with_runtime_log_context(core::convert::identity)
             .unwrap_or_else(|_| structured_log::fallback_runtime_log_context(meta));
         if let Some(status) = console::try_publish_without_runtime(meta, context, args) {
+            publish_aux_record(meta, args);
             return status;
         }
         let mut writer = PlatformConsoleWriter::default();
-        if structured_log::write_record(&mut writer, meta, context, args).is_ok() {
+        let published = structured_log::write_record(&mut writer, meta, context, args).is_ok();
+        publish_aux_record(meta, args);
+        if published {
             ax_log::PublishStatus::Published
         } else {
             ax_log::PublishStatus::Dropped

@@ -12,13 +12,13 @@ use linux_raw_sys::{
 };
 use ringbuf::{
     HeapRb,
-    traits::{Consumer, Observer, Producer},
+    traits::{Consumer, Observer, Producer, RingBuffer},
 };
 
 use crate::{
     Errno, StarryError, StarryResult,
     mm::{UserPtr, VmMutPtr, VmPtr, vm_read_slice, vm_write_slice},
-    sync::Mutex,
+    sync::IrqMutex,
     task::{SockFilter, SockFprog, get_task_by_number, processes},
 };
 
@@ -40,7 +40,12 @@ const SYSLOG_ACTION_CONSOLE_ON: i32 = 7;
 const SYSLOG_ACTION_CONSOLE_LEVEL: i32 = 8;
 const SYSLOG_ACTION_SIZE_UNREAD: i32 = 9;
 const SYSLOG_ACTION_SIZE_BUFFER: i32 = 10;
-const SYSLOG_BUFFER_CAPACITY: usize = 4096;
+/// Capacity of the kernel log ring that backs `syslog(2)`/`dmesg`.
+///
+/// Linux sizes this ring at 64 KiB by default; the kernel now publishes every
+/// `info!`/`warn!` record into it (see `ax_runtime::set_aux_log_writer`), so a
+/// 4 KiB ring would evict the boot log almost immediately.
+const SYSLOG_BUFFER_CAPACITY: usize = 65536;
 const SYSLOG_SEED_MESSAGE: &[u8] = b"StarryOS kernel log buffer initialized\n";
 /// Linux caps `getrandom` through `import_ubuf()` at `MAX_RW_COUNT`.
 /// `MAX_RW_COUNT` is `INT_MAX` rounded down to the page size on the 64-bit
@@ -131,10 +136,30 @@ impl SyslogState {
         let len = self.buffer.occupied_len();
         unsafe { self.buffer.advance_read_index(len) };
     }
+
+    /// Appends one already-formatted log record, overwriting the oldest bytes
+    /// when the ring is full (ring semantics, matching Linux's `log_buf`).
+    fn push_str(&mut self, message: &str) {
+        self.buffer.push_slice_overwrite(message.as_bytes());
+    }
 }
 
-static SYSLOG_STATE: LazyLock<Mutex<SyslogState>> =
-    LazyLock::new(|| Mutex::new(SyslogState::new()));
+/// The kernel log ring is written from every context a log record can be
+/// produced in — including hard interrupt context and before the scheduler has
+/// a current task — so it must be guarded by an IRQ-saving spin lock rather
+/// than a sleepable mutex. Every critical section below is O(ring) work with
+/// no user copy, so a spin lock is also the cheaper choice.
+static SYSLOG_STATE: LazyLock<IrqMutex<SyslogState>> =
+    LazyLock::new(|| IrqMutex::new(SyslogState::new()));
+
+/// Publishes one formatted record into the kernel log ring (`dmesg`).
+///
+/// Registered as the runtime's auxiliary log writer in
+/// [`crate::entry::init`], which is what makes `info!()`/`warn!()` records
+/// visible through `syslog(2)` in addition to the console.
+pub fn syslog_write(message: &str) {
+    SYSLOG_STATE.lock().push_str(message);
+}
 
 pub fn sys_reboot(
     current: &crate::task::UserTaskRef,
