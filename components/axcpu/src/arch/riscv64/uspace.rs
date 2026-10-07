@@ -119,9 +119,15 @@ impl UserContext {
             fn enter_user(uctx: &mut UserContext);
         }
 
-        // Refresh all instruction caches before entering the user program space to resolve user program errors
-        riscv::asm::fence_i();
+        // Refresh the instruction cache only when the user image may actually be
+        // stale (exec / newly executable mapping / address-space switch). 板上
+        // 实测这次 `fence.i` 要 2.17 µs，而它原来挂在每一次返回用户态上。
+        if crate::user_cache::need_flush() {
+            let _t = crate::diag::scope(crate::diag::STAGE_FENCE_I);
+            riscv::asm::fence_i();
+        }
 
+        let _t_prepare = crate::diag::scope(crate::diag::STAGE_PREPARE);
         assert!(
             !crate::asm::irqs_enabled(),
             "raw user entry requires the prepared IRQ-off boundary"
@@ -130,7 +136,10 @@ impl UserContext {
             self.has_interruptible_user_return_mode(),
             "raw user entry requires an interruptible user-mode register image"
         );
+        drop(_t_prepare);
+        let _t_roundtrip = crate::diag::scope(crate::diag::STAGE_USER_ROUNDTRIP);
         unsafe { enter_user(self) };
+        drop(_t_roundtrip);
 
         let scause = scause::read();
         let ret = if let Ok(cause) = scause.cause().try_into::<I, E>() {

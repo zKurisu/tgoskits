@@ -101,6 +101,9 @@ pub fn new_user_task(
             while check_signals(&curr, &mut uctx, None, None) {}
         }
         while !thr.pending_exit() {
+            let _t_iter =
+                crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_ITER);
+            crate::mm::fault_attrib::note_trap_iter();
             if thr.proc_data.has_ptrace_singlestep_work() {
                 let tid = thr.tid();
                 let is_ptraced =
@@ -130,9 +133,14 @@ pub fn new_user_task(
                 }
             }
 
-            let reason = uctx
-                .enter()
-                .expect("return-to-user validation must match the current task and address space");
+            let reason = {
+                let _t = crate::mm::fault_attrib::scope_capped(
+                    crate::mm::fault_attrib::STAGE_SYS_UCTX_ENTER,
+                );
+                uctx.enter().expect(
+                    "return-to-user validation must match the current task and address space",
+                )
+            };
 
             let saved_a0 = uctx.arg0();
             let saved_sysno = uctx.sysno();
@@ -140,7 +148,13 @@ pub fn new_user_task(
             let is_syscall = matches!(reason, ReturnReason::Syscall);
             let mut syscall_restart = SyscallRestart::Allowed;
 
-            if stop_for_pending_ptrace_event(thr, &mut uctx) {
+            let ptrace_stop = {
+                let _t = crate::mm::fault_attrib::scope_capped(
+                    crate::mm::fault_attrib::STAGE_SYS_PTRACE_PRE,
+                );
+                stop_for_pending_ptrace_event(thr, &mut uctx)
+            };
+            if ptrace_stop {
                 continue;
             }
 
@@ -167,6 +181,9 @@ pub fn new_user_task(
                         let _ = ptrace_stop_current(thr, Signo::SIGTRAP, &mut uctx);
                     }
 
+                    let _t = crate::mm::fault_attrib::scope_capped(
+                        crate::mm::fault_attrib::STAGE_SYS_HANDLE,
+                    );
                     syscall_restart = handle_syscall(&curr, &mut uctx);
                     if address_space_replaced {
                         uctx.refresh_address_space()
@@ -214,6 +231,8 @@ pub fn new_user_task(
                 }
             }
 
+            let _t_post =
+                crate::mm::fault_attrib::scope_capped(crate::mm::fault_attrib::STAGE_SYS_POST);
             if !thr.unblock_next_signal_check() && thr.has_user_return_work() {
                 let eintr_code = -(crate::Errno::EINTR.into_raw() as isize);
                 let restart = if is_syscall

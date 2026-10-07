@@ -13,6 +13,9 @@ pub use ax_memory_addr::{MemoryAddr, PhysAddr, VirtAddr};
 
 #[macro_use]
 pub mod trap;
+extern crate alloc;
+pub mod diag;
+pub mod user_cache;
 
 pub(crate) use trap::TrapOrigin;
 

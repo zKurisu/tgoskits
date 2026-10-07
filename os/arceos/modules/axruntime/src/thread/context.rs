@@ -592,6 +592,12 @@ pub(super) unsafe fn switch_runtime_context(plan: RuntimeSwitchPlan) {
     let previous_address_space = plan.previous_address_space();
     let next_address_space = plan.next_address_space();
     let same_address_space = plan.same_address_space();
+    // 换地址空间后，同一虚拟地址可能指向另一份物理页（或同一物理页被改写过），
+    // 用户 I-cache 不再可信 ⇒ 下一次进用户态要刷一次 `fence.i`。
+    // 同 mm 的切换不需要（T-Head 的 user trap 入口/出口不刷 I-cache）。
+    if !same_address_space {
+        ax_cpu::user_cache::mark_stale();
+    }
     let previous_raw = plan.previous_context().into_raw();
     let next_raw = plan.next_context().into_raw();
     let previous = ptr::with_exposed_provenance_mut::<RuntimeContext>(previous_raw);

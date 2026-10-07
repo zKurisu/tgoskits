@@ -118,7 +118,19 @@ pub const STAGE_EXIT_PUB: usize = 79;
 /// C1：`fork_clone_entry`（每个 VMA ~700 µs）内部再拆 memfd 增量与 VMA 树操作。
 pub const STAGE_FORK_MEMFD: usize = 80;
 pub const STAGE_FORK_VMA: usize = 81;
-const STAGES: usize = 82;
+/// B1/B2：用户陷阱循环里"一次系统调用"的入口/分派/出口分段。`syscost2` 已经
+/// 证明 `invalid_syscall` 8.5 µs ≈ 空系统调用地板、`getpid` 9.8 µs ⇒ 成本几乎
+/// 全在这套机制上，而不在 handler 里。这组计数器把它拆开定位。
+pub const STAGE_SYS_ITER: usize = 82;
+pub const STAGE_SYS_UCTX_ENTER: usize = 83;
+pub const STAGE_SYS_PTRACE_PRE: usize = 84;
+pub const STAGE_SYS_HANDLE: usize = 85;
+pub const STAGE_SYS_POST: usize = 86;
+/// B1 细分：每次返回用户态都要做的 `fence.i` 与裸的用户往返。
+pub const STAGE_SYS_FENCE_I: usize = 87;
+pub const STAGE_SYS_USER_ROUNDTRIP: usize = 88;
+pub const STAGE_SYS_PREP_RETURN: usize = 89;
+const STAGES: usize = 90;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 static FAULTS: AtomicU64 = AtomicU64::new(0);
@@ -128,6 +140,8 @@ static FORKS: AtomicU64 = AtomicU64::new(0);
 static EXITS: AtomicU64 = AtomicU64::new(0);
 /// `do_exit` 的调用次数（每个退出的线程一次），用于 `exit_fd/mm/proc/pub` 取平均。
 static EXIT_CALLS: AtomicU64 = AtomicU64::new(0);
+/// 用户陷阱循环的迭代次数（≈ 系统调用 + 缺页 + 中断的次数）。
+static TRAP_ITERS: AtomicU64 = AtomicU64::new(0);
 
 /// 有序索引插入的位置直方图（诊断 COW 页索引的搬移代价）。
 ///
@@ -216,6 +230,47 @@ pub fn scope(stage: usize) -> Scope {
     Scope::new(stage)
 }
 
+/// 采样上限：超过这个时长的样本一律丢弃。
+///
+/// 系统调用入口/出口这类"每线程都在走"的路径上，**阻塞型系统调用**（例如
+/// 空闲 shell 卡在 `read()` 上等命令结束）会把整段墙钟算进去，一个样本就能
+/// 把均值抬高几个数量级。按 Linux 的 sched_switch 计时口径，这种样本本来就
+/// 不该算进"处理一次系统调用要多久"，所以直接丢。
+pub const SAMPLE_CAP_NS: u64 = 100_000;
+
+/// [`Scope`] 的"丢弃阻塞样本"版本，供每线程热路径使用。
+#[must_use]
+pub struct ScopeCapped {
+    stage: usize,
+    start: u64,
+}
+
+impl ScopeCapped {
+    pub fn new(stage: usize) -> Self {
+        Self {
+            stage,
+            start: stage_now(),
+        }
+    }
+}
+
+impl Drop for ScopeCapped {
+    fn drop(&mut self) {
+        let end = stage_now();
+        if end > self.start {
+            let delta = end - self.start;
+            if delta < SAMPLE_CAP_NS {
+                add(self.stage, delta);
+            }
+        }
+    }
+}
+
+/// Convenience constructor for [`ScopeCapped`].
+pub fn scope_capped(stage: usize) -> ScopeCapped {
+    ScopeCapped::new(stage)
+}
+
 /// Counts one resolved (or attempted) fault.
 pub fn note_fault() {
     FAULTS.fetch_add(1, Ordering::Relaxed);
@@ -267,6 +322,11 @@ pub fn note_exit_aspace() {
 /// Counts one `do_exit` call.
 pub fn note_exit_call() {
     EXIT_CALLS.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Counts one iteration of the user trap loop.
+pub fn note_trap_iter() {
+    TRAP_ITERS.fetch_add(1, Ordering::Relaxed);
 }
 
 /// Renders the cumulative per-stage table (for `/proc/fault_attrib`).
@@ -403,6 +463,24 @@ pub fn render() -> String {
             "exit_calls={}\n",
             EXIT_CALLS.load(Ordering::Relaxed)
         ));
+        let iters = TRAP_ITERS.load(Ordering::Relaxed).max(1);
+        for (name, stage) in [
+            ("sys_iter", STAGE_SYS_ITER),
+            ("sys_uctx_enter", STAGE_SYS_UCTX_ENTER),
+            ("sys_ptrace_pre", STAGE_SYS_PTRACE_PRE),
+            ("sys_handle", STAGE_SYS_HANDLE),
+            ("sys_post", STAGE_SYS_POST),
+            ("sys_fence_i", STAGE_SYS_FENCE_I),
+            ("sys_user_roundtrip", STAGE_SYS_USER_ROUNDTRIP),
+            ("sys_prep_return", STAGE_SYS_PREP_RETURN),
+        ] {
+            let ns = TOTALS[stage].load(Ordering::Relaxed);
+            out.push_str(&format!("{name}_ns={ns} {name}_avg={}\n", ns / iters));
+        }
+        out.push_str(&format!(
+            "trap_iters={}\n",
+            TRAP_ITERS.load(Ordering::Relaxed)
+        ));
     }
     let (reclaim_calls, reclaim_ns) = ax_alloc::reclaim_stats();
     out.push_str(&format!(
@@ -457,6 +535,8 @@ pub fn render() -> String {
     out.push_str(&ax_fs_ng::diag::render());
     // ax-task 侧分段（见 components/ax-task/src/diag.rs）。
     out.push_str(&ax_std::os::arceos::task::diag::render());
+    // ax-cpu 侧分段（见 components/axcpu/src/diag.rs）。
+    out.push_str(&ax_cpu::diag::render());
     // C1：地址空间标签能力（1 = 只能全量刷 TLB，值越大 = 能用硬件 ASID）。
     out.push_str(&format!(
         "asid_tag_capacity={}\n",

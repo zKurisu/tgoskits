@@ -1939,6 +1939,45 @@ fn unsupported_limit_sysctl_file(fs: &Arc<SimpleFs>, value: &'static str) -> Arc
 /// `SimpleFile` 那种「读出现有内容再整体写回」的往返。
 struct FaultAroundKnob;
 
+/// `/proc/icache_flush`：返回用户态刷不刷指令缓存（见 ax_cpu::user_cache）。
+struct IcacheFlushKnob;
+
+impl DirectRwFsFileOps for IcacheFlushKnob {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> VfsResult<usize> {
+        let mode = if ax_cpu::user_cache::always_flush() {
+            "every-user-entry"
+        } else {
+            "only-when-stale"
+        };
+        let pending = u8::from(ax_cpu::user_cache::stale());
+        let text = format!(
+            "mode={mode}\npending_stale={pending}\n(echo 1 > /proc/icache_flush = 每次进\
+             用户态都 fence.i；echo 0 = 只在 exec/mmap(PROT_EXEC)/mprotect(PROT_EXEC)/\
+             换地址空间之后刷)\n"
+        );
+        let data = text.as_bytes();
+        let offset = offset as usize;
+        if offset >= data.len() {
+            return Ok(0);
+        }
+        let rest = &data[offset..];
+        let read = rest.len().min(buf.len());
+        buf[..read].copy_from_slice(&rest[..read]);
+        Ok(read)
+    }
+
+    fn write_at(&self, buf: &[u8], _offset: u64) -> VfsResult<usize> {
+        let text = core::str::from_utf8(buf).map_err(|_| VfsError::InvalidInput)?;
+        let eager = match text.trim() {
+            "0" => false,
+            "1" => true,
+            _ => return Err(VfsError::InvalidInput),
+        };
+        ax_cpu::user_cache::set_always_flush(eager);
+        Ok(buf.len())
+    }
+}
+
 impl DirectRwFsFileOps for FaultAroundKnob {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> VfsResult<usize> {
         let pages = crate::mm::fault_around_pages();
@@ -2012,6 +2051,17 @@ fn builder(fs: Arc<SimpleFs>, view: PidView) -> DirMaker {
         SpecialFsFile::new_regular_with_perm(
             fs.clone(),
             FaultAroundKnob,
+            NodePermission::from_bits_truncate(0o644),
+        ),
+    );
+    // /proc/icache_flush — 返回用户态时刷指令缓存的策略（1 = 每次，0 = 只在
+    // 内核可能写过可执行页/换过地址空间时）。板端实测每次 `fence.i` 2.17 µs，
+    // 占空系统调用 ~19%，所以做成旋钮在同一条镜像上做 A/B，而不是改一次刷一次板。
+    root.add(
+        "icache_flush",
+        SpecialFsFile::new_regular_with_perm(
+            fs.clone(),
+            IcacheFlushKnob,
             NodePermission::from_bits_truncate(0o644),
         ),
     );

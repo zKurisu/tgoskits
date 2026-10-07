@@ -62,6 +62,8 @@ pub fn init(args: &[String], envs: &[String]) {
     ax_fs_ng::diag::register_clock(ax_hal::time::monotonic_time_nanos);
     // C1：`StagedThread::activate` 的内部分段（见 components/ax-task/src/diag.rs）。
     ax_std::os::arceos::task::diag::register_clock(ax_hal::time::monotonic_time_nanos);
+    // B1：返回用户态路径（fence.i / 用户往返）的分段（见 components/axcpu/src/diag.rs）。
+    ax_cpu::diag::register_clock(ax_hal::time::monotonic_time_nanos);
 
     let loc = current_fs_context()
         .lock()
