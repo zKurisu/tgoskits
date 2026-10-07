@@ -1776,7 +1776,12 @@ impl MappingExecution for CowBackend {
                         // 匿名 4 KiB：把「连续未映射」的一段（最多 ANON_BLOCK_PAGES
                         // 页）交给整块分配，见 `alloc_new_anon_run`。剩下的页仍由
                         // 外层循环继续处理。
+                        //
+                        // `addrs[i]` 刚在上面判定为未映射，所以第一页直接算进 run，
+                        // 从 i+1 开始探测 —— 原来这里会把第一页再 `pt.query` 一遍，
+                        // 每次整块填充白付一轮三级页表走查。
                         let run_start = i;
+                        i += 1;
                         while i < addrs.len()
                             && i - run_start < ANON_BLOCK_PAGES
                             && matches!(pt.query(addrs[i]), Err(PagingError::NotMapped))
