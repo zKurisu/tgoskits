@@ -305,19 +305,63 @@ pub(crate) fn me_config_payload() -> [u8; 112] {
     payload
 }
 
+/// Per-channel transmit power ceiling in dBm; the vendor `CHAN(_freq)` macro
+/// writes the same 30.
+const CHANNEL_TX_POWER: u8 = 30;
+/// `struct mac_chan_def.band`: the vendor driver writes Linux's band enum.
+const BAND_2G4: u8 = 0;
+const BAND_5G: u8 = 1;
+
+/// Fills one `struct mac_chan_def` entry:
+/// `freq:u16, band:u8, flags:u8, tx_power:i8, pad`.
+fn write_channel(entry: &mut [u8], frequency: u16, band: u8) {
+    entry[0..2].copy_from_slice(&frequency.to_le_bytes());
+    entry[2] = band;
+    entry[3] = 0; // flags: not DISABLED/NO_IR/RADAR
+    entry[4] = CHANNEL_TX_POWER;
+}
+
+/// `ME_CHAN_CONFIG_REQ` payload: `chan2G4[14] + chan5G[28] + chan2G4_cnt +
+/// chan5G_cnt` (the vendor `struct me_chan_config_req`, 254 bytes).
+///
+/// The 5 GHz section is not optional: reporting only 2.4 GHz with a zero 5 GHz
+/// count tells the firmware that no 5 GHz channel exists, so it never scans
+/// them — connecting to a common 5745 MHz (channel 149) AP then fails with
+/// `SM_CONNECT_IND status=1`, which looks exactly like "AP not found".
 pub(crate) fn channel_config_payload() -> [u8; 254] {
-    let mut payload = [0; 254];
-    const CHANNELS: [u16; 14] = [
+    const CHANNELS_2G4: [u16; 14] = [
         2412, 2417, 2422, 2427, 2432, 2437, 2442, 2447, 2452, 2457, 2462, 2467, 2472, 2484,
     ];
-    for (index, frequency) in CHANNELS.into_iter().enumerate() {
-        let offset = index * 6;
-        payload[offset..offset + 2].copy_from_slice(&frequency.to_le_bytes());
-        payload[offset + 4] = 30;
+    /// The non-extended group of the vendor `rwnx_5ghz_channels[]`
+    /// (channels 36..177, 28 entries). The count has to match
+    /// `CHANNEL_CONFIG_PAYLOAD_LEN`'s `28 * 6`: a short list silently leaves
+    /// trailing entries zeroed, and an AP on one of those channels then fails
+    /// exactly like an AP that does not exist.
+    const CHANNELS_5G: [u16; 28] = [
+        5180, 5200, 5220, 5240, 5260, 5280, 5300, 5320, 5500, 5520, 5540, 5560, 5580, 5600, 5620,
+        5640, 5660, 5680, 5700, 5720, 5745, 5765, 5785, 5805, 5825, 5845, 5865, 5885,
+    ];
+    debug_assert_eq!(
+        CHANNELS_2G4.len() * 6 + CHANNELS_5G.len() * 6 + 2,
+        CHANNEL_CONFIG_PAYLOAD_LEN
+    );
+
+    let mut payload = [0; CHANNEL_CONFIG_PAYLOAD_LEN];
+    for (index, frequency) in CHANNELS_2G4.into_iter().enumerate() {
+        write_channel(&mut payload[index * 6..index * 6 + 6], frequency, BAND_2G4);
     }
-    payload[252] = CHANNELS.len() as u8;
+    let base_5g = CHANNELS_2G4.len() * 6;
+    for (index, frequency) in CHANNELS_5G.into_iter().enumerate() {
+        let offset = base_5g + index * 6;
+        write_channel(&mut payload[offset..offset + 6], frequency, BAND_5G);
+    }
+    payload[252] = CHANNELS_2G4.len() as u8;
+    payload[253] = CHANNELS_5G.len() as u8;
     payload
 }
+
+/// `chan2G4[14] + chan5G[28]` at 6 bytes each, plus the two counters.
+pub(crate) const CHANNEL_CONFIG_PAYLOAD_LEN: usize = 14 * 6 + 28 * 6 + 2;
 
 pub(crate) fn add_interface_payload(mac: [u8; 6], role: u8) -> [u8; 10] {
     let mut payload = [0; 10];
