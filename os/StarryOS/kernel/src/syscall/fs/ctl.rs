@@ -1140,21 +1140,21 @@ pub fn sys_renameat2(
     Ok(0)
 }
 
-fn run_sync_stages<PageSync, RootSync, BlockSync>(
+fn run_sync_stages<PageSync, FsSync, BlockSync>(
     page_sync: PageSync,
-    root_sync: RootSync,
+    fs_sync: FsSync,
     block_sync: BlockSync,
 ) -> StarryResult<isize>
 where
     PageSync: FnOnce() -> StarryResult<()>,
-    RootSync: FnOnce() -> StarryResult<()>,
+    FsSync: FnOnce() -> StarryResult<()>,
     BlockSync: FnOnce() -> StarryResult<()>,
 {
     if let Err(error) = page_sync() {
         warn!("sync(2) page-cache writeback failed: {error:?}");
     }
-    if let Err(error) = root_sync() {
-        warn!("sync(2) root-filesystem writeback failed: {error:?}");
+    if let Err(error) = fs_sync() {
+        warn!("sync(2) filesystem writeback failed: {error:?}");
     }
     if let Err(error) = block_sync() {
         warn!("sync(2) block-cache writeback failed: {error:?}");
@@ -1165,21 +1165,38 @@ where
 }
 
 pub fn sys_sync() -> StarryResult<isize> {
-    // Only syncs root filesystem; does not iterate all mount points like Linux sync(2).
-    // Write back ax-fs-ng page cache first, then flush filesystem metadata.
+    // 与 Linux sync(2) 对齐：写回页缓存 → 遍历**所有挂载点**逐个 flush 文件系统 →
+    // 写回所有块缓存。只同步根文件系统是不够的：vfat 这类实现会把最后一次写留在
+    // 自己的块缓冲里，只有文件系统级 flush 才会真正落到设备（否则一掉电就丢）。
     run_sync_stages(
         || {
             sync_all_cached_files(false)?;
             Ok(())
         },
         || {
+            // 根文件系统：根节点自身先 sync 一次。
             current_fs_context().lock().root_dir().sync(false)?;
+            // 其余挂载点：把挂载树整体取出来（Arc 克隆）后再逐个 flush，
+            // 避免在块设备 I/O 期间一直持有文件系统上下文锁。
+            let mounts = current_fs_context()
+                .lock()
+                .mount_namespace()
+                .walk_tree()
+                .into_iter()
+                .map(|(_, _, mount)| mount)
+                .collect::<Vec<_>>();
+            for mount in mounts {
+                if let Err(error) = mount.root_location().filesystem().flush() {
+                    warn!(
+                        "sync(2) filesystem flush failed for {}: {error:?}",
+                        mount.source()
+                    );
+                }
+            }
             Ok(())
         },
         || {
-            // The root sync above only reaches the root filesystem's device path;
-            // write back block-cache dirt of every device (other partitions) and
-            // issue their flush barriers.
+            // 上面按挂载点 flush 后，再把每个设备的块缓存脏页写回并下发 flush 屏障。
             #[cfg(any(feature = "ext4", feature = "fat"))]
             ax_fs_ng::sync_all_block_caches()?;
             Ok(())

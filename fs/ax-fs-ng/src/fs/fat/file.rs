@@ -82,9 +82,14 @@ impl NodeOps for FatFileNode {
     }
 
     fn sync(&self, _data_only: bool) -> VfsResult<()> {
-        let fs = self.fs.lock();
-        let file = self.inner.borrow_mut(&fs);
-        file.flush().map_err(into_vfs_err)
+        {
+            let fs = self.fs.lock();
+            let file = self.inner.borrow_mut(&fs);
+            // fatfs 的 flush 只把目录项（含新的文件长度）写进上一层块缓冲。
+            file.flush().map_err(into_vfs_err)?;
+        }
+        // 再把这层块缓冲落盘，`fsync()` 才有持久化语义（见 FatFilesystem::flush_disk）。
+        self.fs.flush_disk()
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
@@ -125,11 +130,16 @@ impl FileNodeOps for FatFileNode {
         loop {
             let n = file.write(buf).map_err(into_vfs_err)?;
             if n == 0 {
-                return Ok(written);
+                break;
             }
             written += n;
             buf = &buf[n..];
         }
+        // fatfs 把"新的文件长度"留在内存里的目录项上，只有 flush 才写出去；
+        // 而 VFS 会在 dcache 里保留文件节点，fatfs 的 Drop 迟迟不跑。写一次就
+        // 更新一次目录项，掉电/重启后卡上才有正确的长度（数据块本来就会随块边界落盘）。
+        file.flush().map_err(into_vfs_err)?;
+        Ok(written)
     }
 
     fn append(&self, buf: &[u8]) -> VfsResult<(usize, u64)> {
@@ -137,6 +147,7 @@ impl FileNodeOps for FatFileNode {
         let file = self.inner.borrow_mut(&fs);
         file.seek(SeekFrom::End(0)).map_err(into_vfs_err)?;
         let written = file.write(buf).map_err(into_vfs_err)?;
+        file.flush().map_err(into_vfs_err)?;
         Ok((written, file.size().unwrap_or(0) as u64))
     }
 
@@ -145,10 +156,12 @@ impl FileNodeOps for FatFileNode {
         let file = self.inner.borrow_mut(&fs);
         if len <= file.size().unwrap_or(0) as u64 {
             file.seek(SeekFrom::Start(len)).map_err(into_vfs_err)?;
-            file.truncate().map_err(into_vfs_err)
+            file.truncate().map_err(into_vfs_err)?;
         } else {
-            grow_file(&fs, file, len)
+            grow_file(&fs, file, len)?
         }
+        file.flush().map_err(into_vfs_err)?;
+        Ok(())
     }
 }
 

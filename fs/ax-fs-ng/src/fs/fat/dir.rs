@@ -95,7 +95,9 @@ impl NodeOps for FatDirNode {
     }
 
     fn sync(&self, _data_only: bool) -> VfsResult<()> {
-        Ok(())
+        // 目录项的创建/删除同样可能停在 FAT 自己的块缓冲里（原因见 fat/file.rs 的
+        // sync），所以这里也要把缓冲落盘。
+        self.fs.flush_disk()
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {

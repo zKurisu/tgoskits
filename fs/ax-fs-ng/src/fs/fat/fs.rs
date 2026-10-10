@@ -80,6 +80,21 @@ impl FatFilesystem {
     pub(crate) fn lock(&self) -> SleepMutexGuard<'_, FatFilesystemInner> {
         self.inner.lock()
     }
+
+    /// Flushes the FAT disk buffer down to the block device without taking the
+    /// FAT state lock.
+    ///
+    /// `FilesystemOps::flush` holds the FAT state while flushing. File and
+    /// directory `sync` calls already hold it when they need this, so they must
+    /// come in through here to avoid re-entering the same lock. Without it the
+    /// last partially filled block (usually the one carrying the directory
+    /// entry and the file size of the file just written) stays in RAM until the
+    /// mount is flushed, which is what makes plain `sync(2)` miss vfat writes.
+    pub(crate) fn flush_disk(&self) -> VfsResult<()> {
+        self.disk_flusher
+            .flush()
+            .map_err(crate::block_error_to_vfs_error)
+    }
 }
 
 impl FilesystemOps for FatFilesystem {
