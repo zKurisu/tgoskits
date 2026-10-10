@@ -74,6 +74,8 @@ const CLK_ENABLE_3_MASK: u32 = 1 << 29; // VIP_SYS_2
 static VPSS_IRQ_NOTIFY: IrqWaitCell = IrqWaitCell::new();
 /// 等待侧真正 park 的队列。
 static VPSS_IRQ_PARK: WaitQueue = WaitQueue::new();
+/// IRQ 状态诊断计数：只打前几次，避免刷屏。
+static VPSS_IRQ_SEEN: core::sync::atomic::AtomicU32 = core::sync::atomic::AtomicU32::new(0);
 
 #[derive(Clone, Copy, Debug)]
 struct VpssResource {
@@ -203,6 +205,15 @@ impl VpssDevice {
         let irq = resource.irq;
         let registration = request_shared_disabled(irq, move |_| match handler.handle() {
             Some(event) => {
+                // 诊断：把每一次 VPSS 中断的原始状态打出来。完成中断没被识别时，
+                // 这一行能直接告诉我们硬件置的是哪一位（而不是只看到超时）。
+                let seen = VPSS_IRQ_SEEN.fetch_add(1, Ordering::Relaxed);
+                if seen < 8 {
+                    warn!(
+                        "[VPSS] irq status=0x{:x} wake={} seen={}",
+                        event.status, event.wake_waiter, seen
+                    );
+                }
                 if event.wake_waiter {
                     // Capture completion in IRQ context before waking the
                     // waiter. Task wake-up latency must not be charged to
