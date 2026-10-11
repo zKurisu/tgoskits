@@ -160,7 +160,12 @@ pub const STAGE_UNMAP_SUMMARY: usize = 110;
 pub const STAGE_UNMAP_APPLY: usize = 111;
 pub const STAGE_UNMAP_SLOTS: usize = 112;
 pub const STAGE_UNMAP_COMMIT: usize = 113;
-const STAGES: usize = 114;
+/// H2：populate 路径上"每页槽/rmap 发布"与"外层页表查询"两段
+/// （fork 侧那组探针按 `in_fork()` 门控，这里补非 fork 路径的）。
+pub const STAGE_PUB_PREP: usize = 114;
+pub const STAGE_PUB_APPLY: usize = 115;
+pub const STAGE_POP_QUERY: usize = 116;
+const STAGES: usize = 117;
 
 static TOTALS: [AtomicU64; STAGES] = [const { AtomicU64::new(0) }; STAGES];
 /// 每个段的样本数（供"每次调用"口径的段取平均用）。
@@ -534,6 +539,9 @@ pub fn render() -> String {
             ("unmap_apply", STAGE_UNMAP_APPLY),
             ("unmap_slots", STAGE_UNMAP_SLOTS),
             ("unmap_commit", STAGE_UNMAP_COMMIT),
+            ("pub_prep", STAGE_PUB_PREP),
+            ("pub_apply", STAGE_PUB_APPLY),
+            ("pop_query", STAGE_POP_QUERY),
         ] {
             let ns = TOTALS[stage].load(Ordering::Relaxed);
             // 这些是"每次调用"口径的段：total 是真实累计，调用次数由 CALLS 记录，

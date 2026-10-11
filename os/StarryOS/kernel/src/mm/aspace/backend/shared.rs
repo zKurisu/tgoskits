@@ -602,7 +602,12 @@ impl MappingExecution for SharedBackend {
             return Err(crate::StarryError::BadState);
         }
         for (va, page_size) in occupied_leaf_ranges(range, pt)? {
-            let unmapped = pt.unmap_page(va)?;
+            // 延迟失效路径的外层事务已对整段登记一次 TLB 失效（见 cow.rs）。
+            let unmapped = if super::tlb_retire_is_deferred() {
+                pt.unmap_page_without_flush(va)?
+            } else {
+                pt.unmap_page(va)?
+            };
             if unmapped.2 != page_size {
                 return Err(crate::StarryError::BadState);
             }
