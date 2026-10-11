@@ -60,7 +60,15 @@ static struct mapped_buffer allocate_ion(int ion_fd, size_t requested_size, cons
 
     memset(&allocation, 0, sizeof(allocation));
     allocation.len = align_up(requested_size, 4096U);
-    allocation.heap_id_mask = 1U << ION_HEAP_DMA_COHERENT;
+    {
+        /* 调试用：VPSS_ION_HEAP=<mask> 可切到 carveout(4)/system(8) 等堆，
+           默认仍是原来的 DMA-coherent(2)。 */
+        const char *heap_env = getenv("VPSS_ION_HEAP");
+
+        allocation.heap_id_mask = heap_env
+                                      ? (uint32_t)strtoul(heap_env, NULL, 0)
+                                      : (1U << ION_HEAP_DMA_COHERENT);
+    }
     (void)snprintf((char *)allocation.name, sizeof(allocation.name), "%s", name);
     if (ioctl(ion_fd, ION_IOC_ALLOC, &allocation) < 0) {
         perror("ION_IOC_ALLOC");
