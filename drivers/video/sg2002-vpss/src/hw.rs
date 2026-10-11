@@ -30,6 +30,141 @@ const SC_GOP_BYPASS: u32 = 1 << 2;
 const SC_CIRCLE_BYPASS: u32 = 1 << 5;
 const IMG_RESET_W1T: u32 = 1 << 18;
 
+/// 4-tap bicubic phase table for SC_V1, copied verbatim from the vendor
+/// driver (`scl_coef[128][4]` in `chip/mars/scaler.c`). SC_V1 is the only
+/// 4-tap scaler instance on this platform, so the vendor `sclr_init()`
+/// always installs this table for it.
+const SC_BICUBIC_COEFFICIENTS: [[i32; 4]; 128] = [
+    [-4, 1024, 4, 0],
+    [-8, 1024, 8, 0],
+    [-12, 1024, 12, 0],
+    [-16, 1024, 16, 0],
+    [-19, 1023, 20, 0],
+    [-23, 1023, 25, -1],
+    [-26, 1022, 29, -1],
+    [-30, 1022, 33, -1],
+    [-34, 1022, 37, -1],
+    [-37, 1021, 42, -2],
+    [-40, 1020, 46, -2],
+    [-44, 1020, 50, -2],
+    [-47, 1019, 55, -3],
+    [-50, 1018, 59, -3],
+    [-53, 1017, 63, -3],
+    [-56, 1016, 68, -4],
+    [-59, 1015, 72, -4],
+    [-62, 1014, 77, -5],
+    [-65, 1013, 81, -5],
+    [-68, 1012, 86, -6],
+    [-71, 1011, 90, -6],
+    [-74, 1010, 95, -7],
+    [-76, 1008, 100, -8],
+    [-79, 1007, 104, -8],
+    [-81, 1005, 109, -9],
+    [-84, 1004, 113, -9],
+    [-86, 1002, 118, -10],
+    [-89, 1001, 123, -11],
+    [-91, 999, 128, -12],
+    [-94, 998, 132, -12],
+    [-96, 996, 137, -13],
+    [-98, 994, 142, -14],
+    [-100, 992, 147, -15],
+    [-102, 990, 152, -16],
+    [-104, 988, 157, -17],
+    [-106, 986, 161, -17],
+    [-108, 984, 166, -18],
+    [-110, 982, 171, -19],
+    [-112, 980, 176, -20],
+    [-114, 978, 181, -21],
+    [-116, 976, 186, -22],
+    [-117, 973, 191, -23],
+    [-119, 971, 196, -24],
+    [-121, 969, 201, -25],
+    [-122, 966, 206, -26],
+    [-124, 964, 211, -27],
+    [-125, 961, 216, -28],
+    [-127, 959, 221, -29],
+    [-128, 956, 226, -30],
+    [-130, 954, 231, -31],
+    [-131, 951, 237, -33],
+    [-132, 948, 242, -34],
+    [-133, 945, 247, -35],
+    [-134, 942, 252, -36],
+    [-136, 940, 257, -37],
+    [-137, 937, 262, -38],
+    [-138, 934, 267, -39],
+    [-139, 931, 273, -41],
+    [-140, 928, 278, -42],
+    [-141, 925, 283, -43],
+    [-142, 922, 288, -44],
+    [-142, 918, 294, -46],
+    [-143, 915, 299, -47],
+    [-144, 912, 304, -48],
+    [-145, 909, 309, -49],
+    [-145, 905, 315, -51],
+    [-146, 902, 320, -52],
+    [-147, 899, 325, -53],
+    [-147, 895, 330, -54],
+    [-148, 892, 336, -56],
+    [-148, 888, 341, -57],
+    [-149, 885, 346, -58],
+    [-149, 881, 352, -60],
+    [-150, 878, 357, -61],
+    [-150, 874, 362, -62],
+    [-150, 870, 367, -63],
+    [-151, 867, 373, -65],
+    [-151, 863, 378, -66],
+    [-151, 859, 383, -67],
+    [-151, 855, 389, -69],
+    [-151, 851, 394, -70],
+    [-152, 848, 399, -71],
+    [-152, 844, 405, -73],
+    [-152, 840, 410, -74],
+    [-152, 836, 415, -75],
+    [-152, 832, 421, -77],
+    [-152, 828, 426, -78],
+    [-152, 824, 431, -79],
+    [-151, 819, 437, -81],
+    [-151, 815, 442, -82],
+    [-151, 811, 447, -83],
+    [-151, 807, 453, -85],
+    [-151, 803, 458, -86],
+    [-151, 799, 463, -87],
+    [-150, 794, 469, -89],
+    [-150, 790, 474, -90],
+    [-150, 786, 479, -91],
+    [-149, 781, 485, -93],
+    [-149, 777, 490, -94],
+    [-149, 773, 495, -95],
+    [-148, 768, 501, -97],
+    [-148, 764, 506, -98],
+    [-147, 759, 511, -99],
+    [-147, 755, 516, -100],
+    [-146, 750, 522, -102],
+    [-146, 746, 527, -103],
+    [-145, 741, 532, -104],
+    [-144, 736, 537, -105],
+    [-144, 732, 543, -107],
+    [-143, 727, 548, -108],
+    [-142, 722, 553, -109],
+    [-142, 718, 558, -110],
+    [-141, 713, 563, -111],
+    [-140, 708, 569, -113],
+    [-140, 704, 574, -114],
+    [-139, 699, 579, -115],
+    [-138, 694, 584, -116],
+    [-137, 689, 589, -117],
+    [-136, 684, 594, -118],
+    [-135, 679, 600, -120],
+    [-135, 675, 605, -121],
+    [-134, 670, 610, -122],
+    [-133, 665, 615, -123],
+    [-132, 660, 620, -124],
+    [-131, 655, 625, -125],
+    [-130, 650, 630, -126],
+    [-129, 645, 635, -127],
+    [-128, 640, 640, -128],
+];
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Diagnostics {
     pub img_debug: u32,
@@ -89,11 +224,12 @@ impl<I: RegisterIo> VpssControl<I> {
             TOP_FORCE_CLOCK | TOP_IP_TRIGGER,
             TOP_FORCE_CLOCK | TOP_IP_TRIGGER,
         );
-        self.io.update32(
-            TOP_CFG1,
-            TOP_SC_V1_ENABLE | TOP_DEBUG_ENABLE | TOP_QOS_ENABLE,
-            TOP_DEBUG_ENABLE | TOP_QOS_ENABLE,
-        );
+        // Write the whole register instead of updating single bits: the vendor
+        // driver rewrites TOP_CFG1 as one word so that only the scaler
+        // instances it owns stay enabled. Updating bits would keep the
+        // enables that U-Boot left behind (sc_d, sc_v2, sc_v3 and the display
+        // path), and those unfed instances keep the shared input running.
+        self.io.write32(TOP_CFG1, TOP_DEBUG_ENABLE | TOP_QOS_ENABLE);
         self.io
             .update32(TOP_AXI, TOP_IMG_D_SELECT, TOP_IMG_D_SELECT);
         // IMG_V uses software trigger: clear bits 13 and 9.
@@ -105,7 +241,7 @@ impl<I: RegisterIo> VpssControl<I> {
         self.io.write32(SC_SHD, 2);
         self.io.update32(TOP_SHD, 1 << 9, 1 << 9);
 
-        self.program_bilinear_coefficients();
+        self.program_bicubic_coefficients();
         self.io.update32(
             SC_CFG,
             0x8000_00f7,
@@ -386,15 +522,21 @@ impl<I: RegisterIo> VpssControl<I> {
         self.io.write32(OUT_CSC_FRAC1, 0);
     }
 
-    fn program_bilinear_coefficients(&self) {
-        let mut coefficient_1 = 1024_u32;
-        let mut coefficient_2 = 0_u32;
-        for phase in 0..128_u32 {
-            coefficient_1 -= 4;
-            coefficient_2 += 4;
-            self.io.write32(SC_COEF1, coefficient_1 << 16);
-            self.io.write32(SC_COEF2, coefficient_2 & 0x0fff);
-            self.io.write32(SC_COEF0, (0x5 << 8) | phase);
+    /// Installs the 4-tap bicubic phase table expected by SC_V1.
+    ///
+    /// The vendor driver installs `scl_coef[128][4]` for every scaler
+    /// instance and lets `sclr_set_scale()` decide that only instance 1
+    /// (SC_V1) runs as a 4-tap engine, so the same table is programmed
+    /// here through the COEF1/COEF2/COEF0 write sequence.
+    fn program_bicubic_coefficients(&self) {
+        for (phase, coefficient) in SC_BICUBIC_COEFFICIENTS.iter().enumerate() {
+            let coefficient_1 =
+                ((coefficient[1] as u32) << 16) | ((coefficient[0] as u32) & 0x0fff);
+            let coefficient_2 =
+                ((coefficient[3] as u32) << 16) | ((coefficient[2] as u32) & 0x0fff);
+            self.io.write32(SC_COEF1, coefficient_1);
+            self.io.write32(SC_COEF2, coefficient_2);
+            self.io.write32(SC_COEF0, (0x5 << 8) | phase as u32);
         }
     }
 
