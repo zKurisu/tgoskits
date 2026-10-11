@@ -20,7 +20,7 @@
 #define CVI_CAMERA_IOCTL_GET_LATEST_NV12_FRAME 12U
 #define CVI_CAMERA_IOCTL_GET_LATEST_YUV_ION 13U
 
-#define CVI_CAMERA_ION_ABI_VERSION 1U
+#define CVI_CAMERA_ION_ABI_VERSION 2U
 
 #define CVI_CAMERA_FRAME_NONBLOCK (1U << 0)
 
@@ -115,6 +115,8 @@ struct cvi_camera_ion_frame_request {
     uint16_t height;
     uint8_t format;
     uint8_t reserved[3];
+    /* JPU decode duration for this returned frame; excludes frame wait and UVC capture. */
+    uint64_t jpu_decode_us;
     struct cvi_camera_capture_profile profile;
 };
 
@@ -124,7 +126,7 @@ _Static_assert(sizeof(struct cvi_camera_capture_stats) == 168,
                "camera stats ABI mismatch");
 _Static_assert(sizeof(struct cvi_camera_frame_request) == 120,
                "camera frame request ABI mismatch");
-_Static_assert(sizeof(struct cvi_camera_ion_frame_request) == 160,
+_Static_assert(sizeof(struct cvi_camera_ion_frame_request) == 168,
                "camera ION frame request ABI mismatch");
 
 #endif
